@@ -1,0 +1,736 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --ink: #0f1117;
+    --slate: #1e2230;
+    --panel: #f5f4f0;
+    --accent: #e8401c;
+    --accent2: #2563eb;
+    --muted: #6b7280;
+    --border: #e2e0db;
+    --success: #16a34a;
+    --warning: #d97706;
+  }
+
+  * { box-sizing: border-box; }
+
+  body { font-family: 'DM Sans', sans-serif; background: var(--panel); }
+
+  .admin-wrap {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: calc(100vh - 56px);
+    background: var(--panel);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    background: var(--ink);
+    padding: 2rem 0;
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+
+  .sidebar-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #4b5563;
+    padding: 0 1.5rem;
+    margin: 1.5rem 0 0.5rem;
+  }
+
+  .sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1.5rem;
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+  }
+
+  .sidebar a:hover, .sidebar a.active {
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+    border-left-color: var(--accent);
+  }
+
+  .sidebar a .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+  /* MAIN */
+  .main {
+    padding: 2rem 2.5rem;
+    overflow-x: hidden;
+  }
+
+  .page-section { display: none; }
+  .page-section.active { display: block; }
+
+  /* HEADINGS */
+  .page-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 0.25rem;
+  }
+  .page-sub { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
+
+  /* STAT CARDS */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .stat-card.red::before { background: var(--accent); }
+  .stat-card.blue::before { background: var(--accent2); }
+  .stat-card.green::before { background: var(--success); }
+  .stat-card.orange::before { background: var(--warning); }
+
+  .stat-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .stat-label { color: var(--muted); font-size: 0.8rem; margin-top: 0.25rem; }
+  .stat-change { font-size: 0.75rem; margin-top: 0.5rem; color: var(--success); }
+
+  /* CARDS */
+  .card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-head {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-head h5 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .card-body { padding: 1.5rem; }
+
+  /* TABLES */
+  .table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .table th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 2px solid var(--border);
+  }
+  .table td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink);
+    vertical-align: middle;
+  }
+  .table tr:last-child td { border-bottom: none; }
+  .table tr:hover td { background: #fafaf8; }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .badge-pending { background: #fef3c7; color: #92400e; }
+  .badge-confirmed { background: #dbeafe; color: #1e40af; }
+  .badge-completed { background: #dcfce7; color: #15803d; }
+  .badge-cancelled { background: #fee2e2; color: #991b1b; }
+  .badge-processing { background: #ede9fe; color: #6d28d9; }
+  .badge-shipped { background: #cffafe; color: #0e7490; }
+  .badge-admin { background: #fee2e2; color: #991b1b; }
+  .badge-staff { background: #dbeafe; color: #1e40af; }
+  .badge-customer { background: #f3f4f6; color: #374151; }
+
+  /* BUTTONS */
+  .btn-sm-action {
+    padding: 0.3rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink);
+  }
+  .btn-sm-action:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn-sm-action.danger:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .btn-primary-custom {
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary-custom:hover { background: var(--accent); }
+
+  /* SEARCH / FILTER BAR */
+  .filter-bar {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .filter-bar input, .filter-bar select {
+    padding: 0.55rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-family: 'DM Sans', sans-serif;
+    background: #fff;
+    color: var(--ink);
+    outline: none;
+  }
+  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent2); }
+  .filter-bar input { min-width: 220px; }
+
+  /* CHARTS */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-bar-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
+  .chart-bar-item { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; }
+  .chart-bar-item .bar-label { width: 60px; color: var(--muted); text-align: right; }
+  .chart-bar-track { flex: 1; background: var(--panel); border-radius: 4px; height: 10px; overflow: hidden; }
+  .chart-bar-fill { height: 100%; border-radius: 4px; background: var(--accent); }
+  .chart-bar-item .bar-val { width: 40px; font-weight: 600; color: var(--ink); }
+
+  .donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+  .donut-legend { width: 100%; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; margin-bottom: 0.4rem; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem;
+    width: 480px;
+    max-width: 95vw;
+  }
+  .modal-box h5 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 1.25rem;
+    color: var(--ink);
+  }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 0.6rem 0.875rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    outline: none;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent2); }
+  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .admin-wrap { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="admin-wrap" style="margin: -1.5rem -12px 0;">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-label">Overview</div>
+    <a href="#" class="active" onclick="showSection('dashboard', this)">
+      <span class="icon">📊</span> Dashboard
+    </a>
+
+    <div class="sidebar-label">Management</div>
+    <a href="#" onclick="showSection('bookings', this)">
+      <span class="icon">📅</span> Bookings
+    </a>
+    <a href="#" onclick="showSection('orders', this)">
+      <span class="icon">📦</span> Orders
+    </a>
+    <a href="#" onclick="showSection('users', this)">
+      <span class="icon">👥</span> Users
+    </a>
+
+    <div class="sidebar-label">Analytics</div>
+    <a href="#" onclick="showSection('reports', this)">
+      <span class="icon">📈</span> Reports & Sales
+    </a>
+
+    <div class="sidebar-label">Account</div>
+    <a href="{{ url_for('logout') }}">
+      <span class="icon">🚪</span> Logout
+    </a>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ===== DASHBOARD ===== -->
+    <section id="sec-dashboard" class="page-section active">
+      <div class="page-title">Admin Dashboard</div>
+      <div class="page-sub">Welcome back, {{ current_user.fullname }} — here's what's happening today.</div>
+
+      <div class="stats-grid">
+        <div class="stat-card red">
+          <div class="stat-icon">📅</div>
+          <div class="stat-value">{{ total_bookings or 0 }}</div>
+          <div class="stat-label">Total Bookings</div>
+          <div class="stat-change">↑ 12% this week</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value">{{ total_orders or 0 }}</div>
+          <div class="stat-label">Total Orders</div>
+          <div class="stat-change">↑ 8% this week</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value">₱{{ total_revenue or '0' }}</div>
+          <div class="stat-label">Total Revenue</div>
+          <div class="stat-change">↑ 5% this month</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value">{{ total_users or 0 }}</div>
+          <div class="stat-label">Registered Users</div>
+          <div class="stat-change">↑ 3 new today</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-head"><h5>Monthly Bookings</h5></div>
+          <div class="card-body">
+            <div class="chart-bar-wrap">
+              <div class="chart-bar-item"><span class="bar-label">Jan</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:40%"></div></div><span class="bar-val">24</span></div>
+              <div class="chart-bar-item"><span class="bar-label">Feb</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:55%"></div></div><span class="bar-val">33</span></div>
+              <div class="chart-bar-item"><span class="bar-label">Mar</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:70%"></div></div><span class="bar-val">42</span></div>
+              <div class="chart-bar-item"><span class="bar-label">Apr</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:60%"></div></div><span class="bar-val">36</span></div>
+              <div class="chart-bar-item"><span class="bar-label">May</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:85%"></div></div><span class="bar-val">51</span></div>
+              <div class="chart-bar-item"><span class="bar-label">Jun</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:50%"></div></div><span class="bar-val">30</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h5>Booking Status</h5></div>
+          <div class="card-body">
+            <div class="donut-wrap">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="45" fill="none" stroke="#f3f4f6" stroke-width="18"/>
+                <circle cx="60" cy="60" r="45" fill="none" stroke="#e8401c" stroke-width="18"
+                  stroke-dasharray="113 170" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
+                <circle cx="60" cy="60" r="45" fill="none" stroke="#2563eb" stroke-width="18"
+                  stroke-dasharray="68 215" stroke-dashoffset="-113" transform="rotate(-90 60 60)"/>
+                <circle cx="60" cy="60" r="45" fill="none" stroke="#16a34a" stroke-width="18"
+                  stroke-dasharray="56 227" stroke-dashoffset="-181" transform="rotate(-90 60 60)"/>
+                <text x="60" y="65" text-anchor="middle" font-size="13" font-weight="700" fill="#0f1117">216</text>
+              </svg>
+              <div class="donut-legend">
+                <div class="legend-item"><div class="legend-dot" style="background:#e8401c"></div> Pending — 52</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div> Confirmed — 31</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> Completed — 26</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#f3f4f6;border:1px solid #e2e0db"></div> Cancelled — 7</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Bookings -->
+      <div class="card">
+        <div class="card-head">
+          <h5>Recent Bookings</h5>
+          <button class="btn-primary-custom" onclick="showSection('bookings', document.querySelector('.sidebar a:nth-child(4)'))">View All</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Customer</th><th>Service</th><th>Date</th><th>Status</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if recent_bookings %}
+                {% for b in recent_bookings %}
+                <tr>
+                  <td>{{ b.customer_name }}</td>
+                  <td>{{ b.service }}</td>
+                  <td>{{ b.date }}</td>
+                  <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
+                  <td><button class="btn-sm-action">Manage</button></td>
+                </tr>
+                {% endfor %}
+              {% else %}
+              <tr><td>Juan Dela Cruz</td><td>Oil Change</td><td>2025-06-10</td><td><span class="badge badge-pending">Pending</span></td><td><button class="btn-sm-action">Manage</button></td></tr>
+              <tr><td>Maria Santos</td><td>Tire Replacement</td><td>2025-06-11</td><td><span class="badge badge-confirmed">Confirmed</span></td><td><button class="btn-sm-action">Manage</button></td></tr>
+              <tr><td>Pedro Reyes</td><td>General Checkup</td><td>2025-06-12</td><td><span class="badge badge-completed">Completed</span></td><td><button class="btn-sm-action">Manage</button></td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== BOOKINGS ===== -->
+    <section id="sec-bookings" class="page-section">
+      <div class="page-title">Manage Bookings</div>
+      <div class="page-sub">View, confirm, or cancel service appointments.</div>
+
+      <div class="filter-bar">
+        <input type="text" placeholder="🔍  Search customer or service...">
+        <select>
+          <option value="">All Status</option>
+          <option>Pending</option>
+          <option>Confirmed</option>
+          <option>Completed</option>
+          <option>Cancelled</option>
+        </select>
+        <select>
+          <option value="">All Services</option>
+          <option>Oil Change</option>
+          <option>Tire Replacement</option>
+          <option>General Checkup</option>
+          <option>Chain Cleaning</option>
+          <option>Brake Service</option>
+        </select>
+        <button class="btn-primary-custom" onclick="openModal('modal-add-booking')">+ Add Booking</button>
+      </div>
+
+      <div class="card">
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              <tr><th>#</th><th>Customer</th><th>Service</th><th>Date & Time</th><th>Motorcycle</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>001</td><td>Juan Dela Cruz</td><td>Oil Change</td><td>Jun 10, 2025 9:00 AM</td><td>Honda Click 125i</td><td><span class="badge badge-pending">Pending</span></td><td><button class="btn-sm-action">Confirm</button> <button class="btn-sm-action danger">Cancel</button></td></tr>
+              <tr><td>002</td><td>Maria Santos</td><td>Tire Replacement</td><td>Jun 11, 2025 10:30 AM</td><td>Yamaha Mio</td><td><span class="badge badge-confirmed">Confirmed</span></td><td><button class="btn-sm-action">Complete</button> <button class="btn-sm-action danger">Cancel</button></td></tr>
+              <tr><td>003</td><td>Pedro Reyes</td><td>General Checkup</td><td>Jun 12, 2025 2:00 PM</td><td>Suzuki Raider</td><td><span class="badge badge-completed">Completed</span></td><td><button class="btn-sm-action">View</button></td></tr>
+              <tr><td>004</td><td>Ana Lim</td><td>Brake Service</td><td>Jun 13, 2025 11:00 AM</td><td>Honda TMX</td><td><span class="badge badge-cancelled">Cancelled</span></td><td><button class="btn-sm-action">View</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ORDERS ===== -->
+    <section id="sec-orders" class="page-section">
+      <div class="page-title">Manage Orders</div>
+      <div class="page-sub">Track and update tire and parts orders.</div>
+
+      <div class="filter-bar">
+        <input type="text" placeholder="🔍  Search customer or product...">
+        <select>
+          <option value="">All Status</option>
+          <option>Pending</option>
+          <option>Processing</option>
+          <option>Shipped</option>
+          <option>Completed</option>
+          <option>Cancelled</option>
+        </select>
+        <button class="btn-primary-custom" onclick="openModal('modal-add-order')">+ Add Order</button>
+      </div>
+
+      <div class="card">
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              <tr><th>Order #</th><th>Customer</th><th>Product</th><th>Qty</th><th>Total</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>ORD-001</td><td>Juan Dela Cruz</td><td>IRC MB99 Front Tire</td><td>2</td><td>₱2,400</td><td>Jun 8, 2025</td><td><span class="badge badge-processing">Processing</span></td><td><button class="btn-sm-action">Update</button></td></tr>
+              <tr><td>ORD-002</td><td>Maria Santos</td><td>Maxxis Victra MA-3DS</td><td>1</td><td>₱1,800</td><td>Jun 9, 2025</td><td><span class="badge badge-shipped">Shipped</span></td><td><button class="btn-sm-action">Update</button></td></tr>
+              <tr><td>ORD-003</td><td>Pedro Reyes</td><td>FDR Sport XR-1</td><td>4</td><td>₱5,600</td><td>Jun 10, 2025</td><td><span class="badge badge-pending">Pending</span></td><td><button class="btn-sm-action">Update</button> <button class="btn-sm-action danger">Cancel</button></td></tr>
+              <tr><td>ORD-004</td><td>Ana Lim</td><td>Dunlop TT900 GP</td><td>2</td><td>₱3,200</td><td>Jun 11, 2025</td><td><span class="badge badge-completed">Completed</span></td><td><button class="btn-sm-action">View</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== USERS ===== -->
+    <section id="sec-users" class="page-section">
+      <div class="page-title">Manage Users</div>
+      <div class="page-sub">View all registered customers and staff accounts.</div>
+
+      <div class="filter-bar">
+        <input type="text" placeholder="🔍  Search name or email...">
+        <select>
+          <option value="">All Roles</option>
+          <option>Customer</option>
+          <option>Staff</option>
+          <option>Admin</option>
+        </select>
+        <button class="btn-primary-custom" onclick="openModal('modal-add-user')">+ Add User</button>
+      </div>
+
+      <div class="card">
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              <tr><th>#</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Motorcycle</th><th>Role</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {% if users %}
+                {% for u in users %}
+                <tr>
+                  <td>{{ u.id }}</td>
+                  <td>{{ u.fullname }}</td>
+                  <td>{{ u.email }}</td>
+                  <td>{{ u.phone }}</td>
+                  <td>{{ u.motorcycle_model or '—' }}</td>
+                  <td><span class="badge badge-{{ u.role }}">{{ u.role|title }}</span></td>
+                  <td>
+                    <button class="btn-sm-action">Edit</button>
+                    <button class="btn-sm-action danger">Delete</button>
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+              <tr><td>1</td><td>Admin User</td><td>admin@mototyre.com</td><td>09xx xxx xxxx</td><td>—</td><td><span class="badge badge-admin">Admin</span></td><td><button class="btn-sm-action">Edit</button></td></tr>
+              <tr><td>2</td><td>Juan Dela Cruz</td><td>juan@email.com</td><td>0912 345 6789</td><td>Honda Click 125i</td><td><span class="badge badge-customer">Customer</span></td><td><button class="btn-sm-action">Edit</button> <button class="btn-sm-action danger">Delete</button></td></tr>
+              <tr><td>3</td><td>Maria Santos</td><td>maria@email.com</td><td>0917 654 3210</td><td>Yamaha Mio</td><td><span class="badge badge-customer">Customer</span></td><td><button class="btn-sm-action">Edit</button> <button class="btn-sm-action danger">Delete</button></td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== REPORTS ===== -->
+    <section id="sec-reports" class="page-section">
+      <div class="page-title">Reports & Sales</div>
+      <div class="page-sub">Overview of revenue, services, and order performance.</div>
+
+      <div class="stats-grid">
+        <div class="stat-card red">
+          <div class="stat-icon">💵</div>
+          <div class="stat-value">₱48,200</div>
+          <div class="stat-label">Revenue This Month</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">🔧</div>
+          <div class="stat-value">116</div>
+          <div class="stat-label">Services Completed</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value">84</div>
+          <div class="stat-label">Orders Fulfilled</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value">4.8</div>
+          <div class="stat-label">Avg. Rating</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-head"><h5>Revenue by Month (₱)</h5></div>
+          <div class="card-body">
+            <div class="chart-bar-wrap">
+              <div class="chart-bar-item"><span class="bar-label">Jan</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:55%;background:#2563eb"></div></div><span class="bar-val">₱32k</span></div>
+              <div class="chart-bar-item"><span class="bar-label">Feb</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:62%;background:#2563eb"></div></div><span class="bar-val">₱37k</span></div>
+              <div class="chart-bar-item"><span class="bar-label">Mar</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:75%;background:#2563eb"></div></div><span class="bar-val">₱45k</span></div>
+              <div class="chart-bar-item"><span class="bar-label">Apr</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:68%;background:#2563eb"></div></div><span class="bar-val">₱41k</span></div>
+              <div class="chart-bar-item"><span class="bar-label">May</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:80%;background:#2563eb"></div></div><span class="bar-val">₱48k</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h5>Top Services</h5></div>
+          <div class="card-body">
+            <div class="chart-bar-wrap">
+              <div class="chart-bar-item"><span class="bar-label" style="width:90px">Tire Repl.</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:85%;background:#16a34a"></div></div><span class="bar-val">42</span></div>
+              <div class="chart-bar-item"><span class="bar-label" style="width:90px">Oil Change</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:70%;background:#16a34a"></div></div><span class="bar-val">35</span></div>
+              <div class="chart-bar-item"><span class="bar-label" style="width:90px">Checkup</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:50%;background:#16a34a"></div></div><span class="bar-val">25</span></div>
+              <div class="chart-bar-item"><span class="bar-label" style="width:90px">Brake Svc</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:28%;background:#16a34a"></div></div><span class="bar-val">14</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h5>Sales Transaction Log</h5>
+          <button class="btn-primary-custom">Export CSV</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              <tr><th>Date</th><th>Type</th><th>Description</th><th>Customer</th><th>Amount</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Jun 10</td><td>Service</td><td>Tire Replacement</td><td>Juan Dela Cruz</td><td>₱1,200</td><td><span class="badge badge-completed">Completed</span></td></tr>
+              <tr><td>Jun 10</td><td>Order</td><td>IRC MB99 x2</td><td>Maria Santos</td><td>₱2,400</td><td><span class="badge badge-shipped">Shipped</span></td></tr>
+              <tr><td>Jun 11</td><td>Service</td><td>Oil Change</td><td>Pedro Reyes</td><td>₱450</td><td><span class="badge badge-completed">Completed</span></td></tr>
+              <tr><td>Jun 11</td><td>Order</td><td>Maxxis Victra x1</td><td>Ana Lim</td><td>₱1,800</td><td><span class="badge badge-processing">Processing</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- MODALS -->
+
+<!-- Add Booking -->
+<div class="modal-overlay" id="modal-add-booking">
+  <div class="modal-box">
+    <h5>➕ Add New Booking</h5>
+    <div class="form-group"><label>Customer Name</label><input type="text" placeholder="Juan Dela Cruz"></div>
+    <div class="form-group"><label>Service</label>
+      <select><option>Oil Change</option><option>Tire Replacement</option><option>General Checkup</option><option>Brake Service</option><option>Chain Cleaning</option></select>
+    </div>
+    <div class="form-group"><label>Date & Time</label><input type="datetime-local"></div>
+    <div class="form-group"><label>Motorcycle Model</label><input type="text" placeholder="Honda Click 125i"></div>
+    <div class="form-group"><label>Notes</label><textarea rows="2" placeholder="Additional notes..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-sm-action" onclick="closeModal('modal-add-booking')">Cancel</button>
+      <button class="btn-primary-custom">Save Booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Order -->
+<div class="modal-overlay" id="modal-add-order">
+  <div class="modal-box">
+    <h5>➕ Add New Order</h5>
+    <div class="form-group"><label>Customer Name</label><input type="text" placeholder="Juan Dela Cruz"></div>
+    <div class="form-group"><label>Product</label><input type="text" placeholder="IRC MB99 Front Tire"></div>
+    <div class="form-group"><label>Quantity</label><input type="number" placeholder="1" min="1"></div>
+    <div class="form-group"><label>Unit Price (₱)</label><input type="number" placeholder="1200"></div>
+    <div class="modal-actions">
+      <button class="btn-sm-action" onclick="closeModal('modal-add-order')">Cancel</button>
+      <button class="btn-primary-custom">Save Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add User -->
+<div class="modal-overlay" id="modal-add-user">
+  <div class="modal-box">
+    <h5>➕ Add New User</h5>
+    <div class="form-group"><label>Full Name</label><input type="text" placeholder="Juan Dela Cruz"></div>
+    <div class="form-group"><label>Email</label><input type="email" placeholder="example@email.com"></div>
+    <div class="form-group"><label>Phone</label><input type="tel" placeholder="09xx xxx xxxx"></div>
+    <div class="form-group"><label>Role</label><select><option>Customer</option><option>Staff</option><option>Admin</option></select></div>
+    <div class="form-group"><label>Password</label><input type="password" placeholder="••••••••"></div>
+    <div class="modal-actions">
+      <button class="btn-sm-action" onclick="closeModal('modal-add-user')">Cancel</button>
+      <button class="btn-primary-custom">Create User</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showSection(name, el) {
+    // hide all
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+    // show target
+    document.getElementById('sec-' + name).classList.add('active');
+    if (el) el.classList.add('active');
+  }
+
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  // Close modal on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+  });
+</script>
+
+{% endblock %}

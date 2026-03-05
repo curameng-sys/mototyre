@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-sm border-0 mt-5">
+            <div class="card-header bg-success text-white text-center py-3">
+                <h4 class="mb-0">Create Your Account</h4>
+                <small>Join Mototyre Moto Shop – Book & Order Easily</small>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('register') }}">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="fullname" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="fullname" name="fullname" 
+                                   placeholder="Juan Dela Cruz" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email address</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   placeholder="example@email.com" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   placeholder="09xx xxx xxxx" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="plate" class="form-label">Motorcycle Plate (optional)</label>
+                            <input type="text" class="form-control" id="plate" name="plate" 
+                                   placeholder="ABC 1234">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="model" class="form-label">Motorcycle Model (optional)</label>
+                            <input type="text" class="form-control" id="model" name="model" 
+                                   placeholder="Honda Click 125i">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               placeholder="At least 6 characters" required>
+                        <div class="form-text text-muted">
+                            Minimum 6 characters
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-2">
+                        Register Account
+                    </button>
+                </form>
+
+                <div class="text-center mt-4">
+                    <small>
+                        Already have an account? 
+                        <a href="http://127.0.0.1:5000/login" class="text-success fw-bold">Login here</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
