@@ -1,40 +1,323 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign In – Mototyre Moto Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card shadow-sm border-0 mt-5">
-            <div class="card-header bg-primary text-white text-center py-3">
-                <h4 class="mb-0">Login to Mototyre Moto Shop</h4>
-                <small>Access your account to book services & order tires</small>
-            </div>
-            <div class="card-body p-4">
-                <form method="POST" action="{{ url_for('login') }}">
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email address</label>
-                        <input type="email" class="form-control" id="email" name="email" 
-                               placeholder="example@email.com" required autofocus>
-                    </div>
+      :root {
+        --ink: #0c0d0f;
+        --red: #c72b2b;
+        --border: rgba(255,255,255,0.08);
+      }
 
-                    <div class="mb-4">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" 
-                               placeholder="••••••••" required>
-                    </div>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-                    <button type="submit" class="btn btn-primary w-100 py-2">
-                        Sign In
-                    </button>
-                </form>
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--ink);
+        color: #fff;
+        min-height: 100vh;
+      }
 
-                <div class="text-center mt-4">
-                    <small>
-                        Don't have an account? 
-                        <a href="{{ url_for('register') }}" class="text-primary fw-bold">Register here</a>
-                    </small>
-                </div>
-            </div>
-        </div>
+      .auth-wrap {
+        min-height: 100vh;
+        display: flex;
+        align-items: stretch;
+      }
+
+      /* LEFT PANEL */
+      .auth-left {
+        flex: 1;
+        background: var(--ink);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 4rem;
+        overflow: hidden;
+      }
+
+      .auth-left-bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 80% 60% at 30% 50%, rgba(232,64,28,0.13) 0%, transparent 65%),
+          radial-gradient(ellipse 40% 40% at 80% 80%, rgba(232,64,28,0.05) 0%, transparent 50%);
+      }
+
+      .auth-left-bg::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+
+      .auth-left-content { position: relative; z-index: 2; }
+
+      .auth-logo {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2rem;
+        letter-spacing: 0.05em;
+        color: #fff;
+        text-decoration: none;
+        display: inline-block;
+        margin-bottom: 3rem;
+      }
+      .auth-logo span { color: var(--red); }
+
+      .auth-left h2 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(2.5rem, 4vw, 4rem);
+        line-height: 0.95;
+        letter-spacing: 0.02em;
+        margin-bottom: 1.25rem;
+        animation: fadeUp 0.6s ease both;
+      }
+      .auth-left h2 .accent { color: var(--red); }
+      .auth-left h2 .outline {
+        -webkit-text-stroke: 2px rgba(255,255,255,0.25);
+        color: transparent;
+      }
+
+      .auth-left p {
+        color: #6b7280;
+        font-size: 0.95rem;
+        line-height: 1.7;
+        max-width: 380px;
+        margin-bottom: 2.5rem;
+        animation: fadeUp 0.6s 0.1s ease both;
+      }
+
+      .auth-perks {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        animation: fadeUp 0.6s 0.2s ease both;
+      }
+      .auth-perk {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+        color: #9ca3af;
+      }
+      .auth-perk-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--red);
+        flex-shrink: 0;
+      }
+
+      /* RIGHT PANEL */
+      .auth-right {
+        width: 480px;
+        flex-shrink: 0;
+        background: #111215;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 3rem;
+        border-left: 1px solid var(--border);
+        animation: fadeUp 0.5s ease both;
+      }
+
+      .auth-right h3 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2rem;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.4rem;
+      }
+      .auth-right .sub {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 2rem;
+      }
+
+      .flash-msg {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        margin-bottom: 1.25rem;
+      }
+      .flash-danger  { background: rgba(232,64,28,0.12); border: 1px solid rgba(232,64,28,0.3); color: #f87171; }
+      .flash-success { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  color: #86efac; }
+
+      .field-group { margin-bottom: 1.25rem; }
+      .field-group label {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #9ca3af;
+        margin-bottom: 0.4rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .field-group input {
+        width: 100%;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        color: #fff;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.95rem;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+      }
+      .field-group input::placeholder { color: #374151; }
+      .field-group input:focus {
+        border-color: var(--red);
+        background: rgba(232,64,28,0.05);
+      }
+
+      .pass-wrap { position: relative; }
+      .pass-wrap input { padding-right: 3.5rem; }
+      .pass-toggle {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6b7280;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        transition: color 0.15s;
+      }
+      .pass-toggle:hover { color: #fff; }
+
+      .btn-auth {
+        width: 100%;
+        background: var(--red);
+        color: #fff;
+        border: none;
+        padding: 0.875rem;
+        border-radius: 8px;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 0.5rem;
+      }
+      .btn-auth:hover {
+        background: #c73418;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(232,64,28,0.3);
+      }
+
+      .auth-divider {
+        text-align: center;
+        color: #374151;
+        font-size: 0.8rem;
+        margin: 1.5rem 0;
+        position: relative;
+      }
+      .auth-divider::before, .auth-divider::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 44%;
+        height: 1px;
+        background: rgba(255,255,255,0.07);
+      }
+      .auth-divider::before { left: 0; }
+      .auth-divider::after  { right: 0; }
+
+      .auth-switch {
+        text-align: center;
+        font-size: 0.875rem;
+        color: #6b7280;
+      }
+      .auth-switch a {
+        color: var(--red);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .auth-switch a:hover { text-decoration: underline; }
+
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 768px) {
+        .auth-left { display: none; }
+        .auth-right { width: 100%; padding: 2rem 1.5rem; }
+      }
+    </style>
+</head>
+<body>
+
+<div class="auth-wrap">
+
+  <!-- LEFT PANEL -->
+  <div class="auth-left">
+    <div class="auth-left-bg"></div>
+    <div class="auth-left-content">
+      <a href="{{ url_for('home') }}" class="auth-logo">MOTO<span>TYRE</span></a>
+      <h2>
+        WELCOME<br>
+        <span class="accent">BACK</span><br>
+        <span class="outline">RIDER.</span>
+      </h2>
+      <p>Sign in to manage your appointments, track your orders, and keep your motorcycle in top shape.</p>
+      <div class="auth-perks">
+        <div class="auth-perk"><div class="auth-perk-dot"></div> Book service appointments online</div>
+        <div class="auth-perk"><div class="auth-perk-dot"></div> Order tires and parts anytime</div>
+        <div class="auth-perk"><div class="auth-perk-dot"></div> Track your booking status live</div>
+        <div class="auth-perk"><div class="auth-perk-dot"></div> Manage your motorcycle profile</div>
+      </div>
     </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="auth-right">
+    <h3>Sign In</h3>
+    <p class="sub">Enter your credentials to access your account</p>
+    <form method="POST" action="{{ url_for('login') }}">
+      <div class="field-group">
+        <label>Email Address</label>
+        <input type="email" name="email" placeholder="you@email.com" required>
+      </div>
+
+      <div class="field-group">
+        <label>Password</label>
+        <div class="pass-wrap">
+          <input type="password" name="password" id="loginPass" placeholder="Your password" required>
+          <button type="button" class="pass-toggle" id="loginEye" onclick="toggleLoginPass()">Show</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-auth">Sign In →</button>
+    </form>
+
+    <div class="auth-divider">or</div>
+
+    <div class="auth-switch">
+      Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
+    </div>
+  </div>
+
 </div>
-{% endblock %}
+
+<script>
+  function toggleLoginPass() {
+    const p = document.getElementById('loginPass');
+    const eye = document.getElementById('loginEye');
+    p.type = p.type === 'password' ? 'text' : 'password';
+    eye.textContent = p.type === 'password' ? 'Show' : 'Hide';
+  }
+</script>
+
+</body>
+</html>

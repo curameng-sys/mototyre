@@ -6,6 +6,8 @@ from datetime import datetime
 from flask import jsonify
 from sqlalchemy import func
 from datetime import date as date_today
+import uuid
+from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__)
@@ -30,6 +32,7 @@ class User(db.Model, UserMixin):
     role = db.Column(db.String(20), default='customer')
     motorcycle_plate = db.Column(db.String(20), nullable=True)
     motorcycle_model = db.Column(db.String(100), nullable=True)
+    profile_pic = db.Column(db.String(255), nullable=True)  # ← ADD THIS
     bookings = db.relationship('Booking', backref='customer', lazy=True)
     orders = db.relationship('Order', backref='customer', lazy=True)
 
@@ -83,7 +86,7 @@ class OrderItem(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 with app.app_context():
     db.create_all()
@@ -94,7 +97,7 @@ with app.app_context():
 
 @app.route('/')
 def home():
-    return redirect(url_for('login'))
+    return render_template('landing.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -104,9 +107,12 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             login_user(user)
-            if user.role in ['admin', 'staff']:
+            if user.role == 'admin':
                 return redirect(url_for('admin_dashboard'))
-            return redirect(url_for('customer_dashboard'))
+            elif user.role == 'staff':                        
+                return redirect(url_for('staff_dashboard'))   
+            else:
+                return redirect(url_for('customer_dashboard'))
         flash('Invalid email or password.', 'danger')
     return render_template('login.html')
 
@@ -220,8 +226,59 @@ def customer_profile():
         current_user.motorcycle_plate = request.form.get('motorcycle_plate')
         db.session.commit()
         flash('Profile updated successfully!', 'success')
+    return redirect(url_for('customer_dashboard'))  
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/profile/upload-pic', methods=['POST'])
+@login_required
+def upload_profile_pic():
+    if 'profile_pic' not in request.files:
+        flash('No file selected.', 'danger')
+    else:
+        file = request.files['profile_pic']
+        if file.filename == '':
+            flash('No file selected.', 'danger')
+        elif file and allowed_file(file.filename):
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            filename = f"{current_user.id}_{uuid.uuid4().hex}.{ext}"
+            upload_folder = os.path.join(app.root_path, 'static', 'profile_pics')
+            os.makedirs(upload_folder, exist_ok=True)
+            file.save(os.path.join(upload_folder, filename))
+            current_user.profile_pic = filename
+            db.session.commit()
+            db.session.refresh(current_user)  # ← forces fresh user data
+            flash('Profile picture updated!', 'success')
+        else:
+            flash('Invalid file type.', 'danger')
+
+    if current_user.role == 'admin':
+        return redirect(url_for('admin_dashboard'))
+    elif current_user.role == 'staff':
+        return redirect(url_for('staff_dashboard'))
+    else:
         return redirect(url_for('customer_dashboard'))
-    return render_template('customer_dashboard.html')
+
+@app.route('/admin/update-profile', methods=['POST'])
+@login_required
+def update_admin_profile():
+    current_user.fullname = request.form['fullname']
+    current_user.phone = request.form['phone']
+    db.session.commit()
+    flash('Profile updated!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/staff/update-profile', methods=['POST'])
+@login_required
+def update_staff_profile():
+    current_user.fullname = request.form['fullname']
+    current_user.phone = request.form['phone']
+    db.session.commit()
+    flash('Profile updated!', 'success')
+    return redirect(url_for('staff_dashboard'))
 
 @app.route('/api/booked-slots')
 @login_required
@@ -257,6 +314,29 @@ def get_booked_slots():
         result[date_str].append(time_str)
 
     return jsonify(result)
+
+# ─────────────────────────────────────────
+# STAFF ROUTES
+# ─────────────────────────────────────────
+
+@app.route('/staff/dashboard')
+@login_required
+def staff_dashboard():
+    if current_user.role != 'staff':
+        return redirect(url_for('customer_dashboard'))
+    all_bookings = Booking.query.order_by(Booking.created_at.desc()).all()
+    all_orders = Order.query.order_by(Order.created_at.desc()).all()
+    all_customers = User.query.filter_by(role='customer').all()
+    all_products = Product.query.all()
+    recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(5).all()
+    booking_status_counts = dict(db.session.query(Booking.status, func.count(Booking.id)).group_by(Booking.status).all())
+    order_status_counts = dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all())
+    return render_template('staff_dashboard.html',
+        all_bookings=all_bookings, all_orders=all_orders,
+        all_customers=all_customers, all_products=all_products,
+        recent_bookings=recent_bookings, today=date_today.today(),
+        booking_status_counts=booking_status_counts,
+        order_status_counts=order_status_counts)
 
 # ─────────────────────────────────────────
 # ADMIN ROUTES
@@ -326,6 +406,75 @@ def admin_dashboard():
         all_users=all_users,
     )
 
+@app.route('/admin/booking/<int:booking_id>/status', methods=['POST'])
+@login_required
+def update_booking_status(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+    booking.status = request.form['status']
+    db.session.commit()
+    flash('Booking status updated!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/order/<int:order_id>/status', methods=['POST'])
+@login_required
+def update_order_status(order_id):
+    order = Order.query.get_or_404(order_id)
+    order.status = request.form['status']
+    db.session.commit()
+    flash('Order status updated!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/product/add', methods=['POST'])
+@login_required
+def add_product():
+    name = request.form['name']
+    category = request.form['category']
+    description = request.form.get('description', '')
+    price = float(request.form['price'])
+    stock = int(request.form['stock'])
+
+    product = Product(
+        name=name,
+        category=category,
+        description=description,
+        price=price,
+        stock=stock
+    )
+    db.session.add(product)
+    db.session.commit()
+    flash('Product added successfully!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@app.route('/admin/add-staff', methods=['POST'])  # ← add this right here
+@login_required
+def add_staff():
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    fullname = request.form['fullname']
+    email    = request.form['email']
+    phone    = request.form['phone']
+    password = request.form['password']
+
+    if User.query.filter_by(email=email).first():
+        flash('Email already exists.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    staff = User(
+        fullname=fullname,
+        email=email,
+        phone=phone,
+        role='staff'
+    )
+    staff.set_password(password)
+    db.session.add(staff)
+    db.session.commit()
+    flash(f'Staff account for {fullname} created!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+    
 # ─────────────────────────────────────────
 # TEMP: CREATE ADMIN
 # ─────────────────────────────────────────

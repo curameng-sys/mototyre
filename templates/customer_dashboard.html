@@ -1,457 +1,374 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Dashboard – Mototyre Moto Shop</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
-{% block content %}
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+    :root {
+      --ink: #0c0d0f;
+      --panel: #111215;
+      --card: #1a1d23;
+      --red: #ff0f0f;
+      --muted: #6b7280;
+      --border: rgba(255,255,255,0.07);
+      --text: #e5e7eb;
+      --green: #15803d;
+      --blue: #1d4ed8;
+    }
 
-  :root {
-    --ink: #111318;
-    --panel: #f7f6f2;
-    --white: #ffffff;
-    --accent: #e63c1e;
-    --accent2: #1d4ed8;
-    --success: #15803d;
-    --warning: #b45309;
-    --muted: #6b7280;
-    --border: #e5e3de;
-  }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--ink); color: var(--text); }
 
-  body { font-family: 'DM Sans', sans-serif; background: var(--panel); }
+    /* ── TOP NAVBAR ── */
+    .top-nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(17,18,21,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.25rem; height: 72px; gap: 1rem;
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem;
+      letter-spacing: 0.08em; color: #fff; white-space: nowrap; cursor: default;
+    }
+    .nav-logo span { color: var(--red); }
 
-  .cust-wrap {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    min-height: calc(100vh - 56px);
-  }
+    .nav-links { display: flex; align-items: center; gap: 0.5rem; flex: 1; justify-content: space-evenly; padding: 0 2rem; }
+    .nav-links a {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.55rem 1.25rem; border-radius: 10px;
+      color: var(--muted); text-decoration: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem; font-weight: 700;
+      letter-spacing: 0.03em;
+      transition: all 0.15s; white-space: nowrap;
+      border: 1px solid transparent;
+    }
+    .nav-links a:hover { color: #fff; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.08); }
+    .nav-links a.active { color: #fff; background: rgba(232,64,28,0.15); border-color: rgba(232,64,28,0.3); }
 
-  /* SIDEBAR */
-  .c-sidebar {
-    background: var(--ink);
-    padding: 1.75rem 0;
-    position: sticky;
-    top: 56px;
-    height: calc(100vh - 56px);
-    overflow-y: auto;
-  }
+    .nav-right { display: flex; align-items: center; gap: 0.75rem; }
+    .nav-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--red); display: flex; align-items: center; justify-content: center;
+      font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: #fff;
+      cursor: pointer; overflow: hidden; flex-shrink: 0;
+      border: 2px solid rgba(232,64,28,0.4); transition: border-color 0.15s;
+    }
+    .nav-avatar:hover { border-color: var(--red); }
+    .nav-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .nav-username { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: #fff; white-space: nowrap; }
+    .nav-logout-btn {
+      background: rgba(232,64,28,0.1); border: 1px solid rgba(232,64,28,0.3);
+      color: var(--red); padding: 0.5rem 1.1rem; border-radius: 8px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+      letter-spacing: 0.03em;
+    }
+    .nav-logout-btn:hover { background: var(--red); color: #fff; }
 
-  .c-sidebar-greeting {
-    padding: 0 1.25rem 1.5rem;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 0.75rem;
-  }
+    /* ── PAGE WRAP ── */
+    .page-wrap { width: 100%; padding: 2.5rem 1.25rem 4rem; }
 
-  .c-sidebar-greeting .avatar {
-    width: 44px; height: 44px;
-    background: var(--accent);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.1rem;
-    color: #fff;
-    margin-bottom: 0.6rem;
-  }
+    .c-section { display: none; }
+    .c-section.active { display: block; }
 
-  .c-sidebar-greeting .name {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: #fff;
-  }
+    /* ── HERO ── */
+    .hero-banner {
+      background: linear-gradient(135deg, #1a1d23 0%, #1e1218 50%, #1a1d23 100%);
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: 2.5rem; margin-bottom: 2rem;
+      position: relative; overflow: hidden;
+    }
+    .hero-banner::before {
+      content: ''; position: absolute; top: -60px; right: -60px;
+      width: 240px; height: 240px;
+      background: radial-gradient(circle, rgba(232,64,28,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-banner::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+      height: 3px; background: linear-gradient(90deg, var(--red), transparent);
+    }
+    .hero-greeting { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
+    .hero-name { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; line-height: 1; color: #fff; letter-spacing: 0.03em; margin-bottom: 0.6rem; }
+    .hero-name span { color: var(--red); }
+    .hero-sub { font-size: 0.875rem; color: var(--muted); max-width: 360px; }
+    .hero-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    .hero-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.65rem 1.4rem; border-radius: 10px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
+      cursor: pointer; border: none; transition: all 0.2s; text-decoration: none;
+    }
+    .hero-btn.primary { background: var(--red); color: #fff; }
+    .hero-btn.primary:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(232,64,28,0.3); }
+    .hero-btn.secondary { background: rgba(255,255,255,0.07); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+    .hero-btn.secondary:hover { background: rgba(255,255,255,0.12); transform: translateY(-2px); }
+    .hero-bike { font-size: 6rem; opacity: 0.12; position: absolute; right: 2rem; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; }
 
-  .c-sidebar-greeting .role {
-    font-size: 0.72rem;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
+    /* ── STATS ── */
+    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 1.5rem; position: relative; overflow: hidden;
+      transition: all 0.2s; cursor: default;
+    }
+    .stat-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
+    .stat-icon-wrap { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem; }
+    .stat-icon-wrap.red { background: rgba(232,64,28,0.15); }
+    .stat-icon-wrap.blue { background: rgba(29,78,216,0.15); }
+    .stat-icon-wrap.green { background: rgba(21,128,61,0.15); }
+    .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: #fff; line-height: 1; margin-bottom: 0.25rem; }
+    .stat-lbl { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+    .stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
+    .stat-card.red::after { background: var(--red); }
+    .stat-card.blue::after { background: var(--blue); }
+    .stat-card.green::after { background: var(--green); }
 
-  .c-sidebar-label {
-    font-size: 0.62rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #4b5563;
-    padding: 0 1.25rem;
-    margin: 1.25rem 0 0.4rem;
-    font-family: 'Syne', sans-serif;
-  }
+    /* ── SECTION HEADER ── */
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+    .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; color: #fff; line-height: 1; }
+    .section-title span { color: var(--red); }
+    .section-sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
+    .section-link { font-size: 0.8rem; color: var(--red); text-decoration: none; font-weight: 600; font-family: 'Syne', sans-serif; }
+    .section-link:hover { color: #ff5533; }
 
-  .c-sidebar a {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.6rem 1.25rem;
-    color: #9ca3af;
-    text-decoration: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-left: 3px solid transparent;
-    transition: all 0.15s;
-  }
+    /* ── QUICK ACTIONS ── */
+    .quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .quick-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 1.5rem; cursor: pointer; text-decoration: none;
+      transition: all 0.2s; display: flex; align-items: center; gap: 1.25rem;
+      position: relative; overflow: hidden;
+    }
+    .quick-card::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+    .quick-card.red::after { background: var(--red); }
+    .quick-card.blue::after { background: var(--blue); }
+    .quick-card.green::after { background: var(--green); }
+    .quick-card.orange::after { background: #f97316; }
+    .quick-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
+    .quick-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+    .quick-icon.red { background: rgba(232,64,28,0.15); }
+    .quick-icon.blue { background: rgba(29,78,216,0.15); }
+    .quick-icon.green { background: rgba(21,128,61,0.15); }
+    .quick-icon.orange { background: rgba(249,115,22,0.15); }
+    .quick-label { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: #fff; margin-bottom: 0.2rem; }
+    .quick-sub { font-size: 0.78rem; color: var(--muted); }
+    .quick-arrow { margin-left: auto; color: var(--muted); font-size: 1.1rem; }
 
-  .c-sidebar a:hover, .c-sidebar a.active {
-    color: #fff;
-    background: rgba(255,255,255,0.05);
-    border-left-color: var(--accent);
-  }
+    /* ── CARDS ── */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .card-head h5 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: #fff; margin: 0; }
+    .card-head a { font-size: 0.78rem; color: var(--red); text-decoration: none; font-weight: 600; font-family: 'Syne', sans-serif; }
+    .card-body { padding: 1.5rem; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
 
-  /* MAIN */
-  .c-main { padding: 2rem 2rem; overflow-x: hidden; }
+    /* ── TABLE ── */
+    .table { width: 100%; --bs-table-bg: transparent; --bs-table-hover-bg: rgba(255,255,255,0.03); color: var(--text); font-size: 0.875rem; margin: 0; }
+    .table > :not(caption) > * > * { background-color: transparent !important; color: inherit; }
+    .table thead th { font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0.75rem 1rem; }
+    .table tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+    .table tbody tr:last-child td { border-bottom: none; }
+    .table tbody tr:hover td { background: rgba(255,255,255,0.03) !important; }
 
-  .c-section { display: none; }
-  .c-section.active { display: block; }
+    /* ── BADGES ── */
+    .badge { font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; padding: 0.3em 0.65em; border-radius: 6px; text-transform: uppercase; }
+    .badge-pending   { background: rgba(180,83,9,0.2);   color: #fbbf24; border: 1px solid rgba(180,83,9,0.3); }
+    .badge-confirmed { background: rgba(29,78,216,0.2);  color: #93c5fd; border: 1px solid rgba(29,78,216,0.3); }
+    .badge-completed { background: rgba(21,128,61,0.2);  color: #86efac; border: 1px solid rgba(21,128,61,0.3); }
+    .badge-cancelled { background: rgba(220,38,38,0.15); color: #fca5a5; border: 1px solid rgba(220,38,38,0.2); }
+    .badge-processing{ background: rgba(124,58,237,0.2); color: #c4b5fd; border: 1px solid rgba(124,58,237,0.3); }
+    .badge-shipped   { background: rgba(6,182,212,0.2);  color: #67e8f9; border: 1px solid rgba(6,182,212,0.3); }
 
-  .page-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: var(--ink);
-    margin-bottom: 0.2rem;
-  }
-  .page-sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.75rem; }
+    /* ── FORMS ── */
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.4rem; font-family: 'Syne', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.65rem 0.9rem; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.15s; outline: none; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--red); }
+    .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .form-group select option { background: #1a1d23; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
+    .btn-submit { background: var(--red); color: #fff; border: none; padding: 0.7rem 1.75rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.5rem; }
+    .btn-submit:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,64,28,0.3); }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
-  /* STAT CARDS */
-  .stat-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.75rem;
-  }
+    /* ── EMPTY ── */
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state p { font-size: 0.88rem; }
+    .empty-state a { color: var(--red); text-decoration: none; font-weight: 600; }
 
-  .stat-card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.25rem;
-    position: relative;
-    overflow: hidden;
-  }
+    /* ── PRODUCTS ── */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .product-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; transition: all 0.2s; }
+    .product-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-3px); }
+    .product-icon { font-size: 2rem; margin-bottom: 0.25rem; }
+    .product-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: #fff; }
+    .product-cat { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .product-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--red); }
+    .product-stock { font-size: 0.75rem; color: #6b7280; }
+    .btn-order { margin-top: auto; background: rgba(232,64,28,0.12); border: 1px solid rgba(232,64,28,0.25); color: var(--red); padding: 0.55rem 1rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; width: 100%; }
+    .btn-order:hover { background: var(--red); color: #fff; }
 
-  .stat-card::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 3px;
-  }
-  .stat-card.red::after { background: var(--accent); }
-  .stat-card.blue::after { background: var(--accent2); }
-  .stat-card.green::after { background: var(--success); }
+    /* ── CALENDAR ── */
+    .book-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .cal-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.75rem; color: var(--muted); }
+    .cal-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+    .cal-day { aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 500; cursor: default; border: 1px solid transparent; transition: all 0.15s; background: rgba(255,255,255,0.03); color: var(--muted); }
+    .cal-day.empty { background: transparent; border-color: transparent; }
+    .cal-day.today { border-color: rgba(232,64,28,0.4); color: var(--red); font-weight: 700; }
+    .cal-day.available { background: rgba(21,128,61,0.12); border-color: rgba(21,128,61,0.2); color: #86efac; cursor: pointer; }
+    .cal-day.available:hover { background: rgba(21,128,61,0.25); border-color: rgba(21,128,61,0.4); }
+    .cal-day.past { opacity: 0.3; }
+    .cal-day.fully-booked { background: rgba(232,64,28,0.12); border-color: rgba(232,64,28,0.2); color: #fca5a5; }
+    .cal-day.selected { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; font-weight: 700; }
+    .time-slot-btn { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text); border-radius: 8px; padding: 0.5rem 0.25rem; font-size: 0.78rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .time-slot-btn:hover:not(:disabled) { background: rgba(232,64,28,0.12); border-color: rgba(232,64,28,0.3); color: var(--red); }
+    .time-slot-btn.booked { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
+    .time-slot-btn.selected-slot { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
 
-  .stat-icon { font-size: 1.4rem; margin-bottom: 0.5rem; }
-  .stat-val {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--ink);
-    line-height: 1;
-  }
-  .stat-lbl { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+    /* ── SETTINGS ── */
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .pic-upload-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 1.5rem; border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; margin-bottom: 1.5rem; background: rgba(255,255,255,0.02); transition: border-color 0.2s; }
+    .pic-upload-wrap:hover { border-color: rgba(255,255,255,0.3); }
+    .pic-preview { width: 90px; height: 90px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: #fff; overflow: hidden; }
+    .pic-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .pic-upload-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 0.5rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
+    .pic-upload-btn:hover { background: rgba(255,255,255,0.12); }
+    .pic-upload-hint { font-size: 0.75rem; color: var(--muted); text-align: center; }
 
-  /* CARD */
-  .card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 1.5rem;
-  }
+    /* ── MODAL ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 420px; max-width: 95vw; animation: fadeUp 0.2s ease both; }
+    .modal-box h5 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.04em; margin-bottom: 1.25rem; color: #fff; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+    .btn-cancel-modal { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--muted); padding: 0.6rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
+    .btn-cancel-modal:hover { color: #fff; }
 
-  .card-head {
-    padding: 1.1rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 
-  .card-head h5 {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin: 0;
-    color: var(--ink);
-  }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .stat-row { grid-template-columns: 1fr 1fr; }
+      .quick-actions, .two-col, .book-grid, .settings-grid { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .hero-bike { display: none; }
+    }
+  </style>
+</head>
+<body>
 
-  .card-body { padding: 1.5rem; }
+<!-- ═══ TOP NAVBAR ═══ -->
+<nav class="top-nav">
+  <div class="nav-logo">MOTO<span>TYRE</span></div>
 
-  /* FORM */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .form-group { margin-bottom: 1rem; }
-  .form-group.full { grid-column: 1 / -1; }
-  .form-group label {
-    display: block;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--muted);
-    margin-bottom: 0.3rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    width: 100%;
-    padding: 0.6rem 0.875rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-family: 'DM Sans', sans-serif;
-    color: var(--ink);
-    background: #fff;
-    outline: none;
-    transition: border 0.15s;
-  }
-  .form-group input:focus,
-  .form-group select:focus,
-  .form-group textarea:focus { border-color: var(--accent2); }
-
-  .btn-submit {
-    background: var(--ink);
-    color: #fff;
-    border: none;
-    padding: 0.65rem 1.5rem;
-    border-radius: 8px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .btn-submit:hover { background: var(--accent); }
-
-  /* TABLE */
-  .table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-  .table th {
-    text-align: left;
-    padding: 0.7rem 1rem;
-    font-family: 'Syne', sans-serif;
-    font-size: 0.68rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    border-bottom: 2px solid var(--border);
-  }
-  .table td {
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid var(--border);
-    color: var(--ink);
-    vertical-align: middle;
-  }
-  .table tr:last-child td { border-bottom: none; }
-  .table tr:hover td { background: #fafaf8; }
-
-  /* BADGES */
-  .badge {
-    display: inline-block;
-    padding: 0.2rem 0.65rem;
-    border-radius: 99px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-  }
-  .badge-pending { background: #fef3c7; color: #92400e; }
-  .badge-confirmed { background: #dbeafe; color: #1e40af; }
-  .badge-completed { background: #dcfce7; color: #15803d; }
-  .badge-cancelled { background: #fee2e2; color: #991b1b; }
-  .badge-processing { background: #ede9fe; color: #6d28d9; }
-  .badge-shipped { background: #cffafe; color: #0e7490; }
-
-  /* PRODUCT GRID */
-  .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.25rem;
-  }
-
-  .product-card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    transition: box-shadow 0.15s;
-  }
-  .product-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-
-  .product-icon { font-size: 2rem; }
-  .product-name {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--ink);
-  }
-  .product-cat { font-size: 0.75rem; color: var(--muted); }
-  .product-price {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.1rem;
-    color: var(--accent);
-  }
-  .product-stock { font-size: 0.75rem; color: var(--success); }
-
-  .btn-order {
-    margin-top: auto;
-    background: var(--ink);
-    color: #fff;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .btn-order:hover { background: var(--accent); }
-
-  /* MODAL */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal-box {
-    background: #fff;
-    border-radius: 16px;
-    padding: 2rem;
-    width: 420px;
-    max-width: 95vw;
-  }
-  .modal-box h5 {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: 1.25rem;
-    color: var(--ink);
-  }
-  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
-  .btn-cancel-modal {
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: #fff;
-    cursor: pointer;
-    font-size: 0.875rem;
-    color: var(--ink);
-  }
-
-  /* PROFILE */
-  .profile-header {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-  }
-  .profile-avatar {
-    width: 72px; height: 72px;
-    background: var(--accent);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.75rem;
-    color: #fff;
-    flex-shrink: 0;
-  }
-  .profile-name {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.4rem;
-    color: var(--ink);
-  }
-  .profile-email { color: var(--muted); font-size: 0.875rem; }
-
-  /* EMPTY STATE */
-  .empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: var(--muted);
-  }
-  .empty-state .empty-icon { font-size: 3rem; margin-bottom: 0.75rem; }
-  .empty-state p { font-size: 0.9rem; }
-
-  @media (max-width: 768px) {
-    .cust-wrap { grid-template-columns: 1fr; }
-    .c-sidebar { display: none; }
-    .form-grid { grid-template-columns: 1fr; }
-  }
-</style>
-
-<div class="cust-wrap" style="margin: -1.5rem -12px 0;">
-
-  <!-- SIDEBAR -->
-  <aside class="c-sidebar">
-    <div class="c-sidebar-greeting">
-      <div class="avatar">{{ current_user.fullname[0].upper() }}</div>
-      <div class="name">{{ current_user.fullname }}</div>
-      <div class="role">Customer</div>
-    </div>
-
-    <div class="c-sidebar-label">Main</div>
-    <a href="#" class="active" onclick="showSection('overview', this)">🏠 Overview</a>
-
-    <div class="c-sidebar-label">Services</div>
-    <a href="#" onclick="showSection('book', this)">📅 Book Appointment</a>
+  <div class="nav-links">
+    <a href="#" class="active" onclick="showSection('overview', this)">🏠 Home</a>
+    <a href="#" onclick="showSection('book', this)">📅 Book</a>
     <a href="#" onclick="showSection('bookings', this)">📋 My Bookings</a>
-
-    <div class="c-sidebar-label">Shop</div>
-    <a href="#" onclick="showSection('shop', this)">🛒 Order Parts</a>
+    <a href="#" onclick="showSection('shop', this)">🛒 Shop</a>
     <a href="#" onclick="showSection('orders', this)">📦 My Orders</a>
+  </div>
 
-    <div class="c-sidebar-label">Account</div>
-    <a href="#" onclick="showSection('profile', this)">👤 My Profile</a>
-    <a href="{{ url_for('logout') }}">🚪 Logout</a>
-  </aside>
+  <div class="nav-right">
+    <div class="nav-avatar" onclick="showSection('profile', null)" title="Account Settings">
+      {% if current_user.profile_pic %}
+        <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="Profile">
+      {% else %}
+        {{ current_user.fullname[0].upper() }}
+      {% endif %}
+    </div>
+    <span class="nav-username">{{ current_user.fullname.split()[0] }}</span>
+    <button class="nav-logout-btn" onclick="document.getElementById('modal-logout').style.display='flex'">Logout</button>
+  </div>
+</nav>
 
-  <!-- MAIN -->
-  <main class="c-main">
+<!-- ═══ CONTENT ═══ -->
+<div class="page-wrap">
 
-    <!-- ===== OVERVIEW ===== -->
-    <section id="sec-overview" class="c-section active">
-      <div class="page-title">Welcome, {{ current_user.fullname.split()[0] }}! 👋</div>
-      <div class="page-sub">Here's a summary of your activity at Mototyre Moto Shop.</div>
+  <!-- ── OVERVIEW ── -->
+  <section id="sec-overview" class="c-section active">
 
-      <div class="stat-row">
-        <div class="stat-card red">
-          <div class="stat-icon">📅</div>
-          <div class="stat-val">{{ bookings|length }}</div>
-          <div class="stat-lbl">Total Bookings</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-icon">📦</div>
-          <div class="stat-val">{{ orders|length }}</div>
-          <div class="stat-lbl">Total Orders</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-icon">🏍️</div>
-          <div class="stat-val">{{ current_user.motorcycle_model or '—' }}</div>
-          <div class="stat-lbl">My Motorcycle</div>
+    <div class="hero-banner">
+      <div>
+        <div class="hero-greeting">Welcome back</div>
+        <div class="hero-name">{{ current_user.fullname.split()[0].upper() }} <span>!</span></div>
+        <div class="hero-sub">Manage your bookings, orders, and profile all in one place.</div>
+        <div class="hero-actions">
+          <button class="hero-btn primary" onclick="showSection('book', null)">📅 Book Appointment</button>
+          <button class="hero-btn secondary" onclick="showSection('shop', null)">🛒 Order Parts</button>
         </div>
       </div>
+      <div class="hero-bike">🏍️</div>
+    </div>
 
-      <!-- Recent Bookings -->
+    <div class="stat-row">
+      <div class="stat-card red">
+        <div class="stat-icon-wrap red">📅</div>
+        <div class="stat-val">{{ bookings|length }}</div>
+        <div class="stat-lbl">Total Bookings</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-icon-wrap blue">📦</div>
+        <div class="stat-val">{{ orders|length }}</div>
+        <div class="stat-lbl">Total Orders</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-icon-wrap green">🏍️</div>
+        <div class="stat-val" style="font-size:1.1rem;padding-top:0.4rem;">{{ current_user.motorcycle_model or '—' }}</div>
+        <div class="stat-lbl">My Motorcycle</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">QUICK <span>ACTIONS</span></div>
+    </div>
+    <div class="quick-actions">
+      <a class="quick-card red" href="#" onclick="showSection('book', null)">
+        <div class="quick-icon red">📅</div>
+        <div><div class="quick-label">Book Appointment</div><div class="quick-sub">Schedule a service for your bike</div></div>
+        <div class="quick-arrow">›</div>
+      </a>
+      <a class="quick-card blue" href="#" onclick="showSection('bookings', null)">
+        <div class="quick-icon blue">📋</div>
+        <div><div class="quick-label">My Bookings</div><div class="quick-sub">Track all your appointments</div></div>
+        <div class="quick-arrow">›</div>
+      </a>
+      <a class="quick-card green" href="#" onclick="showSection('shop', null)">
+        <div class="quick-icon green">🛒</div>
+        <div><div class="quick-label">Order Parts</div><div class="quick-sub">Browse motorcycle parts & accessories</div></div>
+        <div class="quick-arrow">›</div>
+      </a>
+      <a class="quick-card orange" href="#" onclick="showSection('orders', null)">
+        <div class="quick-icon orange">📦</div>
+        <div><div class="quick-label">My Orders</div><div class="quick-sub">Track your parts orders</div></div>
+        <div class="quick-arrow">›</div>
+      </a>
+    </div>
+
+    <div class="two-col">
       <div class="card">
-        <div class="card-head">
-          <h5>Recent Bookings</h5>
-          <a href="#" onclick="showSection('book', document.querySelector('.c-sidebar a:nth-child(5)'))" style="font-size:0.8rem;color:var(--accent);text-decoration:none;font-weight:600;">+ Book Now</a>
-        </div>
+        <div class="card-head"><h5>Recent Bookings</h5><a href="#" onclick="showSection('book', null)">+ Book Now</a></div>
         {% if bookings %}
         <div style="overflow-x:auto;">
           <table class="table">
-            <thead><tr><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+            <thead><tr><th>Service</th><th>Date</th><th>Status</th></tr></thead>
             <tbody>
-              {% for b in bookings[:3] %}
+              {% for b in bookings[:4] %}
               <tr>
                 <td>{{ b.service }}</td>
-                <td>{{ b.date.strftime('%b %d, %Y') }}</td>
-                <td>{{ b.time.strftime('%I:%M %p') }}</td>
+                <td>{{ b.date.strftime('%b %d') }}</td>
                 <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
               </tr>
               {% endfor %}
@@ -459,29 +376,21 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state">
-          <div class="empty-icon">📅</div>
-          <p>No bookings yet. <a href="#" onclick="showSection('book', null)" style="color:var(--accent)">Book your first appointment!</a></p>
-        </div>
+        <div class="empty-state"><div class="empty-icon">📅</div><p>No bookings yet. <a href="#" onclick="showSection('book', null)">Book now!</a></p></div>
         {% endif %}
       </div>
 
-      <!-- Recent Orders -->
       <div class="card">
-        <div class="card-head">
-          <h5>Recent Orders</h5>
-          <a href="#" onclick="showSection('shop', null)" style="font-size:0.8rem;color:var(--accent);text-decoration:none;font-weight:600;">+ Order Parts</a>
-        </div>
+        <div class="card-head"><h5>Recent Orders</h5><a href="#" onclick="showSection('shop', null)">+ Order Parts</a></div>
         {% if orders %}
         <div style="overflow-x:auto;">
           <table class="table">
-            <thead><tr><th>Order #</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
+            <thead><tr><th>Order #</th><th>Total</th><th>Status</th></tr></thead>
             <tbody>
-              {% for o in orders[:3] %}
+              {% for o in orders[:4] %}
               <tr>
                 <td>ORD-{{ '%03d'|format(o.id) }}</td>
                 <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
-                <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
                 <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
               </tr>
               {% endfor %}
@@ -489,508 +398,366 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state">
-          <div class="empty-icon">📦</div>
-          <p>No orders yet. <a href="#" onclick="showSection('shop', null)" style="color:var(--accent)">Browse our parts!</a></p>
-        </div>
+        <div class="empty-state"><div class="empty-icon">📦</div><p>No orders yet. <a href="#" onclick="showSection('shop', null)">Shop now!</a></p></div>
         {% endif %}
       </div>
-    </section>
-
-    <!-- ===== BOOK APPOINTMENT ===== -->
-    <!-- ===== BOOK APPOINTMENT (with Calendar) ===== -->
-<section id="sec-book" class="c-section">
-  <div class="page-title">Book an Appointment</div>
-  <div class="page-sub">Pick an available date then choose your time slot.</div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
-
-    <!-- CALENDAR -->
-    <div class="card">
-      <div class="card-head">
-        <h5 id="cal-month-label">Month Year</h5>
-        <div style="display:flex;gap:0.5rem;">
-          <button onclick="changeMonth(-1)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.9rem;">‹</button>
-          <button onclick="changeMonth(1)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.9rem;">›</button>
-        </div>
-      </div>
-      <div class="card-body" style="padding:1rem;">
-
-        <!-- Legend -->
-        <div style="display:flex;gap:1rem;margin-bottom:1rem;font-size:0.75rem;flex-wrap:wrap;">
-          <span style="display:flex;align-items:center;gap:0.35rem;"><span style="width:12px;height:12px;border-radius:3px;background:#dcfce7;border:1px solid #16a34a;display:inline-block;"></span> Available</span>
-          <span style="display:flex;align-items:center;gap:0.35rem;"><span style="width:12px;height:12px;border-radius:3px;background:#fee2e2;border:1px solid #e63c1e;display:inline-block;"></span> Fully Booked</span>
-          <span style="display:flex;align-items:center;gap:0.35rem;"><span style="width:12px;height:12px;border-radius:3px;background:#f3f4f6;border:1px solid #d1d5db;display:inline-block;"></span> Unavailable</span>
-          <span style="display:flex;align-items:center;gap:0.35rem;"><span style="width:12px;height:12px;border-radius:3px;background:#1d4ed8;display:inline-block;"></span> Selected</span>
-        </div>
-
-        <!-- Day headers -->
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
-          {% for d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}
-          <div style="text-align:center;font-size:0.68rem;font-weight:700;color:var(--muted);font-family:'Syne',sans-serif;padding:4px 0;">{{ d }}</div>
-          {% endfor %}
-        </div>
-
-        <!-- Calendar grid -->
-        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
-
-        <div id="cal-selected-info" style="margin-top:1rem;font-size:0.82rem;color:var(--muted);text-align:center;min-height:20px;"></div>
-      </div>
     </div>
 
-    <!-- BOOKING FORM -->
-    <div class="card">
-      <div class="card-head"><h5>Booking Details</h5></div>
-      <div class="card-body">
-        <form method="POST" action="{{ url_for('book_service') }}" id="booking-form">
+  </section>
 
-          <div class="form-group">
-            <label>Selected Date</label>
-            <input type="text" id="selected-date-display" placeholder="Click a date on the calendar" disabled style="background:#f9f9f9;">
-            <input type="hidden" name="date" id="selected-date-value" required>
-          </div>
-
-          <div class="form-group">
-            <label>Available Time Slots</label>
-            <div id="time-slots-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;min-height:60px;">
-              <div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">
-                Please select a date first.
-              </div>
-            </div>
-            <input type="hidden" name="time" id="selected-time-value" required>
-          </div>
-
-          <div class="form-group">
-            <label>Service Type</label>
-            <select name="service" required>
-              <option value="">-- Select Service --</option>
-              <option>Oil Change</option>
-              <option>Tire Replacement</option>
-              <option>General Checkup</option>
-              <option>Brake Service</option>
-              <option>Chain Cleaning</option>
-              <option>Engine Tune-up</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Motorcycle Model</label>
-            <input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i">
-          </div>
-
-          <div class="form-group">
-            <label>Plate Number</label>
-            <input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
-          </div>
-
-          <div class="form-group">
-            <label>Additional Notes</label>
-            <textarea name="notes" rows="2" placeholder="Describe your concern..."></textarea>
-          </div>
-
-          <button type="submit" class="btn-submit" id="btn-book" disabled style="opacity:0.5;cursor:not-allowed;">📅 Confirm Booking</button>
-        </form>
-      </div>
+  <!-- ── BOOK ── -->
+  <section id="sec-book" class="c-section">
+    <div class="section-head">
+      <div><div class="section-title">BOOK AN <span>APPOINTMENT</span></div><div class="section-sub">Pick an available date then choose your time slot.</div></div>
     </div>
-
-  </div>
-</section>
-
-<style>
-  .cal-day {
-    aspect-ratio: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.12s;
-    font-family: 'Syne', sans-serif;
-  }
-  .cal-day.empty { background: none; border: none; cursor: default; }
-  .cal-day.past { background: #f9fafb; color: #d1d5db; cursor: not-allowed; }
-  .cal-day.available { background: #dcfce7; color: #15803d; border-color: #86efac; }
-  .cal-day.available:hover { background: #bbf7d0; transform: scale(1.05); }
-  .cal-day.fully-booked { background: #fee2e2; color: #991b1b; border-color: #fca5a5; cursor: not-allowed; }
-  .cal-day.today { outline: 2px solid #1d4ed8; outline-offset: 1px; }
-  .cal-day.selected { background: #1d4ed8 !important; color: #fff !important; border-color: #1d4ed8 !important; }
-
-  .time-slot-btn {
-    padding: 0.4rem 0.25rem;
-    border-radius: 7px;
-    border: 1px solid var(--border);
-    background: #fff;
-    font-size: 0.72rem;
-    font-weight: 600;
-    font-family: 'Syne', sans-serif;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.12s;
-    color: var(--ink);
-  }
-  .time-slot-btn:hover:not(.booked) { background: #dbeafe; border-color: #1d4ed8; color: #1d4ed8; }
-  .time-slot-btn.booked { background: #fee2e2; color: #fca5a5; cursor: not-allowed; text-decoration: line-through; }
-  .time-slot-btn.selected-slot { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
-</style>
-
-<script>
-const ALL_SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
-const SLOT_LABELS = {'08:00':'8:00 AM','09:00':'9:00 AM','10:00':'10:00 AM','11:00':'11:00 AM','12:00':'12:00 PM','13:00':'1:00 PM','14:00':'2:00 PM','15:00':'3:00 PM','16:00':'4:00 PM','17:00':'5:00 PM','18:00':'6:00 PM','19:00':'7:00 PM'};
-
-let currentYear, currentMonth, selectedDate = null, selectedTime = null;
-let bookedData = {}; // { 'YYYY-MM-DD': ['HH:MM', ...] }
-
-const today = new Date();
-today.setHours(0,0,0,0);
-currentYear = today.getFullYear();
-currentMonth = today.getMonth();
-
-async function fetchBookedSlots(year, month) {
-  try {
-    const res = await fetch(`/api/booked-slots?year=${year}&month=${month+1}`);
-    const data = await res.json();
-    bookedData = data;
-  } catch(e) {
-    bookedData = {};
-  }
-}
-
-function isFullyBooked(dateStr) {
-  const slots = bookedData[dateStr] || [];
-  return slots.length >= ALL_SLOTS.length;
-}
-
-async function renderCalendar() {
-  await fetchBookedSlots(currentYear, currentMonth);
-
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('cal-month-label').textContent = `${monthNames[currentMonth]} ${currentYear}`;
-
-  const grid = document.getElementById('cal-grid');
-  grid.innerHTML = '';
-
-  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-  // Empty cells
-  for (let i = 0; i < firstDay; i++) {
-    const empty = document.createElement('div');
-    empty.className = 'cal-day empty';
-    grid.appendChild(empty);
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateObj = new Date(currentYear, currentMonth, d);
-    dateObj.setHours(0,0,0,0);
-    const mm = String(currentMonth+1).padStart(2,'0');
-    const dd = String(d).padStart(2,'0');
-    const dateStr = `${currentYear}-${mm}-${dd}`;
-    const dayOfWeek = dateObj.getDay();
-    const isSunday = dayOfWeek === 0;
-    const isPast = dateObj < today;
-
-    const cell = document.createElement('div');
-    cell.className = 'cal-day';
-    cell.textContent = d;
-
-    if (dateObj.getTime() === today.getTime()) cell.classList.add('today');
-
-    if (isPast || isSunday) {
-      cell.classList.add('past');
-      cell.title = isSunday ? 'Closed on Sundays' : 'Past date';
-    } else if (isFullyBooked(dateStr)) {
-      cell.classList.add('fully-booked');
-      cell.title = 'Fully booked';
-    } else {
-      cell.classList.add('available');
-      cell.title = 'Available';
-      cell.onclick = () => selectDate(dateStr, d, cell);
-    }
-
-    if (selectedDate === dateStr) cell.classList.add('selected');
-    grid.appendChild(cell);
-  }
-}
-
-function selectDate(dateStr, day, cell) {
-  selectedDate = dateStr;
-  selectedTime = null;
-  document.getElementById('selected-date-value').value = dateStr;
-
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const displayDate = `${monthNames[currentMonth]} ${day}, ${currentYear}`;
-  document.getElementById('selected-date-display').value = displayDate;
-  document.getElementById('cal-selected-info').textContent = `Selected: ${displayDate}`;
-  document.getElementById('selected-time-value').value = '';
-  document.getElementById('btn-book').disabled = true;
-  document.getElementById('btn-book').style.opacity = '0.5';
-  document.getElementById('btn-book').style.cursor = 'not-allowed';
-
-  // Highlight selected cell
-  document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
-  cell.classList.add('selected');
-
-  renderTimeSlots(dateStr);
-}
-
-function renderTimeSlots(dateStr) {
-  const booked = bookedData[dateStr] || [];
-  const wrap = document.getElementById('time-slots-wrap');
-  wrap.innerHTML = '';
-
-  ALL_SLOTS.forEach(slot => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'time-slot-btn';
-    btn.textContent = SLOT_LABELS[slot];
-
-    if (booked.includes(slot)) {
-      btn.classList.add('booked');
-      btn.disabled = true;
-      btn.title = 'Already booked';
-    } else {
-      btn.onclick = () => selectTime(slot, btn);
-    }
-    wrap.appendChild(btn);
-  });
-}
-
-function selectTime(slot, btn) {
-  selectedTime = slot;
-  document.getElementById('selected-time-value').value = slot;
-  document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected-slot'));
-  btn.classList.add('selected-slot');
-  document.getElementById('btn-book').disabled = false;
-  document.getElementById('btn-book').style.opacity = '1';
-  document.getElementById('btn-book').style.cursor = 'pointer';
-}
-
-async function changeMonth(dir) {
-  currentMonth += dir;
-  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-  selectedDate = null;
-  selectedTime = null;
-  document.getElementById('selected-date-display').value = '';
-  document.getElementById('selected-date-value').value = '';
-  document.getElementById('selected-time-value').value = '';
-  document.getElementById('time-slots-wrap').innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
-  document.getElementById('cal-selected-info').textContent = '';
-  document.getElementById('btn-book').disabled = true;
-  document.getElementById('btn-book').style.opacity = '0.5';
-  await renderCalendar();
-}
-
-// Init calendar on page load
-renderCalendar();
-</script>
-
-    <!-- ===== MY BOOKINGS ===== -->
-    <section id="sec-bookings" class="c-section">
-      <div class="page-title">My Bookings</div>
-      <div class="page-sub">Track all your service appointments.</div>
+    <div class="book-grid">
+      <div class="card">
+        <div class="card-head">
+          <h5 id="cal-month-label">Month Year</h5>
+          <div style="display:flex;gap:0.5rem;">
+            <button onclick="changeMonth(-1)" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:#fff;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">‹</button>
+            <button onclick="changeMonth(1)"  style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:#fff;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">›</button>
+          </div>
+        </div>
+        <div class="card-body" style="padding:1rem;">
+          <div class="cal-legend">
+            <span><span class="cal-legend-dot" style="background:rgba(21,128,61,0.4);border:1px solid rgba(21,128,61,0.5);"></span>Available</span>
+            <span><span class="cal-legend-dot" style="background:rgba(232,64,28,0.3);border:1px solid rgba(232,64,28,0.4);"></span>Fully Booked</span>
+            <span><span class="cal-legend-dot" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);"></span>Unavailable</span>
+            <span><span class="cal-legend-dot" style="background:var(--red);"></span>Selected</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
+            {% for d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}
+            <div style="text-align:center;font-size:0.65rem;font-weight:700;color:var(--muted);font-family:'Syne',sans-serif;padding:4px 0;">{{ d }}</div>
+            {% endfor %}
+          </div>
+          <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+          <div id="cal-selected-info" style="margin-top:1rem;font-size:0.82rem;color:var(--muted);text-align:center;min-height:20px;"></div>
+        </div>
+      </div>
 
       <div class="card">
-        {% if bookings %}
-        <div style="overflow-x:auto;">
-          <table class="table">
-            <thead>
-              <tr><th>#</th><th>Service</th><th>Date</th><th>Time</th><th>Motorcycle</th><th>Notes</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {% for b in bookings %}
-              <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ b.service }}</td>
-                <td>{{ b.date.strftime('%b %d, %Y') }}</td>
-                <td>{{ b.time.strftime('%I:%M %p') }}</td>
-                <td>{{ b.motorcycle_model or '—' }}</td>
-                <td>{{ b.notes or '—' }}</td>
-                <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div class="card-head"><h5>Booking Details</h5></div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('book_service') }}" id="booking-form">
+            <div class="form-group">
+              <label>Selected Date</label>
+              <input type="text" id="selected-date-display" placeholder="Click a date on the calendar" disabled>
+              <input type="hidden" name="date" id="selected-date-value" required>
+            </div>
+            <div class="form-group">
+              <label>Available Time Slots</label>
+              <div id="time-slots-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;min-height:60px;">
+                <div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>
+              </div>
+              <input type="hidden" name="time" id="selected-time-value" required>
+            </div>
+            <div class="form-group">
+              <label>Service Type</label>
+              <select name="service" required>
+                <option value="">-- Select Service --</option>
+                <option>Oil Change</option>
+                <option>Tire Replacement</option>
+                <option>General Checkup</option>
+                <option>Brake Service</option>
+                <option>Chain Cleaning</option>
+                <option>Engine Tune-up</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Motorcycle Model</label>
+              <input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i">
+            </div>
+            <div class="form-group">
+              <label>Plate Number</label>
+              <input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
+            </div>
+            <div class="form-group">
+              <label>Additional Notes</label>
+              <textarea name="notes" rows="2" placeholder="Describe your concern..."></textarea>
+            </div>
+            <button type="submit" class="btn-submit" id="btn-book" disabled>📅 Confirm Booking</button>
+          </form>
         </div>
-        {% else %}
-        <div class="empty-state">
-          <div class="empty-icon">📅</div>
-          <p>You have no bookings yet.</p>
-        </div>
-        {% endif %}
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- ===== SHOP ===== -->
-    <section id="sec-shop" class="c-section">
-      <div class="page-title">Order Parts</div>
-      <div class="page-sub">Browse available motorcycle parts and accessories.</div>
-
-      {% if products %}
-      <div class="product-grid">
-        {% for p in products %}
-        <div class="product-card">
-          <div class="product-icon">🔧</div>
-          <div class="product-name">{{ p.name }}</div>
-          <div class="product-cat">{{ p.category }}</div>
-          <div class="product-price">₱{{ '%.2f'|format(p.price) }}</div>
-          <div class="product-stock">{{ p.stock }} in stock</div>
-          {% if p.description %}<div style="font-size:0.78rem;color:var(--muted);">{{ p.description }}</div>{% endif %}
-          <button class="btn-order"
-            data-id="{{ p.id }}"
-            data-name="{{ p.name }}"
-            data-price="{{ p.price }}"
-            data-stock="{{ p.stock }}"
-            onclick="openOrderModal(this)">Order Now</button>s
-        </div>
-        {% endfor %}
+  <!-- ── MY BOOKINGS ── -->
+  <section id="sec-bookings" class="c-section">
+    <div class="section-head">
+      <div><div class="section-title">MY <span>BOOKINGS</span></div><div class="section-sub">Track all your service appointments.</div></div>
+      <a class="section-link" href="#" onclick="showSection('book', null)">+ New Booking</a>
+    </div>
+    <div class="card">
+      {% if bookings %}
+      <div style="overflow-x:auto;">
+        <table class="table">
+          <thead><tr><th>#</th><th>Service</th><th>Date</th><th>Time</th><th>Motorcycle</th><th>Notes</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for b in bookings %}
+            <tr>
+              <td>{{ loop.index }}</td><td>{{ b.service }}</td>
+              <td>{{ b.date.strftime('%b %d, %Y') }}</td>
+              <td>{{ b.time.strftime('%I:%M %p') }}</td>
+              <td>{{ b.motorcycle_model or '—' }}</td>
+              <td>{{ b.notes or '—' }}</td>
+              <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
       {% else %}
-      <div class="empty-state">
-        <div class="empty-icon">🔧</div>
-        <p>No parts available at the moment. Please check back later.</p>
-      </div>
+      <div class="empty-state"><div class="empty-icon">📅</div><p>No bookings yet. <a href="#" onclick="showSection('book', null)">Book an appointment!</a></p></div>
       {% endif %}
-    </section>
+    </div>
+  </section>
 
-    <!-- ===== MY ORDERS ===== -->
-    <section id="sec-orders" class="c-section">
-      <div class="page-title">My Orders</div>
-      <div class="page-sub">Track your parts and accessories orders.</div>
-
-      <div class="card">
-        {% if orders %}
-        <div style="overflow-x:auto;">
-          <table class="table">
-            <thead>
-              <tr><th>Order #</th><th>Total</th><th>Date</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {% for o in orders %}
-              <tr>
-                <td>ORD-{{ '%03d'|format(o.id) }}</td>
-                <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
-                <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
-                <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="empty-state">
-          <div class="empty-icon">📦</div>
-          <p>No orders yet. <a href="#" onclick="showSection('shop', null)" style="color:var(--accent)">Browse our parts!</a></p>
-        </div>
-        {% endif %}
+  <!-- ── SHOP ── -->
+  <section id="sec-shop" class="c-section">
+    <div class="section-head">
+      <div><div class="section-title">ORDER <span>PARTS</span></div><div class="section-sub">Browse available motorcycle parts and accessories.</div></div>
+    </div>
+    {% if products %}
+    <div class="product-grid">
+      {% for p in products %}
+      <div class="product-card">
+        <div class="product-icon">🔧</div>
+        <div class="product-name">{{ p.name }}</div>
+        <div class="product-cat">{{ p.category }}</div>
+        <div class="product-price">₱{{ '%.2f'|format(p.price) }}</div>
+        <div class="product-stock">{{ p.stock }} in stock</div>
+        {% if p.description %}<div style="font-size:0.78rem;color:var(--muted);">{{ p.description }}</div>{% endif %}
+        <button class="btn-order" data-id="{{ p.id }}" data-name="{{ p.name }}" data-price="{{ p.price }}" data-stock="{{ p.stock }}" onclick="openOrderModal(this)">Order Now</button>
       </div>
-    </section>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">🔧</div><p>No parts available at the moment. Please check back later.</p></div>
+    {% endif %}
+  </section>
 
-    <!-- ===== PROFILE ===== -->
-    <section id="sec-profile" class="c-section">
-      <div class="page-title">My Profile</div>
-      <div class="page-sub">Manage your account and motorcycle information.</div>
+  <!-- ── MY ORDERS ── -->
+  <section id="sec-orders" class="c-section">
+    <div class="section-head">
+      <div><div class="section-title">MY <span>ORDERS</span></div><div class="section-sub">Track your parts and accessories orders.</div></div>
+      <a class="section-link" href="#" onclick="showSection('shop', null)">+ Order Parts</a>
+    </div>
+    <div class="card">
+      {% if orders %}
+      <div style="overflow-x:auto;">
+        <table class="table">
+          <thead><tr><th>Order #</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for o in orders %}
+            <tr>
+              <td>ORD-{{ '%03d'|format(o.id) }}</td>
+              <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
+              <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
+              <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="empty-icon">📦</div><p>No orders yet. <a href="#" onclick="showSection('shop', null)">Browse our parts!</a></p></div>
+      {% endif %}
+    </div>
+  </section>
 
+  <!-- ── SETTINGS ── -->
+  <section id="sec-profile" class="c-section">
+    <div class="section-head">
+      <div><div class="section-title">ACCOUNT <span>SETTINGS</span></div><div class="section-sub">Update your profile picture and personal information.</div></div>
+    </div>
+    <div class="settings-grid">
       <div class="card">
+        <div class="card-head"><h5>Profile Picture</h5></div>
         <div class="card-body">
-          <div class="profile-header">
-            <div class="profile-avatar">{{ current_user.fullname[0].upper() }}</div>
-            <div>
-              <div class="profile-name">{{ current_user.fullname }}</div>
-              <div class="profile-email">{{ current_user.email }}</div>
+          <form method="POST" action="{{ url_for('upload_profile_pic') }}" enctype="multipart/form-data">
+            <div class="pic-upload-wrap">
+              <div class="pic-preview" id="picPreview">
+                {% if current_user.profile_pic %}
+                  <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="Profile">
+                {% else %}
+                  {{ current_user.fullname[0].upper() }}
+                {% endif %}
+              </div>
+              <div>
+                <input type="file" name="profile_pic" id="picInput" accept="image/*" style="display:none;" onchange="previewPic(this)">
+                <button type="button" class="pic-upload-btn" onclick="document.getElementById('picInput').click()">📷 Choose Photo</button>
+              </div>
+              <div class="pic-upload-hint">JPG, PNG or GIF · Max 2MB</div>
             </div>
-          </div>
-
+            <button type="submit" class="btn-submit">💾 Save Picture</button>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h5>Account Information</h5></div>
+        <div class="card-body">
           <form method="POST" action="{{ url_for('customer_profile') }}">
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" name="fullname" value="{{ current_user.fullname }}" required>
-              </div>
-              <div class="form-group">
-                <label>Phone Number</label>
-                <input type="tel" name="phone" value="{{ current_user.phone }}" required>
-              </div>
-              <div class="form-group">
-                <label>Motorcycle Model</label>
-                <input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i">
-              </div>
-              <div class="form-group">
-                <label>Plate Number</label>
-                <input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
-              </div>
-              <div class="form-group">
-                <label>Email (cannot change)</label>
-                <input type="email" value="{{ current_user.email }}" disabled style="background:#f9f9f9;color:var(--muted);">
-              </div>
-            </div>
+            <div class="form-group"><label>Full Name</label><input type="text" name="fullname" value="{{ current_user.fullname }}" required></div>
+            <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" value="{{ current_user.phone }}" required></div>
+            <div class="form-group"><label>Motorcycle Model</label><input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i"></div>
+            <div class="form-group"><label>Plate Number</label><input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234"></div>
+            <div class="form-group"><label>Email (cannot change)</label><input type="email" value="{{ current_user.email }}" disabled></div>
             <button type="submit" class="btn-submit">💾 Save Changes</button>
           </form>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-  </main>
 </div>
 
-<!-- ORDER MODAL -->
+<!-- ═══ ORDER MODAL ═══ -->
 <div class="modal-overlay" id="modal-order">
   <div class="modal-box">
     <h5>🛒 Place Order</h5>
     <form method="POST" action="{{ url_for('place_order') }}">
       <input type="hidden" name="product_id" id="modal-product-id">
-      <div class="form-group">
-        <label>Product</label>
-        <input type="text" id="modal-product-name" disabled style="background:#f9f9f9;">
-      </div>
-      <div class="form-group">
-        <label>Unit Price</label>
-        <input type="text" id="modal-product-price" disabled style="background:#f9f9f9;">
-      </div>
-      <div class="form-group">
-        <label>Quantity</label>
-        <input type="number" name="quantity" id="modal-quantity" value="1" min="1" required>
-      </div>
+      <div class="form-group"><label>Product</label><input type="text" id="modal-product-name" disabled></div>
+      <div class="form-group"><label>Unit Price</label><input type="text" id="modal-product-price" disabled></div>
+      <div class="form-group"><label>Quantity</label><input type="number" name="quantity" id="modal-quantity" min="1" value="1" required></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel</button>
-        <button type="submit" class="btn-submit">Confirm Order</button>
+        <button type="submit" class="btn-submit" style="width:auto;">Confirm Order</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ═══ LOGOUT MODAL ═══ -->
+<div class="modal-overlay" id="modal-logout" style="display:none;">
+  <div class="modal-box" style="max-width:380px;text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem;">🚪</div>
+    <h5 style="margin-bottom:0.5rem;">Logging Out</h5>
+    <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:1.5rem;">Are you sure you want to log out of your account?</p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn-cancel-modal" onclick="document.getElementById('modal-logout').style.display='none'">Cancel</button>
+      <a href="{{ url_for('logout') }}" style="text-decoration:none;padding:0.6rem 1.5rem;background:var(--red);color:#fff;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;">Yes, Logout</a>
+    </div>
   </div>
 </div>
 
 <script>
   function showSection(name, el) {
     document.querySelectorAll('.c-section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.c-sidebar a').forEach(a => a.classList.remove('active'));
+    document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
     if (el) el.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function openOrderModal(btn) {
-    const id = btn.dataset.id;
-    const name = btn.dataset.name;
-    const price = parseFloat(btn.dataset.price);
-    const stock = parseInt(btn.dataset.stock);
-    document.getElementById('modal-product-id').value = id;
-    document.getElementById('modal-product-name').value = name;
-    document.getElementById('modal-product-price').value = '₱' + price.toFixed(2);
-    document.getElementById('modal-quantity').max = stock;
+    document.getElementById('modal-product-id').value   = btn.dataset.id;
+    document.getElementById('modal-product-name').value = btn.dataset.name;
+    document.getElementById('modal-product-price').value = '₱' + parseFloat(btn.dataset.price).toFixed(2);
+    document.getElementById('modal-quantity').max = btn.dataset.stock;
     document.getElementById('modal-order').classList.add('open');
   }
-
   function closeModal(id) {
     document.getElementById(id).classList.remove('open');
+    document.getElementById(id).style.display = '';
   }
-
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', function(e) {
-      if (e.target === this) this.classList.remove('open');
+      if (e.target === this) { this.classList.remove('open'); this.style.display = 'none'; }
     });
   });
+
+  /* ── CALENDAR ── */
+  const ALL_SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
+  const SLOT_LABELS = {'08:00':'8:00 AM','09:00':'9:00 AM','10:00':'10:00 AM','11:00':'11:00 AM','12:00':'12:00 PM','13:00':'1:00 PM','14:00':'2:00 PM','15:00':'3:00 PM','16:00':'4:00 PM','17:00':'5:00 PM','18:00':'6:00 PM','19:00':'7:00 PM'};
+  let currentYear, currentMonth, selectedDate = null, selectedTime = null, bookedData = {};
+  const today = new Date(); today.setHours(0,0,0,0);
+  currentYear = today.getFullYear(); currentMonth = today.getMonth();
+
+  async function fetchBookedSlots(year, month) {
+    try { const res = await fetch(`/api/booked-slots?year=${year}&month=${month+1}`); bookedData = await res.json(); }
+    catch(e) { bookedData = {}; }
+  }
+  function isFullyBooked(dateStr) { return (bookedData[dateStr] || []).length >= ALL_SLOTS.length; }
+
+  async function renderCalendar() {
+    await fetchBookedSlots(currentYear, currentMonth);
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('cal-month-label').textContent = `${months[currentMonth]} ${currentYear}`;
+    const grid = document.getElementById('cal-grid'); grid.innerHTML = '';
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    for (let i = 0; i < firstDay; i++) { const e = document.createElement('div'); e.className = 'cal-day empty'; grid.appendChild(e); }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(currentYear, currentMonth, d); dateObj.setHours(0,0,0,0);
+      const mm = String(currentMonth+1).padStart(2,'0'); const dd = String(d).padStart(2,'0');
+      const dateStr = `${currentYear}-${mm}-${dd}`;
+      const cell = document.createElement('div'); cell.className = 'cal-day'; cell.textContent = d;
+      if (dateObj.getTime() === today.getTime()) cell.classList.add('today');
+      if (dateObj < today || dateObj.getDay() === 0) { cell.classList.add('past'); cell.title = dateObj.getDay() === 0 ? 'Closed Sundays' : 'Past date'; }
+      else if (isFullyBooked(dateStr)) { cell.classList.add('fully-booked'); cell.title = 'Fully booked'; }
+      else { cell.classList.add('available'); cell.onclick = () => selectDate(dateStr, d, cell); }
+      if (selectedDate === dateStr) cell.classList.add('selected');
+      grid.appendChild(cell);
+    }
+  }
+
+  function selectDate(dateStr, day, cell) {
+    selectedDate = dateStr; selectedTime = null;
+    document.getElementById('selected-date-value').value = dateStr;
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const display = `${months[currentMonth]} ${day}, ${currentYear}`;
+    document.getElementById('selected-date-display').value = display;
+    document.getElementById('cal-selected-info').textContent = `Selected: ${display}`;
+    document.getElementById('selected-time-value').value = '';
+    document.getElementById('btn-book').disabled = true;
+    document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
+    cell.classList.add('selected'); renderTimeSlots(dateStr);
+  }
+
+  function renderTimeSlots(dateStr) {
+    const booked = bookedData[dateStr] || [];
+    const wrap = document.getElementById('time-slots-wrap'); wrap.innerHTML = '';
+    ALL_SLOTS.forEach(slot => {
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'time-slot-btn'; btn.textContent = SLOT_LABELS[slot];
+      if (booked.includes(slot)) { btn.classList.add('booked'); btn.disabled = true; }
+      else { btn.onclick = () => selectTime(slot, btn); }
+      wrap.appendChild(btn);
+    });
+  }
+
+  function selectTime(slot, btn) {
+    selectedTime = slot; document.getElementById('selected-time-value').value = slot;
+    document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected-slot'));
+    btn.classList.add('selected-slot'); document.getElementById('btn-book').disabled = false;
+  }
+
+  async function changeMonth(dir) {
+    currentMonth += dir;
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+    selectedDate = null; selectedTime = null;
+    document.getElementById('selected-date-display').value = '';
+    document.getElementById('selected-date-value').value = '';
+    document.getElementById('selected-time-value').value = '';
+    document.getElementById('time-slots-wrap').innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
+    document.getElementById('cal-selected-info').textContent = '';
+    document.getElementById('btn-book').disabled = true;
+    await renderCalendar();
+  }
+
+  renderCalendar();
+
+  function previewPic(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = e => { document.getElementById('picPreview').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
 </script>
 
-{% endblock %}
+</body>
+</html>

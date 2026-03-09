@@ -1,326 +1,498 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard – Mototyre Moto Shop</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
 
-{% block content %}
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+    :root {
+      --ink: #0c0d0f;
+      --panel: #111215;
+      --surface: #16181d;
+      --card: #1a1d23;
+      --red: #ff0f0f;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --warning: #d97706;
+      --muted: #6b7280;
+      --border: rgba(255,255,255,0.07);
+      --text: #e5e7eb;
+    }
 
-  :root {
-    --ink: #0f1117;
-    --slate: #1e2230;
-    --panel: #f5f4f0;
-    --accent: #e8401c;
-    --accent2: #2563eb;
-    --muted: #6b7280;
-    --border: #e2e0db;
-    --success: #16a34a;
-    --warning: #d97706;
-    --white: #ffffff;
-  }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--ink); color: var(--text); }
 
-  body { font-family: 'DM Sans', sans-serif; background: var(--panel); }
+    /* ── LAYOUT ── */
+    .admin-wrap { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
 
-  .admin-wrap {
-    display: grid;
-    grid-template-columns: 240px 1fr;
-    min-height: calc(100vh - 56px);
-  }
+    /* ── SIDEBAR ── */
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      padding: 1.75rem 0 1rem;
+    }
 
-  /* SIDEBAR */
-  .sidebar {
-    background: var(--ink);
-    padding: 2rem 0;
-    position: sticky;
-    top: 56px;
-    height: calc(100vh - 56px);
-    overflow-y: auto;
-  }
+    .sidebar-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.06em;
+      color: #fff;
+      padding: 0 1.5rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: block;
+      cursor: default;
+      text-align: center;
+    }
+    .sidebar-logo span { color: var(--red); }
 
-  .sidebar-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #4b5563;
-    padding: 0 1.5rem;
-    margin: 1.5rem 0 0.5rem;
-  }
+    .sidebar-badge {
+      display: inline-block;
+      background: rgba(232,64,28,0.2);
+      color: var(--red);
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid rgba(232,64,28,0.3);
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
 
-  .sidebar a {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.65rem 1.5rem;
-    color: #9ca3af;
-    text-decoration: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: all 0.15s;
-    border-left: 3px solid transparent;
-  }
+    .sidebar-greeting {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .avatar {
+      width: 64px; height: 64px;
+      background: var(--red);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.75rem;
+      color: #fff;
+      margin-bottom: 0.75rem;
+    }
+    .greeting-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: #fff; }
+    .greeting-role { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.2rem; }
 
-  .sidebar a:hover, .sidebar a.active {
-    color: #fff;
-    background: rgba(255,255,255,0.05);
-    border-left-color: var(--accent);
-  }
+    .sidebar-label {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      padding: 1.25rem 1.5rem 0.4rem;
+      text-align: center;
+    }
 
-  /* MAIN */
-  .main { padding: 2rem 2.5rem; overflow-x: hidden; }
-  .page-section { display: none; }
-  .page-section.active { display: block; }
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      padding: 0.75rem 1.5rem;
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 500;
+      border-left: 3px solid transparent;
+      border-right: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      color: #fff;
+      background: rgba(255,255,255,0.04);
+      border-left-color: var(--red);
+      border-right-color: transparent;
+    }
 
-  .page-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--ink);
-    margin-bottom: 0.25rem;
-  }
-  .page-sub { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
+    .sidebar-bottom { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border); }
 
-  /* STATS */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 2rem;
-  }
+    /* ── MAIN ── */
+    .main { padding: 2rem 2.5rem; overflow-x: hidden; background: var(--ink); }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
 
-  .stat-card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    position: relative;
-    overflow: hidden;
-  }
+    /* ── PAGE HEADER ── */
+    .page-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 0.04em;
+      color: #fff;
+      margin-bottom: 0.2rem;
+      line-height: 1;
+    }
+    .page-title .accent { color: var(--red); }
+    .page-sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.75rem; }
 
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-  }
-  .stat-card.red::before { background: var(--accent); }
-  .stat-card.blue::before { background: var(--accent2); }
-  .stat-card.green::before { background: var(--success); }
-  .stat-card.orange::before { background: var(--warning); }
+    /* ── STAT CARDS ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.75rem;
+    }
 
-  .stat-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
-  .stat-value { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--ink); line-height: 1; }
-  .stat-label { color: var(--muted); font-size: 0.8rem; margin-top: 0.25rem; }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: rgba(255,255,255,0.15); }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-card.red::before    { background: var(--red); }
+    .stat-card.blue::before   { background: var(--blue); }
+    .stat-card.green::before  { background: var(--green); }
+    .stat-card.orange::before { background: var(--warning); }
 
-  /* CARD */
-  .card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 1.5rem;
-  }
+    .stat-icon  { font-size: 1.5rem; margin-bottom: 0.75rem; }
+    .stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      color: #fff;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+    .stat-label { color: var(--muted); font-size: 0.78rem; margin-top: 0.25rem; }
 
-  .card-head {
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+    /* ── CARDS ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .card-head {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-head h5 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #fff;
+      margin: 0;
+    }
+    .card-body { padding: 1.5rem; }
 
-  .card-head h5 {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    margin: 0;
-    color: var(--ink);
-  }
+    /* ── TABLE ── */
+    .table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .table th {
+      text-align: left;
+      padding: 0.7rem 1rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: #d1d5db;
+      vertical-align: middle;
+    }
+    .table tr:last-child td { border-bottom: none; }
+    .table { --bs-table-bg: transparent; --bs-table-color: #d1d5db; --bs-table-border-color: rgba(255,255,255,0.04); --bs-table-hover-bg: rgba(255,255,255,0.03); --bs-table-hover-color: #d1d5db; }
+    .table > :not(caption) > * > * { background-color: transparent !important; color: #d1d5db; }
+    .table tr:hover td { background: rgba(255,255,255,0.03) !important; color: #d1d5db !important; }
 
-  .card-body { padding: 1.5rem; }
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.65rem;
+      border-radius: 99px;
+      font-size: 0.67rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .badge-pending    { background: rgba(217,119,6,0.2);   color: #fbbf24; border: 1px solid rgba(217,119,6,0.4); }
+    .badge-confirmed  { background: rgba(37,99,235,0.2);   color: #93c5fd; border: 1px solid rgba(37,99,235,0.4); }
+    .badge-completed  { background: rgba(22,163,74,0.2);   color: #86efac; border: 1px solid rgba(22,163,74,0.4); }
+    .badge-cancelled  { background: rgba(232,64,28,0.15);  color: #fca5a5; border: 1px solid rgba(232,64,28,0.3); }
+    .badge-processing { background: rgba(109,40,217,0.2);  color: #c4b5fd; border: 1px solid rgba(109,40,217,0.4); }
+    .badge-shipped    { background: rgba(6,182,212,0.2);   color: #67e8f9; border: 1px solid rgba(6,182,212,0.4); }
+    .badge-admin      { background: rgba(232,64,28,0.15);  color: #fca5a5; border: 1px solid rgba(232,64,28,0.3); }
+    .badge-staff      { background: rgba(37,99,235,0.2);   color: #93c5fd; border: 1px solid rgba(37,99,235,0.4); }
+    .badge-customer   { background: rgba(255,255,255,0.06); color: #9ca3af; border: 1px solid rgba(255,255,255,0.1); }
 
-  /* TABLE */
-  .table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-  .table th {
-    text-align: left;
-    padding: 0.75rem 1rem;
-    font-family: 'Syne', sans-serif;
-    font-size: 0.7rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    border-bottom: 2px solid var(--border);
-  }
-  .table td {
-    padding: 0.875rem 1rem;
-    border-bottom: 1px solid var(--border);
-    color: var(--ink);
-    vertical-align: middle;
-  }
-  .table tr:last-child td { border-bottom: none; }
-  .table tr:hover td { background: #fafaf8; }
+    /* ── FILTER BAR ── */
+    .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
+    .filter-bar input, .filter-bar select {
+      padding: 0.55rem 1rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-family: 'DM Sans', sans-serif;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      outline: none;
+      transition: border 0.15s;
+    }
+    .filter-bar input { min-width: 220px; }
+    .filter-bar input::placeholder { color: #4b5563; }
+    .filter-bar input:focus, .filter-bar select:focus { border-color: var(--red); background: rgba(232,64,28,0.05); }
+    .filter-bar select option { background: #1a1d23; color: #fff; }
 
-  /* BADGES */
-  .badge {
-    display: inline-block;
-    padding: 0.2rem 0.65rem;
-    border-radius: 99px;
-    font-size: 0.7rem;
-    font-weight: 600;
-  }
-  .badge-pending { background: #fef3c7; color: #92400e; }
-  .badge-confirmed { background: #dbeafe; color: #1e40af; }
-  .badge-completed { background: #dcfce7; color: #15803d; }
-  .badge-cancelled { background: #fee2e2; color: #991b1b; }
-  .badge-processing { background: #ede9fe; color: #6d28d9; }
-  .badge-shipped { background: #cffafe; color: #0e7490; }
-  .badge-admin { background: #fee2e2; color: #991b1b; }
-  .badge-staff { background: #dbeafe; color: #1e40af; }
-  .badge-customer { background: #f3f4f6; color: #374151; }
+    /* ── STATUS FORM ── */
+    .status-form { display: inline-flex; gap: 0.4rem; align-items: center; }
+    .status-form select {
+      padding: 0.25rem 0.5rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: 'DM Sans', sans-serif;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      outline: none;
+    }
+    .status-form select option { background: #1a1d23; }
+    .status-form button {
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      border: none;
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Syne', sans-serif;
+      transition: background 0.15s;
+    }
+    .status-form button:hover { background: var(--red); }
 
-  /* BUTTONS */
-  .btn-primary-custom {
-    background: var(--ink);
-    color: #fff;
-    border: none;
-    padding: 0.6rem 1.25rem;
-    border-radius: 8px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-decoration: none;
-    display: inline-block;
-  }
-  .btn-primary-custom:hover { background: var(--accent); color: #fff; }
+    /* ── BUTTONS ── */
+    .btn-primary-custom {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.25rem;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+      letter-spacing: 0.02em;
+    }
+    .btn-primary-custom:hover {
+      background: #c73418;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(232,64,28,0.3);
+      color: #fff;
+    }
 
-  .btn-action {
-    padding: 0.3rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border: 1px solid var(--border);
-    background: #fff;
-    cursor: pointer;
-    transition: all 0.15s;
-    color: var(--ink);
-  }
-  .btn-action:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .btn-action.danger:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+    /* ── CHARTS ── */
+    .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+    .chart-bar-wrap { display: flex; flex-direction: column; gap: 0.75rem; }
+    .chart-bar-item { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; }
+    .chart-bar-item .bar-label { width: 80px; color: var(--muted); text-align: right; font-size: 0.73rem; }
+    .chart-bar-track { flex: 1; background: rgba(255,255,255,0.05); border-radius: 4px; height: 8px; overflow: hidden; }
+    .chart-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; width: 0; }
+    .chart-bar-item .bar-val { width: 40px; font-weight: 700; color: #fff; font-size: 0.75rem; font-family: 'Syne', sans-serif; }
 
-  /* FILTER BAR */
-  .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
-  .filter-bar input, .filter-bar select {
-    padding: 0.55rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-family: 'DM Sans', sans-serif;
-    background: #fff;
-    color: var(--ink);
-    outline: none;
-  }
-  .filter-bar input { min-width: 220px; }
-  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent2); }
+    .bar-pending    { background: #f59e0b; }
+    .bar-confirmed  { background: #2563eb; }
+    .bar-completed  { background: #16a34a; }
+    .bar-cancelled  { background: #e8401c; }
+    .bar-processing { background: #8b5cf6; }
+    .bar-shipped    { background: #06b6d4; }
+    .bar-green      { background: #16a34a; }
 
-  /* STATUS FORM */
-  .status-form { display: inline-flex; gap: 0.4rem; align-items: center; }
-  .status-form select {
-    padding: 0.25rem 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-family: 'DM Sans', sans-serif;
-    outline: none;
-    background: #fff;
-  }
-  .status-form button {
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
-    border: none;
-    background: var(--ink);
-    color: #fff;
-    font-size: 0.72rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .status-form button:hover { background: var(--accent); }
+    /* ── PENDING BOXES ── */
+    .pending-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.875rem 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+    }
+    .pending-box:last-child { margin-bottom: 0; }
+    .pending-box span:first-child { font-size: 0.85rem; color: #d1d5db; }
+    .pending-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.04em;
+    }
 
-  /* MODAL */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal-box {
-    background: #fff;
-    border-radius: 16px;
-    padding: 2rem;
-    width: 480px;
-    max-width: 95vw;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-  .modal-box h5 {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 1.1rem;
-    margin-bottom: 1.25rem;
-    color: var(--ink);
-  }
-  .form-group { margin-bottom: 1rem; }
-  .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  .form-group input, .form-group select, .form-group textarea {
-    width: 100%;
-    padding: 0.6rem 0.875rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-family: 'DM Sans', sans-serif;
-    color: var(--ink);
-    outline: none;
-  }
-  .form-group input:focus, .form-group select:focus { border-color: var(--accent2); }
-  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
-  .btn-cancel { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 0.875rem; }
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 480px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: fadeUp 0.2s ease both;
+    }
+    .modal-box h5 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 1.25rem;
+      color: #fff;
+    }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #9ca3af;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 0.65rem 1rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-family: 'DM Sans', sans-serif;
+      color: #fff;
+      background: rgba(255,255,255,0.05);
+      outline: none;
+      transition: border 0.15s, background 0.15s;
+    }
+    .form-group input::placeholder, .form-group textarea::placeholder { color: #374151; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--red);
+      background: rgba(232,64,28,0.05);
+    }
+    .form-group select option { background: #1a1d23; color: #fff; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+    .btn-cancel {
+      padding: 0.6rem 1.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.875rem;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+    }
+    .btn-cancel:hover { color: #fff; border-color: rgba(255,255,255,0.2); }
 
-  /* CHARTS */
-  .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
-  .chart-bar-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
-  .chart-bar-item { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; }
-  .chart-bar-item .bar-label { width: 70px; color: var(--muted); text-align: right; font-size: 0.75rem; }
-  .chart-bar-track { flex: 1; background: var(--panel); border-radius: 4px; height: 10px; overflow: hidden; }
-  .chart-bar-fill { height: 100%; border-radius: 4px; }
-  .chart-bar-item .bar-val { width: 50px; font-weight: 600; color: var(--ink); font-size: 0.75rem; }
+    /* ── EMPTY STATE ── */
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+    .empty-state .ei { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state p { font-size: 0.88rem; }
 
-  /* EMPTY STATE */
-  .empty-state { text-align: center; padding: 2.5rem; color: var(--muted); }
-  .empty-state .ei { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    /* ── SETTINGS ── */
+    .pic-upload-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 1rem;
+      padding: 1.5rem; border: 1px dashed rgba(255,255,255,0.15);
+      border-radius: 12px; margin-bottom: 1.5rem;
+      background: rgba(255,255,255,0.02); transition: border-color 0.2s;
+    }
+    .pic-upload-wrap:hover { border-color: rgba(255,255,255,0.3); }
+    .pic-preview {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: var(--red); display: flex; align-items: center; justify-content: center;
+      font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: #fff; overflow: hidden;
+    }
+    .pic-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .pic-upload-btn {
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+      color: #fff; padding: 0.5rem 1.25rem; border-radius: 8px;
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.8rem;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .pic-upload-btn:hover { background: rgba(255,255,255,0.12); }
+    .pic-upload-hint { font-size: 0.75rem; color: var(--muted); text-align: center; }
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 900px) { .settings-grid { grid-template-columns: 1fr; } }
 
-  @media (max-width: 768px) {
-    .admin-wrap { grid-template-columns: 1fr; }
-    .sidebar { display: none; }
-    .charts-grid { grid-template-columns: 1fr; }
-  }
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-  .bar-pending { background: #f59e0b; }
-  .bar-confirmed { background: #2563eb; }
-  .bar-completed { background: #16a34a; }
-  .bar-cancelled { background: #e8401c; }
-  .bar-processing { background: #8b5cf6; }
-  .bar-shipped { background: #06b6d4; }
-  .bar-green { background: #16a34a; }
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-</style>
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .admin-wrap { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
 
-<div class="admin-wrap" style="margin: -1.5rem -12px 0;">
+<div class="admin-wrap">
 
-  <!-- SIDEBAR -->
+  <!-- ═══ SIDEBAR ═══ -->
   <aside class="sidebar">
+    <div class="sidebar-logo">MOTO<span>TYRE</span> <span class="sidebar-badge">Admin</span></div>
+
+    <div class="sidebar-greeting">
+      <div class="avatar">
+        {% if current_user.profile_pic %}
+          <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+        {% else %}
+          {{ current_user.fullname[0].upper() }}
+        {% endif %}
+      </div>
+      <div class="greeting-name">{{ current_user.fullname }}</div>
+      <div class="greeting-role">Administrator</div>
+    </div>
+
     <div class="sidebar-label">Overview</div>
     <a href="#" class="active" onclick="showSection('dashboard', this)">📊 Dashboard</a>
 
@@ -333,16 +505,20 @@
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
 
-    <div class="sidebar-label">Account</div>
-    <a href="{{ url_for('logout') }}">🚪 Logout</a>
+    <div class="sidebar-bottom">
+      <div class="sidebar-label">Account</div>
+      <a href="#" onclick="showSection('settings', this)">⚙️ Settings</a>
+      <a href="#" onclick="document.getElementById('modal-logout').style.display='flex'">🚪 Logout</a>
+    </div>
   </aside>
 
+  <!-- ═══ MAIN ═══ -->
   <main class="main">
 
-    <!-- ===== DASHBOARD ===== -->
+    <!-- ── DASHBOARD ── -->
     <section id="sec-dashboard" class="page-section active">
-      <div class="page-title">Admin Dashboard</div>
-      <div class="page-sub">Welcome back, {{ current_user.fullname }} — here's what's happening.</div>
+      <div class="page-title">ADMIN <span class="accent">DASHBOARD</span></div>
+      <div class="page-sub">Welcome back, {{ current_user.fullname }} — here's what's happening today.</div>
 
       <div class="stats-grid">
         <div class="stat-card red">
@@ -367,24 +543,20 @@
         </div>
       </div>
 
-      <!-- Booking status summary -->
       <div class="charts-grid">
         <div class="card">
           <div class="card-head"><h5>Bookings by Status</h5></div>
           <div class="card-body">
             <div class="chart-bar-wrap">
-              {% set statuses = [('pending', 'bar-pending'), ('confirmed', 'bar-confirmed'), ('completed', 'bar-completed'), ('cancelled', 'bar-cancelled')] %}
-              {% for status, colorclass in statuses %}
-              {% set count = booking_status_counts.get(status, 0) %}
-              {% set pct = ((count / total_bookings * 100) | int) if total_bookings > 0 else 0 %}
-            <div class="chart-bar-item">
-            <span class="bar-label">{{ status|title }}</span>
-            <div class="chart-bar-track">
-            <div class="chart-bar-fill {{ colorclass }}" data-width="{{ pct }}"></div>
-    </div>
-    <span class="bar-val">{{ count }}</span>
-</div>
-{% endfor %}
+              {% set booking_statuses = [('pending','bar-pending'),('confirmed','bar-confirmed'),('completed','bar-completed'),('cancelled','bar-cancelled')] %}
+              {% for status, cls in booking_statuses %}
+                {% set count = booking_status_counts.get(status, 0) %}
+                {% set pct = ((count / total_bookings * 100)|int) if total_bookings > 0 else 0 %}
+                <div class="chart-bar-item">
+                  <span class="bar-label">{{ status|title }}</span>
+                  <div class="chart-bar-track"><div class="chart-bar-fill {{ cls }}" data-width="{{ pct }}"></div></div>
+                  <span class="bar-val">{{ count }}</span>
+                </div>
               {% endfor %}
             </div>
           </div>
@@ -393,29 +565,26 @@
         <div class="card">
           <div class="card-head"><h5>Pending Actions</h5></div>
           <div class="card-body">
-            <div style="display:flex;flex-direction:column;gap:1rem;">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:var(--panel);border-radius:8px;">
-                <span style="font-size:0.85rem;">Pending Bookings</span>
-                <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--warning);">{{ booking_status_counts.get('pending', 0) }}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:var(--panel);border-radius:8px;">
-                <span style="font-size:0.85rem;">Pending Orders</span>
-                <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--accent2);">{{ order_status_counts.get('pending', 0) }}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:var(--panel);border-radius:8px;">
-                <span style="font-size:0.85rem;">New Users Today</span>
-                <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--success);">{{ new_users_today }}</span>
-              </div>
+            <div class="pending-box">
+              <span>Pending Bookings</span>
+              <span class="pending-num" style="color:#fbbf24;">{{ booking_status_counts.get('pending', 0) }}</span>
+            </div>
+            <div class="pending-box">
+              <span>Pending Orders</span>
+              <span class="pending-num" style="color:#93c5fd;">{{ order_status_counts.get('pending', 0) }}</span>
+            </div>
+            <div class="pending-box">
+              <span>New Users Today</span>
+              <span class="pending-num" style="color:#86efac;">{{ new_users_today }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Recent Bookings -->
       <div class="card">
         <div class="card-head">
           <h5>Recent Bookings</h5>
-          <button class="btn-primary-custom" onclick="showSection('bookings', document.querySelectorAll('.sidebar a')[1])">View All</button>
+          <button class="btn-primary-custom" onclick="showSection('bookings', document.querySelectorAll('.sidebar a')[2])">View All</button>
         </div>
         {% if recent_bookings %}
         <div style="overflow-x:auto;">
@@ -440,13 +609,13 @@
       </div>
     </section>
 
-    <!-- ===== BOOKINGS ===== -->
+    <!-- ── BOOKINGS ── -->
     <section id="sec-bookings" class="page-section">
-      <div class="page-title">Manage Bookings</div>
+      <div class="page-title">MANAGE <span class="accent">BOOKINGS</span></div>
       <div class="page-sub">View, confirm, complete, or cancel service appointments.</div>
 
       <div class="filter-bar">
-        <input type="text" id="search-bookings" placeholder="🔍 Search customer or service..." oninput="filterTable('bookings-table', this.value)">
+        <input type="text" placeholder="🔍 Search customer or service..." oninput="filterTable('bookings-table', this.value)">
         <select onchange="filterTableByCol('bookings-table', 5, this.value)">
           <option value="">All Status</option>
           <option>pending</option>
@@ -460,9 +629,7 @@
         {% if all_bookings %}
         <div style="overflow-x:auto;">
           <table class="table" id="bookings-table">
-            <thead>
-              <tr><th>#</th><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Motorcycle</th><th>Update Status</th></tr>
-            </thead>
+            <thead><tr><th>#</th><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Motorcycle</th><th>Update Status</th></tr></thead>
             <tbody>
               {% for b in all_bookings %}
               <tr>
@@ -476,10 +643,10 @@
                 <td>
                   <form method="POST" action="{{ url_for('update_booking_status', booking_id=b.id) }}" class="status-form">
                     <select name="status">
-                      <option value="pending" {% if b.status=='pending' %}selected{% endif %}>Pending</option>
-                      <option value="confirmed" {% if b.status=='confirmed' %}selected{% endif %}>Confirmed</option>
-                      <option value="completed" {% if b.status=='completed' %}selected{% endif %}>Completed</option>
-                      <option value="cancelled" {% if b.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                      <option value="pending"    {% if b.status=='pending' %}selected{% endif %}>Pending</option>
+                      <option value="confirmed"  {% if b.status=='confirmed' %}selected{% endif %}>Confirmed</option>
+                      <option value="completed"  {% if b.status=='completed' %}selected{% endif %}>Completed</option>
+                      <option value="cancelled"  {% if b.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     </select>
                     <button type="submit">Save</button>
                   </form>
@@ -495,9 +662,9 @@
       </div>
     </section>
 
-    <!-- ===== ORDERS ===== -->
+    <!-- ── ORDERS ── -->
     <section id="sec-orders" class="page-section">
-      <div class="page-title">Manage Orders</div>
+      <div class="page-title">MANAGE <span class="accent">ORDERS</span></div>
       <div class="page-sub">Track and update parts and accessories orders.</div>
 
       <div class="filter-bar">
@@ -516,9 +683,7 @@
         {% if all_orders %}
         <div style="overflow-x:auto;">
           <table class="table" id="orders-table">
-            <thead>
-              <tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th><th>Update Status</th></tr>
-            </thead>
+            <thead><tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th><th>Update Status</th></tr></thead>
             <tbody>
               {% for o in all_orders %}
               <tr>
@@ -530,11 +695,11 @@
                 <td>
                   <form method="POST" action="{{ url_for('update_order_status', order_id=o.id) }}" class="status-form">
                     <select name="status">
-                      <option value="pending" {% if o.status=='pending' %}selected{% endif %}>Pending</option>
+                      <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
                       <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
-                      <option value="shipped" {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
-                      <option value="completed" {% if o.status=='completed' %}selected{% endif %}>Completed</option>
-                      <option value="cancelled" {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                      <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
+                      <option value="completed"  {% if o.status=='completed' %}selected{% endif %}>Completed</option>
+                      <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     </select>
                     <button type="submit">Save</button>
                   </form>
@@ -550,9 +715,9 @@
       </div>
     </section>
 
-    <!-- ===== PRODUCTS ===== -->
+    <!-- ── PRODUCTS ── -->
     <section id="sec-products" class="page-section">
-      <div class="page-title">Manage Products</div>
+      <div class="page-title">MANAGE <span class="accent">PRODUCTS</span></div>
       <div class="page-sub">Add and manage spare parts and accessories inventory.</div>
 
       <div class="filter-bar">
@@ -564,9 +729,7 @@
         {% if all_products %}
         <div style="overflow-x:auto;">
           <table class="table" id="products-table">
-            <thead>
-              <tr><th>#</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Description</th></tr>
-            </thead>
+            <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Description</th></tr></thead>
             <tbody>
               {% for p in all_products %}
               <tr>
@@ -576,15 +739,14 @@
                 <td>₱{{ '%.2f'|format(p.price) }}</td>
                 <td>
                   {% if p.stock == 0 %}
-                  <span style="color:#e8401c;font-weight:600;">{{ p.stock }}</span>
+                    <span style="color:#fca5a5;font-weight:700;">{{ p.stock }}</span>
                   {% elif p.stock < 5 %}
-                  <span style="color:#d97706;font-weight:600;">{{ p.stock }}</span>
+                    <span style="color:#fbbf24;font-weight:700;">{{ p.stock }}</span>
                   {% else %}
-                  <span style="color:#16a34a;font-weight:600;">{{ p.stock }}</span>
+                    <span style="color:#86efac;font-weight:700;">{{ p.stock }}</span>
                   {% endif %}
                 </td>
-                </td>
-                <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.description or '—' }}</td>
+                <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);">{{ p.description or '—' }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -596,9 +758,9 @@
       </div>
     </section>
 
-    <!-- ===== USERS ===== -->
+    <!-- ── USERS ── -->
     <section id="sec-users" class="page-section">
-      <div class="page-title">Manage Users</div>
+      <div class="page-title">MANAGE <span class="accent">USERS</span></div>
       <div class="page-sub">View all registered customers and staff accounts.</div>
 
       <div class="filter-bar">
@@ -609,15 +771,14 @@
           <option>staff</option>
           <option>admin</option>
         </select>
+        <button class="btn-primary-custom" onclick="openModal('modal-add-staff')">+ Add Staff</button>
       </div>
 
       <div class="card">
         {% if all_users %}
         <div style="overflow-x:auto;">
           <table class="table" id="users-table">
-            <thead>
-              <tr><th>#</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Motorcycle</th><th>Role</th></tr>
-            </thead>
+            <thead><tr><th>#</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Motorcycle</th><th>Role</th></tr></thead>
             <tbody>
               {% for u in all_users %}
               <tr>
@@ -638,9 +799,9 @@
       </div>
     </section>
 
-    <!-- ===== REPORTS ===== -->
+    <!-- ── REPORTS ── -->
     <section id="sec-reports" class="page-section">
-      <div class="page-title">Reports & Sales</div>
+      <div class="page-title">REPORTS <span class="accent">& SALES</span></div>
       <div class="page-sub">Overview of revenue, services, and order performance.</div>
 
       <div class="stats-grid">
@@ -671,17 +832,15 @@
           <div class="card-head"><h5>Orders by Status</h5></div>
           <div class="card-body">
             <div class="chart-bar-wrap">
-              {% set order_statuses = [('pending','#f59e0b'),('processing','#8b5cf6'),('shipped','#06b6d4'),('completed','#16a34a'),('cancelled','#e8401c')] %}
-              {% for status, color in order_statuses %}
-              {% set count = order_status_counts.get(status, 0) %}
-              {% set pct = ((count / total_orders * 100)|int) if total_orders > 0 else 0 %}
-              <div class="chart-bar-item">
-                <span class="bar-label">{{ status|title }}</span>
-                <div class="chart-bar-track">
-                  <div class="chart-bar-fill {{ colorclass }}" data-width="{{ pct }}"></div>
+              {% set order_statuses = [('pending','bar-pending'),('processing','bar-processing'),('shipped','bar-shipped'),('completed','bar-completed'),('cancelled','bar-cancelled')] %}
+              {% for status, cls in order_statuses %}
+                {% set count = order_status_counts.get(status, 0) %}
+                {% set pct = ((count / total_orders * 100)|int) if total_orders > 0 else 0 %}
+                <div class="chart-bar-item">
+                  <span class="bar-label">{{ status|title }}</span>
+                  <div class="chart-bar-track"><div class="chart-bar-fill {{ cls }}" data-width="{{ pct }}"></div></div>
+                  <span class="bar-val">{{ count }}</span>
                 </div>
-                <span class="bar-val">{{ count }}</span>
-              </div>
               {% endfor %}
             </div>
           </div>
@@ -693,14 +852,12 @@
             {% if top_services %}
             <div class="chart-bar-wrap">
               {% for service, count in top_services %}
-              {% set pct = ((count / total_bookings * 100)|int) if total_bookings > 0 else 0 %}
-              <div class="chart-bar-item">
-                <span class="bar-label" style="width:90px;font-size:0.7rem;">{{ service[:10] }}</span>
-                <div class="chart-bar-track">
-                 <div class="chart-bar-fill {{ colorclass }}" data-width="{{ pct }}"></div>
+                {% set pct = ((count / total_bookings * 100)|int) if total_bookings > 0 else 0 %}
+                <div class="chart-bar-item">
+                  <span class="bar-label" style="width:90px;font-size:0.7rem;">{{ service[:10] }}</span>
+                  <div class="chart-bar-track"><div class="chart-bar-fill bar-green" data-width="{{ pct }}"></div></div>
+                  <span class="bar-val">{{ count }}</span>
                 </div>
-                <span class="bar-val">{{ count }}</span>
-              </div>
               {% endfor %}
             </div>
             {% else %}
@@ -710,7 +867,6 @@
         </div>
       </div>
 
-      <!-- Sales Transaction Log -->
       <div class="card">
         <div class="card-head"><h5>Recent Orders Log</h5></div>
         {% if all_orders %}
@@ -736,16 +892,105 @@
       </div>
     </section>
 
+    <!-- ── SETTINGS ── -->
+    <section id="sec-settings" class="page-section">
+      <div class="page-title">ACCOUNT <span class="accent">SETTINGS</span></div>
+      <div class="page-sub">Update your profile picture and personal information.</div>
+
+      <div class="settings-grid">
+
+        <!-- Profile Picture -->
+        <div class="card">
+          <div class="card-head"><h5>Profile Picture</h5></div>
+          <div class="card-body">
+            <form method="POST" action="{{ url_for('upload_profile_pic') }}" enctype="multipart/form-data">
+              <div class="pic-upload-wrap">
+                <div class="pic-preview" id="picPreview">
+                  {% if current_user.profile_pic %}
+                    <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="Profile">
+                  {% else %}
+                    {{ current_user.fullname[0].upper() }}
+                  {% endif %}
+                </div>
+                <div>
+                  <input type="file" name="profile_pic" id="picInput" accept="image/*" style="display:none;" onchange="previewPic(this)">
+                  <button type="button" class="pic-upload-btn" onclick="document.getElementById('picInput').click()">📷 Choose Photo</button>
+                </div>
+                <div class="pic-upload-hint">JPG, PNG or GIF · Max 2MB</div>
+              </div>
+              <button type="submit" class="btn-primary-custom">💾 Save Picture</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Account Info -->
+        <div class="card">
+          <div class="card-head"><h5>Account Information</h5></div>
+          <div class="card-body">
+            <form method="POST" action="{{ url_for('update_admin_profile') }}">
+              <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="fullname" value="{{ current_user.fullname }}" required>
+              </div>
+              <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" name="phone" value="{{ current_user.phone }}" required>
+              </div>
+              <div class="form-group">
+                <label>Email (cannot change)</label>
+                <input type="email" value="{{ current_user.email }}" disabled>
+              </div>
+              <button type="submit" class="btn-primary-custom">💾 Save Changes</button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
   </main>
 </div>
 
-<!-- ADD PRODUCT MODAL -->
+<!-- ═══ ADD STAFF MODAL ═══ -->
+<div class="modal-overlay" id="modal-add-staff">
+  <div class="modal-box">
+    <h5>👤 Add Staff Account</h5>
+    <form method="POST" action="{{ url_for('add_staff') }}">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" name="fullname" placeholder="e.g. Juan dela Cruz" required>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" name="email" placeholder="staff@mototyre.com" required>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" name="phone" placeholder="09xx xxx xxxx" required>
+      </div>
+      <div class="form-group">
+        <label>Temporary Password</label>
+        <input type="password" name="password" placeholder="Min. 8 characters" required minlength="8">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeModal('modal-add-staff')">Cancel</button>
+        <button type="submit" class="btn-primary-custom">Create Staff Account</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ ADD PRODUCT MODAL ═══ -->
 <div class="modal-overlay" id="modal-add-product">
   <div class="modal-box">
     <h5>🔧 Add New Product</h5>
     <form method="POST" action="{{ url_for('add_product') }}">
-      <div class="form-group"><label>Product Name</label><input type="text" name="name" placeholder="e.g. IRC MB99 Front Tire" required></div>
-      <div class="form-group"><label>Category</label>
+      <div class="form-group">
+        <label>Product Name</label>
+        <input type="text" name="name" placeholder="e.g. IRC MB99 Front Tire" required>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
         <select name="category" required>
           <option value="">-- Select Category --</option>
           <option>Tires</option>
@@ -758,9 +1003,18 @@
           <option>Other Spare Parts</option>
         </select>
       </div>
-      <div class="form-group"><label>Price (₱)</label><input type="number" name="price" step="0.01" min="0" placeholder="0.00" required></div>
-      <div class="form-group"><label>Stock Quantity</label><input type="number" name="stock" min="0" placeholder="0" required></div>
-      <div class="form-group"><label>Description (optional)</label><textarea name="description" rows="2" placeholder="Brief description..."></textarea></div>
+      <div class="form-group">
+        <label>Price (₱)</label>
+        <input type="number" name="price" step="0.01" min="0" placeholder="0.00" required>
+      </div>
+      <div class="form-group">
+        <label>Stock Quantity</label>
+        <input type="number" name="stock" min="0" placeholder="0" required>
+      </div>
+      <div class="form-group">
+        <label>Description (optional)</label>
+        <textarea name="description" rows="2" placeholder="Brief description..."></textarea>
+      </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-add-product')">Cancel</button>
         <button type="submit" class="btn-primary-custom">Add Product</button>
@@ -777,45 +1031,55 @@
     if (el) el.classList.add('active');
   }
 
-  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function openModal(id)  { document.getElementById(id).classList.add('open'); }
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
   });
 
-  // Search filter
   function filterTable(tableId, query) {
-    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+    const rows = document.querySelectorAll('#' + tableId + ' tbody tr');
     const q = query.toLowerCase();
-    rows.forEach(row => {
-      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
+    rows.forEach(row => { row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none'; });
   }
 
-  // Filter by specific column
   function filterTableByCol(tableId, colIndex, value) {
-    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
-    rows.forEach(row => {
+    document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
       const cell = row.cells[colIndex];
-      if (!value || (cell && cell.textContent.toLowerCase().includes(value.toLowerCase()))) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
+      row.style.display = (!value || (cell && cell.textContent.toLowerCase().includes(value.toLowerCase()))) ? '' : 'none';
     });
   }
 
-  // Apply colors to chart bars
-document.querySelectorAll('.chart-bar-fill[data-color]').forEach(bar => {
-    bar.style.background = bar.dataset.color;
-});
+  // Animate chart bars on load
+  document.querySelectorAll('.chart-bar-fill[data-width]').forEach(bar => {
+    setTimeout(() => { bar.style.width = bar.dataset.width + '%'; }, 100);
+  });
 
-// Apply widths to chart bars
-document.querySelectorAll('.chart-bar-fill[data-width]').forEach(bar => {
-    bar.style.width = bar.dataset.width + '%';
-});
-
+  function previewPic(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const preview = document.getElementById('picPreview');
+        preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
 </script>
 
-{% endblock %}
+<!-- ═══ LOGOUT MODAL ═══ -->
+<div class="modal-overlay" id="modal-logout" style="display:none;">
+  <div class="modal-box" style="max-width:380px;text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem;">🚪</div>
+    <h5 style="margin-bottom:0.5rem;">Logging Out</h5>
+    <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:1.5rem;">Are you sure you want to log out of your account?</p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn-cancel" onclick="document.getElementById('modal-logout').style.display='none'">Cancel</button>
+      <a href="{{ url_for('logout') }}" style="text-decoration:none;padding:0.6rem 1.5rem;background:var(--red);color:#fff;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;">Yes, Logout</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

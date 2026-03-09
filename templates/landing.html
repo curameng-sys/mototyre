@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mototyre Moto Shop</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+    :root {
+      --ink: #0c0d0f;
+      --red: #c72b2b;
+      --gold: #c72b2b; 
+      --light: #f7f6f2;
+      --muted: #6b7280;
+      --border: #e2e0db;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--ink);
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* ── NAVBAR ── */
+    .nav-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 4rem;
+      background: rgba(12,13,15,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      letter-spacing: 0.05em;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .nav-logo span { color: var(--red); }
+
+    .nav-links { display: flex; gap: 2rem; align-items: center; }
+    .nav-links a {
+      color: #9ca3af;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: #fff; }
+
+    .nav-cta {
+      background: var(--red);
+      color: #fff !important;
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px;
+      font-weight: 600 !important;
+      transition: background 0.15s !important;
+    }
+    .nav-cta:hover { background: #c73418 !important; color: #fff !important; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      padding: 0 4rem;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 70% 50%, rgba(232,64,28,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 20% 80%, rgba(245,166,35,0.06) 0%, transparent 50%),
+        var(--ink);
+    }
+
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 680px;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(232,64,28,0.15);
+      border: 1px solid rgba(232,64,28,0.3);
+      color: var(--red);
+      padding: 0.35rem 1rem;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero-tag::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--red);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3.5rem, 8vw, 7rem);
+      line-height: 0.92;
+      letter-spacing: 0.02em;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .hero h1 .accent { color: var(--red); }
+    .hero h1 .outline {
+      -webkit-text-stroke: 2px rgba(255,255,255,0.3);
+      color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 1.05rem;
+      color: #9ca3af;
+      line-height: 1.7;
+      max-width: 480px;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+
+    .btn-hero-primary {
+      background: var(--red);
+      color: #fff;
+      padding: 0.875rem 2rem;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-hero-primary:hover {
+      background: #c73418;
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(232,64,28,0.35);
+    }
+
+    .btn-hero-secondary {
+      background: rgba(255,255,255,0.07);
+      color: #fff;
+      padding: 0.875rem 2rem;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.12);
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-hero-secondary:hover {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    .hero-visual {
+      position: absolute;
+      right: 4rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      animation: fadeUp 0.8s 0.4s ease both;
+    }
+
+    .hero-badge-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .stat-badge {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 1.25rem 1.75rem;
+      min-width: 180px;
+      transition: transform 0.2s;
+    }
+    .stat-badge:hover { transform: translateX(-4px); }
+    .stat-badge .num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.5rem;
+      color: #fff;
+      line-height: 1;
+    }
+    .stat-badge .num span { color: var(--red); }
+    .stat-badge .lbl { font-size: 0.78rem; color: #6b7280; margin-top: 0.25rem; }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      color: #4b5563;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      animation: fadeUp 1s 0.8s ease both;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, transparent, #4b5563);
+      animation: scrollAnim 1.5s infinite;
+    }
+
+    @keyframes scrollAnim {
+      0% { transform: scaleY(0); transform-origin: top; }
+      50% { transform: scaleY(1); transform-origin: top; }
+      51% { transform: scaleY(1); transform-origin: bottom; }
+      100% { transform: scaleY(0); transform-origin: bottom; }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SERVICES ── */
+    .services {
+      padding: 6rem 4rem;
+      background: #111215;
+      position: relative;
+    }
+
+    .section-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    .section-sub {
+      color: #6b7280;
+      font-size: 0.95rem;
+      max-width: 480px;
+      line-height: 1.7;
+      margin-bottom: 3rem;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .service-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .service-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--red);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s;
+    }
+
+    .service-card:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(232,64,28,0.2);
+      transform: translateY(-4px);
+    }
+    .service-card:hover::before { transform: scaleX(1); }
+
+    .service-icon {
+      font-size: 2.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .service-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.5rem;
+    }
+
+    .service-desc {
+      color: #6b7280;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how-it-works {
+      padding: 6rem 4rem;
+      background: var(--ink);
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      position: relative;
+    }
+
+    .step-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 4rem;
+      line-height: 1;
+      color: rgba(232,64,28,0.15);
+      transition: color 0.2s;
+    }
+    .step:hover .step-num { color: rgba(232,64,28,0.4); }
+
+    .step-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 0.04em;
+    }
+
+    .step-desc {
+      color: #6b7280;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    /* ── TESTIMONIALS ── */
+    .testimonials {
+      padding: 6rem 4rem;
+      background: #111215;
+    }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .testi-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: transform 0.2s;
+    }
+    .testi-card:hover { transform: translateY(-4px); }
+
+    .testi-stars {
+      color: var(--gold);
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .testi-text {
+      color: #d1d5db;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 1.5rem;
+      font-style: italic;
+    }
+
+    .testi-author {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .testi-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--red);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .testi-name { font-weight: 600; font-size: 0.875rem; }
+    .testi-bike { font-size: 0.75rem; color: #6b7280; }
+
+    /* ── CTA SECTION ── */
+    .cta-section {
+      padding: 6rem 4rem;
+      background: var(--ink);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(232,64,28,0.1) 0%, transparent 70%);
+    }
+
+    .cta-section h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.5rem, 5vw, 4.5rem);
+      letter-spacing: 0.02em;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .cta-section p {
+      color: #6b7280;
+      font-size: 1rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: #080909;
+      padding: 3rem 4rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      color: #fff;
+    }
+    .footer-logo span { color: var(--red); }
+
+    .footer-copy {
+      color: #4b5563;
+      font-size: 0.8rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+    .footer-links a {
+      color: #4b5563;
+      text-decoration: none;
+      font-size: 0.8rem;
+      transition: color 0.15s;
+    }
+    .footer-links a:hover { color: #fff; }
+
+    /* ── FEEDBACK ── */
+    .feedback {
+      padding: 6rem 4rem;
+      background: var(--ink);
+    }
+
+    .feedback-form {
+      max-width: 620px;
+      margin: 3rem auto 0;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 2.5rem;
+    }
+
+    .feedback-form label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #9ca3af;
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+
+    .feedback-form input,
+    .feedback-form textarea,
+    .feedback-form select {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .feedback-form input::placeholder,
+    .feedback-form textarea::placeholder {
+      color: #4b5563;
+    }
+
+    .feedback-form input:focus,
+    .feedback-form textarea:focus,
+    .feedback-form select:focus {
+      border-color: var(--red);
+    }
+
+    .feedback-form select option {
+      background: #1a1a1a;
+      color: #fff;
+    }
+
+    .feedback-form textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .star-rating {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+    }
+
+    .star-rating input { display: none; }
+
+    .star-rating label {
+      font-size: 1.8rem;
+      color: #4b5563;
+      cursor: pointer;
+      transition: color 0.15s;
+      margin: 0;
+    }
+
+    .star-rating input:checked ~ label,
+    .star-rating label:hover,
+    .star-rating label:hover ~ label {
+      color: var(--red);
+    }
+
+    .btn-feedback {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 0.875rem 2rem;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-feedback:hover {
+      background: #c73418;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(232,64,28,0.35);
+    }
+
+    .feedback-success {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+      color: #9ca3af;
+    }
+
+    .feedback-success .big { font-size: 3rem; margin-bottom: 0.5rem; }
+    .feedback-success h4 { color: #fff; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.04em; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .hero { padding: 6rem 2rem 4rem; min-height: auto; }
+      .hero-visual { display: none; }
+      .services, .how-it-works, .testimonials, .cta-section { padding: 4rem 2rem; }
+      .nav-bar { padding: 1rem 1.5rem; }
+      .nav-links { display: none; }
+      .footer { padding: 2rem; flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="nav-bar">
+    <a class="nav-logo" href="#">MOTO<span>TYRE</span></a>
+    <div class="nav-links">
+      <a href="#services">Services</a>
+      <a href="#how">How It Works</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#feedback">Feedback</a>
+      <a href="/login" class="nav-cta">Login</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+
+    <div class="hero-content">
+      <div class="hero-tag">Now Open for Online Booking</div>
+      <h1>
+        YOUR RIDE.<br>
+        <span class="accent">OUR</span><br>
+        <span class="outline">EXPERTISE.</span>
+      </h1>
+      <p class="hero-desc">
+        Book motorcycle services, order quality tires and parts — all in one place.
+        Fast, reliable, and built for Filipino riders.
+      </p>
+      <div class="hero-actions">
+        <a href="/register" class="btn-hero-primary">
+          🏍️ Get Started Free
+        </a>
+        <a href="/login" class="btn-hero-secondary">
+          🔑 Sign In
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="hero-badge-group">
+        <div class="stat-badge">
+          <div class="num">500<span>+</span></div>
+          <div class="lbl">Bikes Serviced</div>
+        </div>
+        <div class="stat-badge">
+          <div class="num">6</div>
+          <div class="lbl">Services Available</div>
+        </div>
+        <div class="stat-badge">
+          <div class="num">4.9<span>★</span></div>
+          <div class="lbl">Customer Rating</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="services" id="services">
+    <div class="section-tag">What We Offer</div>
+    <div class="section-title">OUR SERVICES</div>
+    <p class="section-sub">From routine maintenance to full tire replacements — we keep your motorcycle running at its best.</p>
+
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon">🛢️</div>
+        <div class="service-name">Oil Change</div>
+        <p class="service-desc">Fresh engine oil and filter replacement to keep your engine smooth and protected.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔧</div>
+        <div class="service-name">Tire Replacement</div>
+        <p class="service-desc">Wide selection of quality tires fitted professionally for your motorcycle model.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔍</div>
+        <div class="service-name">General Checkup</div>
+        <p class="service-desc">Full inspection of your motorcycle — brakes, lights, suspension, and more.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🛑</div>
+        <div class="service-name">Brake Service</div>
+        <p class="service-desc">Brake pad replacement and brake system inspection for maximum stopping power.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">⛓️</div>
+        <div class="service-name">Chain Cleaning</div>
+        <p class="service-desc">Chain cleaning, lubrication, and tension adjustment for smooth power delivery.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">⚙️</div>
+        <div class="service-name">Engine Tune-up</div>
+        <p class="service-desc">Carburetor cleaning, spark plug replacement, and full engine performance tuning.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works" id="how">
+    <div class="section-tag">Simple Process</div>
+    <div class="section-title">HOW IT WORKS</div>
+    <p class="section-sub">Book your appointment in just a few steps — no hassle, no waiting in line.</p>
+
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Create Account</div>
+        <p class="step-desc">Register for free with your name, email, and motorcycle details.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">Pick a Service</div>
+        <p class="step-desc">Choose from our list of available motorcycle services and parts.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">Book a Schedule</div>
+        <p class="step-desc">Select your preferred date and time slot from our live availability calendar.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-title">We Got You</div>
+        <p class="step-desc">Show up on time and our mechanics will take care of the rest.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials" id="reviews">
+    <div class="section-tag">Customer Reviews</div>
+    <div class="section-title">WHAT RIDERS SAY</div>
+
+    <div class="testimonials-grid">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"Super convenient! I booked online and everything was ready when I arrived. The oil change was done fast and the staff were very professional."</p>
+        <div class="testi-author">
+          <div class="testi-avatar">J</div>
+          <div>
+            <div class="testi-name">Juan Dela Cruz</div>
+            <div class="testi-bike">Honda Click 125i</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"Finally a moto shop with online booking! No more waiting in line. The tire they installed is great and the price was very fair."</p>
+        <div class="testi-author">
+          <div class="testi-avatar">M</div>
+          <div>
+            <div class="testi-name">Maria Santos</div>
+            <div class="testi-bike">Yamaha Mio i 125</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"Ang galing ng system! I ordered parts online and they were ready the next day. The whole experience was smooth from start to finish."</p>
+        <div class="testi-author">
+          <div class="testi-avatar">P</div>
+          <div>
+            <div class="testi-name">Pedro Reyes</div>
+            <div class="testi-bike">Suzuki Raider R150</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEEDBACK -->
+  <section class="feedback" id="feedback">
+    <div class="section-tag">Share Your Thoughts</div>
+    <div class="section-title">SEND US FEEDBACK</div>
+    <p class="section-sub">We'd love to hear about your experience. Your feedback helps us improve our service.</p>
+
+    <div class="feedback-form">
+      <div id="formContent">
+        <label>Your Name</label>
+        <input type="text" placeholder="Juan Dela Cruz"
+          oninput="this.value = this.value.replace(/[^A-Za-z\s]/g, '')">
+
+        <label>Email (optional)</label>
+        <input type="email" placeholder="juan@email.com">
+
+        <label>Service Used</label>
+        <select>
+          <option value="" disabled selected>Select a service...</option>
+          <option>Oil Change</option>
+          <option>Tire Replacement</option>
+          <option>General Checkup</option>
+          <option>Brake Service</option>
+          <option>Chain Cleaning</option>
+          <option>Engine Tune-up</option>
+          <option>Parts Order</option>
+        </select>
+
+        <label>Rating</label>
+        <div class="star-rating">
+          <input type="radio" id="s5" name="rating" value="5"><label for="s5">★</label>
+          <input type="radio" id="s4" name="rating" value="4"><label for="s4">★</label>
+          <input type="radio" id="s3" name="rating" value="3"><label for="s3">★</label>
+          <input type="radio" id="s2" name="rating" value="2"><label for="s2">★</label>
+          <input type="radio" id="s1" name="rating" value="1"><label for="s1">★</label>
+        </div>
+
+        <label>Your Feedback</label>
+        <textarea placeholder="Tell us about your experience..."></textarea>
+
+        <button class="btn-feedback" onclick="submitFeedback()">Submit Feedback</button>
+      </div>
+
+      <div class="feedback-success" id="feedbackSuccess">
+        <div class="big">🙏</div>
+        <h4>Thank You!</h4>
+        <p>Your feedback has been received. We appreciate you taking the time to share your experience.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>READY TO BOOK<br><span style="color:var(--red)">YOUR SERVICE?</span></h2>
+    <p>Join hundreds of riders who trust Mototyre Moto Shop for all their motorcycle needs.</p>
+    <div class="cta-buttons">
+      <a href="/register" class="btn-hero-primary">🏍️ Create Free Account</a>
+      <a href="/login" class="btn-hero-secondary">🔑 Sign In</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-logo">MOTO<span>TYRE</span> MOTO SHOP</div>
+    <div class="footer-copy">© 2025 Mototyre Moto Shop. All rights reserved.</div>
+    <div class="footer-links">
+      <a href="#services">Services</a>
+      <a href="#how">How It Works</a>
+      <a href="/login">Login</a>
+      <a href="/register">Register</a>
+    </div>
+  </footer>
+
+  <script>
+    function submitFeedback() {
+      document.getElementById('formContent').style.display = 'none';
+      document.getElementById('feedbackSuccess').style.display = 'block';
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    const nav = document.querySelector('.nav-bar');
+    window.addEventListener('scroll', () => {
+      nav.style.background = window.scrollY > 50
+        ? 'rgba(12,13,15,0.98)'
+        : 'rgba(12,13,15,0.85)';
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.style.opacity = '1';
+          e.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.service-card, .step, .testi-card, .stat-badge').forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(20px)';
+      el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      observer.observe(el);
+    });
+  </script>
+
+</body>
+</html>
