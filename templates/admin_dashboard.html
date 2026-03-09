@@ -14,9 +14,8 @@
     --border: #e2e0db;
     --success: #16a34a;
     --warning: #d97706;
+    --white: #ffffff;
   }
-
-  * { box-sizing: border-box; }
 
   body { font-family: 'DM Sans', sans-serif; background: var(--panel); }
 
@@ -24,7 +23,6 @@
     display: grid;
     grid-template-columns: 240px 1fr;
     min-height: calc(100vh - 56px);
-    background: var(--panel);
   }
 
   /* SIDEBAR */
@@ -66,18 +64,11 @@
     border-left-color: var(--accent);
   }
 
-  .sidebar a .icon { font-size: 1rem; width: 20px; text-align: center; }
-
   /* MAIN */
-  .main {
-    padding: 2rem 2.5rem;
-    overflow-x: hidden;
-  }
-
+  .main { padding: 2rem 2.5rem; overflow-x: hidden; }
   .page-section { display: none; }
   .page-section.active { display: block; }
 
-  /* HEADINGS */
   .page-title {
     font-family: 'Syne', sans-serif;
     font-size: 1.75rem;
@@ -87,7 +78,7 @@
   }
   .page-sub { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
 
-  /* STAT CARDS */
+  /* STATS */
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -96,7 +87,7 @@
   }
 
   .stat-card {
-    background: #fff;
+    background: var(--white);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 1.5rem;
@@ -116,19 +107,12 @@
   .stat-card.orange::before { background: var(--warning); }
 
   .stat-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
-  .stat-value {
-    font-family: 'Syne', sans-serif;
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--ink);
-    line-height: 1;
-  }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--ink); line-height: 1; }
   .stat-label { color: var(--muted); font-size: 0.8rem; margin-top: 0.25rem; }
-  .stat-change { font-size: 0.75rem; margin-top: 0.5rem; color: var(--success); }
 
-  /* CARDS */
+  /* CARD */
   .card {
-    background: #fff;
+    background: var(--white);
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
@@ -153,7 +137,7 @@
 
   .card-body { padding: 1.5rem; }
 
-  /* TABLES */
+  /* TABLE */
   .table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
   .table th {
     text-align: left;
@@ -181,7 +165,6 @@
     border-radius: 99px;
     font-size: 0.7rem;
     font-weight: 600;
-    letter-spacing: 0.03em;
   }
   .badge-pending { background: #fef3c7; color: #92400e; }
   .badge-confirmed { background: #dbeafe; color: #1e40af; }
@@ -194,20 +177,6 @@
   .badge-customer { background: #f3f4f6; color: #374151; }
 
   /* BUTTONS */
-  .btn-sm-action {
-    padding: 0.3rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border: 1px solid var(--border);
-    background: #fff;
-    cursor: pointer;
-    transition: all 0.15s;
-    color: var(--ink);
-  }
-  .btn-sm-action:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .btn-sm-action.danger:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
-
   .btn-primary-custom {
     background: var(--ink);
     color: #fff;
@@ -219,16 +188,27 @@
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.15s;
+    text-decoration: none;
+    display: inline-block;
   }
-  .btn-primary-custom:hover { background: var(--accent); }
+  .btn-primary-custom:hover { background: var(--accent); color: #fff; }
 
-  /* SEARCH / FILTER BAR */
-  .filter-bar {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
-    flex-wrap: wrap;
+  .btn-action {
+    padding: 0.3rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink);
   }
+  .btn-action:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn-action.danger:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* FILTER BAR */
+  .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
   .filter-bar input, .filter-bar select {
     padding: 0.55rem 1rem;
     border: 1px solid var(--border);
@@ -239,28 +219,31 @@
     color: var(--ink);
     outline: none;
   }
-  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent2); }
   .filter-bar input { min-width: 220px; }
+  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent2); }
 
-  /* CHARTS */
-  .charts-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 1.25rem;
-    margin-bottom: 1.5rem;
+  /* STATUS FORM */
+  .status-form { display: inline-flex; gap: 0.4rem; align-items: center; }
+  .status-form select {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    background: #fff;
   }
-
-  .chart-bar-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
-  .chart-bar-item { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; }
-  .chart-bar-item .bar-label { width: 60px; color: var(--muted); text-align: right; }
-  .chart-bar-track { flex: 1; background: var(--panel); border-radius: 4px; height: 10px; overflow: hidden; }
-  .chart-bar-fill { height: 100%; border-radius: 4px; background: var(--accent); }
-  .chart-bar-item .bar-val { width: 40px; font-weight: 600; color: var(--ink); }
-
-  .donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-  .donut-legend { width: 100%; }
-  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; margin-bottom: 0.4rem; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .status-form button {
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    border: none;
+    background: var(--ink);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .status-form button:hover { background: var(--accent); }
 
   /* MODAL */
   .modal-overlay {
@@ -279,6 +262,8 @@
     padding: 2rem;
     width: 480px;
     max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
   }
   .modal-box h5 {
     font-family: 'Syne', sans-serif;
@@ -288,7 +273,7 @@
     color: var(--ink);
   }
   .form-group { margin-bottom: 1rem; }
-  .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; }
+  .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; }
   .form-group input, .form-group select, .form-group textarea {
     width: 100%;
     padding: 0.6rem 0.875rem;
@@ -301,13 +286,35 @@
   }
   .form-group input:focus, .form-group select:focus { border-color: var(--accent2); }
   .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+  .btn-cancel { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 0.875rem; }
 
-  /* RESPONSIVE */
+  /* CHARTS */
+  .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+  .chart-bar-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
+  .chart-bar-item { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; }
+  .chart-bar-item .bar-label { width: 70px; color: var(--muted); text-align: right; font-size: 0.75rem; }
+  .chart-bar-track { flex: 1; background: var(--panel); border-radius: 4px; height: 10px; overflow: hidden; }
+  .chart-bar-fill { height: 100%; border-radius: 4px; }
+  .chart-bar-item .bar-val { width: 50px; font-weight: 600; color: var(--ink); font-size: 0.75rem; }
+
+  /* EMPTY STATE */
+  .empty-state { text-align: center; padding: 2.5rem; color: var(--muted); }
+  .empty-state .ei { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
   @media (max-width: 768px) {
     .admin-wrap { grid-template-columns: 1fr; }
     .sidebar { display: none; }
     .charts-grid { grid-template-columns: 1fr; }
   }
+
+  .bar-pending { background: #f59e0b; }
+  .bar-confirmed { background: #2563eb; }
+  .bar-completed { background: #16a34a; }
+  .bar-cancelled { background: #e8401c; }
+  .bar-processing { background: #8b5cf6; }
+  .bar-shipped { background: #06b6d4; }
+  .bar-green { background: #16a34a; }
+
 </style>
 
 <div class="admin-wrap" style="margin: -1.5rem -12px 0;">
@@ -315,101 +322,89 @@
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-label">Overview</div>
-    <a href="#" class="active" onclick="showSection('dashboard', this)">
-      <span class="icon">📊</span> Dashboard
-    </a>
+    <a href="#" class="active" onclick="showSection('dashboard', this)">📊 Dashboard</a>
 
     <div class="sidebar-label">Management</div>
-    <a href="#" onclick="showSection('bookings', this)">
-      <span class="icon">📅</span> Bookings
-    </a>
-    <a href="#" onclick="showSection('orders', this)">
-      <span class="icon">📦</span> Orders
-    </a>
-    <a href="#" onclick="showSection('users', this)">
-      <span class="icon">👥</span> Users
-    </a>
+    <a href="#" onclick="showSection('bookings', this)">📅 Bookings</a>
+    <a href="#" onclick="showSection('orders', this)">📦 Orders</a>
+    <a href="#" onclick="showSection('products', this)">🔧 Products</a>
+    <a href="#" onclick="showSection('users', this)">👥 Users</a>
 
     <div class="sidebar-label">Analytics</div>
-    <a href="#" onclick="showSection('reports', this)">
-      <span class="icon">📈</span> Reports & Sales
-    </a>
+    <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
 
     <div class="sidebar-label">Account</div>
-    <a href="{{ url_for('logout') }}">
-      <span class="icon">🚪</span> Logout
-    </a>
+    <a href="{{ url_for('logout') }}">🚪 Logout</a>
   </aside>
 
-  <!-- MAIN CONTENT -->
   <main class="main">
 
     <!-- ===== DASHBOARD ===== -->
     <section id="sec-dashboard" class="page-section active">
       <div class="page-title">Admin Dashboard</div>
-      <div class="page-sub">Welcome back, {{ current_user.fullname }} — here's what's happening today.</div>
+      <div class="page-sub">Welcome back, {{ current_user.fullname }} — here's what's happening.</div>
 
       <div class="stats-grid">
         <div class="stat-card red">
           <div class="stat-icon">📅</div>
-          <div class="stat-value">{{ total_bookings or 0 }}</div>
+          <div class="stat-value">{{ total_bookings }}</div>
           <div class="stat-label">Total Bookings</div>
-          <div class="stat-change">↑ 12% this week</div>
         </div>
         <div class="stat-card blue">
           <div class="stat-icon">📦</div>
-          <div class="stat-value">{{ total_orders or 0 }}</div>
+          <div class="stat-value">{{ total_orders }}</div>
           <div class="stat-label">Total Orders</div>
-          <div class="stat-change">↑ 8% this week</div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon">💰</div>
-          <div class="stat-value">₱{{ total_revenue or '0' }}</div>
+          <div class="stat-value">₱{{ total_revenue }}</div>
           <div class="stat-label">Total Revenue</div>
-          <div class="stat-change">↑ 5% this month</div>
         </div>
         <div class="stat-card orange">
           <div class="stat-icon">👥</div>
-          <div class="stat-value">{{ total_users or 0 }}</div>
+          <div class="stat-value">{{ total_users }}</div>
           <div class="stat-label">Registered Users</div>
-          <div class="stat-change">↑ 3 new today</div>
         </div>
       </div>
 
+      <!-- Booking status summary -->
       <div class="charts-grid">
         <div class="card">
-          <div class="card-head"><h5>Monthly Bookings</h5></div>
+          <div class="card-head"><h5>Bookings by Status</h5></div>
           <div class="card-body">
             <div class="chart-bar-wrap">
-              <div class="chart-bar-item"><span class="bar-label">Jan</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:40%"></div></div><span class="bar-val">24</span></div>
-              <div class="chart-bar-item"><span class="bar-label">Feb</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:55%"></div></div><span class="bar-val">33</span></div>
-              <div class="chart-bar-item"><span class="bar-label">Mar</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:70%"></div></div><span class="bar-val">42</span></div>
-              <div class="chart-bar-item"><span class="bar-label">Apr</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:60%"></div></div><span class="bar-val">36</span></div>
-              <div class="chart-bar-item"><span class="bar-label">May</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:85%"></div></div><span class="bar-val">51</span></div>
-              <div class="chart-bar-item"><span class="bar-label">Jun</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:50%"></div></div><span class="bar-val">30</span></div>
+              {% set statuses = [('pending', 'bar-pending'), ('confirmed', 'bar-confirmed'), ('completed', 'bar-completed'), ('cancelled', 'bar-cancelled')] %}
+              {% for status, colorclass in statuses %}
+              {% set count = booking_status_counts.get(status, 0) %}
+              {% set pct = ((count / total_bookings * 100) | int) if total_bookings > 0 else 0 %}
+            <div class="chart-bar-item">
+            <span class="bar-label">{{ status|title }}</span>
+            <div class="chart-bar-track">
+            <div class="chart-bar-fill {{ colorclass }}" data-width="{{ pct }}"></div>
+    </div>
+    <span class="bar-val">{{ count }}</span>
+</div>
+{% endfor %}
+              {% endfor %}
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-head"><h5>Booking Status</h5></div>
+          <div class="card-head"><h5>Pending Actions</h5></div>
           <div class="card-body">
-            <div class="donut-wrap">
-              <svg width="120" height="120" viewBox="0 0 120 120">
-                <circle cx="60" cy="60" r="45" fill="none" stroke="#f3f4f6" stroke-width="18"/>
-                <circle cx="60" cy="60" r="45" fill="none" stroke="#e8401c" stroke-width="18"
-                  stroke-dasharray="113 170" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
-                <circle cx="60" cy="60" r="45" fill="none" stroke="#2563eb" stroke-width="18"
-                  stroke-dasharray="68 215" stroke-dashoffset="-113" transform="rotate(-90 60 60)"/>
-                <circle cx="60" cy="60" r="45" fill="none" stroke="#16a34a" stroke-width="18"
-                  stroke-dasharray="56 227" stroke-dashoffset="-181" transform="rotate(-90 60 60)"/>
-                <text x="60" y="65" text-anchor="middle" font-size="13" font-weight="700" fill="#0f1117">216</text>
-              </svg>
-              <div class="donut-legend">
-                <div class="legend-item"><div class="legend-dot" style="background:#e8401c"></div> Pending — 52</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div> Confirmed — 31</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> Completed — 26</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#f3f4f6;border:1px solid #e2e0db"></div> Cancelled — 7</div>
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:var(--panel);border-radius:8px;">
+                <span style="font-size:0.85rem;">Pending Bookings</span>
+                <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--warning);">{{ booking_status_counts.get('pending', 0) }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:var(--panel);border-radius:8px;">
+                <span style="font-size:0.85rem;">Pending Orders</span>
+                <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--accent2);">{{ order_status_counts.get('pending', 0) }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:var(--panel);border-radius:8px;">
+                <span style="font-size:0.85rem;">New Users Today</span>
+                <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--success);">{{ new_users_today }}</span>
               </div>
             </div>
           </div>
@@ -420,111 +415,184 @@
       <div class="card">
         <div class="card-head">
           <h5>Recent Bookings</h5>
-          <button class="btn-primary-custom" onclick="showSection('bookings', document.querySelector('.sidebar a:nth-child(4)'))">View All</button>
+          <button class="btn-primary-custom" onclick="showSection('bookings', document.querySelectorAll('.sidebar a')[1])">View All</button>
         </div>
+        {% if recent_bookings %}
         <div style="overflow-x:auto;">
           <table class="table">
-            <thead>
-              <tr>
-                <th>Customer</th><th>Service</th><th>Date</th><th>Status</th><th>Action</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
             <tbody>
-              {% if recent_bookings %}
-                {% for b in recent_bookings %}
-                <tr>
-                  <td>{{ b.customer_name }}</td>
-                  <td>{{ b.service }}</td>
-                  <td>{{ b.date }}</td>
-                  <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
-                  <td><button class="btn-sm-action">Manage</button></td>
-                </tr>
-                {% endfor %}
-              {% else %}
-              <tr><td>Juan Dela Cruz</td><td>Oil Change</td><td>2025-06-10</td><td><span class="badge badge-pending">Pending</span></td><td><button class="btn-sm-action">Manage</button></td></tr>
-              <tr><td>Maria Santos</td><td>Tire Replacement</td><td>2025-06-11</td><td><span class="badge badge-confirmed">Confirmed</span></td><td><button class="btn-sm-action">Manage</button></td></tr>
-              <tr><td>Pedro Reyes</td><td>General Checkup</td><td>2025-06-12</td><td><span class="badge badge-completed">Completed</span></td><td><button class="btn-sm-action">Manage</button></td></tr>
-              {% endif %}
+              {% for b in recent_bookings %}
+              <tr>
+                <td>{{ b.customer.fullname }}</td>
+                <td>{{ b.service }}</td>
+                <td>{{ b.date.strftime('%b %d, %Y') }}</td>
+                <td>{{ b.time.strftime('%I:%M %p') }}</td>
+                <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
+        {% else %}
+        <div class="empty-state"><div class="ei">📅</div><p>No bookings yet.</p></div>
+        {% endif %}
       </div>
     </section>
 
     <!-- ===== BOOKINGS ===== -->
     <section id="sec-bookings" class="page-section">
       <div class="page-title">Manage Bookings</div>
-      <div class="page-sub">View, confirm, or cancel service appointments.</div>
+      <div class="page-sub">View, confirm, complete, or cancel service appointments.</div>
 
       <div class="filter-bar">
-        <input type="text" placeholder="🔍  Search customer or service...">
-        <select>
+        <input type="text" id="search-bookings" placeholder="🔍 Search customer or service..." oninput="filterTable('bookings-table', this.value)">
+        <select onchange="filterTableByCol('bookings-table', 5, this.value)">
           <option value="">All Status</option>
-          <option>Pending</option>
-          <option>Confirmed</option>
-          <option>Completed</option>
-          <option>Cancelled</option>
+          <option>pending</option>
+          <option>confirmed</option>
+          <option>completed</option>
+          <option>cancelled</option>
         </select>
-        <select>
-          <option value="">All Services</option>
-          <option>Oil Change</option>
-          <option>Tire Replacement</option>
-          <option>General Checkup</option>
-          <option>Chain Cleaning</option>
-          <option>Brake Service</option>
-        </select>
-        <button class="btn-primary-custom" onclick="openModal('modal-add-booking')">+ Add Booking</button>
       </div>
 
       <div class="card">
+        {% if all_bookings %}
         <div style="overflow-x:auto;">
-          <table class="table">
+          <table class="table" id="bookings-table">
             <thead>
-              <tr><th>#</th><th>Customer</th><th>Service</th><th>Date & Time</th><th>Motorcycle</th><th>Status</th><th>Actions</th></tr>
+              <tr><th>#</th><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Motorcycle</th><th>Update Status</th></tr>
             </thead>
             <tbody>
-              <tr><td>001</td><td>Juan Dela Cruz</td><td>Oil Change</td><td>Jun 10, 2025 9:00 AM</td><td>Honda Click 125i</td><td><span class="badge badge-pending">Pending</span></td><td><button class="btn-sm-action">Confirm</button> <button class="btn-sm-action danger">Cancel</button></td></tr>
-              <tr><td>002</td><td>Maria Santos</td><td>Tire Replacement</td><td>Jun 11, 2025 10:30 AM</td><td>Yamaha Mio</td><td><span class="badge badge-confirmed">Confirmed</span></td><td><button class="btn-sm-action">Complete</button> <button class="btn-sm-action danger">Cancel</button></td></tr>
-              <tr><td>003</td><td>Pedro Reyes</td><td>General Checkup</td><td>Jun 12, 2025 2:00 PM</td><td>Suzuki Raider</td><td><span class="badge badge-completed">Completed</span></td><td><button class="btn-sm-action">View</button></td></tr>
-              <tr><td>004</td><td>Ana Lim</td><td>Brake Service</td><td>Jun 13, 2025 11:00 AM</td><td>Honda TMX</td><td><span class="badge badge-cancelled">Cancelled</span></td><td><button class="btn-sm-action">View</button></td></tr>
+              {% for b in all_bookings %}
+              <tr>
+                <td>{{ b.id }}</td>
+                <td>{{ b.customer.fullname }}</td>
+                <td>{{ b.service }}</td>
+                <td>{{ b.date.strftime('%b %d, %Y') }}</td>
+                <td>{{ b.time.strftime('%I:%M %p') }}</td>
+                <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
+                <td>{{ b.motorcycle_model or '—' }}</td>
+                <td>
+                  <form method="POST" action="{{ url_for('update_booking_status', booking_id=b.id) }}" class="status-form">
+                    <select name="status">
+                      <option value="pending" {% if b.status=='pending' %}selected{% endif %}>Pending</option>
+                      <option value="confirmed" {% if b.status=='confirmed' %}selected{% endif %}>Confirmed</option>
+                      <option value="completed" {% if b.status=='completed' %}selected{% endif %}>Completed</option>
+                      <option value="cancelled" {% if b.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                    <button type="submit">Save</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
+        {% else %}
+        <div class="empty-state"><div class="ei">📅</div><p>No bookings found.</p></div>
+        {% endif %}
       </div>
     </section>
 
     <!-- ===== ORDERS ===== -->
     <section id="sec-orders" class="page-section">
       <div class="page-title">Manage Orders</div>
-      <div class="page-sub">Track and update tire and parts orders.</div>
+      <div class="page-sub">Track and update parts and accessories orders.</div>
 
       <div class="filter-bar">
-        <input type="text" placeholder="🔍  Search customer or product...">
-        <select>
+        <input type="text" placeholder="🔍 Search customer or product..." oninput="filterTable('orders-table', this.value)">
+        <select onchange="filterTableByCol('orders-table', 3, this.value)">
           <option value="">All Status</option>
-          <option>Pending</option>
-          <option>Processing</option>
-          <option>Shipped</option>
-          <option>Completed</option>
-          <option>Cancelled</option>
+          <option>pending</option>
+          <option>processing</option>
+          <option>shipped</option>
+          <option>completed</option>
+          <option>cancelled</option>
         </select>
-        <button class="btn-primary-custom" onclick="openModal('modal-add-order')">+ Add Order</button>
       </div>
 
       <div class="card">
+        {% if all_orders %}
         <div style="overflow-x:auto;">
-          <table class="table">
+          <table class="table" id="orders-table">
             <thead>
-              <tr><th>Order #</th><th>Customer</th><th>Product</th><th>Qty</th><th>Total</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+              <tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th><th>Update Status</th></tr>
             </thead>
             <tbody>
-              <tr><td>ORD-001</td><td>Juan Dela Cruz</td><td>IRC MB99 Front Tire</td><td>2</td><td>₱2,400</td><td>Jun 8, 2025</td><td><span class="badge badge-processing">Processing</span></td><td><button class="btn-sm-action">Update</button></td></tr>
-              <tr><td>ORD-002</td><td>Maria Santos</td><td>Maxxis Victra MA-3DS</td><td>1</td><td>₱1,800</td><td>Jun 9, 2025</td><td><span class="badge badge-shipped">Shipped</span></td><td><button class="btn-sm-action">Update</button></td></tr>
-              <tr><td>ORD-003</td><td>Pedro Reyes</td><td>FDR Sport XR-1</td><td>4</td><td>₱5,600</td><td>Jun 10, 2025</td><td><span class="badge badge-pending">Pending</span></td><td><button class="btn-sm-action">Update</button> <button class="btn-sm-action danger">Cancel</button></td></tr>
-              <tr><td>ORD-004</td><td>Ana Lim</td><td>Dunlop TT900 GP</td><td>2</td><td>₱3,200</td><td>Jun 11, 2025</td><td><span class="badge badge-completed">Completed</span></td><td><button class="btn-sm-action">View</button></td></tr>
+              {% for o in all_orders %}
+              <tr>
+                <td>ORD-{{ '%03d'|format(o.id) }}</td>
+                <td>{{ o.customer.fullname }}</td>
+                <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
+                <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
+                <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
+                <td>
+                  <form method="POST" action="{{ url_for('update_order_status', order_id=o.id) }}" class="status-form">
+                    <select name="status">
+                      <option value="pending" {% if o.status=='pending' %}selected{% endif %}>Pending</option>
+                      <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
+                      <option value="shipped" {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
+                      <option value="completed" {% if o.status=='completed' %}selected{% endif %}>Completed</option>
+                      <option value="cancelled" {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                    <button type="submit">Save</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
+        {% else %}
+        <div class="empty-state"><div class="ei">📦</div><p>No orders found.</p></div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- ===== PRODUCTS ===== -->
+    <section id="sec-products" class="page-section">
+      <div class="page-title">Manage Products</div>
+      <div class="page-sub">Add and manage spare parts and accessories inventory.</div>
+
+      <div class="filter-bar">
+        <input type="text" placeholder="🔍 Search product..." oninput="filterTable('products-table', this.value)">
+        <button class="btn-primary-custom" onclick="openModal('modal-add-product')">+ Add Product</button>
+      </div>
+
+      <div class="card">
+        {% if all_products %}
+        <div style="overflow-x:auto;">
+          <table class="table" id="products-table">
+            <thead>
+              <tr><th>#</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              {% for p in all_products %}
+              <tr>
+                <td>{{ p.id }}</td>
+                <td>{{ p.name }}</td>
+                <td>{{ p.category }}</td>
+                <td>₱{{ '%.2f'|format(p.price) }}</td>
+                <td>
+                  {% if p.stock == 0 %}
+                  <span style="color:#e8401c;font-weight:600;">{{ p.stock }}</span>
+                  {% elif p.stock < 5 %}
+                  <span style="color:#d97706;font-weight:600;">{{ p.stock }}</span>
+                  {% else %}
+                  <span style="color:#16a34a;font-weight:600;">{{ p.stock }}</span>
+                  {% endif %}
+                </td>
+                </td>
+                <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.description or '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><div class="ei">🔧</div><p>No products yet. Add your first product!</p></div>
+        {% endif %}
       </div>
     </section>
 
@@ -534,46 +602,39 @@
       <div class="page-sub">View all registered customers and staff accounts.</div>
 
       <div class="filter-bar">
-        <input type="text" placeholder="🔍  Search name or email...">
-        <select>
+        <input type="text" placeholder="🔍 Search name or email..." oninput="filterTable('users-table', this.value)">
+        <select onchange="filterTableByCol('users-table', 5, this.value)">
           <option value="">All Roles</option>
-          <option>Customer</option>
-          <option>Staff</option>
-          <option>Admin</option>
+          <option>customer</option>
+          <option>staff</option>
+          <option>admin</option>
         </select>
-        <button class="btn-primary-custom" onclick="openModal('modal-add-user')">+ Add User</button>
       </div>
 
       <div class="card">
+        {% if all_users %}
         <div style="overflow-x:auto;">
-          <table class="table">
+          <table class="table" id="users-table">
             <thead>
-              <tr><th>#</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Motorcycle</th><th>Role</th><th>Actions</th></tr>
+              <tr><th>#</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Motorcycle</th><th>Role</th></tr>
             </thead>
             <tbody>
-              {% if users %}
-                {% for u in users %}
-                <tr>
-                  <td>{{ u.id }}</td>
-                  <td>{{ u.fullname }}</td>
-                  <td>{{ u.email }}</td>
-                  <td>{{ u.phone }}</td>
-                  <td>{{ u.motorcycle_model or '—' }}</td>
-                  <td><span class="badge badge-{{ u.role }}">{{ u.role|title }}</span></td>
-                  <td>
-                    <button class="btn-sm-action">Edit</button>
-                    <button class="btn-sm-action danger">Delete</button>
-                  </td>
-                </tr>
-                {% endfor %}
-              {% else %}
-              <tr><td>1</td><td>Admin User</td><td>admin@mototyre.com</td><td>09xx xxx xxxx</td><td>—</td><td><span class="badge badge-admin">Admin</span></td><td><button class="btn-sm-action">Edit</button></td></tr>
-              <tr><td>2</td><td>Juan Dela Cruz</td><td>juan@email.com</td><td>0912 345 6789</td><td>Honda Click 125i</td><td><span class="badge badge-customer">Customer</span></td><td><button class="btn-sm-action">Edit</button> <button class="btn-sm-action danger">Delete</button></td></tr>
-              <tr><td>3</td><td>Maria Santos</td><td>maria@email.com</td><td>0917 654 3210</td><td>Yamaha Mio</td><td><span class="badge badge-customer">Customer</span></td><td><button class="btn-sm-action">Edit</button> <button class="btn-sm-action danger">Delete</button></td></tr>
-              {% endif %}
+              {% for u in all_users %}
+              <tr>
+                <td>{{ u.id }}</td>
+                <td>{{ u.fullname }}</td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.phone }}</td>
+                <td>{{ u.motorcycle_model or '—' }}</td>
+                <td><span class="badge badge-{{ u.role }}">{{ u.role|title }}</span></td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
+        {% else %}
+        <div class="empty-state"><div class="ei">👥</div><p>No users found.</p></div>
+        {% endif %}
       </div>
     </section>
 
@@ -585,152 +646,176 @@
       <div class="stats-grid">
         <div class="stat-card red">
           <div class="stat-icon">💵</div>
-          <div class="stat-value">₱48,200</div>
-          <div class="stat-label">Revenue This Month</div>
+          <div class="stat-value">₱{{ total_revenue }}</div>
+          <div class="stat-label">Total Revenue</div>
         </div>
         <div class="stat-card blue">
           <div class="stat-icon">🔧</div>
-          <div class="stat-value">116</div>
+          <div class="stat-value">{{ booking_status_counts.get('completed', 0) }}</div>
           <div class="stat-label">Services Completed</div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon">📦</div>
-          <div class="stat-value">84</div>
+          <div class="stat-value">{{ order_status_counts.get('completed', 0) }}</div>
           <div class="stat-label">Orders Fulfilled</div>
         </div>
         <div class="stat-card orange">
-          <div class="stat-icon">⭐</div>
-          <div class="stat-value">4.8</div>
-          <div class="stat-label">Avg. Rating</div>
+          <div class="stat-icon">👥</div>
+          <div class="stat-value">{{ total_users }}</div>
+          <div class="stat-label">Total Customers</div>
         </div>
       </div>
 
       <div class="charts-grid">
         <div class="card">
-          <div class="card-head"><h5>Revenue by Month (₱)</h5></div>
+          <div class="card-head"><h5>Orders by Status</h5></div>
           <div class="card-body">
             <div class="chart-bar-wrap">
-              <div class="chart-bar-item"><span class="bar-label">Jan</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:55%;background:#2563eb"></div></div><span class="bar-val">₱32k</span></div>
-              <div class="chart-bar-item"><span class="bar-label">Feb</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:62%;background:#2563eb"></div></div><span class="bar-val">₱37k</span></div>
-              <div class="chart-bar-item"><span class="bar-label">Mar</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:75%;background:#2563eb"></div></div><span class="bar-val">₱45k</span></div>
-              <div class="chart-bar-item"><span class="bar-label">Apr</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:68%;background:#2563eb"></div></div><span class="bar-val">₱41k</span></div>
-              <div class="chart-bar-item"><span class="bar-label">May</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:80%;background:#2563eb"></div></div><span class="bar-val">₱48k</span></div>
+              {% set order_statuses = [('pending','#f59e0b'),('processing','#8b5cf6'),('shipped','#06b6d4'),('completed','#16a34a'),('cancelled','#e8401c')] %}
+              {% for status, color in order_statuses %}
+              {% set count = order_status_counts.get(status, 0) %}
+              {% set pct = ((count / total_orders * 100)|int) if total_orders > 0 else 0 %}
+              <div class="chart-bar-item">
+                <span class="bar-label">{{ status|title }}</span>
+                <div class="chart-bar-track">
+                  <div class="chart-bar-fill {{ colorclass }}" data-width="{{ pct }}"></div>
+                </div>
+                <span class="bar-val">{{ count }}</span>
+              </div>
+              {% endfor %}
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-head"><h5>Top Services</h5></div>
+          <div class="card-head"><h5>Top Services Booked</h5></div>
           <div class="card-body">
+            {% if top_services %}
             <div class="chart-bar-wrap">
-              <div class="chart-bar-item"><span class="bar-label" style="width:90px">Tire Repl.</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:85%;background:#16a34a"></div></div><span class="bar-val">42</span></div>
-              <div class="chart-bar-item"><span class="bar-label" style="width:90px">Oil Change</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:70%;background:#16a34a"></div></div><span class="bar-val">35</span></div>
-              <div class="chart-bar-item"><span class="bar-label" style="width:90px">Checkup</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:50%;background:#16a34a"></div></div><span class="bar-val">25</span></div>
-              <div class="chart-bar-item"><span class="bar-label" style="width:90px">Brake Svc</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:28%;background:#16a34a"></div></div><span class="bar-val">14</span></div>
+              {% for service, count in top_services %}
+              {% set pct = ((count / total_bookings * 100)|int) if total_bookings > 0 else 0 %}
+              <div class="chart-bar-item">
+                <span class="bar-label" style="width:90px;font-size:0.7rem;">{{ service[:10] }}</span>
+                <div class="chart-bar-track">
+                 <div class="chart-bar-fill {{ colorclass }}" data-width="{{ pct }}"></div>
+                </div>
+                <span class="bar-val">{{ count }}</span>
+              </div>
+              {% endfor %}
             </div>
+            {% else %}
+            <div class="empty-state"><div class="ei">📊</div><p>No booking data yet.</p></div>
+            {% endif %}
           </div>
         </div>
       </div>
 
+      <!-- Sales Transaction Log -->
       <div class="card">
-        <div class="card-head">
-          <h5>Sales Transaction Log</h5>
-          <button class="btn-primary-custom">Export CSV</button>
-        </div>
+        <div class="card-head"><h5>Recent Orders Log</h5></div>
+        {% if all_orders %}
         <div style="overflow-x:auto;">
           <table class="table">
-            <thead>
-              <tr><th>Date</th><th>Type</th><th>Description</th><th>Customer</th><th>Amount</th><th>Status</th></tr>
-            </thead>
+            <thead><tr><th>Order #</th><th>Customer</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
             <tbody>
-              <tr><td>Jun 10</td><td>Service</td><td>Tire Replacement</td><td>Juan Dela Cruz</td><td>₱1,200</td><td><span class="badge badge-completed">Completed</span></td></tr>
-              <tr><td>Jun 10</td><td>Order</td><td>IRC MB99 x2</td><td>Maria Santos</td><td>₱2,400</td><td><span class="badge badge-shipped">Shipped</span></td></tr>
-              <tr><td>Jun 11</td><td>Service</td><td>Oil Change</td><td>Pedro Reyes</td><td>₱450</td><td><span class="badge badge-completed">Completed</span></td></tr>
-              <tr><td>Jun 11</td><td>Order</td><td>Maxxis Victra x1</td><td>Ana Lim</td><td>₱1,800</td><td><span class="badge badge-processing">Processing</span></td></tr>
+              {% for o in all_orders[:10] %}
+              <tr>
+                <td>ORD-{{ '%03d'|format(o.id) }}</td>
+                <td>{{ o.customer.fullname }}</td>
+                <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
+                <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
+                <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
+        {% else %}
+        <div class="empty-state"><div class="ei">💳</div><p>No transactions yet.</p></div>
+        {% endif %}
       </div>
     </section>
 
   </main>
 </div>
 
-<!-- MODALS -->
-
-<!-- Add Booking -->
-<div class="modal-overlay" id="modal-add-booking">
+<!-- ADD PRODUCT MODAL -->
+<div class="modal-overlay" id="modal-add-product">
   <div class="modal-box">
-    <h5>➕ Add New Booking</h5>
-    <div class="form-group"><label>Customer Name</label><input type="text" placeholder="Juan Dela Cruz"></div>
-    <div class="form-group"><label>Service</label>
-      <select><option>Oil Change</option><option>Tire Replacement</option><option>General Checkup</option><option>Brake Service</option><option>Chain Cleaning</option></select>
-    </div>
-    <div class="form-group"><label>Date & Time</label><input type="datetime-local"></div>
-    <div class="form-group"><label>Motorcycle Model</label><input type="text" placeholder="Honda Click 125i"></div>
-    <div class="form-group"><label>Notes</label><textarea rows="2" placeholder="Additional notes..."></textarea></div>
-    <div class="modal-actions">
-      <button class="btn-sm-action" onclick="closeModal('modal-add-booking')">Cancel</button>
-      <button class="btn-primary-custom">Save Booking</button>
-    </div>
-  </div>
-</div>
-
-<!-- Add Order -->
-<div class="modal-overlay" id="modal-add-order">
-  <div class="modal-box">
-    <h5>➕ Add New Order</h5>
-    <div class="form-group"><label>Customer Name</label><input type="text" placeholder="Juan Dela Cruz"></div>
-    <div class="form-group"><label>Product</label><input type="text" placeholder="IRC MB99 Front Tire"></div>
-    <div class="form-group"><label>Quantity</label><input type="number" placeholder="1" min="1"></div>
-    <div class="form-group"><label>Unit Price (₱)</label><input type="number" placeholder="1200"></div>
-    <div class="modal-actions">
-      <button class="btn-sm-action" onclick="closeModal('modal-add-order')">Cancel</button>
-      <button class="btn-primary-custom">Save Order</button>
-    </div>
-  </div>
-</div>
-
-<!-- Add User -->
-<div class="modal-overlay" id="modal-add-user">
-  <div class="modal-box">
-    <h5>➕ Add New User</h5>
-    <div class="form-group"><label>Full Name</label><input type="text" placeholder="Juan Dela Cruz"></div>
-    <div class="form-group"><label>Email</label><input type="email" placeholder="example@email.com"></div>
-    <div class="form-group"><label>Phone</label><input type="tel" placeholder="09xx xxx xxxx"></div>
-    <div class="form-group"><label>Role</label><select><option>Customer</option><option>Staff</option><option>Admin</option></select></div>
-    <div class="form-group"><label>Password</label><input type="password" placeholder="••••••••"></div>
-    <div class="modal-actions">
-      <button class="btn-sm-action" onclick="closeModal('modal-add-user')">Cancel</button>
-      <button class="btn-primary-custom">Create User</button>
-    </div>
+    <h5>🔧 Add New Product</h5>
+    <form method="POST" action="{{ url_for('add_product') }}">
+      <div class="form-group"><label>Product Name</label><input type="text" name="name" placeholder="e.g. IRC MB99 Front Tire" required></div>
+      <div class="form-group"><label>Category</label>
+        <select name="category" required>
+          <option value="">-- Select Category --</option>
+          <option>Tires</option>
+          <option>Brake Parts</option>
+          <option>Engine Parts</option>
+          <option>Chain & Sprockets</option>
+          <option>Filters</option>
+          <option>Lubricants</option>
+          <option>Accessories</option>
+          <option>Other Spare Parts</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Price (₱)</label><input type="number" name="price" step="0.01" min="0" placeholder="0.00" required></div>
+      <div class="form-group"><label>Stock Quantity</label><input type="number" name="stock" min="0" placeholder="0" required></div>
+      <div class="form-group"><label>Description (optional)</label><textarea name="description" rows="2" placeholder="Brief description..."></textarea></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeModal('modal-add-product')">Cancel</button>
+        <button type="submit" class="btn-primary-custom">Add Product</button>
+      </div>
+    </form>
   </div>
 </div>
 
 <script>
   function showSection(name, el) {
-    // hide all
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
-    // show target
     document.getElementById('sec-' + name).classList.add('active');
     if (el) el.classList.add('active');
   }
 
-  function openModal(id) {
-    document.getElementById(id).classList.add('open');
-  }
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-  function closeModal(id) {
-    document.getElementById(id).classList.remove('open');
-  }
-
-  // Close modal on overlay click
-  document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', function(e) {
-      if (e.target === this) this.classList.remove('open');
-    });
+  document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
   });
+
+  // Search filter
+  function filterTable(tableId, query) {
+    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+    const q = query.toLowerCase();
+    rows.forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  // Filter by specific column
+  function filterTableByCol(tableId, colIndex, value) {
+    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+    rows.forEach(row => {
+      const cell = row.cells[colIndex];
+      if (!value || (cell && cell.textContent.toLowerCase().includes(value.toLowerCase()))) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+
+  // Apply colors to chart bars
+document.querySelectorAll('.chart-bar-fill[data-color]').forEach(bar => {
+    bar.style.background = bar.dataset.color;
+});
+
+// Apply widths to chart bars
+document.querySelectorAll('.chart-bar-fill[data-width]').forEach(bar => {
+    bar.style.width = bar.dataset.width + '%';
+});
+
 </script>
 
 {% endblock %}

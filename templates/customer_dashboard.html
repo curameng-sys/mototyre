@@ -1,0 +1,996 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+
+  :root {
+    --ink: #111318;
+    --panel: #f7f6f2;
+    --white: #ffffff;
+    --accent: #e63c1e;
+    --accent2: #1d4ed8;
+    --success: #15803d;
+    --warning: #b45309;
+    --muted: #6b7280;
+    --border: #e5e3de;
+  }
+
+  body { font-family: 'DM Sans', sans-serif; background: var(--panel); }
+
+  .cust-wrap {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* SIDEBAR */
+  .c-sidebar {
+    background: var(--ink);
+    padding: 1.75rem 0;
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+
+  .c-sidebar-greeting {
+    padding: 0 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 0.75rem;
+  }
+
+  .c-sidebar-greeting .avatar {
+    width: 44px; height: 44px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #fff;
+    margin-bottom: 0.6rem;
+  }
+
+  .c-sidebar-greeting .name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #fff;
+  }
+
+  .c-sidebar-greeting .role {
+    font-size: 0.72rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .c-sidebar-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #4b5563;
+    padding: 0 1.25rem;
+    margin: 1.25rem 0 0.4rem;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .c-sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.6rem 1.25rem;
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .c-sidebar a:hover, .c-sidebar a.active {
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+    border-left-color: var(--accent);
+  }
+
+  /* MAIN */
+  .c-main { padding: 2rem 2rem; overflow-x: hidden; }
+
+  .c-section { display: none; }
+  .c-section.active { display: block; }
+
+  .page-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 0.2rem;
+  }
+  .page-sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.75rem; }
+
+  /* STAT CARDS */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .stat-card.red::after { background: var(--accent); }
+  .stat-card.blue::after { background: var(--accent2); }
+  .stat-card.green::after { background: var(--success); }
+
+  .stat-icon { font-size: 1.4rem; margin-bottom: 0.5rem; }
+  .stat-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .stat-lbl { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* CARD */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-head {
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-head h5 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .card-body { padding: 1.5rem; }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.6rem 0.875rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    background: #fff;
+    outline: none;
+    transition: border 0.15s;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--accent2); }
+
+  .btn-submit {
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    padding: 0.65rem 1.5rem;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-submit:hover { background: var(--accent); }
+
+  /* TABLE */
+  .table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .table th {
+    text-align: left;
+    padding: 0.7rem 1rem;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 2px solid var(--border);
+  }
+  .table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink);
+    vertical-align: middle;
+  }
+  .table tr:last-child td { border-bottom: none; }
+  .table tr:hover td { background: #fafaf8; }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 99px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  .badge-pending { background: #fef3c7; color: #92400e; }
+  .badge-confirmed { background: #dbeafe; color: #1e40af; }
+  .badge-completed { background: #dcfce7; color: #15803d; }
+  .badge-cancelled { background: #fee2e2; color: #991b1b; }
+  .badge-processing { background: #ede9fe; color: #6d28d9; }
+  .badge-shipped { background: #cffafe; color: #0e7490; }
+
+  /* PRODUCT GRID */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .product-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: box-shadow 0.15s;
+  }
+  .product-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+
+  .product-icon { font-size: 2rem; }
+  .product-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--ink);
+  }
+  .product-cat { font-size: 0.75rem; color: var(--muted); }
+  .product-price {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--accent);
+  }
+  .product-stock { font-size: 0.75rem; color: var(--success); }
+
+  .btn-order {
+    margin-top: auto;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-order:hover { background: var(--accent); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem;
+    width: 420px;
+    max-width: 95vw;
+  }
+  .modal-box h5 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 1.25rem;
+    color: var(--ink);
+  }
+  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+  .btn-cancel-modal {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--ink);
+  }
+
+  /* PROFILE */
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .profile-avatar {
+    width: 72px; height: 72px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.75rem;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .profile-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: var(--ink);
+  }
+  .profile-email { color: var(--muted); font-size: 0.875rem; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--muted);
+  }
+  .empty-state .empty-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+  .empty-state p { font-size: 0.9rem; }
+
+  @media (max-width: 768px) {
+    .cust-wrap { grid-template-columns: 1fr; }
+    .c-sidebar { display: none; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="cust-wrap" style="margin: -1.5rem -12px 0;">
+
+  <!-- SIDEBAR -->
+  <aside class="c-sidebar">
+    <div class="c-sidebar-greeting">
+      <div class="avatar">{{ current_user.fullname[0].upper() }}</div>
+      <div class="name">{{ current_user.fullname }}</div>
+      <div class="role">Customer</div>
+    </div>
+
+    <div class="c-sidebar-label">Main</div>
+    <a href="#" class="active" onclick="showSection('overview', this)">🏠 Overview</a>
+
+    <div class="c-sidebar-label">Services</div>
+    <a href="#" onclick="showSection('book', this)">📅 Book Appointment</a>
+    <a href="#" onclick="showSection('bookings', this)">📋 My Bookings</a>
+
+    <div class="c-sidebar-label">Shop</div>
+    <a href="#" onclick="showSection('shop', this)">🛒 Order Parts</a>
+    <a href="#" onclick="showSection('orders', this)">📦 My Orders</a>
+
+    <div class="c-sidebar-label">Account</div>
+    <a href="#" onclick="showSection('profile', this)">👤 My Profile</a>
+    <a href="{{ url_for('logout') }}">🚪 Logout</a>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="c-main">
+
+    <!-- ===== OVERVIEW ===== -->
+    <section id="sec-overview" class="c-section active">
+      <div class="page-title">Welcome, {{ current_user.fullname.split()[0] }}! 👋</div>
+      <div class="page-sub">Here's a summary of your activity at Mototyre Moto Shop.</div>
+
+      <div class="stat-row">
+        <div class="stat-card red">
+          <div class="stat-icon">📅</div>
+          <div class="stat-val">{{ bookings|length }}</div>
+          <div class="stat-lbl">Total Bookings</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">📦</div>
+          <div class="stat-val">{{ orders|length }}</div>
+          <div class="stat-lbl">Total Orders</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">🏍️</div>
+          <div class="stat-val">{{ current_user.motorcycle_model or '—' }}</div>
+          <div class="stat-lbl">My Motorcycle</div>
+        </div>
+      </div>
+
+      <!-- Recent Bookings -->
+      <div class="card">
+        <div class="card-head">
+          <h5>Recent Bookings</h5>
+          <a href="#" onclick="showSection('book', document.querySelector('.c-sidebar a:nth-child(5)'))" style="font-size:0.8rem;color:var(--accent);text-decoration:none;font-weight:600;">+ Book Now</a>
+        </div>
+        {% if bookings %}
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead><tr><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for b in bookings[:3] %}
+              <tr>
+                <td>{{ b.service }}</td>
+                <td>{{ b.date.strftime('%b %d, %Y') }}</td>
+                <td>{{ b.time.strftime('%I:%M %p') }}</td>
+                <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <p>No bookings yet. <a href="#" onclick="showSection('book', null)" style="color:var(--accent)">Book your first appointment!</a></p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Recent Orders -->
+      <div class="card">
+        <div class="card-head">
+          <h5>Recent Orders</h5>
+          <a href="#" onclick="showSection('shop', null)" style="font-size:0.8rem;color:var(--accent);text-decoration:none;font-weight:600;">+ Order Parts</a>
+        </div>
+        {% if orders %}
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead><tr><th>Order #</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for o in orders[:3] %}
+              <tr>
+                <td>ORD-{{ '%03d'|format(o.id) }}</td>
+                <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
+                <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
+                <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">📦</div>
+          <p>No orders yet. <a href="#" onclick="showSection('shop', null)" style="color:var(--accent)">Browse our parts!</a></p>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- ===== BOOK APPOINTMENT ===== -->
+    <!-- ===== BOOK APPOINTMENT (with Calendar) ===== -->
+<section id="sec-book" class="c-section">
+  <div class="page-title">Book an Appointment</div>
+  <div class="page-sub">Pick an available date then choose your time slot.</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+
+    <!-- CALENDAR -->
+    <div class="card">
+      <div class="card-head">
+        <h5 id="cal-month-label">Month Year</h5>
+        <div style="display:flex;gap:0.5rem;">
+          <button onclick="changeMonth(-1)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.9rem;">‹</button>
+          <button onclick="changeMonth(1)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.9rem;">›</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:1rem;">
+
+        <!-- Legend -->
+        <div style="display:flex;gap:1rem;margin-bottom:1rem;font-size:0.75rem;flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:0.35rem;"><span style="width:12px;height:12px;border-radius:3px;background:#dcfce7;border:1px solid #16a34a;display:inline-block;"></span> Available</span>
+          <span style="display:flex;align-items:center;gap:0.35rem;"><span style="width:12px;height:12px;border-radius:3px;background:#fee2e2;border:1px solid #e63c1e;display:inline-block;"></span> Fully Booked</span>
+          <span style="display:flex;align-items:center;gap:0.35rem;"><span style="width:12px;height:12px;border-radius:3px;background:#f3f4f6;border:1px solid #d1d5db;display:inline-block;"></span> Unavailable</span>
+          <span style="display:flex;align-items:center;gap:0.35rem;"><span style="width:12px;height:12px;border-radius:3px;background:#1d4ed8;display:inline-block;"></span> Selected</span>
+        </div>
+
+        <!-- Day headers -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
+          {% for d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}
+          <div style="text-align:center;font-size:0.68rem;font-weight:700;color:var(--muted);font-family:'Syne',sans-serif;padding:4px 0;">{{ d }}</div>
+          {% endfor %}
+        </div>
+
+        <!-- Calendar grid -->
+        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+
+        <div id="cal-selected-info" style="margin-top:1rem;font-size:0.82rem;color:var(--muted);text-align:center;min-height:20px;"></div>
+      </div>
+    </div>
+
+    <!-- BOOKING FORM -->
+    <div class="card">
+      <div class="card-head"><h5>Booking Details</h5></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('book_service') }}" id="booking-form">
+
+          <div class="form-group">
+            <label>Selected Date</label>
+            <input type="text" id="selected-date-display" placeholder="Click a date on the calendar" disabled style="background:#f9f9f9;">
+            <input type="hidden" name="date" id="selected-date-value" required>
+          </div>
+
+          <div class="form-group">
+            <label>Available Time Slots</label>
+            <div id="time-slots-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;min-height:60px;">
+              <div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">
+                Please select a date first.
+              </div>
+            </div>
+            <input type="hidden" name="time" id="selected-time-value" required>
+          </div>
+
+          <div class="form-group">
+            <label>Service Type</label>
+            <select name="service" required>
+              <option value="">-- Select Service --</option>
+              <option>Oil Change</option>
+              <option>Tire Replacement</option>
+              <option>General Checkup</option>
+              <option>Brake Service</option>
+              <option>Chain Cleaning</option>
+              <option>Engine Tune-up</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Motorcycle Model</label>
+            <input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i">
+          </div>
+
+          <div class="form-group">
+            <label>Plate Number</label>
+            <input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
+          </div>
+
+          <div class="form-group">
+            <label>Additional Notes</label>
+            <textarea name="notes" rows="2" placeholder="Describe your concern..."></textarea>
+          </div>
+
+          <button type="submit" class="btn-submit" id="btn-book" disabled style="opacity:0.5;cursor:not-allowed;">📅 Confirm Booking</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<style>
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.12s;
+    font-family: 'Syne', sans-serif;
+  }
+  .cal-day.empty { background: none; border: none; cursor: default; }
+  .cal-day.past { background: #f9fafb; color: #d1d5db; cursor: not-allowed; }
+  .cal-day.available { background: #dcfce7; color: #15803d; border-color: #86efac; }
+  .cal-day.available:hover { background: #bbf7d0; transform: scale(1.05); }
+  .cal-day.fully-booked { background: #fee2e2; color: #991b1b; border-color: #fca5a5; cursor: not-allowed; }
+  .cal-day.today { outline: 2px solid #1d4ed8; outline-offset: 1px; }
+  .cal-day.selected { background: #1d4ed8 !important; color: #fff !important; border-color: #1d4ed8 !important; }
+
+  .time-slot-btn {
+    padding: 0.4rem 0.25rem;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: 'Syne', sans-serif;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.12s;
+    color: var(--ink);
+  }
+  .time-slot-btn:hover:not(.booked) { background: #dbeafe; border-color: #1d4ed8; color: #1d4ed8; }
+  .time-slot-btn.booked { background: #fee2e2; color: #fca5a5; cursor: not-allowed; text-decoration: line-through; }
+  .time-slot-btn.selected-slot { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+</style>
+
+<script>
+const ALL_SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
+const SLOT_LABELS = {'08:00':'8:00 AM','09:00':'9:00 AM','10:00':'10:00 AM','11:00':'11:00 AM','12:00':'12:00 PM','13:00':'1:00 PM','14:00':'2:00 PM','15:00':'3:00 PM','16:00':'4:00 PM','17:00':'5:00 PM','18:00':'6:00 PM','19:00':'7:00 PM'};
+
+let currentYear, currentMonth, selectedDate = null, selectedTime = null;
+let bookedData = {}; // { 'YYYY-MM-DD': ['HH:MM', ...] }
+
+const today = new Date();
+today.setHours(0,0,0,0);
+currentYear = today.getFullYear();
+currentMonth = today.getMonth();
+
+async function fetchBookedSlots(year, month) {
+  try {
+    const res = await fetch(`/api/booked-slots?year=${year}&month=${month+1}`);
+    const data = await res.json();
+    bookedData = data;
+  } catch(e) {
+    bookedData = {};
+  }
+}
+
+function isFullyBooked(dateStr) {
+  const slots = bookedData[dateStr] || [];
+  return slots.length >= ALL_SLOTS.length;
+}
+
+async function renderCalendar() {
+  await fetchBookedSlots(currentYear, currentMonth);
+
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+  // Empty cells
+  for (let i = 0; i < firstDay; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-day empty';
+    grid.appendChild(empty);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(currentYear, currentMonth, d);
+    dateObj.setHours(0,0,0,0);
+    const mm = String(currentMonth+1).padStart(2,'0');
+    const dd = String(d).padStart(2,'0');
+    const dateStr = `${currentYear}-${mm}-${dd}`;
+    const dayOfWeek = dateObj.getDay();
+    const isSunday = dayOfWeek === 0;
+    const isPast = dateObj < today;
+
+    const cell = document.createElement('div');
+    cell.className = 'cal-day';
+    cell.textContent = d;
+
+    if (dateObj.getTime() === today.getTime()) cell.classList.add('today');
+
+    if (isPast || isSunday) {
+      cell.classList.add('past');
+      cell.title = isSunday ? 'Closed on Sundays' : 'Past date';
+    } else if (isFullyBooked(dateStr)) {
+      cell.classList.add('fully-booked');
+      cell.title = 'Fully booked';
+    } else {
+      cell.classList.add('available');
+      cell.title = 'Available';
+      cell.onclick = () => selectDate(dateStr, d, cell);
+    }
+
+    if (selectedDate === dateStr) cell.classList.add('selected');
+    grid.appendChild(cell);
+  }
+}
+
+function selectDate(dateStr, day, cell) {
+  selectedDate = dateStr;
+  selectedTime = null;
+  document.getElementById('selected-date-value').value = dateStr;
+
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const displayDate = `${monthNames[currentMonth]} ${day}, ${currentYear}`;
+  document.getElementById('selected-date-display').value = displayDate;
+  document.getElementById('cal-selected-info').textContent = `Selected: ${displayDate}`;
+  document.getElementById('selected-time-value').value = '';
+  document.getElementById('btn-book').disabled = true;
+  document.getElementById('btn-book').style.opacity = '0.5';
+  document.getElementById('btn-book').style.cursor = 'not-allowed';
+
+  // Highlight selected cell
+  document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
+  cell.classList.add('selected');
+
+  renderTimeSlots(dateStr);
+}
+
+function renderTimeSlots(dateStr) {
+  const booked = bookedData[dateStr] || [];
+  const wrap = document.getElementById('time-slots-wrap');
+  wrap.innerHTML = '';
+
+  ALL_SLOTS.forEach(slot => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'time-slot-btn';
+    btn.textContent = SLOT_LABELS[slot];
+
+    if (booked.includes(slot)) {
+      btn.classList.add('booked');
+      btn.disabled = true;
+      btn.title = 'Already booked';
+    } else {
+      btn.onclick = () => selectTime(slot, btn);
+    }
+    wrap.appendChild(btn);
+  });
+}
+
+function selectTime(slot, btn) {
+  selectedTime = slot;
+  document.getElementById('selected-time-value').value = slot;
+  document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected-slot'));
+  btn.classList.add('selected-slot');
+  document.getElementById('btn-book').disabled = false;
+  document.getElementById('btn-book').style.opacity = '1';
+  document.getElementById('btn-book').style.cursor = 'pointer';
+}
+
+async function changeMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  selectedDate = null;
+  selectedTime = null;
+  document.getElementById('selected-date-display').value = '';
+  document.getElementById('selected-date-value').value = '';
+  document.getElementById('selected-time-value').value = '';
+  document.getElementById('time-slots-wrap').innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
+  document.getElementById('cal-selected-info').textContent = '';
+  document.getElementById('btn-book').disabled = true;
+  document.getElementById('btn-book').style.opacity = '0.5';
+  await renderCalendar();
+}
+
+// Init calendar on page load
+renderCalendar();
+</script>
+
+    <!-- ===== MY BOOKINGS ===== -->
+    <section id="sec-bookings" class="c-section">
+      <div class="page-title">My Bookings</div>
+      <div class="page-sub">Track all your service appointments.</div>
+
+      <div class="card">
+        {% if bookings %}
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              <tr><th>#</th><th>Service</th><th>Date</th><th>Time</th><th>Motorcycle</th><th>Notes</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {% for b in bookings %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ b.service }}</td>
+                <td>{{ b.date.strftime('%b %d, %Y') }}</td>
+                <td>{{ b.time.strftime('%I:%M %p') }}</td>
+                <td>{{ b.motorcycle_model or '—' }}</td>
+                <td>{{ b.notes or '—' }}</td>
+                <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <p>You have no bookings yet.</p>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- ===== SHOP ===== -->
+    <section id="sec-shop" class="c-section">
+      <div class="page-title">Order Parts</div>
+      <div class="page-sub">Browse available motorcycle parts and accessories.</div>
+
+      {% if products %}
+      <div class="product-grid">
+        {% for p in products %}
+        <div class="product-card">
+          <div class="product-icon">🔧</div>
+          <div class="product-name">{{ p.name }}</div>
+          <div class="product-cat">{{ p.category }}</div>
+          <div class="product-price">₱{{ '%.2f'|format(p.price) }}</div>
+          <div class="product-stock">{{ p.stock }} in stock</div>
+          {% if p.description %}<div style="font-size:0.78rem;color:var(--muted);">{{ p.description }}</div>{% endif %}
+          <button class="btn-order"
+            data-id="{{ p.id }}"
+            data-name="{{ p.name }}"
+            data-price="{{ p.price }}"
+            data-stock="{{ p.stock }}"
+            onclick="openOrderModal(this)">Order Now</button>s
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">🔧</div>
+        <p>No parts available at the moment. Please check back later.</p>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- ===== MY ORDERS ===== -->
+    <section id="sec-orders" class="c-section">
+      <div class="page-title">My Orders</div>
+      <div class="page-sub">Track your parts and accessories orders.</div>
+
+      <div class="card">
+        {% if orders %}
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              <tr><th>Order #</th><th>Total</th><th>Date</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {% for o in orders %}
+              <tr>
+                <td>ORD-{{ '%03d'|format(o.id) }}</td>
+                <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
+                <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
+                <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">📦</div>
+          <p>No orders yet. <a href="#" onclick="showSection('shop', null)" style="color:var(--accent)">Browse our parts!</a></p>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- ===== PROFILE ===== -->
+    <section id="sec-profile" class="c-section">
+      <div class="page-title">My Profile</div>
+      <div class="page-sub">Manage your account and motorcycle information.</div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="profile-header">
+            <div class="profile-avatar">{{ current_user.fullname[0].upper() }}</div>
+            <div>
+              <div class="profile-name">{{ current_user.fullname }}</div>
+              <div class="profile-email">{{ current_user.email }}</div>
+            </div>
+          </div>
+
+          <form method="POST" action="{{ url_for('customer_profile') }}">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="fullname" value="{{ current_user.fullname }}" required>
+              </div>
+              <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" name="phone" value="{{ current_user.phone }}" required>
+              </div>
+              <div class="form-group">
+                <label>Motorcycle Model</label>
+                <input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i">
+              </div>
+              <div class="form-group">
+                <label>Plate Number</label>
+                <input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
+              </div>
+              <div class="form-group">
+                <label>Email (cannot change)</label>
+                <input type="email" value="{{ current_user.email }}" disabled style="background:#f9f9f9;color:var(--muted);">
+              </div>
+            </div>
+            <button type="submit" class="btn-submit">💾 Save Changes</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ORDER MODAL -->
+<div class="modal-overlay" id="modal-order">
+  <div class="modal-box">
+    <h5>🛒 Place Order</h5>
+    <form method="POST" action="{{ url_for('place_order') }}">
+      <input type="hidden" name="product_id" id="modal-product-id">
+      <div class="form-group">
+        <label>Product</label>
+        <input type="text" id="modal-product-name" disabled style="background:#f9f9f9;">
+      </div>
+      <div class="form-group">
+        <label>Unit Price</label>
+        <input type="text" id="modal-product-price" disabled style="background:#f9f9f9;">
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" name="quantity" id="modal-quantity" value="1" min="1" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel</button>
+        <button type="submit" class="btn-submit">Confirm Order</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function showSection(name, el) {
+    document.querySelectorAll('.c-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.c-sidebar a').forEach(a => a.classList.remove('active'));
+    document.getElementById('sec-' + name).classList.add('active');
+    if (el) el.classList.add('active');
+  }
+
+  function openOrderModal(btn) {
+    const id = btn.dataset.id;
+    const name = btn.dataset.name;
+    const price = parseFloat(btn.dataset.price);
+    const stock = parseInt(btn.dataset.stock);
+    document.getElementById('modal-product-id').value = id;
+    document.getElementById('modal-product-name').value = name;
+    document.getElementById('modal-product-price').value = '₱' + price.toFixed(2);
+    document.getElementById('modal-quantity').max = stock;
+    document.getElementById('modal-order').classList.add('open');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+  });
+</script>
+
+{% endblock %}
