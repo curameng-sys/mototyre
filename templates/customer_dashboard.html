@@ -12,7 +12,7 @@
       --ink: #0c0d0f;
       --panel: #111215;
       --card: #1a1d23;
-      --red: #ff0f0f;
+      --red: #cd D:\CAPS\mototyreff0f0f;
       --muted: #6b7280;
       --border: rgba(255,255,255,0.07);
       --text: #e5e7eb;
@@ -265,6 +265,18 @@
       .form-grid { grid-template-columns: 1fr; }
       .hero-bike { display: none; }
     }
+
+    /* ── CATEGORY TABS ── */
+.cat-tab {
+  padding: 0.45rem 1.1rem; border-radius: 8px;
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem;
+  cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05); color: var(--muted);
+  transition: all 0.15s;
+}
+.cat-tab:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.cat-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
+
   </style>
 </head>
 <body>
@@ -519,10 +531,19 @@
     <div class="section-head">
       <div><div class="section-title">ORDER <span>PARTS</span></div><div class="section-sub">Browse available motorcycle parts and accessories.</div></div>
     </div>
+
+    <!-- Category Filter Tabs -->
+    <div id="cat-tabs" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+      <button class="cat-tab active" onclick="filterProducts('all', this)">All</button>
+      {% for cat in categories %}
+      <button class="cat-tab" onclick="filterProducts('{{ cat }}', this)">{{ cat|title }}</button>
+      {% endfor %}
+    </div>
+
     {% if products %}
-    <div class="product-grid">
+    <div class="product-grid" id="product-grid">
       {% for p in products %}
-      <div class="product-card">
+      <div class="product-card" data-category="{{ p.category }}">
         <div class="product-icon">🔧</div>
         <div class="product-name">{{ p.name }}</div>
         <div class="product-cat">{{ p.category }}</div>
@@ -533,6 +554,7 @@
       </div>
       {% endfor %}
     </div>
+    <div id="no-products" style="display:none;" class="empty-state"><div class="empty-icon">🔧</div><p>No products in this category.</p></div>
     {% else %}
     <div class="empty-state"><div class="empty-icon">🔧</div><p>No parts available at the moment. Please check back later.</p></div>
     {% endif %}
@@ -757,6 +779,21 @@
       reader.readAsDataURL(input.files[0]);
     }
   }
+
+  function filterProducts(cat, btn) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const cards = document.querySelectorAll('.product-card');
+  let visible = 0;
+  cards.forEach(card => {
+    const match = cat === 'all' || card.dataset.category === cat;
+    card.style.display = match ? 'flex' : 'none';
+    if (match) visible++;
+  });
+  document.getElementById('no-products').style.display = visible === 0 ? 'block' : 'none';
+  document.getElementById('product-grid').style.display = visible === 0 ? 'none' : 'grid';
+}
+
 </script>
 
 </body>

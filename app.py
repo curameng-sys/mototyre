@@ -6,9 +6,10 @@ from datetime import datetime
 from flask import jsonify
 from sqlalchemy import func
 from datetime import date as date_today
-import uuid
+from flask import jsonify, request
 from werkzeug.utils import secure_filename
 import os
+import uuid
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-dev-key')
@@ -58,6 +59,7 @@ class Booking(db.Model):
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    barcode = db.Column(db.String(100), nullable=True)
     name = db.Column(db.String(150), nullable=False)
     category = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
@@ -130,6 +132,12 @@ def register():
         if existing_user:
             flash('Email already registered.', 'danger')
             return redirect(url_for('register'))
+        
+        if not phone.isdigit():
+            return redirect(url_for('register'))
+
+        if len(phone) < 10 or len(phone) > 13:
+            return redirect(url_for('register'))
 
         new_user = User(
             fullname=fullname,
@@ -162,11 +170,14 @@ def customer_dashboard():
     bookings = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
     orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
     products = Product.query.filter(Product.stock > 0).all()
+    categories = db.session.query(Product.category).distinct().order_by(Product.category).all()
+    categories = [c[0] for c in categories]
     return render_template('customer_dashboard.html',
-        bookings=bookings,
-        orders=orders,
-        products=products
-    )
+    bookings=bookings,
+    orders=orders,
+    products=products,
+    categories=categories
+)
 
 @app.route('/customer/book', methods=['POST'])
 @login_required
@@ -446,7 +457,7 @@ def add_product():
     return redirect(url_for('admin_dashboard'))
 
 
-@app.route('/admin/add-staff', methods=['POST'])  # ← add this right here
+@app.route('/admin/add-staff', methods=['POST']) 
 @login_required
 def add_staff():
     if current_user.role != 'admin':
@@ -473,6 +484,99 @@ def add_staff():
     db.session.commit()
     flash(f'Staff account for {fullname} created!', 'success')
     return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/product/<int:product_id>/edit', methods=['POST']) 
+@login_required
+def edit_product(product_id):
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    product = Product.query.get_or_404(product_id)
+    product.barcode     = request.form.get('barcode', '').strip() or None
+    product.name        = request.form['name']
+    product.category    = request.form['category']
+    product.price       = float(request.form['price'])
+    product.stock       = int(request.form['stock'])
+    product.description = request.form.get('description', '')
+    db.session.commit()
+    flash(f'Product "{product.name}" updated!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/product/<int:product_id>/delete', methods=['POST']) 
+@login_required
+def delete_product(product_id):
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    product = Product.query.get_or_404(product_id)
+    name = product.name
+    db.session.delete(product)
+    db.session.commit()
+    flash(f'Product "{name}" deleted!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@app.route('/admin/import-products', methods=['POST'])
+@login_required
+def import_products():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    data = request.get_json()
+    if not data or 'products' not in data:
+        return jsonify({'success': False, 'error': 'No data received'}), 400
+
+    rows = data['products']
+    if not rows:
+        return jsonify({'success': False, 'error': 'Empty product list'}), 400
+
+    imported = 0
+    errors = []
+
+    # Delete order items first, then products (foreign key constraint)
+    OrderItem.query.delete()
+    Order.query.delete()
+    Product.query.delete()
+    db.session.flush()
+
+    for i, row in enumerate(rows):
+        try:
+            name        = str(row.get('name', '')).strip()
+            category    = str(row.get('category', '')).strip()
+            price       = float(row.get('price', 0))
+            stock       = int(float(row.get('stock', 0)))
+            description = str(row.get('description', '')).strip() or None
+            barcode     = str(row.get('barcode', '')).strip() or None
+
+            if not name or not category:
+                errors.append(f'Row {i+1}: missing name or category')
+                continue
+
+            product = Product(
+                barcode=barcode,
+                name=name,
+                category=category,
+                price=price,
+                stock=stock,
+                description=description
+            )
+            db.session.add(product)
+            imported += 1
+
+        except (ValueError, TypeError) as e:
+            errors.append(f'Row {i+1}: {str(e)}')
+            continue
+
+    if imported == 0:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': 'No valid products to import. ' + '; '.join(errors)}), 400
+
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'count': imported,
+        'errors': errors
+    })
 
     
 # ─────────────────────────────────────────
