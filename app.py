@@ -12,7 +12,8 @@ import os
 import uuid
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://avnadmin:AVNS_1RNbCP5RORVJ7VaVhRD@mysql-1d9dceb5-mackycastanales05-1369.f.aivencloud.com:12422/defaultdb?ssl_ca=&ssl_mode=REQUIRED'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'mototyre-super-secret-key-2024')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost/mototyre_db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
