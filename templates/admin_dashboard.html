@@ -13,7 +13,7 @@
       --panel: #111215;
       --surface: #16181d;
       --card: #1a1d23;
-      --red: #e8401c;
+      --red: #ff0f0f;;
       --blue: #2563eb;
       --green: #16a34a;
       --warning: #d97706;
@@ -730,7 +730,7 @@
             <tbody>
               {% for p in all_products %}
               <tr>
-                <td>{{ p.id }}</td>
+                <td>{{ loop.index }}</td>
                 <td style="font-family:'Courier New',monospace;font-size:0.78rem;color:#9ca3af;white-space:nowrap;">{{ p.barcode or '—' }}</td>
                 <td>{{ p.name }}</td>
                 <td>{{ p.category }}</td>
