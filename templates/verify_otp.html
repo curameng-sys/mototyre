@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Verify OTP – Mototyre Moto Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+      :root {
+        --ink: #0c0d0f;
+        --red: #ff0f0f;
+        --border: rgba(255,255,255,0.08);
+      }
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--ink);
+        color: #fff;
+        min-height: 100vh;
+      }
+
+      .auth-wrap {
+        min-height: 100vh;
+        display: flex;
+        align-items: stretch;
+      }
+
+      /* LEFT PANEL */
+      .auth-left {
+        flex: 1;
+        background: var(--ink);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 4rem;
+        overflow: hidden;
+      }
+
+      .auth-left-bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 80% 60% at 30% 50%, rgba(232,64,28,0.13) 0%, transparent 65%),
+          radial-gradient(ellipse 40% 40% at 80% 80%, rgba(232,64,28,0.05) 0%, transparent 50%);
+      }
+
+      .auth-left-bg::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+
+      .auth-left-content { position: relative; z-index: 2; }
+
+      .auth-logo {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2rem;
+        letter-spacing: 0.05em;
+        color: #fff;
+        text-decoration: none;
+        display: inline-block;
+        margin-bottom: 3rem;
+      }
+      .auth-logo span { color: var(--red); }
+
+      .auth-left h2 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(2.5rem, 4vw, 4rem);
+        line-height: 0.95;
+        letter-spacing: 0.02em;
+        margin-bottom: 1.25rem;
+        animation: fadeUp 0.6s ease both;
+      }
+      .auth-left h2 .accent { color: var(--red); }
+      .auth-left h2 .outline {
+        -webkit-text-stroke: 2px rgba(255,255,255,0.25);
+        color: transparent;
+      }
+
+      .auth-left p {
+        color: #6b7280;
+        font-size: 0.95rem;
+        line-height: 1.7;
+        max-width: 380px;
+        margin-bottom: 2.5rem;
+        animation: fadeUp 0.6s 0.1s ease both;
+      }
+
+      .auth-perks {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        animation: fadeUp 0.6s 0.2s ease both;
+      }
+      .auth-perk {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+        color: #9ca3af;
+      }
+      .auth-perk-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--red);
+        flex-shrink: 0;
+      }
+
+      /* RIGHT PANEL */
+      .auth-right {
+        width: 480px;
+        flex-shrink: 0;
+        background: #111215;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 3rem;
+        border-left: 1px solid var(--border);
+        animation: fadeUp 0.5s ease both;
+      }
+
+      .auth-right h3 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2rem;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.4rem;
+      }
+      .auth-right .sub {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .email-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255,15,15,0.08);
+        border: 1px solid rgba(255,15,15,0.2);
+        border-radius: 20px;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.8rem;
+        color: #f87171;
+        font-weight: 500;
+        margin-bottom: 2rem;
+      }
+      .email-badge svg { flex-shrink: 0; }
+
+      .flash-msg {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        margin-bottom: 1.25rem;
+      }
+      .flash-danger  { background: rgba(232,64,28,0.12); border: 1px solid rgba(232,64,28,0.3); color: #f87171; }
+      .flash-success { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  color: #86efac; }
+      .flash-info    { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);  color: #93c5fd; }
+      .flash-warning { background: rgba(234,179,8,0.1);  border: 1px solid rgba(234,179,8,0.3);   color: #fde047; }
+
+      /* OTP INPUT ROW */
+      .otp-row {
+        display: flex;
+        gap: 0.6rem;
+        margin-bottom: 1.5rem;
+        justify-content: space-between;
+      }
+
+      .otp-box {
+        flex: 1;
+        aspect-ratio: 1;
+        max-width: 64px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: #fff;
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.75rem;
+        letter-spacing: 0.05em;
+        text-align: center;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        caret-color: var(--red);
+      }
+
+      .otp-box::placeholder { color: #1f2937; }
+
+      .otp-box:focus {
+        border-color: var(--red);
+        background: rgba(232,64,28,0.05);
+        box-shadow: 0 0 0 3px rgba(255,15,15,0.1);
+      }
+
+      .otp-box.filled {
+        border-color: rgba(255,15,15,0.4);
+        background: rgba(232,64,28,0.08);
+      }
+
+      /* hidden actual input */
+      #otp-hidden { display: none; }
+
+      .btn-auth {
+        width: 100%;
+        background: var(--red);
+        color: #fff;
+        border: none;
+        padding: 0.875rem;
+        border-radius: 8px;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 0.25rem;
+      }
+      .btn-auth:hover {
+        background: #c73418;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(232,64,28,0.3);
+      }
+      .btn-auth:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      /* TIMER */
+      .otp-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1.5rem;
+        font-size: 0.85rem;
+      }
+
+      .timer-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: #6b7280;
+      }
+      .timer-count {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1rem;
+        color: var(--red);
+        min-width: 2.5ch;
+      }
+      .timer-count.expired { color: #4b5563; }
+
+      .resend-link {
+        color: var(--red);
+        font-weight: 600;
+        text-decoration: none;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      }
+      .resend-link.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .resend-link:hover { text-decoration: underline; }
+
+      .back-link {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: #6b7280;
+        font-size: 0.85rem;
+        text-decoration: none;
+        margin-top: 1.5rem;
+        transition: color 0.15s;
+        width: fit-content;
+      }
+      .back-link:hover { color: #fff; }
+
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20%       { transform: translateX(-6px); }
+        40%       { transform: translateX(6px); }
+        60%       { transform: translateX(-4px); }
+        80%       { transform: translateX(4px); }
+      }
+
+      .shake { animation: shake 0.4s ease; }
+
+      @media (max-width: 768px) {
+        .auth-left { display: none; }
+        .auth-right { width: 100%; padding: 2rem 1.5rem; }
+      }
+    </style>
+</head>
+<body>
+
+<div class="auth-wrap">
+
+  <!-- LEFT PANEL -->
+  <div class="auth-left">
+    <div class="auth-left-bg"></div>
+    <div class="auth-left-content">
+      <a href="{{ url_for('home') }}" class="auth-logo">MOTO<span>TYRE</span></a>
+      <h2>
+        CHECK<br>
+        <span class="accent">YOUR</span><br>
+        <span class="outline">INBOX.</span>
+      </h2>
+      <p>We sent a 6-digit verification code to your email. Enter it to confirm your identity and keep your account secure.</p>
+      <div class="auth-perks">
+        <div class="auth-perk"><div class="auth-perk-dot"></div> Code expires in 10 minutes</div>
+        <div class="auth-perk"><div class="auth-perk-dot"></div> Check your spam folder if needed</div>
+        <div class="auth-perk"><div class="auth-perk-dot"></div> Request a new code anytime</div>
+        <div class="auth-perk"><div class="auth-perk-dot"></div> Your account stays protected</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="auth-right">
+    <h3>
+      {% if purpose == 'login' %}Verify Login{% else %}Verify Email{% endif %}
+    </h3>
+    <p class="sub">
+      {% if purpose == 'login' %}Enter the code we sent to{% else %}Confirm your email address{% endif %}
+    </p>
+
+    <div class="email-badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+      </svg>
+      {{ email }}
+    </div>
+
+    <form method="POST" id="otp-form">
+      <input type="hidden" name="otp" id="otp-hidden">
+
+      <div class="otp-row" id="otp-row">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" data-index="0" autocomplete="off">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" data-index="1" autocomplete="off">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" data-index="2" autocomplete="off">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" data-index="3" autocomplete="off">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" data-index="4" autocomplete="off">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" data-index="5" autocomplete="off">
+      </div>
+
+      <button type="submit" class="btn-auth" id="submit-btn" disabled>Verify Code →</button>
+    </form>
+
+    <div class="otp-footer">
+      <div class="timer-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+        </svg>
+        <span>Expires in</span>
+        <span class="timer-count" id="timer">10:00</span>
+      </div>
+      <a href="{{ url_for('resend_otp', purpose=purpose) }}" class="resend-link" id="resend-link">Resend code</a>
+    </div>
+
+    <a href="{{ url_for('login') }}" class="back-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15,18 9,12 15,6"/>
+      </svg>
+      Back to Sign In
+    </a>
+  </div>
+
+</div>
+
+<script>
+  // ── OTP Box Logic ──────────────────────────────────────
+  const boxes     = document.querySelectorAll('.otp-box');
+  const hidden    = document.getElementById('otp-hidden');
+  const submitBtn = document.getElementById('submit-btn');
+  const otpRow    = document.getElementById('otp-row');
+
+  boxes.forEach((box, i) => {
+    box.addEventListener('input', (e) => {
+      const val = e.target.value.replace(/\D/g, '');
+      box.value = val;
+      box.classList.toggle('filled', val !== '');
+
+      if (val && i < boxes.length - 1) boxes[i + 1].focus();
+      syncHidden();
+    });
+
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !box.value && i > 0) {
+        boxes[i - 1].value = '';
+        boxes[i - 1].classList.remove('filled');
+        boxes[i - 1].focus();
+        syncHidden();
+      }
+    });
+
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData)
+        .getData('text').replace(/\D/g, '').slice(0, 6);
+      pasted.split('').forEach((ch, j) => {
+        if (boxes[j]) {
+          boxes[j].value = ch;
+          boxes[j].classList.add('filled');
+        }
+      });
+      const next = Math.min(pasted.length, boxes.length - 1);
+      boxes[next].focus();
+      syncHidden();
+    });
+  });
+
+  function syncHidden() {
+    const code = [...boxes].map(b => b.value).join('');
+    hidden.value = code;
+    submitBtn.disabled = code.length < 6;
+  }
+
+  // shake on wrong (flash-danger present)
+  window.addEventListener('DOMContentLoaded', () => {
+    if (document.querySelector('.flash-danger')) {
+      otpRow.classList.add('shake');
+      boxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+      hidden.value = '';
+      submitBtn.disabled = true;
+      boxes[0].focus();
+      otpRow.addEventListener('animationend', () => otpRow.classList.remove('shake'), { once: true });
+    } else {
+      boxes[0].focus();
+    }
+  });
+
+  // ── Countdown Timer ────────────────────────────────────
+  const timerEl   = document.getElementById('timer');
+  const resendEl  = document.getElementById('resend-link');
+  let seconds     = 10 * 60;
+
+  const tick = setInterval(() => {
+    seconds--;
+    if (seconds <= 0) {
+      clearInterval(tick);
+      timerEl.textContent = '0:00';
+      timerEl.classList.add('expired');
+      resendEl.classList.add('active');
+      submitBtn.disabled = true;
+      return;
+    }
+    const m = Math.floor(seconds / 60);
+    const s = String(seconds % 60).padStart(2, '0');
+    timerEl.textContent = `${m}:${s}`;
+
+    // show resend when 2 min left
+    if (seconds <= 120) resendEl.classList.add('active');
+  }, 1000);
+</script>
+
+</body>
+</html>

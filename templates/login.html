@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign In – Mototyre Moto Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+      :root {
+        --ink: #0c0d0f;
+        --red: #ff0f0f;
+        --border: rgba(255,255,255,0.08);
+      }
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--ink);
+        color: #fff;
+        min-height: 100vh;
+      }
+
+      .auth-wrap {
+        min-height: 100vh;
+        display: flex;
+        align-items: stretch;
+      }
+
+      /* LEFT PANEL */
+      .auth-left {
+        flex: 1;
+        background: var(--ink);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 4rem;
+        overflow: hidden;
+      }
+
+      .auth-left-bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 80% 60% at 30% 50%, rgba(232,64,28,0.13) 0%, transparent 65%),
+          radial-gradient(ellipse 40% 40% at 80% 80%, rgba(232,64,28,0.05) 0%, transparent 50%);
+      }
+
+      .auth-left-bg::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+
+      .auth-left-content { position: relative; z-index: 2; }
+
+      .auth-logo {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2rem;
+        letter-spacing: 0.05em;
+        color: #fff;
+        text-decoration: none;
+        display: inline-block;
+        margin-bottom: 3rem;
+      }
+      .auth-logo span { color: var(--red); }
+
+      .auth-left h2 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(2.5rem, 4vw, 4rem);
+        line-height: 0.95;
+        letter-spacing: 0.02em;
+        margin-bottom: 1.25rem;
+        animation: fadeUp 0.6s ease both;
+      }
+      .auth-left h2 .accent { color: var(--red); }
+      .auth-left h2 .outline {
+        -webkit-text-stroke: 2px rgba(255,255,255,0.25);
+        color: transparent;
+      }
+
+      .auth-left p {
+        color: #6b7280;
+        font-size: 0.95rem;
+        line-height: 1.7;
+        max-width: 380px;
+        margin-bottom: 2.5rem;
+        animation: fadeUp 0.6s 0.1s ease both;
+      }
+
+      .auth-perks {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        animation: fadeUp 0.6s 0.2s ease both;
+      }
+      .auth-perk {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+        color: #9ca3af;
+      }
+      .auth-perk-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--red);
+        flex-shrink: 0;
+      }
+
+      /* LEFT PANEL — dynamic text */
+      .left-login-text, .left-otp-text { transition: opacity 0.4s, transform 0.4s; }
+      .left-otp-text { display: none; opacity: 0; }
+
+      /* RIGHT PANEL */
+      .auth-right {
+        width: 480px;
+        flex-shrink: 0;
+        background: #111215;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 3rem;
+        border-left: 1px solid var(--border);
+        animation: fadeUp 0.5s ease both;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* PANELS inside right */
+      .panel {
+        position: absolute;
+        inset: 0;
+        padding: 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        transition: opacity 0.4s ease, transform 0.4s ease;
+      }
+
+      .panel-login  { opacity: 1;  transform: translateX(0);     pointer-events: auto; }
+      .panel-otp    { opacity: 0;  transform: translateX(60px);  pointer-events: none; }
+
+      .panel.active        { opacity: 1; transform: translateX(0);    pointer-events: auto; }
+      .panel.slide-out     { opacity: 0; transform: translateX(-60px); pointer-events: none; }
+      .panel.slide-in-wait { opacity: 0; transform: translateX(60px);  pointer-events: none; }
+
+      .auth-right h3 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2rem;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.4rem;
+      }
+      .auth-right .sub {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 2rem;
+      }
+
+      .flash-msg {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        margin-bottom: 1.25rem;
+      }
+      .flash-danger  { background: rgba(232,64,28,0.12); border: 1px solid rgba(232,64,28,0.3); color: #f87171; }
+      .flash-success { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  color: #86efac; }
+      .flash-info    { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);  color: #93c5fd; }
+      .flash-warning { background: rgba(234,179,8,0.1);  border: 1px solid rgba(234,179,8,0.3);   color: #fde047; }
+
+      .field-group { margin-bottom: 1.25rem; }
+      .field-group label {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #9ca3af;
+        margin-bottom: 0.4rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .field-group input {
+        width: 100%;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        color: #fff;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.95rem;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+      }
+      .field-group input::placeholder { color: #374151; }
+      .field-group input:focus {
+        border-color: var(--red);
+        background: rgba(232,64,28,0.05);
+      }
+
+      .pass-wrap { position: relative; }
+      .pass-wrap input { padding-right: 3.5rem; }
+      .pass-toggle {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6b7280;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        transition: color 0.15s;
+      }
+      .pass-toggle:hover { color: #fff; }
+
+      .btn-auth {
+        width: 100%;
+        background: var(--red);
+        color: #fff;
+        border: none;
+        padding: 0.875rem;
+        border-radius: 8px;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 0.5rem;
+      }
+      .btn-auth:hover {
+        background: #c73418;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(232,64,28,0.3);
+      }
+      .btn-auth:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .auth-divider {
+        text-align: center;
+        color: #374151;
+        font-size: 0.8rem;
+        margin: 1.5rem 0;
+        position: relative;
+      }
+      .auth-divider::before, .auth-divider::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 44%;
+        height: 1px;
+        background: rgba(255,255,255,0.07);
+      }
+      .auth-divider::before { left: 0; }
+      .auth-divider::after  { right: 0; }
+
+      .auth-switch {
+        text-align: center;
+        font-size: 0.875rem;
+        color: #6b7280;
+      }
+      .auth-switch a {
+        color: var(--red);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .auth-switch a:hover { text-decoration: underline; }
+
+      /* OTP PANEL SPECIFIC */
+      .email-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255,15,15,0.08);
+        border: 1px solid rgba(255,15,15,0.2);
+        border-radius: 20px;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.8rem;
+        color: #f87171;
+        font-weight: 500;
+        margin-bottom: 1.75rem;
+      }
+
+      .otp-row {
+        display: flex;
+        gap: 0.6rem;
+        margin-bottom: 1.5rem;
+        justify-content: space-between;
+      }
+
+      .otp-box {
+        flex: 1;
+        aspect-ratio: 1;
+        max-width: 64px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: #fff;
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.75rem;
+        letter-spacing: 0.05em;
+        text-align: center;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        caret-color: var(--red);
+      }
+      .otp-box::placeholder { color: #1f2937; }
+      .otp-box:focus {
+        border-color: var(--red);
+        background: rgba(232,64,28,0.05);
+        box-shadow: 0 0 0 3px rgba(255,15,15,0.1);
+      }
+      .otp-box.filled {
+        border-color: rgba(255,15,15,0.4);
+        background: rgba(232,64,28,0.08);
+      }
+
+      .otp-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1.25rem;
+        font-size: 0.85rem;
+      }
+      .timer-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: #6b7280;
+      }
+      .timer-count {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1rem;
+        color: var(--red);
+        min-width: 2.5ch;
+      }
+      .timer-count.expired { color: #4b5563; }
+
+      .resend-btn {
+        background: none;
+        border: none;
+        color: var(--red);
+        font-weight: 600;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.85rem;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        padding: 0;
+      }
+      .resend-btn.active { opacity: 1; pointer-events: auto; }
+      .resend-btn:hover { text-decoration: underline; }
+
+      .back-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: none;
+        border: none;
+        color: #6b7280;
+        font-size: 0.85rem;
+        font-family: 'DM Sans', sans-serif;
+        cursor: pointer;
+        margin-top: 1.5rem;
+        padding: 0;
+        transition: color 0.15s;
+      }
+      .back-btn:hover { color: #fff; }
+
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20%  { transform: translateX(-6px); }
+        40%  { transform: translateX(6px); }
+        60%  { transform: translateX(-4px); }
+        80%  { transform: translateX(4px); }
+      }
+      .shake { animation: shake 0.4s ease; }
+
+      @media (max-width: 768px) {
+        .auth-left { display: none; }
+        .auth-right { width: 100%; }
+        .panel { padding: 2rem 1.5rem; }
+      }
+    </style>
+</head>
+<body>
+
+<div class="auth-wrap">
+
+  <!-- LEFT PANEL -->
+  <div class="auth-left">
+    <div class="auth-left-bg"></div>
+    <div class="auth-left-content">
+      <a href="{{ url_for('home') }}" class="auth-logo">MOTO<span>TYRE</span></a>
+
+      <!-- Login text -->
+      <div class="left-login-text">
+        <h2>
+          WELCOME<br>
+          <span class="accent">BACK</span><br>
+          <span class="outline">RIDER.</span>
+        </h2>
+        <p>Sign in to manage your appointments, track your orders, and keep your motorcycle in top shape.</p>
+        <div class="auth-perks">
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Book service appointments online</div>
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Order tires and parts anytime</div>
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Track your booking status live</div>
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Manage your motorcycle profile</div>
+        </div>
+      </div>
+
+      <!-- OTP text -->
+      <div class="left-otp-text">
+        <h2>
+          CHECK<br>
+          <span class="accent">YOUR</span><br>
+          <span class="outline">INBOX.</span>
+        </h2>
+        <p>We sent a 6-digit code to your email. Enter it to complete your sign in.</p>
+        <div class="auth-perks">
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Code expires in 10 minutes</div>
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Check your spam folder if needed</div>
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Request a new code anytime</div>
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Your account stays protected</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="auth-right">
+
+    <!-- ── STEP 1: LOGIN FORM ── -->
+    <div class="panel panel-login" id="panel-login">
+      <h3>Sign In</h3>
+      <p class="sub">Enter your credentials to access your account</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('login') }}" id="login-form">
+        <div class="field-group">
+          <label>Email Address</label>
+          <input type="email" name="email" id="login-email" placeholder="you@email.com" required>
+        </div>
+        <div class="field-group">
+          <label>Password</label>
+          <div class="pass-wrap">
+            <input type="password" name="password" id="loginPass" placeholder="Your password" required>
+            <button type="button" class="pass-toggle" onclick="togglePass('loginPass', this)">Show</button>
+          </div>
+        </div>
+        <button type="submit" class="btn-auth" id="login-submit-btn">Sign In →</button>
+      </form>
+
+      <div class="auth-divider">or</div>
+      <div class="auth-switch">
+        Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: OTP FORM ── -->
+    <div class="panel panel-otp slide-in-wait" id="panel-otp">
+      <h3>Verify Login</h3>
+      <p class="sub">Enter the 6-digit code sent to</p>
+      <div class="email-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        <span id="otp-email-display">—</span>
+      </div>
+
+      <div id="otp-flash"></div>
+
+      <form method="POST" action="{{ url_for('verify_login_otp') }}" id="otp-form">
+        <input type="hidden" name="otp" id="otp-hidden">
+        <div class="otp-row" id="otp-row">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+        </div>
+        <button type="submit" class="btn-auth" id="otp-submit-btn" disabled>Verify Code →</button>
+      </form>
+
+      <div class="otp-footer">
+        <div class="timer-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+          </svg>
+          <span>Expires in</span>
+          <span class="timer-count" id="timer">10:00</span>
+        </div>
+        <button class="resend-btn" id="resend-btn" onclick="resendOtp()">Resend code</button>
+      </div>
+
+      <button class="back-btn" onclick="goBack()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15,18 9,12 15,6"/>
+        </svg>
+        Back to Sign In
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── Panel Swap ─────────────────────────────────────────
+  const panelLogin   = document.getElementById('panel-login');
+  const panelOtp     = document.getElementById('panel-otp');
+  const leftLogin    = document.querySelector('.left-login-text');
+  const leftOtp      = document.querySelector('.left-otp-text');
+  const emailDisplay = document.getElementById('otp-email-display');
+
+  // If backend redirected back here after OTP sent (pending_login_email in session),
+  // check if we should show OTP panel immediately
+  {% if session.get('pending_login_email') %}
+    window.addEventListener('DOMContentLoaded', () => {
+      emailDisplay.textContent = '{{ session.get("pending_login_email") }}';
+      showOtpPanel();
+    });
+  {% endif %}
+
+  document.getElementById('login-form').addEventListener('submit', function(e) {
+    const email = document.getElementById('login-email').value;
+    emailDisplay.textContent = email;
+  });
+
+  function showOtpPanel() {
+    panelLogin.classList.add('slide-out');
+    panelLogin.classList.remove('active');
+    setTimeout(() => {
+      panelOtp.classList.remove('slide-in-wait');
+      panelOtp.classList.add('active');
+    }, 350);
+
+    leftLogin.style.opacity = '0';
+    leftLogin.style.transform = 'translateY(-20px)';
+    setTimeout(() => {
+      leftLogin.style.display = 'none';
+      leftOtp.style.display = 'block';
+      setTimeout(() => {
+        leftOtp.style.opacity = '1';
+        leftOtp.style.transform = 'translateY(0)';
+      }, 50);
+    }, 350);
+
+    startTimer();
+    setTimeout(() => boxes[0].focus(), 400);
+  }
+
+  function goBack() {
+    panelOtp.classList.remove('active');
+    panelOtp.classList.add('slide-in-wait');
+    panelLogin.classList.remove('slide-out');
+    panelLogin.classList.add('active');
+
+    leftOtp.style.opacity = '0';
+    setTimeout(() => {
+      leftOtp.style.display = 'none';
+      leftLogin.style.display = 'block';
+      leftLogin.style.opacity = '';
+      leftLogin.style.transform = '';
+    }, 350);
+    clearInterval(timerInterval);
+  }
+
+  // ── OTP Boxes ──────────────────────────────────────────
+  const boxes     = document.querySelectorAll('.otp-box');
+  const hidden    = document.getElementById('otp-hidden');
+  const submitBtn = document.getElementById('otp-submit-btn');
+  const otpRow    = document.getElementById('otp-row');
+
+  boxes.forEach((box, i) => {
+    box.addEventListener('input', (e) => {
+      box.value = e.target.value.replace(/\D/g, '');
+      box.classList.toggle('filled', box.value !== '');
+      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+      syncHidden();
+    });
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !box.value && i > 0) {
+        boxes[i - 1].value = '';
+        boxes[i - 1].classList.remove('filled');
+        boxes[i - 1].focus();
+        syncHidden();
+      }
+    });
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData)
+        .getData('text').replace(/\D/g, '').slice(0, 6);
+      pasted.split('').forEach((ch, j) => {
+        if (boxes[j]) { boxes[j].value = ch; boxes[j].classList.add('filled'); }
+      });
+      boxes[Math.min(pasted.length, boxes.length - 1)].focus();
+      syncHidden();
+    });
+  });
+
+  function syncHidden() {
+    hidden.value = [...boxes].map(b => b.value).join('');
+    submitBtn.disabled = hidden.value.length < 6;
+  }
+
+  // ── Timer ──────────────────────────────────────────────
+  let timerInterval, seconds = 600;
+  const timerEl  = document.getElementById('timer');
+  const resendEl = document.getElementById('resend-btn');
+
+  function startTimer() {
+    seconds = 600;
+    timerEl.classList.remove('expired');
+    resendEl.classList.remove('active');
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      seconds--;
+      if (seconds <= 0) {
+        clearInterval(timerInterval);
+        timerEl.textContent = '0:00';
+        timerEl.classList.add('expired');
+        resendEl.classList.add('active');
+        submitBtn.disabled = true;
+        return;
+      }
+      const m = Math.floor(seconds / 60);
+      const s = String(seconds % 60).padStart(2, '0');
+      timerEl.textContent = `${m}:${s}`;
+      if (seconds <= 120) resendEl.classList.add('active');
+    }, 1000);
+  }
+
+  function resendOtp() {
+    fetch("{{ url_for('resend_otp', purpose='login') }}")
+      .then(() => {
+        startTimer();
+        boxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+        syncHidden();
+        const flash = document.getElementById('otp-flash');
+        flash.innerHTML = '<div class="flash-msg flash-info">A new code has been sent to your email.</div>';
+        setTimeout(() => flash.innerHTML = '', 4000);
+        boxes[0].focus();
+      });
+  }
+
+  // ── Password Toggle ────────────────────────────────────
+  function togglePass(id, btn) {
+    const el = document.getElementById(id);
+    el.type = el.type === 'password' ? 'text' : 'password';
+    btn.textContent = el.type === 'password' ? 'Show' : 'Hide';
+  }
+</script>
+</body>
+</html>
