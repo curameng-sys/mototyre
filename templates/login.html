@@ -116,8 +116,13 @@
       }
 
       /* LEFT PANEL — dynamic text */
-      .left-login-text, .left-otp-text { transition: opacity 0.4s, transform 0.4s; }
-      .left-otp-text { display: none; opacity: 0; }
+      .left-panel-text {
+        transition: opacity 0.4s, transform 0.4s;
+      }
+      .left-panel-text.hidden {
+        display: none;
+        opacity: 0;
+      }
 
       /* RIGHT PANEL */
       .auth-right {
@@ -147,6 +152,8 @@
 
       .panel-login  { opacity: 1;  transform: translateX(0);     pointer-events: auto; }
       .panel-otp    { opacity: 0;  transform: translateX(60px);  pointer-events: none; }
+      .panel-forgot { opacity: 0;  transform: translateX(60px);  pointer-events: none; }
+      .panel-reset  { opacity: 0;  transform: translateX(60px);  pointer-events: none; }
 
       .panel.active        { opacity: 1; transform: translateX(0);    pointer-events: auto; }
       .panel.slide-out     { opacity: 0; transform: translateX(-60px); pointer-events: none; }
@@ -246,6 +253,13 @@
         transform: none;
         box-shadow: none;
       }
+      .btn-auth-success {
+        background: #16a34a;
+      }
+      .btn-auth-success:hover {
+        background: #15803d;
+        box-shadow: 0 8px 24px rgba(22,163,74,0.3);
+      }
 
       .auth-divider {
         text-align: center;
@@ -270,12 +284,18 @@
         font-size: 0.875rem;
         color: #6b7280;
       }
-      .auth-switch a {
+      .auth-switch a, .auth-link {
         color: var(--red);
         font-weight: 600;
         text-decoration: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        font-size: inherit;
+        padding: 0;
       }
-      .auth-switch a:hover { text-decoration: underline; }
+      .auth-switch a:hover, .auth-link:hover { text-decoration: underline; }
 
       /* OTP PANEL SPECIFIC */
       .email-badge {
@@ -379,6 +399,12 @@
       }
       .back-btn:hover { color: #fff; }
 
+      /* Forgot / Reset specific */
+      .panel-forgot .sub,
+      .panel-reset .sub {
+        margin-bottom: 1.5rem;
+      }
+
       @keyframes fadeUp {
         from { opacity: 0; transform: translateY(20px); }
         to   { opacity: 1; transform: translateY(0); }
@@ -410,7 +436,7 @@
       <a href="{{ url_for('home') }}" class="auth-logo">MOTO<span>TYRE</span></a>
 
       <!-- Login text -->
-      <div class="left-login-text">
+      <div class="left-panel-text" id="left-login">
         <h2>
           WELCOME<br>
           <span class="accent">BACK</span><br>
@@ -426,7 +452,7 @@
       </div>
 
       <!-- OTP text -->
-      <div class="left-otp-text">
+      <div class="left-panel-text hidden" id="left-otp">
         <h2>
           CHECK<br>
           <span class="accent">YOUR</span><br>
@@ -441,6 +467,24 @@
         </div>
       </div>
 
+      <!-- Forgot Password text -->
+      <div class="left-panel-text hidden" id="left-forgot">
+        <h2>
+          FORGOT<br>
+          <span class="accent">YOUR</span><br>
+          <span class="outline">PASSWORD?</span>
+        </h2>
+        <p>No worries. Enter your registered email and we'll send you a reset code right away.</p>
+        <div class="auth-perks">
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Reset code sent instantly</div>
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Code valid for 10 minutes</div>
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Check your spam folder if needed</div>
+          <div class="auth-perk"><div class="auth-perk-dot"></div> Your account stays secure</div>
+        </div>
+      </div>
+
+
+
     </div>
   </div>
 
@@ -452,6 +496,7 @@
       <h3>Sign In</h3>
       <p class="sub">Enter your credentials to access your account</p>
 
+      <div id="login-flash"></div>
 
       <form method="POST" action="{{ url_for('login') }}" id="login-form">
         <div class="field-group">
@@ -465,6 +510,11 @@
             <button type="button" class="pass-toggle" onclick="togglePass('loginPass', this)">Show</button>
           </div>
         </div>
+
+        <div style="text-align: right; margin-bottom: 0.75rem; margin-top: -0.5rem;">
+          <button type="button" class="auth-link" style="font-size: 0.85rem;" onclick="showPanel('forgot')">Forgot password?</button>
+        </div>
+
         <button type="submit" class="btn-auth" id="login-submit-btn">Sign In →</button>
       </form>
 
@@ -512,7 +562,7 @@
         <button class="resend-btn" id="resend-btn" onclick="resendOtp()">Resend code</button>
       </div>
 
-      <button class="back-btn" onclick="goBack()">
+      <button class="back-btn" onclick="showPanel('login')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="15,18 9,12 15,6"/>
         </svg>
@@ -520,75 +570,112 @@
       </button>
     </div>
 
+    <!-- ── STEP 3: FORGOT PASSWORD ── -->
+    <div class="panel panel-forgot slide-in-wait" id="panel-forgot">
+      <h3>Forgot Password</h3>
+      <p class="sub">Enter your registered email and we'll send you a reset code.</p>
+
+      <div id="forgot-flash"></div>
+
+      <form method="POST" action="/forgot-password" id="forgot-form">
+        <div class="field-group">
+          <label>Email Address</label>
+          <input type="email" name="email" id="forgot-email" placeholder="you@example.com" required>
+        </div>
+        <button type="submit" class="btn-auth">Send Reset Code →</button>
+      </form>
+
+      <button class="back-btn" onclick="showPanel('login')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15,18 9,12 15,6"/>
+        </svg>
+        Back to Sign In
+      </button>
+    </div>
+
+
+
   </div>
 </div>
 
 <script>
-  // ── Panel Swap ─────────────────────────────────────────
-  const panelLogin   = document.getElementById('panel-login');
-  const panelOtp     = document.getElementById('panel-otp');
-  const leftLogin    = document.querySelector('.left-login-text');
-  const leftOtp      = document.querySelector('.left-otp-text');
+  // ── Panel System ───────────────────────────────────────
+  const panels = {
+    login:  { panel: document.getElementById('panel-login'),  left: document.getElementById('left-login') },
+    otp:    { panel: document.getElementById('panel-otp'),    left: document.getElementById('left-otp') },
+    forgot: { panel: document.getElementById('panel-forgot'), left: document.getElementById('left-forgot') },
+  };
+
+  let currentPanel = 'login';
+
+  function showPanel(name) {
+    const from = panels[currentPanel];
+    const to   = panels[name];
+
+    // Slide out current
+    from.panel.classList.remove('active');
+    from.panel.classList.add('slide-out');
+
+    // Fade out left text
+    from.left.style.opacity = '0';
+    from.left.style.transform = 'translateY(-20px)';
+
+    setTimeout(() => {
+      from.panel.classList.remove('slide-out');
+      from.panel.classList.add('slide-in-wait');
+      from.left.style.display = 'none';
+      from.left.classList.add('hidden');
+
+      // Slide in new panel
+      to.panel.classList.remove('slide-in-wait');
+      to.panel.classList.add('active');
+
+      // Fade in new left text
+      to.left.classList.remove('hidden');
+      to.left.style.display = 'block';
+      to.left.style.opacity = '0';
+      to.left.style.transform = 'translateY(20px)';
+      setTimeout(() => {
+        to.left.style.opacity = '1';
+        to.left.style.transform = 'translateY(0)';
+      }, 50);
+
+      currentPanel = name;
+
+      // Panel-specific side effects
+      if (name === 'otp') {
+        startTimer();
+        setTimeout(() => boxes[0].focus(), 400);
+      }
+      if (name === 'forgot') {
+        setTimeout(() => document.getElementById('forgot-email').focus(), 400);
+      }
+
+      if (name === 'login') {
+        clearInterval(timerInterval);
+      }
+    }, 350);
+  }
+
+  // ── Auto-show OTP panel if session has pending email ──
   const emailDisplay = document.getElementById('otp-email-display');
 
-  // If backend redirected back here after OTP sent (pending_login_email in session),
-  // check if we should show OTP panel immediately
   {% if session.get('pending_login_email') %}
     window.addEventListener('DOMContentLoaded', () => {
       emailDisplay.textContent = '{{ session.get("pending_login_email") }}';
-      showOtpPanel();
+      showPanel('otp');
     });
   {% endif %}
 
-  document.getElementById('login-form').addEventListener('submit', function(e) {
+document.getElementById('login-form').addEventListener('submit', function() {
     const email = document.getElementById('login-email').value;
     emailDisplay.textContent = email;
   });
-
-  function showOtpPanel() {
-    panelLogin.classList.add('slide-out');
-    panelLogin.classList.remove('active');
-    setTimeout(() => {
-      panelOtp.classList.remove('slide-in-wait');
-      panelOtp.classList.add('active');
-    }, 350);
-
-    leftLogin.style.opacity = '0';
-    leftLogin.style.transform = 'translateY(-20px)';
-    setTimeout(() => {
-      leftLogin.style.display = 'none';
-      leftOtp.style.display = 'block';
-      setTimeout(() => {
-        leftOtp.style.opacity = '1';
-        leftOtp.style.transform = 'translateY(0)';
-      }, 50);
-    }, 350);
-
-    startTimer();
-    setTimeout(() => boxes[0].focus(), 400);
-  }
-
-  function goBack() {
-    panelOtp.classList.remove('active');
-    panelOtp.classList.add('slide-in-wait');
-    panelLogin.classList.remove('slide-out');
-    panelLogin.classList.add('active');
-
-    leftOtp.style.opacity = '0';
-    setTimeout(() => {
-      leftOtp.style.display = 'none';
-      leftLogin.style.display = 'block';
-      leftLogin.style.opacity = '';
-      leftLogin.style.transform = '';
-    }, 350);
-    clearInterval(timerInterval);
-  }
 
   // ── OTP Boxes ──────────────────────────────────────────
   const boxes     = document.querySelectorAll('.otp-box');
   const hidden    = document.getElementById('otp-hidden');
   const submitBtn = document.getElementById('otp-submit-btn');
-  const otpRow    = document.getElementById('otp-row');
 
   boxes.forEach((box, i) => {
     box.addEventListener('input', (e) => {

@@ -23,7 +23,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SECRET_KEY'] = 'mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4'
 app.config['SQLALCHEMY_DATABASE_URI'] = (
     "mysql+pymysql://avnadmin:AVNS_1RNbCP5RORVJ7VaVhRD@"
     "mysql-1d9dceb5-mackycastanales05-1369.f.aivencloud.com:12422/defaultdb"
@@ -45,14 +45,13 @@ login_manager.login_view = 'login'
 # ─────────────────────────────────────────
 
 GMAIL_SCOPES     = ["https://www.googleapis.com/auth/gmail.send"]
-GMAIL_TOKEN_FILE = "gmail_token.json"      # auto-created after first auth
-GMAIL_CREDS_FILE = "credentials.json"      # downloaded from Google Cloud Console
+GMAIL_TOKEN_FILE = "gmail_token.json"
+GMAIL_CREDS_FILE = "credentials.json"
 GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mackycastanales05@gmail.com")
 OTP_EXPIRY_MINS  = 10
 
 
 def _get_gmail_service():
-    """Authenticate and return Gmail API service. Refreshes token automatically."""
     creds = None
     if os.path.exists(GMAIL_TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_FILE, GMAIL_SCOPES)
@@ -68,7 +67,6 @@ def _get_gmail_service():
 
 
 def _send_gmail(to: str, subject: str, html_body: str):
-    """Send an HTML email via Gmail API."""
     msg = MIMEMultipart("alternative")
     msg["to"]      = to
     msg["from"]    = GMAIL_SENDER
@@ -80,11 +78,14 @@ def _send_gmail(to: str, subject: str, html_body: str):
 
 
 def send_otp_email(email: str, otp: str, purpose: str = "verify"):
-    """Build and send the OTP email. purpose: 'verify' or 'login'."""
     if purpose == "verify":
         subject = "Verify your MotoTyre email"
         heading = "Email Verification"
         subtext = "Use the code below to verify your email address."
+    elif purpose == "reset":
+        subject = "Your MotoTyre password reset code"
+        heading = "Password Reset"
+        subtext = "Use the code below to reset your password."
     else:
         subject = "Your MotoTyre login code"
         heading = "Login Verification"
@@ -120,7 +121,7 @@ class User(db.Model, UserMixin):
     motorcycle_plate  = db.Column(db.String(20), nullable=True)
     motorcycle_model  = db.Column(db.String(100), nullable=True)
     profile_pic       = db.Column(db.String(255), nullable=True)
-    email_verified    = db.Column(db.Boolean, default=False)   # ← NEW
+    email_verified    = db.Column(db.Boolean, default=False)
     bookings          = db.relationship('Booking', backref='customer', lazy=True)
     orders            = db.relationship('Order', backref='customer', lazy=True)
 
@@ -132,11 +133,10 @@ class User(db.Model, UserMixin):
 
 
 class OTPRecord(db.Model):
-    """Stores OTPs for email verification and login 2FA."""
     id         = db.Column(db.Integer, primary_key=True)
     email      = db.Column(db.String(100), nullable=False, index=True)
     otp        = db.Column(db.String(10), nullable=False)
-    purpose    = db.Column(db.String(10), nullable=False)   # 'verify' or 'login'
+    purpose    = db.Column(db.String(10), nullable=False)   # 'verify', 'login', or 'reset'
     expires_at = db.Column(db.DateTime, nullable=False)
     used       = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -198,7 +198,6 @@ def _generate_otp(length=6) -> str:
 
 
 def _save_otp(email: str, purpose: str) -> str:
-    """Invalidate old OTPs, generate a new one, save to DB, return the code."""
     OTPRecord.query.filter_by(email=email, purpose=purpose, used=False).update({"used": True})
     db.session.flush()
     otp = _generate_otp()
@@ -214,7 +213,6 @@ def _save_otp(email: str, purpose: str) -> str:
 
 
 def _verify_otp(email: str, otp_input: str, purpose: str) -> dict:
-    """Check OTP validity. Returns {"valid": bool, "message": str}."""
     record = OTPRecord.query.filter_by(
         email=email, purpose=purpose, used=False
     ).order_by(OTPRecord.created_at.desc()).first()
@@ -244,18 +242,24 @@ def home():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        if current_user.role == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        elif current_user.role == 'staff':
+            return redirect(url_for('staff_dashboard'))
+        else:
+            return redirect(url_for('customer_dashboard'))
+
     if request.method == 'POST':
         email    = request.form['email']
         password = request.form['password']
         user     = User.query.filter_by(email=email).first()
 
         if user and user.check_password(password):
-            # ── Step 1: block unverified users ──────────────────
             if not user.email_verified:
                 flash('Please verify your email before logging in.', 'warning')
                 return redirect(url_for('login'))
 
-            # ── Step 2: send login OTP, hold user in session ────
             otp = _save_otp(email, purpose="login")
             try:
                 send_otp_email(email, otp, purpose="login")
@@ -263,7 +267,7 @@ def login():
                 flash(f'Could not send OTP: {e}', 'danger')
                 return redirect(url_for('login'))
 
-            session['pending_login_email'] = email   # temporarily store email
+            session['pending_login_email'] = email
             flash('A login code has been sent to your email.', 'info')
             return redirect(url_for('verify_login_otp'))
 
@@ -273,7 +277,6 @@ def login():
 
 @app.route('/verify-login-otp', methods=['GET', 'POST'])
 def verify_login_otp():
-    """Step 2 of login: verify the OTP sent to the user's email."""
     email = session.get('pending_login_email')
     if not email:
         return redirect(url_for('login'))
@@ -285,7 +288,12 @@ def verify_login_otp():
         if result['valid']:
             session.pop('pending_login_email', None)
             user = User.query.filter_by(email=email).first()
-            login_user(user)
+            login_user(user, remember=True)
+
+            next_page = request.args.get('next') or session.pop('next', None)
+            if next_page and next_page.startswith('/'):
+                return redirect(next_page)
+
             if user.role == 'admin':
                 return redirect(url_for('admin_dashboard'))
             elif user.role == 'staff':
@@ -300,11 +308,12 @@ def verify_login_otp():
 
 @app.route('/resend-otp/<purpose>')
 def resend_otp(purpose):
-    """Resend OTP for login or verify. Purpose: 'login' or 'verify'."""
     if purpose == 'login':
         email = session.get('pending_login_email')
     elif purpose == 'verify':
         email = session.get('pending_verify_email')
+    elif purpose == 'reset':
+        email = session.get('pending_reset_email')
     else:
         email = None
 
@@ -321,6 +330,8 @@ def resend_otp(purpose):
 
     if purpose == 'login':
         return redirect(url_for('verify_login_otp'))
+    elif purpose == 'reset':
+        return redirect(url_for('forgot_password_verify'))
     return redirect(url_for('verify_email_otp'))
 
 
@@ -344,20 +355,18 @@ def register():
         if len(phone) < 10 or len(phone) > 13:
             return redirect(url_for('register'))
 
-        # Save user but unverified
         new_user = User(
             fullname=fullname,
             email=email,
             phone=phone,
             motorcycle_plate=plate,
             motorcycle_model=model,
-            email_verified=False        # ← must verify before login
+            email_verified=False
         )
         new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
 
-        # Send verification OTP
         otp = _save_otp(email, purpose="verify")
         try:
             send_otp_email(email, otp, purpose="verify")
@@ -374,7 +383,6 @@ def register():
 
 @app.route('/verify-email-otp', methods=['GET', 'POST'])
 def verify_email_otp():
-    """Verify email after registration."""
     email = session.get('pending_verify_email')
     if not email:
         return redirect(url_for('register'))
@@ -395,6 +403,91 @@ def verify_email_otp():
         flash(result['message'], 'danger')
 
     return render_template('verify_otp.html', purpose='verify', email=email)
+
+
+# ─────────────────────────────────────────
+# FORGOT PASSWORD ROUTES
+# ─────────────────────────────────────────
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Step 1: User enters their email to receive a reset OTP."""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user  = User.query.filter_by(email=email).first()
+
+        # Always show the same message to prevent email enumeration
+        if user:
+            otp = _save_otp(email, purpose="reset")
+            try:
+                send_otp_email(email, otp, purpose="reset")
+            except Exception as e:
+                flash(f'Could not send reset code: {e}', 'danger')
+                return redirect(url_for('forgot_password'))
+            session['pending_reset_email'] = email
+
+        flash('If that email is registered, a reset code has been sent.', 'info')
+        return redirect(url_for('forgot_password_verify'))
+
+    return render_template('forgot_password.html')
+
+
+@app.route('/forgot-password/verify', methods=['GET', 'POST'])
+def forgot_password_verify():
+    """Step 2: User enters the OTP sent to their email."""
+    email = session.get('pending_reset_email')
+    if not email:
+        flash('Session expired. Please try again.', 'danger')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        otp_input = request.form.get('otp', '').strip()
+        result    = _verify_otp(email, otp_input, purpose="reset")
+
+        if result['valid']:
+            session['reset_otp_verified'] = True
+            return redirect(url_for('forgot_password_reset'))
+
+        flash(result['message'], 'danger')
+
+    return render_template('verify_otp.html', purpose='reset', email=email)
+
+
+@app.route('/forgot-password/reset', methods=['GET', 'POST'])
+def forgot_password_reset():
+    """Step 3: User sets a new password."""
+    email    = session.get('pending_reset_email')
+    verified = session.get('reset_otp_verified')
+
+    if not email or not verified:
+        flash('Session expired. Please start again.', 'danger')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        new_password     = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if len(new_password) < 8:
+            flash('Password must be at least 8 characters.', 'danger')
+            return redirect(url_for('forgot_password_reset'))
+
+        if new_password != confirm_password:
+            flash('Passwords do not match.', 'danger')
+            return redirect(url_for('forgot_password_reset'))
+
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.set_password(new_password)
+            db.session.commit()
+
+        # Clear reset session keys
+        session.pop('pending_reset_email', None)
+        session.pop('reset_otp_verified', None)
+
+        flash('Password reset successful! You can now log in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', email=email)
 
 
 @app.route('/logout')
@@ -617,7 +710,7 @@ def admin_dashboard():
         .group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all()
     )
 
-    today          = date_today.today()
+    today           = date_today.today()
     new_users_today = User.query.filter(func.date(User.id) == today).count()
     recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(5).all()
     all_bookings    = Booking.query.order_by(Booking.created_at.desc()).all()
@@ -695,7 +788,7 @@ def add_staff():
         email=email,
         phone=request.form['phone'],
         role='staff',
-        email_verified=True    # staff accounts are pre-verified by admin
+        email_verified=True
     )
     staff.set_password(request.form['password'])
     db.session.add(staff)
@@ -799,7 +892,7 @@ def create_admin():
         email='admin@mototyre.com',
         phone='09204434180',
         role='admin',
-        email_verified=True   # admin is pre-verified
+        email_verified=True
     )
     admin.set_password('admin123')
     db.session.add(admin)
@@ -807,8 +900,8 @@ def create_admin():
     return 'Admin created! Now delete this route.'
 
 
-with app.app_context():
-    db.create_all()
+#with app.app_context():
+   # db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1331,8 +1331,6 @@
 
       // Detect columns from header row
       const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim().replace(/\s+/g, '_'));
-      console.log('Headers detected:', headers);
-    console.log('Barcode index:', headers.findIndex(h => h === 'barcode'));
 
       // Support both your MASTER-FILE format AND the simple format
       const nameIdx     = headers.findIndex(h => h.includes('item_description') || h.includes('name'));
@@ -1349,27 +1347,25 @@
       }
 
       csvParsedRows = lines.slice(1).map((line, i) => {
-        const cols = parseCSVLine(line);
-        const rawPrice   = cols[priceIdx] || '';
-        const cleanPrice = rawPrice.replace(/,/g, '').trim();
-        const rawStock   = stockIdx !== -1 ? (cols[stockIdx] || '0') : '0';
-        const cleanStock = rawStock.replace(/,/g, '').trim() || '0';
-
-    // barcode is always column 0 in your MASTER-FILE CSV
-        const barcodeVal = barcodeIdx !== -1
-        ? (cols[barcodeIdx] || '').trim()
-        : (cols[0] || '').trim();
+        const cols        = parseCSVLine(line);
+        const rawPrice    = cols[priceIdx] || '';
+        const cleanPrice  = rawPrice.replace(/,/g, '').trim();
+        const rawStock    = stockIdx !== -1 ? (cols[stockIdx] || '0') : '0';
+        const cleanStock  = rawStock.replace(/,/g, '').trim() || '0';
+        const barcodeVal  = barcodeIdx !== -1
+          ? (cols[barcodeIdx] || '').trim()
+          : (cols[0] || '').trim();
 
         return {
-        barcode:     barcodeVal,
-        name:        (cols[nameIdx] || '').trim(),
-        category:    categoryIdx !== -1 ? (cols[categoryIdx] || '').trim() : '',
-        price:       cleanPrice,
-        stock:       cleanStock,
-        description: descIdx !== -1 ? (cols[descIdx] || '').trim() : '',
-        row: i + 2
-      };
-        }).filter(row => row.name);
+          barcode:     barcodeVal,
+          name:        (cols[nameIdx] || '').trim(),
+          category:    categoryIdx !== -1 ? (cols[categoryIdx] || '').trim() : '',
+          price:       cleanPrice,
+          stock:       cleanStock,
+          description: descIdx !== -1 ? (cols[descIdx] || '').trim() : '',
+          row:         i + 2
+        };
+      }).filter(row => row.name);
 
       nameEl.textContent   = '📄 ' + file.name + ' — ' + csvParsedRows.length + ' rows found';
       nameEl.style.display = 'block';
