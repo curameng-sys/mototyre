@@ -577,7 +577,7 @@
 
       <div id="forgot-flash"></div>
 
-      <form method="POST" action="/forgot-password" id="forgot-form">
+      <form method="POST" action="{{ url_for('forgot_password') }}" id="forgot-form">
         <div class="field-group">
           <label>Email Address</label>
           <input type="email" name="email" id="forgot-email" placeholder="you@example.com" required>
