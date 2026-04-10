@@ -747,7 +747,15 @@
                 <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);">{{ p.description or '—' }}</td>
                 <td>
                   <div style="display:flex;gap:0.5rem;">
-                    <button class="btn-action-edit" onclick="openEditProduct({{ p.id }}, '{{ p.name|replace("'", "\\'") }}', '{{ p.category|replace("'", "\\'") }}', {{ p.price }}, {{ p.stock }}, '{{ (p.description or '')|replace("'", "\\'") }}', '{{ (p.barcode or '')|replace("'", "\\'") }}')">✏️ Edit</button>
+                    <button class="btn-action-edit"
+  data-id="{{ p.id }}"
+  data-name="{{ p.name | e }}"
+  data-category="{{ p.category | e }}"
+  data-price="{{ p.price }}"
+  data-stock="{{ p.stock }}"
+  data-description="{{ (p.description or '') | e }}"
+  data-barcode="{{ (p.barcode or '') | e }}"
+  onclick="openEditProductFromBtn(this)">✏️ Edit</button>
                     <form method="POST" action="{{ url_for('delete_product', product_id=p.id) }}" onsubmit="return confirm('Delete {{ p.name|e }}? This cannot be undone.')">
                       <button type="submit" class="btn-action-delete">🗑️ Delete</button>
                     </form>
