@@ -784,7 +784,7 @@
         {% if all_users %}
         <div style="overflow-x:auto;">
           <table class="table" id="users-table">
-            <thead><tr><th>#</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Motorcycle</th><th>Role</th></tr></thead>
+            <thead><tr><th>#</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Motorcycle</th><th>Role</th><th>Actions</th></tr></thead>
             <tbody>
               {% for u in all_users %}
               <tr>
@@ -794,6 +794,16 @@
                 <td>{{ u.phone }}</td>
                 <td>{{ u.motorcycle_model or '—' }}</td>
                 <td><span class="badge badge-{{ u.role }}">{{ u.role|title }}</span></td>
+                <td>
+                  {% if u.role != 'admin' and u.id != current_user.id %}
+                  <form method="POST" action="{{ url_for('delete_user', user_id=u.id) }}"
+                        onsubmit="return confirm('Delete {{ u.fullname|e }}? This will also remove their bookings and orders. This cannot be undone.')">
+                    <button type="submit" class="btn-action-delete">🗑️ Delete</button>
+                  </form>
+                  {% else %}
+                  <span style="color:var(--muted);font-size:0.75rem;">—</span>
+                  {% endif %}
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -1195,7 +1205,6 @@
   }
 
   function openModal(id) {
-    // Reset CSV modal state when opened
     if (id === 'modal-import-csv') {
       document.getElementById('csv-step-upload').style.display  = 'block';
       document.getElementById('csv-step-preview').style.display = 'none';
@@ -1288,7 +1297,6 @@
     if (input.files[0]) processCSVFile(input.files[0]);
   }
 
-  // Proper CSV parser that handles quoted fields with commas inside
   function parseCSVLine(line) {
     const result = [];
     let current = '';
@@ -1329,10 +1337,7 @@
         return;
       }
 
-      // Detect columns from header row
       const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim().replace(/\s+/g, '_'));
-
-      // Support both your MASTER-FILE format AND the simple format
       const nameIdx     = headers.findIndex(h => h.includes('item_description') || h.includes('name'));
       const categoryIdx = headers.findIndex(h => h.includes('category'));
       const priceIdx    = headers.findIndex(h => h.includes('price'));

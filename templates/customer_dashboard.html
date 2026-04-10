@@ -294,6 +294,11 @@
   </div>
 
   <div class="nav-right">
+  <div style="position:relative;cursor:pointer;" onclick="toggleNotifications()" title="Notifications">
+    <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">🔔</div>
+    <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;font-size:0.6rem;font-family:'Syne',sans-serif;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:2px solid var(--ink);" id="notif-badge">0</span>
+  </div>
+
     <div class="nav-avatar" onclick="showSection('profile', null)" title="Account Settings">
       {% if current_user.profile_pic %}
         <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="Profile">
@@ -305,6 +310,40 @@
     <button class="nav-logout-btn" onclick="document.getElementById('modal-logout').style.display='flex'">Logout</button>
   </div>
 </nav>
+
+<!-- ═══ NOTIFICATION PANEL ═══ --> 
+<div id="notif-panel" style="display:none;position:fixed;top:76px;right:1.25rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,0.1);border-radius:16px;z-index:999;box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;">Notifications</div>
+      <div id="notif-count-badge" style="display:none;background:var(--red);color:#fff;font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;border-radius:20px;padding:0.15em 0.55em;">0</div>
+    </div>
+    <div style="display:flex;gap:0.75rem;align-items:center;">
+      <button onclick="toggleShowAll()" id="btn-show-all" style="background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">Show All</button>
+      <button onclick="markAllRead()" style="background:none;border:none;color:var(--red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">Mark all read</button>
+      <button onclick="toggleNotifications()" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:0;line-height:1;">✕</button>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div style="display:flex;gap:0.5rem;padding:0.75rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.07);overflow-x:auto;">
+    <button class="notif-tab active" onclick="filterNotifs('all', this)" style="background:var(--red);border:1px solid var(--red);color:#fff;border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">All</button>
+    <button class="notif-tab" onclick="filterNotifs('booking', this)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">📅 Bookings</button>
+    <button class="notif-tab" onclick="filterNotifs('order', this)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">📦 Orders</button>
+    <button class="notif-tab" onclick="filterNotifs('unread', this)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">🔴 Unread</button>
+  </div>
+
+  <div id="notif-list" style="max-height:460px;overflow-y:auto;">
+    <div id="notif-empty" style="text-align:center;padding:2.5rem 1rem;color:var(--muted);">
+      <div style="font-size:2rem;margin-bottom:0.5rem;">🔔</div>
+      <div style="font-size:0.85rem;">No notifications yet.</div>
+    </div>
+  </div>
+  <div id="notif-footer" style="display:none;padding:0.75rem 1.25rem;border-top:1px solid rgba(255,255,255,0.07);text-align:center;">
+  <span id="notif-showing" style="font-size:0.75rem;color:var(--muted);font-family:'Syne',sans-serif;"></span>
+  <button onclick="toggleShowAll()" id="btn-view-history" style="background:none;border:none;color:var(--red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">View History</button>
+</div>
+</div>
 
 <!-- ═══ CONTENT ═══ -->
 <div class="page-wrap">
@@ -468,12 +507,24 @@
               <label>Service Type</label>
               <select name="service" required>
                 <option value="">-- Select Service --</option>
-                <option>Oil Change</option>
-                <option>Tire Replacement</option>
-                <option>General Checkup</option>
-                <option>Brake Service</option>
-                <option>Chain Cleaning</option>
-                <option>Engine Tune-up</option>
+                <option>FI Cleaning</option>
+                <option>Throttle Body Cleaning</option>
+                <option>Tune-Up</option>
+                <option>Ball Race Installation</option>
+                <option>General Rewiring</option>
+                <option>CVT Upgrade</option>
+                <option>CVT Cleaning</option>
+                <option>Diagnostic (API Tech / MST)</option>
+                <option>Suspension Tuning</option>
+                <option>Overhaul</option>
+                <option>Top Overhaul</option>
+                <option>Brake Cleaning</option>
+                <option>Remap</option>
+                <option>Change Oil</option>
+                <option>Horn Installation</option>
+                <option>Rubber Link Stopper</option>
+                <option>Change Brake Pad</option>
+                <option>Full Maintenance Package</option>
               </select>
             </div>
             <div class="form-group">
@@ -488,6 +539,23 @@
               <label>Additional Notes</label>
               <textarea name="notes" rows="2" placeholder="Describe your concern..."></textarea>
             </div>
+
+            <div style="border-top:1px solid var(--border);margin:1.25rem 0 1rem;"></div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.9rem;">Contact Information</div>
+
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" name="contact_name" placeholder="Juan Dela Cruz" required>
+            </div>
+            <div class="form-group">
+              <label>Mobile Number</label>
+              <input type="tel" name="contact_mobile" placeholder="09XX XXX XXXX" required>
+            </div>
+            <div class="form-group">
+              <label>Contact Email</label>
+              <input type="email" name="contact_email" placeholder="email@example.com" required>
+            </div>
+
             <button type="submit" class="btn-submit" id="btn-book" disabled>📅 Confirm Booking</button>
           </form>
         </div>
@@ -532,12 +600,16 @@
       <div><div class="section-title">ORDER <span>PARTS</span></div><div class="section-sub">Browse available motorcycle parts and accessories.</div></div>
     </div>
 
-    <!-- Category Filter Tabs -->
-    <div id="cat-tabs" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+   <!-- Category Filter Tabs -->
+    <div style="margin-bottom:1rem;">
+  <input type="text" id="shop-search" placeholder="🔍 Search products..." oninput="searchProducts()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:0.75rem 1rem;color:#fff;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+</div>
+<div id="cat-tabs" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
       <button class="cat-tab active" onclick="filterProducts('all', this)">All</button>
-      {% for cat in categories %}
-      <button class="cat-tab" onclick="filterProducts('{{ cat }}', this)">{{ cat|title }}</button>
-      {% endfor %}
+      <button class="cat-tab" onclick="filterProducts('tire', this)">🏍️ Tire</button>
+      <button class="cat-tab" onclick="filterProducts('engineoil', this)">🛢️ Engine Oil</button>
+      <button class="cat-tab" onclick="filterProducts('airfilter', this)">💨 Air Filter</button>
+      <button class="cat-tab" onclick="filterProducts('brakeshoe', this)">🔩 Brake Shoe</button>
     </div>
 
     {% if products %}
@@ -635,20 +707,136 @@
 
 </div>
 
-<!-- ═══ ORDER MODAL ═══ -->
+<!-- ═══ CART MODAL ═══ -->
 <div class="modal-overlay" id="modal-order">
-  <div class="modal-box">
-    <h5>🛒 Place Order</h5>
-    <form method="POST" action="{{ url_for('place_order') }}">
-      <input type="hidden" name="product_id" id="modal-product-id">
-      <div class="form-group"><label>Product</label><input type="text" id="modal-product-name" disabled></div>
-      <div class="form-group"><label>Unit Price</label><input type="text" id="modal-product-price" disabled></div>
-      <div class="form-group"><label>Quantity</label><input type="number" name="quantity" id="modal-quantity" min="1" value="1" required></div>
+  <div class="modal-box" style="width:520px;max-width:95vw;">
+
+    <!-- STEP 1: CART -->
+    <div id="step-cart">
+      <h5>🛒 Order Summary</h5>
+      <input type="hidden" id="modal-product-id">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+          <div>
+            <div id="cart-product-name" style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;"></div>
+            <div id="cart-product-cat" style="font-size:0.75rem;color:var(--muted);margin-top:2px;"></div>
+          </div>
+          <div id="cart-product-price" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--red);"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
+          <label style="font-size:0.78rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Qty</label>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <button type="button" onclick="changeQty(-1)" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+            <input type="number" id="modal-quantity" min="1" value="1" style="width:52px;text-align:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:0.35rem;color:#fff;font-size:0.9rem;" oninput="updateCartTotal()">
+            <button type="button" onclick="changeQty(1)"  style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-top:1px solid var(--border);">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:var(--muted);">TOTAL</span>
+        <span id="cart-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;"></span>
+      </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel</button>
-        <button type="submit" class="btn-submit" style="width:auto;">Confirm Order</button>
+        <button type="button" class="btn-submit" style="width:auto;" onclick="goToStep('step-shipping')">Proceed to Shipping ›</button>
       </div>
-    </form>
+    </div>
+
+    <!-- STEP 2: SHIPPING -->
+    <div id="step-shipping" style="display:none;">
+      <h5>📦 Shipping Address</h5>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="ship-name" placeholder="Juan Dela Cruz" required>
+      </div>
+      <div class="form-group">
+        <label>Mobile Number</label>
+        <input type="tel" id="ship-mobile" placeholder="09XX XXX XXXX" required>
+      </div>
+      <div class="form-group">
+        <label>Street Address</label>
+        <input type="text" id="ship-street" placeholder="123 Rizal St." required>
+      </div>
+      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+        <div>
+          <label>City / Municipality</label>
+          <input type="text" id="ship-city" placeholder="Quezon City" required>
+        </div>
+        <div>
+          <label>Province</label>
+          <input type="text" id="ship-province" placeholder="Metro Manila" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>ZIP Code</label>
+        <input type="text" id="ship-zip" placeholder="1100" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel-modal" onclick="goToStep('step-cart')">‹ Back to Cart</button>
+        <button type="button" class="btn-submit" style="width:auto;" onclick="goToShipping()">Proceed to Payment ›</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: PAYMENT -->
+    <div id="step-payment" style="display:none;">
+      <h5>💳 Payment Method</h5>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,168,107,0.3);border-radius:10px;padding:1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;">
+        <div style="width:48px;height:48px;border-radius:10px;background:rgba(0,168,107,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">📱</div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">GCash</div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Only available payment method at this time.</div>
+        </div>
+        <div style="margin-left:auto;width:18px;height:18px;border-radius:50%;background:var(--red);border:2px solid var(--red);flex-shrink:0;"></div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Order Summary</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;"><span id="pay-product-name" style="color:var(--text);"></span><span id="pay-product-subtotal" style="color:var(--text);"></span></div>
+        <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:0.75rem;"><span>Shipping</span><span>To be arranged</span></div>
+        <div style="border-top:1px solid var(--border);padding-top:0.75rem;display:flex;justify-content:space-between;">
+          <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
+          <span id="pay-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--red);"></span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel-modal" onclick="goToStep('step-shipping')">‹ Back</button>
+        <button type="button" class="btn-submit" style="width:auto;" onclick="goToConfirm()">Review Order ›</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: CONFIRMATION -->
+    <div id="step-confirm" style="display:none;">
+      <h5>✅ Confirm Order</h5>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Items</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">
+          <span id="conf-product" style="color:var(--text);"></span>
+          <span id="conf-total" style="color:var(--red);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;"></span>
+        </div>
+        <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Shipping To</div>
+        <div id="conf-address" style="color:var(--text);line-height:1.6;"></div>
+        <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Payment</span>
+          <span style="color:#4ade80;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;">📱 GCash</span>
+        </div>
+      </div>
+      <form method="POST" action="{{ url_for('place_order') }}" id="final-order-form">
+        <input type="hidden" name="product_id" id="final-product-id">
+        <input type="hidden" name="quantity" id="final-quantity">
+        <input type="hidden" name="ship_name" id="final-ship-name">
+        <input type="hidden" name="ship_mobile" id="final-ship-mobile">
+        <input type="hidden" name="ship_street" id="final-ship-street">
+        <input type="hidden" name="ship_city" id="final-ship-city">
+        <input type="hidden" name="ship_province" id="final-ship-province">
+        <input type="hidden" name="ship_zip" id="final-ship-zip">
+        <input type="hidden" name="payment_method" value="GCash">
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel Order</button>
+          <button type="submit" class="btn-submit" style="width:auto;background:#15803d;">✅ Confirm and Pay</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -674,17 +862,86 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function openOrderModal(btn) {
-    document.getElementById('modal-product-id').value   = btn.dataset.id;
-    document.getElementById('modal-product-name').value = btn.dataset.name;
-    document.getElementById('modal-product-price').value = '₱' + parseFloat(btn.dataset.price).toFixed(2);
-    document.getElementById('modal-quantity').max = btn.dataset.stock;
-    document.getElementById('modal-order').classList.add('open');
+  let cartPrice = 0;
+
+function openOrderModal(btn) {
+  cartPrice = parseFloat(btn.dataset.price);
+  document.getElementById('modal-product-id').value = btn.dataset.id;
+  document.getElementById('cart-product-name').textContent = btn.dataset.name;
+  document.getElementById('cart-product-cat').textContent  = btn.dataset.category || '';
+  document.getElementById('cart-product-price').textContent = '₱' + cartPrice.toFixed(2);
+  document.getElementById('modal-quantity').max = btn.dataset.stock;
+  document.getElementById('modal-quantity').value = 1;
+  updateCartTotal();
+  goToStep('step-cart');
+  document.getElementById('modal-order').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.getElementById(id).style.display = '';
+}
+
+function goToStep(stepId) {
+  ['step-cart','step-shipping','step-payment','step-confirm'].forEach(s => {
+    document.getElementById(s).style.display = s === stepId ? 'block' : 'none';
+  });
+}
+
+function changeQty(dir) {
+  const input = document.getElementById('modal-quantity');
+  const newVal = Math.max(1, Math.min(parseInt(input.max) || 99, parseInt(input.value || 1) + dir));
+  input.value = newVal;
+  updateCartTotal();
+}
+
+function updateCartTotal() {
+  const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
+  const total = cartPrice * qty;
+  document.getElementById('cart-total').textContent = '₱' + total.toFixed(2);
+}
+
+function goToShipping() {
+  const fields = ['ship-name','ship-mobile','ship-street','ship-city','ship-province','ship-zip'];
+  for (const f of fields) {
+    if (!document.getElementById(f).value.trim()) {
+      document.getElementById(f).focus();
+      document.getElementById(f).style.borderColor = 'var(--red)';
+      return;
+    }
+    document.getElementById(f).style.borderColor = '';
   }
-  function closeModal(id) {
-    document.getElementById(id).classList.remove('open');
-    document.getElementById(id).style.display = '';
-  }
+  const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
+  const total = cartPrice * qty;
+  document.getElementById('pay-product-name').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
+  document.getElementById('pay-product-subtotal').textContent = '₱' + total.toFixed(2);
+  document.getElementById('pay-total').textContent = '₱' + total.toFixed(2);
+  goToStep('step-payment');
+}
+
+function goToConfirm() {
+  const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
+  const total = cartPrice * qty;
+  document.getElementById('conf-product').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
+  document.getElementById('conf-total').textContent = '₱' + total.toFixed(2);
+  document.getElementById('conf-address').innerHTML =
+    document.getElementById('ship-name').value + '<br>' +
+    document.getElementById('ship-mobile').value + '<br>' +
+    document.getElementById('ship-street').value + ', ' +
+    document.getElementById('ship-city').value + ', ' +
+    document.getElementById('ship-province').value + ' ' +
+    document.getElementById('ship-zip').value;
+  document.getElementById('final-product-id').value   = document.getElementById('modal-product-id').value;
+  document.getElementById('final-quantity').value     = qty;
+  document.getElementById('final-ship-name').value    = document.getElementById('ship-name').value;
+  document.getElementById('final-ship-mobile').value  = document.getElementById('ship-mobile').value;
+  document.getElementById('final-ship-street').value  = document.getElementById('ship-street').value;
+  document.getElementById('final-ship-city').value    = document.getElementById('ship-city').value;
+  document.getElementById('final-ship-province').value= document.getElementById('ship-province').value;
+  document.getElementById('final-ship-zip').value     = document.getElementById('ship-zip').value;
+  goToStep('step-confirm');
+}
+
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', function(e) {
       if (e.target === this) { this.classList.remove('open'); this.style.display = 'none'; }
@@ -780,19 +1037,235 @@
     }
   }
 
-  function filterProducts(cat, btn) {
+  const catKeywords = {
+  tire:      ['tire','tyre','tires'],
+  engineoil: ['engine oil','oil','lubricant'],
+  airfilter: ['air filter','airfilter','air fltr'],
+  brakeshoe: ['brake shoe','brakeshoe','brake pad','brake lining'],
+};
+
+function filterProducts(cat, btn) {
   document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   const cards = document.querySelectorAll('.product-card');
   let visible = 0;
   cards.forEach(card => {
-    const match = cat === 'all' || card.dataset.category === cat;
+    let match = cat === 'all';
+    if (!match) {
+      const name = card.querySelector('.product-name').textContent.toLowerCase();
+      match = (catKeywords[cat] || []).some(kw => name.includes(kw));
+    }
     card.style.display = match ? 'flex' : 'none';
     if (match) visible++;
   });
   document.getElementById('no-products').style.display = visible === 0 ? 'block' : 'none';
   document.getElementById('product-grid').style.display = visible === 0 ? 'none' : 'grid';
 }
+
+function searchProducts() {
+  const query = document.getElementById('shop-search').value.toLowerCase().trim();
+  const cards = document.querySelectorAll('.product-card');
+  let visible = 0;
+
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.cat-tab').classList.add('active');
+
+  cards.forEach(card => {
+    const name = card.querySelector('.product-name').textContent.toLowerCase();
+    const match = query === '' || name.includes(query);
+    card.style.display = match ? 'flex' : 'none';
+    if (match) visible++;
+  });
+
+  document.getElementById('no-products').style.display = visible === 0 ? 'block' : 'none';
+  document.getElementById('product-grid').style.display = visible === 0 ? 'none' : 'grid';
+}
+
+/* ══ NOTIFICATIONS ══ */
+let notifOpen = false;
+let notifications = [];
+let showAll = false;
+let activeFilter = 'all';
+const NOTIF_PREVIEW = 3;
+
+async function fetchNotifications() {
+  try {
+    const res = await fetch('/api/notifications');
+    const data = await res.json();
+    notifications = data;
+    renderNotifications();
+  } catch(e) { console.error('Notif fetch error', e); }
+}
+
+function renderNotifications() {
+  const list    = document.getElementById('notif-list');
+  const empty   = document.getElementById('notif-empty');
+  const badge   = document.getElementById('notif-badge');
+  const countBadge = document.getElementById('notif-count-badge');
+  const footer  = document.getElementById('notif-footer');
+  const showing = document.getElementById('notif-showing');
+  const btnAll  = document.getElementById('btn-show-all');
+  const unread  = notifications.filter(n => !n.is_read).length;
+
+  // Bell badge
+  if (unread > 0) {
+    badge.style.display = 'flex';
+    badge.textContent = unread > 9 ? '9+' : unread;
+    countBadge.style.display = 'inline-block';
+    countBadge.textContent = unread > 99 ? '99+' : unread;
+  } else {
+    badge.style.display = 'none';
+    countBadge.style.display = 'none';
+  }
+
+  // Filter
+  let filtered = notifications;
+  if (activeFilter === 'booking') filtered = notifications.filter(n => n.type === 'booking');
+  else if (activeFilter === 'order') filtered = notifications.filter(n => n.type === 'order');
+  else if (activeFilter === 'unread') filtered = notifications.filter(n => !n.is_read);
+
+  if (filtered.length === 0) {
+    empty.style.display = 'block';
+    list.querySelectorAll('.notif-item').forEach(el => el.remove());
+    footer.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Slice for preview vs all
+  const toShow = showAll ? filtered : filtered.slice(0, NOTIF_PREVIEW);
+  btnAll.textContent = showAll ? 'Show Less' : 'Show All';
+  const btnHistory = document.getElementById('btn-view-history');
+  if (btnHistory) btnHistory.textContent = showAll ? '← Back to Latest' : 'View History';
+
+  if (filtered.length > NOTIF_PREVIEW) {
+    footer.style.display = 'block';
+    showing.textContent = showAll
+      ? `Showing all ${filtered.length} notifications — `
+      : `Showing latest 3 — `;
+  } else {
+    footer.style.display = 'none';
+  }
+
+  const icons = {
+    booking:  '📅',
+    order:    '📦',
+    mechanic: '🔧',
+    cost:     '💰',
+    update:   '📢',
+    reminder: '⏰',
+  };
+
+  const colorMap = {
+    pending:    { bg: 'rgba(180,83,9,0.15)',   color: '#fbbf24' },
+    confirmed:  { bg: 'rgba(29,78,216,0.15)',  color: '#93c5fd' },
+    completed:  { bg: 'rgba(21,128,61,0.15)',  color: '#86efac' },
+    cancelled:  { bg: 'rgba(220,38,38,0.15)',  color: '#fca5a5' },
+    inprogress: { bg: 'rgba(124,58,237,0.15)', color: '#c4b5fd' },
+    delivered:  { bg: 'rgba(6,182,212,0.15)',  color: '#67e8f9' },
+    default:    { bg: 'rgba(255,255,255,0.05)',color: '#e5e7eb' },
+  };
+
+  // Remove old items
+  list.querySelectorAll('.notif-item').forEach(el => el.remove());
+
+  toShow.forEach(n => {
+    const icon   = icons[n.type] || '🔔';
+    const scheme = colorMap[n.status] || colorMap.default;
+    const time   = new Date(n.created_at).toLocaleString('en-PH', {
+      month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true
+    });
+
+    const div = document.createElement('div');
+    div.className = 'notif-item';
+    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(232,64,28,0.05)'};transition:background 0.15s;`;
+    div.onmouseover = () => div.style.background = 'rgba(255,255,255,0.04)';
+    div.onmouseout  = () => div.style.background = n.is_read ? 'transparent' : 'rgba(232,64,28,0.05)';
+    div.onclick     = () => readNotif(n.id, n);
+
+    div.innerHTML = `
+      <div style="width:38px;height:38px;border-radius:10px;background:${scheme.bg};display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">${icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;margin-bottom:0.2rem;display:flex;align-items:center;gap:0.5rem;">
+          ${n.title}
+          ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;flex-shrink:0;"></span>' : ''}
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:0.3rem;">${n.message}</div>
+        ${n.status ? `<span style="font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.2em 0.55em;border-radius:5px;">${n.status}</span>` : ''}
+        <div style="font-size:0.7rem;color:#4b5563;margin-top:0.3rem;">${time}</div>
+      </div>
+      <button onclick="deleteNotif(event, ${n.id})" style="background:none;border:none;color:#4b5563;font-size:0.9rem;cursor:pointer;padding:0.25rem;border-radius:6px;flex-shrink:0;align-self:flex-start;line-height:1;transition:all 0.15s;" onmouseover="this.style.color='#fca5a5';this.style.background='rgba(220,38,38,0.1)'" onmouseout="this.style.color='#4b5563';this.style.background='none'" title="Delete notification">✕</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function toggleShowAll() {
+  showAll = !showAll;
+  renderNotifications();
+  if (showAll) {
+    document.getElementById('notif-list').scrollTop = 0;
+  }
+}
+
+function filterNotifs(filter, btn) {
+  activeFilter = filter;
+  showAll = false;
+  document.querySelectorAll('.notif-tab').forEach(t => {
+    t.style.background = 'rgba(255,255,255,0.05)';
+    t.style.borderColor = 'rgba(255,255,255,0.1)';
+    t.style.color = 'var(--muted)';
+  });
+  btn.style.background = 'var(--red)';
+  btn.style.borderColor = 'var(--red)';
+  btn.style.color = '#fff';
+  renderNotifications();
+}
+
+async function readNotif(id, n) {
+  if (!n.is_read) {
+    try {
+      await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+      n.is_read = true;
+      renderNotifications();
+    } catch(e) {}
+  }
+}
+
+async function deleteNotif(e, id) {
+  e.stopPropagation();
+  try {
+    await fetch(`/api/notifications/${id}/delete`, { method: 'POST' });
+    notifications = notifications.filter(n => n.id !== id);
+    renderNotifications();
+  } catch(err) { console.error('Delete error', err); }
+}
+
+async function markAllRead() {
+  try {
+    await fetch('/api/notifications/read-all', { method: 'POST' });
+    notifications.forEach(n => n.is_read = true);
+    renderNotifications();
+  } catch(e) {}
+}
+
+function toggleNotifications() {
+  notifOpen = !notifOpen;
+  document.getElementById('notif-panel').style.display = notifOpen ? 'block' : 'none';
+  if (notifOpen) fetchNotifications();
+}
+
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('notif-panel');
+  if (notifOpen && !panel.contains(e.target) && !e.target.closest('[onclick="toggleNotifications()"]')) {
+    notifOpen = false;
+    panel.style.display = 'none';
+  }
+});
+
+fetchNotifications();
+setInterval(fetchNotifications, 30000);
 
 </script>
 

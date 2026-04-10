@@ -8,6 +8,7 @@ from sqlalchemy import func
 from datetime import date as date_today
 from flask import jsonify, request
 from werkzeug.utils import secure_filename
+from datetime import datetime
 import os
 import uuid
 import random
@@ -39,6 +40,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
 
 # ─────────────────────────────────────────
 # GMAIL OTP CONFIG
@@ -91,7 +93,7 @@ def send_otp_email(email: str, otp: str, purpose: str = "verify"):
         heading = "Login Verification"
         subtext = "Use the code below to complete your login."
 
-    html = f"""
+    html = """
     <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;
                 border:1px solid #e5e7eb;border-radius:8px;">
       <h2 style="color:#111827;margin-bottom:8px;">{heading}</h2>
@@ -136,7 +138,7 @@ class OTPRecord(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     email      = db.Column(db.String(100), nullable=False, index=True)
     otp        = db.Column(db.String(10), nullable=False)
-    purpose    = db.Column(db.String(10), nullable=False)   # 'verify', 'login', or 'reset'
+    purpose    = db.Column(db.String(10), nullable=False)
     expires_at = db.Column(db.DateTime, nullable=False)
     used       = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -184,9 +186,36 @@ class OrderItem(db.Model):
     unit_price = db.Column(db.Float, nullable=False)
 
 
+# ── NEW: Notification Model ──
+class Notification(db.Model):
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title      = db.Column(db.String(120), nullable=False)
+    message    = db.Column(db.Text, nullable=False)
+    type       = db.Column(db.String(30), default='update')
+    # type options: booking, order, mechanic, cost, update, reminder
+    status     = db.Column(db.String(30), nullable=True)
+    # status options: pending, confirmed, inprogress, completed, cancelled, delivered
+    is_read    = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+# ── HELPER: Send Notification ──
+def send_notification(user_id, title, message, type='update', status=None):
+    notif = Notification(
+        user_id=user_id,
+        title=title,
+        message=message,
+        type=type,
+        status=status
+    )
+    db.session.add(notif)
+    db.session.commit()
 
 
 # ─────────────────────────────────────────
@@ -411,12 +440,10 @@ def verify_email_otp():
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
-    """Step 1: User enters their email to receive a reset OTP."""
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         user  = User.query.filter_by(email=email).first()
 
-        # Always show the same message to prevent email enumeration
         if user:
             otp = _save_otp(email, purpose="reset")
             try:
@@ -434,7 +461,6 @@ def forgot_password():
 
 @app.route('/forgot-password/verify', methods=['GET', 'POST'])
 def forgot_password_verify():
-    """Step 2: User enters the OTP sent to their email."""
     email = session.get('pending_reset_email')
     if not email:
         flash('Session expired. Please try again.', 'danger')
@@ -455,7 +481,6 @@ def forgot_password_verify():
 
 @app.route('/forgot-password/reset', methods=['GET', 'POST'])
 def forgot_password_reset():
-    """Step 3: User sets a new password."""
     email    = session.get('pending_reset_email')
     verified = session.get('reset_otp_verified')
 
@@ -480,7 +505,6 @@ def forgot_password_reset():
             user.set_password(new_password)
             db.session.commit()
 
-        # Clear reset session keys
         session.pop('pending_reset_email', None)
         session.pop('reset_otp_verified', None)
 
@@ -535,6 +559,16 @@ def book_service():
     )
     db.session.add(booking)
     db.session.commit()
+
+    # ── Notify: Booking created ──
+    send_notification(
+        user_id=current_user.id,
+        title='Booking Received!',
+        message=f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been received and is pending confirmation.',
+        type='booking',
+        status='pending'
+    )
+
     flash('Appointment booked successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
 
@@ -559,6 +593,16 @@ def place_order():
     product.stock -= quantity
     db.session.add(item)
     db.session.commit()
+
+    # ── Notify: Order placed ──
+    send_notification(
+        user_id=current_user.id,
+        title='Order Placed!',
+        message=f'Your order for {product.name} (x{quantity}) worth ₱{total:.2f} has been placed and is now pending.',
+        type='order',
+        status='pending'
+    )
+
     flash('Order placed successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
 
@@ -660,6 +704,44 @@ def get_booked_slots():
 
 
 # ─────────────────────────────────────────
+# NOTIFICATION ROUTES
+# ─────────────────────────────────────────
+
+@app.route('/api/notifications')
+@login_required
+def get_notifications():
+    notifs = Notification.query.filter_by(user_id=current_user.id)\
+             .order_by(Notification.created_at.desc()).limit(30).all()
+    return jsonify([{
+        'id': n.id,
+        'title': n.title,
+        'message': n.message,
+        'type': n.type,
+        'status': n.status,
+        'is_read': n.is_read,
+        'created_at': n.created_at.isoformat()
+    } for n in notifs])
+
+
+@app.route('/api/notifications/<int:notif_id>/read', methods=['POST'])
+@login_required
+def read_notification(notif_id):
+    n = Notification.query.filter_by(id=notif_id, user_id=current_user.id).first_or_404()
+    n.is_read = True
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/notifications/read-all', methods=['POST'])
+@login_required
+def read_all_notifications():
+    Notification.query.filter_by(user_id=current_user.id, is_read=False)\
+        .update({'is_read': True})
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+# ─────────────────────────────────────────
 # STAFF ROUTES
 # ─────────────────────────────────────────
 
@@ -739,8 +821,32 @@ def admin_dashboard():
 @login_required
 def update_booking_status(booking_id):
     booking = Booking.query.get_or_404(booking_id)
-    booking.status = request.form['status']
+    new_status = request.form['status']
+    booking.status = new_status
     db.session.commit()
+
+    # ── Notify customer of booking status change ──
+    status_messages = {
+        'confirmed':  f'Your {booking.service} appointment on {booking.date.strftime("%b %d, %Y")} has been confirmed.',
+        'inprogress': f'Your {booking.service} is now in progress. Our mechanic is working on your motorcycle.',
+        'completed':  f'Your {booking.service} appointment has been completed. Thank you!',
+        'cancelled':  f'Your {booking.service} appointment on {booking.date.strftime("%b %d, %Y")} has been cancelled.',
+    }
+    status_titles = {
+        'confirmed':  'Booking Confirmed!',
+        'inprogress': 'Service In Progress',
+        'completed':  'Service Completed!',
+        'cancelled':  'Booking Cancelled',
+    }
+    if new_status in status_messages:
+        send_notification(
+            user_id=booking.user_id,
+            title=status_titles[new_status],
+            message=status_messages[new_status],
+            type='booking',
+            status=new_status
+        )
+
     flash('Booking status updated!', 'success')
     return redirect(url_for('admin_dashboard'))
 
@@ -749,8 +855,34 @@ def update_booking_status(booking_id):
 @login_required
 def update_order_status(order_id):
     order = Order.query.get_or_404(order_id)
-    order.status = request.form['status']
+    new_status = request.form['status']
+    order.status = new_status
     db.session.commit()
+
+    # ── Notify customer of order status change ──
+    status_messages = {
+        'confirmed':   f'Your order ORD-{order.id:03d} has been confirmed and is being prepared.',
+        'processing':  f'Your order ORD-{order.id:03d} is now being processed.',
+        'shipped':     f'Your order ORD-{order.id:03d} is out for delivery!',
+        'delivered':   f'Your order ORD-{order.id:03d} has been delivered. Enjoy!',
+        'cancelled':   f'Your order ORD-{order.id:03d} has been cancelled.',
+    }
+    status_titles = {
+        'confirmed':  'Order Confirmed!',
+        'processing': 'Order Processing',
+        'shipped':    'Order Out for Delivery!',
+        'delivered':  'Order Delivered!',
+        'cancelled':  'Order Cancelled',
+    }
+    if new_status in status_messages:
+        send_notification(
+            user_id=order.user_id,
+            title=status_titles[new_status],
+            message=status_messages[new_status],
+            type='order',
+            status=new_status
+        )
+
     flash('Order status updated!', 'success')
     return redirect(url_for('admin_dashboard'))
 
@@ -879,6 +1011,52 @@ def import_products():
 
 
 # ─────────────────────────────────────────
+# ADMIN: DELETE USER
+# ─────────────────────────────────────────
+
+@app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    user = User.query.get_or_404(user_id)
+
+    if user.id == current_user.id:
+        flash('You cannot delete your own account.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    if user.role == 'admin':
+        flash('Admin accounts cannot be deleted.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    name = user.fullname
+
+    OTPRecord.query.filter_by(email=user.email).delete()
+
+    for order in user.orders:
+        OrderItem.query.filter_by(order_id=order.id).delete()
+    Order.query.filter_by(user_id=user.id).delete()
+
+    Booking.query.filter_by(user_id=user.id).delete()
+    Notification.query.filter_by(user_id=user.id).delete()
+
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'User "{name}" has been deleted successfully.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/api/notifications/<int:notif_id>/delete', methods=['POST'])
+@login_required
+def delete_notification(notif_id):
+    n = Notification.query.filter_by(id=notif_id, user_id=current_user.id).first_or_404()
+    db.session.delete(n)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+# ─────────────────────────────────────────
 # TEMP: CREATE ADMIN
 # ─────────────────────────────────────────
 
@@ -901,7 +1079,7 @@ def create_admin():
 
 
 #with app.app_context():
-   # db.create_all()
+#    db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True)

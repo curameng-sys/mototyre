@@ -460,6 +460,81 @@
     .testi-name { font-weight: 600; font-size: 0.875rem; }
     .testi-bike { font-size: 0.75rem; color: #6b7280; }
 
+    /* ── CONTACT ── */
+    .contact {
+      padding: 6rem 4rem;
+      background: #111215;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .contact-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1.25rem;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .contact-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--red);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s;
+    }
+
+    .contact-card:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(232,64,28,0.2);
+      transform: translateY(-4px);
+      color: inherit;
+    }
+    .contact-card:hover::before { transform: scaleX(1); }
+
+    .contact-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .contact-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 0.4rem;
+    }
+
+    .contact-value {
+      font-size: 0.95rem;
+      color: #e5e7eb;
+      line-height: 1.6;
+      font-weight: 500;
+    }
+
+    .contact-hint {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 0.3rem;
+    }
+
     /* ── CTA SECTION ── */
     .cta-section {
       padding: 6rem 4rem;
@@ -653,7 +728,7 @@
     @media (max-width: 900px) {
       .hero { padding: 6rem 2rem 4rem; min-height: auto; }
       .hero-visual { display: none; }
-      .services, .how-it-works, .testimonials, .cta-section { padding: 4rem 2rem; }
+      .services, .how-it-works, .testimonials, .cta-section, .contact, .feedback { padding: 4rem 2rem; }
       .nav-bar { padding: 1rem 1.5rem; }
       .nav-links { display: none; }
       .footer { padding: 2rem; flex-direction: column; text-align: center; }
@@ -668,7 +743,7 @@
     <div class="nav-links">
       <a href="#services">Services</a>
       <a href="#how">How It Works</a>
-      <a href="#reviews">Reviews</a>
+      <a href="#contact">Contact</a>
       <a href="#feedback">Feedback</a>
       <a href="/login" class="nav-cta">Login</a>
     </div>
@@ -686,8 +761,10 @@
         <span class="outline">EXPERTISE.</span>
       </h1>
       <p class="hero-desc">
-        Book motorcycle services, order quality tires and parts — all in one place.
-        Fast, reliable, and built for Filipino riders.
+        MotoTyres North Caloocan is your trusted shop for 
+        high-quality motorcycle tires, parts, and fast, reliable service.
+        Located in Caloocan City, we proudly serve riders by providing durable products and expert 
+        installation to keep you safe on the road
       </p>
       <div class="hero-actions">
         <a href="/register" class="btn-hero-primary">
@@ -699,22 +776,7 @@
       </div>
     </div>
 
-    <div class="hero-visual">
-      <div class="hero-badge-group">
-        <div class="stat-badge">
-          <div class="num">500<span>+</span></div>
-          <div class="lbl">Bikes Serviced</div>
-        </div>
-        <div class="stat-badge">
-          <div class="num">6</div>
-          <div class="lbl">Services Available</div>
-        </div>
-        <div class="stat-badge">
-          <div class="num">4.9<span>★</span></div>
-          <div class="lbl">Customer Rating</div>
-        </div>
-      </div>
-    </div>
+
 
     <div class="scroll-hint">
       <span>Scroll</span>
@@ -730,34 +792,94 @@
 
     <div class="services-grid">
       <div class="service-card">
-        <div class="service-icon">🛢️</div>
-        <div class="service-name">Oil Change</div>
-        <p class="service-desc">Fresh engine oil and filter replacement to keep your engine smooth and protected.</p>
+        <div class="service-icon">💉</div>
+        <div class="service-name">FI Cleaning</div>
+        <p class="service-desc">Fuel injector cleaning for better throttle response, fuel efficiency, and smoother acceleration.</p>
       </div>
       <div class="service-card">
-        <div class="service-icon">🔧</div>
-        <div class="service-name">Tire Replacement</div>
-        <p class="service-desc">Wide selection of quality tires fitted professionally for your motorcycle model.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🔍</div>
-        <div class="service-name">General Checkup</div>
-        <p class="service-desc">Full inspection of your motorcycle — brakes, lights, suspension, and more.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🛑</div>
-        <div class="service-name">Brake Service</div>
-        <p class="service-desc">Brake pad replacement and brake system inspection for maximum stopping power.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">⛓️</div>
-        <div class="service-name">Chain Cleaning</div>
-        <p class="service-desc">Chain cleaning, lubrication, and tension adjustment for smooth power delivery.</p>
+        <div class="service-icon">🌀</div>
+        <div class="service-name">Throttle Body Cleaning</div>
+        <p class="service-desc">Remove carbon buildup from the throttle body to restore smooth idle and engine performance.</p>
       </div>
       <div class="service-card">
         <div class="service-icon">⚙️</div>
-        <div class="service-name">Engine Tune-up</div>
-        <p class="service-desc">Carburetor cleaning, spark plug replacement, and full engine performance tuning.</p>
+        <div class="service-name">Tune-Up</div>
+        <p class="service-desc">Spark plug replacement, air filter check, and full engine performance tuning for optimal ride.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔩</div>
+        <div class="service-name">Ball Race Installation</div>
+        <p class="service-desc">Proper installation of steering head ball bearings for stable and smooth handlebar control.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔌</div>
+        <div class="service-name">General Rewiring</div>
+        <p class="service-desc">Full electrical system inspection and rewiring to fix shorts, faulty connections, and lighting issues.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🏎️</div>
+        <div class="service-name">CVT Upgrade</div>
+        <p class="service-desc">Upgrade your CVT components for improved acceleration, top speed, and overall scooter performance.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🧹</div>
+        <div class="service-name">CVT Cleaning</div>
+        <p class="service-desc">Deep cleaning of the CVT belt and pulley system to prevent slipping and extend component life.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🖥️</div>
+        <div class="service-name">Diagnostic Services</div>
+        <p class="service-desc">Advanced ECU scanning using API Tech / MST tools to accurately identify and resolve error codes.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🛞</div>
+        <div class="service-name">Suspension Tuning</div>
+        <p class="service-desc">Front fork and rear shock adjustment or replacement for a smoother, more controlled ride.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔧</div>
+        <div class="service-name">Full Overhaul</div>
+        <p class="service-desc">Complete engine disassembly, inspection, and rebuild — restoring your motorcycle to peak condition.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔝</div>
+        <div class="service-name">Top Overhaul</div>
+        <p class="service-desc">Cylinder head reconditioning including valve lapping, piston ring replacement, and gasket renewal.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🛑</div>
+        <div class="service-name">Brake Cleaning</div>
+        <p class="service-desc">Thorough cleaning of brake calipers, discs, and drums to maintain safe and consistent stopping power.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">💻</div>
+        <div class="service-name">ECU Remapping</div>
+        <p class="service-desc">Custom ECU tune to optimize fuel maps, ignition timing, and throttle response for your setup.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🛢️</div>
+        <div class="service-name">Oil Change</div>
+        <p class="service-desc">Fresh engine oil and filter replacement to keep your engine smooth, cool, and well-protected.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">📯</div>
+        <div class="service-name">Horn Installation</div>
+        <p class="service-desc">Quick and clean installation of aftermarket or OEM horns with full electrical testing.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔗</div>
+        <div class="service-name">Rubber Link Stopper Installation</div>
+        <p class="service-desc">Installation of rubber link stoppers to reduce chain noise and protect your swingarm from wear.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🅱️</div>
+        <div class="service-name">Brake Pad Replacement</div>
+        <p class="service-desc">High-quality brake pad replacement for both front and rear to ensure maximum stopping power.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🏍️</div>
+        <div class="service-name">Full Maintenance Package</div>
+        <p class="service-desc">All-in-one maintenance package covering oil, brakes, chain, filters, and a full mechanical inspection.</p>
       </div>
     </div>
   </section>
@@ -792,45 +914,43 @@
     </div>
   </section>
 
-  <!-- TESTIMONIALS -->
-  <section class="testimonials" id="reviews">
-    <div class="section-tag">Customer Reviews</div>
-    <div class="section-title">WHAT RIDERS SAY</div>
 
-    <div class="testimonials-grid">
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <p class="testi-text">"Super convenient! I booked online and everything was ready when I arrived. The oil change was done fast and the staff were very professional."</p>
-        <div class="testi-author">
-          <div class="testi-avatar">J</div>
-          <div>
-            <div class="testi-name">Juan Dela Cruz</div>
-            <div class="testi-bike">Honda Click 125i</div>
-          </div>
+
+  <!-- VISIT & CONTACT US -->
+  <section class="contact" id="contact">
+    <div class="section-tag">Find Us</div>
+    <div class="section-title">VISIT &amp; CONTACT US</div>
+    <p class="section-sub">We're open and ready to serve you. Drop by, give us a call, or message us on Facebook.</p>
+
+    <div class="contact-grid">
+
+      <!-- Location -->
+      <div class="contact-card">
+        <div class="contact-icon">📍</div>
+        <div>
+          <div class="contact-label">Location</div>
+          <div class="contact-value">Saranay Rd, Barangay 171 Bagumbong,<br>Caloocan City, Metro Manila, 1421 NCR</div>
         </div>
       </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <p class="testi-text">"Finally a moto shop with online booking! No more waiting in line. The tire they installed is great and the price was very fair."</p>
-        <div class="testi-author">
-          <div class="testi-avatar">M</div>
-          <div>
-            <div class="testi-name">Maria Santos</div>
-            <div class="testi-bike">Yamaha Mio i 125</div>
-          </div>
+
+      <!-- Phone -->
+      <div class="contact-card">
+        <div class="contact-icon">📞</div>
+        <div>
+          <div class="contact-label">Call / Text</div>
+          <div class="contact-value">0915 269 8366</div>
         </div>
       </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <p class="testi-text">"Ang galing ng system! I ordered parts online and they were ready the next day. The whole experience was smooth from start to finish."</p>
-        <div class="testi-author">
-          <div class="testi-avatar">P</div>
-          <div>
-            <div class="testi-name">Pedro Reyes</div>
-            <div class="testi-bike">Suzuki Raider R150</div>
-          </div>
+
+      <!-- Facebook -->
+      <div class="contact-card">
+        <div class="contact-icon">📘</div>
+        <div>
+          <div class="contact-label">Facebook</div>
+          <div class="contact-value">MotoTyres North Caloocan</div>
         </div>
       </div>
+
     </div>
   </section>
 
@@ -901,6 +1021,7 @@
     <div class="footer-links">
       <a href="#services">Services</a>
       <a href="#how">How It Works</a>
+      <a href="#contact">Contact</a>
       <a href="/login">Login</a>
       <a href="/register">Register</a>
     </div>
@@ -936,7 +1057,7 @@
       });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.service-card, .step, .testi-card, .stat-badge').forEach(el => {
+    document.querySelectorAll('.service-card, .step, .testi-card, .stat-badge, .contact-card').forEach(el => {
       el.style.opacity = '0';
       el.style.transform = 'translateY(20px)';
       el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
