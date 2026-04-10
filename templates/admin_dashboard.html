@@ -748,6 +748,7 @@
                 <td>
                   <div style="display:flex;gap:0.5rem;">
                     <button class="btn-action-edit"
+<<<<<<< HEAD
                       data-id="{{ p.id }}"
                       data-name="{{ p.name | e }}"
                       data-category="{{ p.category | e }}"
@@ -757,6 +758,17 @@
                       data-barcode="{{ (p.barcode or '') | e }}"
                       onclick="openEditProductFromBtn(this)">✏️ Edit</button>
                     <form method="POST" action="{{ url_for('delete_product', pid=p.id) }}" onsubmit="return confirm('Delete {{ p.name|e }}? This cannot be undone.')">
+=======
+  data-id="{{ p.id }}"
+  data-name="{{ p.name | e }}"
+  data-category="{{ p.category | e }}"
+  data-price="{{ p.price }}"
+  data-stock="{{ p.stock }}"
+  data-description="{{ (p.description or '') | e }}"
+  data-barcode="{{ (p.barcode or '') | e }}"
+  onclick="openEditProductFromBtn(this)">✏️ Edit</button>
+                    <form method="POST" action="{{ url_for('delete_product', product_id=p.id) }}" onsubmit="return confirm('Delete {{ p.name|e }}? This cannot be undone.')">
+>>>>>>> 7c6308d97922f392721902c010c817263571b8f1
                       <button type="submit" class="btn-action-delete">🗑️ Delete</button>
                     </form>
                   </div>
