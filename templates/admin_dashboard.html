@@ -637,7 +637,7 @@
                 <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
                 <td>{{ b.motorcycle_model or '—' }}</td>
                 <td>
-                  <form method="POST" action="{{ url_for('update_booking_status', booking_id=b.id) }}" class="status-form">
+                  <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
                     <select name="status">
                       <option value="pending"    {% if b.status=='pending' %}selected{% endif %}>Pending</option>
                       <option value="confirmed"  {% if b.status=='confirmed' %}selected{% endif %}>Confirmed</option>
@@ -689,7 +689,7 @@
                 <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
                 <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
                 <td>
-                  <form method="POST" action="{{ url_for('update_order_status', order_id=o.id) }}" class="status-form">
+                  <form method="POST" action="{{ url_for('update_order_status', oid=o.id) }}" class="status-form">
                     <select name="status">
                       <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
                       <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
@@ -747,8 +747,16 @@
                 <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);">{{ p.description or '—' }}</td>
                 <td>
                   <div style="display:flex;gap:0.5rem;">
-                    <button class="btn-action-edit" onclick="openEditProduct({{ p.id }}, '{{ p.name|replace("'", "\\'") }}', '{{ p.category|replace("'", "\\'") }}', {{ p.price }}, {{ p.stock }}, '{{ (p.description or '')|replace("'", "\\'") }}', '{{ (p.barcode or '')|replace("'", "\\'") }}')">✏️ Edit</button>
-                    <form method="POST" action="{{ url_for('delete_product', product_id=p.id) }}" onsubmit="return confirm('Delete {{ p.name|e }}? This cannot be undone.')">
+                    <button class="btn-action-edit"
+                      data-id="{{ p.id }}"
+                      data-name="{{ p.name | e }}"
+                      data-category="{{ p.category | e }}"
+                      data-price="{{ p.price }}"
+                      data-stock="{{ p.stock }}"
+                      data-description="{{ (p.description or '') | e }}"
+                      data-barcode="{{ (p.barcode or '') | e }}"
+                      onclick="openEditProductFromBtn(this)">✏️ Edit</button>
+                    <form method="POST" action="{{ url_for('delete_product', pid=p.id) }}" onsubmit="return confirm('Delete {{ p.name|e }}? This cannot be undone.')">
                       <button type="submit" class="btn-action-delete">🗑️ Delete</button>
                     </form>
                   </div>
@@ -796,7 +804,7 @@
                 <td><span class="badge badge-{{ u.role }}">{{ u.role|title }}</span></td>
                 <td>
                   {% if u.role != 'admin' and u.id != current_user.id %}
-                  <form method="POST" action="{{ url_for('delete_user', user_id=u.id) }}"
+                  <form method="POST" action="{{ url_for('delete_user', uid=u.id) }}"
                         onsubmit="return confirm('Delete {{ u.fullname|e }}? This will also remove their bookings and orders. This cannot be undone.')">
                     <button type="submit" class="btn-action-delete">🗑️ Delete</button>
                   </form>
@@ -1254,6 +1262,18 @@
     openModal('modal-edit-product');
   }
 
+  function openEditProductFromBtn(btn) {
+    openEditProduct(
+      btn.dataset.id,
+      btn.dataset.name,
+      btn.dataset.category,
+      btn.dataset.price,
+      btn.dataset.stock,
+      btn.dataset.description,
+      btn.dataset.barcode
+    );
+  }
+  
   function previewPic(input) {
     if (input.files && input.files[0]) {
       const reader = new FileReader();
