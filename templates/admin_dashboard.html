@@ -231,6 +231,7 @@
     }
     .badge-pending    { background: rgba(217,119,6,0.2);   color: #fbbf24; border: 1px solid rgba(217,119,6,0.4); }
     .badge-confirmed  { background: rgba(37,99,235,0.2);   color: #93c5fd; border: 1px solid rgba(37,99,235,0.4); }
+    .badge-in_progress { background: rgba(234,179,8,0.2); color: #fde047; border: 1px solid rgba(234,179,8,0.4); }
     .badge-completed  { background: rgba(22,163,74,0.2);   color: #86efac; border: 1px solid rgba(22,163,74,0.4); }
     .badge-cancelled  { background: rgba(232,64,28,0.15);  color: #fca5a5; border: 1px solid rgba(232,64,28,0.3); }
     .badge-processing { background: rgba(109,40,217,0.2);  color: #c4b5fd; border: 1px solid rgba(109,40,217,0.4); }
@@ -497,6 +498,7 @@
     <a href="#" onclick="showSection('orders', this)">📦 Orders</a>
     <a href="#" onclick="showSection('products', this)">🔧 Products</a>
     <a href="#" onclick="showSection('users', this)">👥 Users</a>
+    <a href="{{ url_for('pos') }}">🖥️ POS</a>
 
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
@@ -639,10 +641,13 @@
                 <td>
                   <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
                     <select name="status">
-                      <option value="pending"    {% if b.status=='pending' %}selected{% endif %}>Pending</option>
-                      <option value="confirmed"  {% if b.status=='confirmed' %}selected{% endif %}>Confirmed</option>
-                      <option value="completed"  {% if b.status=='completed' %}selected{% endif %}>Completed</option>
-                      <option value="cancelled"  {% if b.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                      {% if b.status == 'pending' %}
+                        <option value="pending" selected disabled>Pending</option>
+                      {% endif %}
+                        <option value="confirmed"    {% if b.status=='confirmed' %}selected{% endif %}>Confirmed</option>
+                        <option value="in_progress"  {% if b.status=='in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="completed"    {% if b.status=='completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled"    {% if b.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     </select>
                     <button type="submit">Save</button>
                   </form>
@@ -679,8 +684,7 @@
         {% if all_orders %}
         <div style="overflow-x:auto;">
           <table class="table" id="orders-table">
-            <thead><tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th><th>Update Status</th></tr></thead>
-            <tbody>
+            <thead><tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Payment</th><th>Date</th><th>Update Status</th></tr></thead>
               {% for o in all_orders %}
               <tr>
                 <td>ORD-{{ '%03d'|format(o.id) }}</td>
@@ -689,13 +693,22 @@
                 <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
                 <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
                 <td>
+                {% if o.payment_method == 'gcash' %}
+                  <span class="badge" style="background:rgba(0,125,255,0.15);color:#93c5fd;border:1px solid rgba(0,125,255,0.3);">💳 GCash</span>
+                {% else %}
+                  <span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>
+                {% endif %}
+              </td>
+                <td>
                   <form method="POST" action="{{ url_for('update_order_status', oid=o.id) }}" class="status-form">
                     <select name="status">
-                      <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
-                      <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
-                      <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
-                      <option value="completed"  {% if o.status=='completed' %}selected{% endif %}>Completed</option>
-                      <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                      {% if o.status == 'pending' %}
+                        <option value="pending" selected disabled>Pending</option>
+                      {% endif %}
+                        <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
+                        <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
+                        <option value="completed"  {% if o.status=='completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     </select>
                     <button type="submit">Save</button>
                   </form>
@@ -748,7 +761,6 @@
                 <td>
                   <div style="display:flex;gap:0.5rem;">
                     <button class="btn-action-edit"
-<<<<<<< HEAD
                       data-id="{{ p.id }}"
                       data-name="{{ p.name | e }}"
                       data-category="{{ p.category | e }}"
@@ -758,17 +770,6 @@
                       data-barcode="{{ (p.barcode or '') | e }}"
                       onclick="openEditProductFromBtn(this)">✏️ Edit</button>
                     <form method="POST" action="{{ url_for('delete_product', pid=p.id) }}" onsubmit="return confirm('Delete {{ p.name|e }}? This cannot be undone.')">
-=======
-  data-id="{{ p.id }}"
-  data-name="{{ p.name | e }}"
-  data-category="{{ p.category | e }}"
-  data-price="{{ p.price }}"
-  data-stock="{{ p.stock }}"
-  data-description="{{ (p.description or '') | e }}"
-  data-barcode="{{ (p.barcode or '') | e }}"
-  onclick="openEditProductFromBtn(this)">✏️ Edit</button>
-                    <form method="POST" action="{{ url_for('delete_product', product_id=p.id) }}" onsubmit="return confirm('Delete {{ p.name|e }}? This cannot be undone.')">
->>>>>>> 7c6308d97922f392721902c010c817263571b8f1
                       <button type="submit" class="btn-action-delete">🗑️ Delete</button>
                     </form>
                   </div>

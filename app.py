@@ -804,6 +804,135 @@ def import_products():
     db.session.commit()
     return jsonify({'success': True, 'count': imported, 'errors': errors})
 
+# ─── POS (Point of Sale) ─────────────────────────────────────────────────────
+
+@app.route('/admin/pos')
+@login_required
+def pos():
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+    products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
+    categories = [c[0] for c in db.session.query(Product.category).distinct().order_by(Product.category).all()]
+    customers = User.query.filter_by(role='customer').order_by(User.fullname).all()
+    return render_template('pos.html', products=products, categories=categories, customers=customers)
+
+
+@app.route('/admin/pos/checkout', methods=['POST'])
+@login_required
+def pos_checkout():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data received'}), 400
+
+    cart        = data.get('cart', [])         # [{ product_id, quantity, unit_price }]
+    services    = data.get('services', [])     # [{ name, price }]
+    customer_id = data.get('customer_id')      # optional
+    payment_ref = data.get('payment_ref', '').strip()
+    total       = float(data.get('total', 0))
+
+    if not cart and not services:
+        return jsonify({'success': False, 'error': 'Cart is empty'}), 400
+
+    # --- validate stock ---
+    for item in cart:
+        product = Product.query.get(item['product_id'])
+        if not product:
+            return jsonify({'success': False, 'error': f'Product ID {item["product_id"]} not found'}), 400
+        if product.stock < item['quantity']:
+            return jsonify({'success': False, 'error': f'Insufficient stock for {product.name}'}), 400
+
+    # --- create order if there are products ---
+    order_id = None
+    if cart:
+        uid   = int(customer_id) if customer_id else current_user.id
+        order = Order(user_id=uid, total_amount=total, status='completed')
+        db.session.add(order)
+        db.session.flush()
+        order_id = order.id
+
+        for item in cart:
+            product = Product.query.get(item['product_id'])
+            db.session.add(OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                quantity=item['quantity'],
+                unit_price=float(item['unit_price'])
+            ))
+            product.stock -= item['quantity']
+
+        if customer_id:
+            send_notification(
+                int(customer_id),
+                'Order Completed (In-Store)',
+                f'Your in-store order ORD-{order.id:03d} worth ₱{total:,.2f} has been completed.',
+                type='order', status='completed'
+            )
+
+    # --- create walk-in bookings for services ---
+    booking_ids = []
+    for svc in services:
+        booking = Booking(
+            user_id=int(customer_id) if customer_id else current_user.id,
+            service=svc['name'],
+            date=date.today(),
+            time=datetime.now().time(),
+            motorcycle_model=svc.get('motorcycle_model', ''),
+            motorcycle_plate=svc.get('motorcycle_plate', ''),
+            notes=f'Walk-in POS. GCash Ref: {payment_ref}' if payment_ref else 'Walk-in POS.',
+            status='completed'
+        )
+        db.session.add(booking)
+        db.session.flush()
+        booking_ids.append(booking.id)
+
+        if customer_id:
+            send_notification(
+                int(customer_id),
+                'Service Completed (In-Store)',
+                f'Your {svc["name"]} walk-in service has been recorded.',
+                type='booking', status='completed'
+            )
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'order_id': order_id,
+        'booking_ids': booking_ids,
+        'message': 'Transaction completed successfully.'
+    })
+
+
+@app.route('/admin/pos/transactions')
+@login_required
+def pos_transactions():
+    """Recent POS transactions (completed orders + walk-in bookings today)."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    today = date.today()
+    orders = (Order.query
+              .filter(Order.status == 'completed', func.date(Order.created_at) == today)
+              .order_by(Order.created_at.desc()).limit(20).all())
+
+    result = []
+    for o in orders:
+        customer = db.session.get(User, o.user_id)
+        result.append({
+            'type': 'order',
+            'id': f'ORD-{o.id:03d}',
+            'customer': customer.fullname if customer else 'Walk-in',
+            'total': o.total_amount,
+            'time': o.created_at.strftime('%I:%M %p'),
+            'items': [f'{i.product.name} x{i.quantity}' for i in o.items]
+        })
+
+    return jsonify(result)
+
 
 # ─── TEMP: CREATE ADMIN ──────────────────────────────────────────────────────
 
