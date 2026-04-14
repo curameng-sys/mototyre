@@ -1,7 +1,7 @@
-from app import app, db
+﻿from app import app, db
+from sqlalchemy import text
 with app.app_context():
     with db.engine.connect() as conn:
-        conn.execute(db.text("ALTER TABLE user ADD COLUMN email_verified BOOLEAN DEFAULT TRUE"))
+        conn.execute(text("ALTER TABLE booking ADD COLUMN payment_method VARCHAR(20) DEFAULT 'cash'"))
         conn.commit()
-    print("Migration done!")
-    
+print('Done')

@@ -627,7 +627,7 @@
         {% if all_bookings %}
         <div style="overflow-x:auto;">
           <table class="table" id="bookings-table">
-            <thead><tr><th>#</th><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Motorcycle</th><th>Update Status</th></tr></thead>
+            <thead><tr><th>#</th><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Payment</th><th>Motorcycle</th><th>Update Status</th></tr></thead>
             <tbody>
               {% for b in all_bookings %}
               <tr>
@@ -637,6 +637,13 @@
                 <td>{{ b.date.strftime('%b %d, %Y') }}</td>
                 <td>{{ b.time.strftime('%I:%M %p') }}</td>
                 <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
+                <td>
+                  {% if b.payment_method == 'gcash' %}
+                    <span class="badge" style="background:rgba(0,125,255,0.15);color:#93c5fd;border:1px solid rgba(0,125,255,0.3);">💳 GCash</span>
+                  {% else %}
+                    <span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>
+                  {% endif %}
+                </td>
                 <td>{{ b.motorcycle_model or '—' }}</td>
                 <td>
                   <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
@@ -684,7 +691,7 @@
         {% if all_orders %}
         <div style="overflow-x:auto;">
           <table class="table" id="orders-table">
-            <thead><tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Payment</th><th>Date</th><th>Update Status</th></tr></thead>
+            <thead><tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th><th>Payment</th><th>Update Status</th></tr></thead>
               {% for o in all_orders %}
               <tr>
                 <td>ORD-{{ '%03d'|format(o.id) }}</td>

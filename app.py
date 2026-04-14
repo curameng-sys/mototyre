@@ -120,6 +120,7 @@ class Booking(db.Model):
     motorcycle_plate = db.Column(db.String(20))
     notes            = db.Column(db.Text)
     status           = db.Column(db.String(20), default='pending')
+    payment_method   = db.Column(db.String(20), default='cash')
     created_at       = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -140,9 +141,9 @@ class Order(db.Model):
     user_id      = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
     status       = db.Column(db.String(20), default='pending')
+    payment_method = db.Column(db.String(20), default='cash')
     created_at   = db.Column(db.DateTime, default=datetime.utcnow)
     items        = db.relationship('OrderItem', backref='order', lazy=True)
-
 
 class OrderItem(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
@@ -849,7 +850,7 @@ def pos_checkout():
     order_id = None
     if cart:
         uid   = int(customer_id) if customer_id else current_user.id
-        order = Order(user_id=uid, total_amount=total, status='completed')
+        order = Order(user_id=uid, total_amount=total, status='completed', payment_method=data.get('payment_method', 'cash'))
         db.session.add(order)
         db.session.flush()
         order_id = order.id
@@ -883,7 +884,8 @@ def pos_checkout():
             motorcycle_model=svc.get('motorcycle_model', ''),
             motorcycle_plate=svc.get('motorcycle_plate', ''),
             notes=f'Walk-in POS. GCash Ref: {payment_ref}' if payment_ref else 'Walk-in POS.',
-            status='completed'
+            status='completed',
+            payment_method=data.get('payment_method', 'cash')
         )
         db.session.add(booking)
         db.session.flush()
