@@ -11,7 +11,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os, uuid, random, string, base64
+import os, uuid, random, string, base64, requests
+import requests
+import base64
 
 app = Flask(__name__)
 app.config.update(
@@ -36,6 +38,86 @@ GMAIL_TOKEN_FILE = "gmail_token.json"
 GMAIL_CREDS_FILE = "credentials.json"
 GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mackycastanales05@gmail.com")
 OTP_EXPIRY_MINS  = 10
+
+# ─── PAYMONGO CONFIG ────────────────────────────────────────────────────────
+
+PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
+PAYMONGO_API_URL = "https://api.paymongo.com/v1"
+BASE_URL = "http://127.0.0.1:5000"
+
+def create_gcash_payment(amount, description, order_id=None, booking_id=None):
+    """Simulate GCash payment for thesis demo."""
+    # For thesis demo - skip real PayMongo, just return success URL
+    return {
+        "success": True,
+        "checkout_url": f"{BASE_URL}/payment/simulate?order_id={order_id}&amount={amount}",
+        "reference": f"SIM-{order_id}"
+    }
+    
+    # Build metadata to track what this payment is for
+    metadata = {}
+    if order_id:
+        metadata["order_id"] = str(order_id)
+    if booking_id:
+        metadata["booking_id"] = str(booking_id)
+    
+    # Get base URL for redirects
+    base_url = os.getenv("BASE_URL", "http://127.0.0.1:5000")
+    
+    payload = {
+        "data": {
+            "attributes": {
+                "amount": int(amount * 100),  # PayMongo uses centavos
+                "currency": "PHP",
+                "description": description,
+                "payment_method_allowed": ["gcash"],
+                "metadata": metadata,
+                "redirect": {
+                    "success": f"{base_url}/payment/success",
+                    "failed": f"{base_url}/payment/failed"
+                }
+            }
+        }
+    }
+    
+    response = requests.post(
+        f"{PAYMONGO_API_URL}/links",
+        json=payload,
+        headers=headers
+    )
+    
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            "success": True,
+            "checkout_url": data["data"]["attributes"]["checkout_url"],
+            "reference": data["data"]["id"]
+        }
+    else:
+        print(f"PayMongo Error: {response.json()}")
+        return {"success": False, "error": response.json()}
+
+
+def get_payment_status(link_id):
+    """Check payment status from PayMongo."""
+    headers = {
+        "Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"
+    }
+    
+    response = requests.get(
+        f"{PAYMONGO_API_URL}/links/{link_id}",
+        headers=headers
+    )
+    
+    if response.status_code == 200:
+        data = response.json()
+        attrs = data["data"]["attributes"]
+        return {
+            "success": True,
+            "status": attrs.get("status"),  # unpaid, paid, expired
+            "metadata": attrs.get("metadata", {})
+        }
+    return {"success": False}
 
 
 def _get_gmail_service():
@@ -137,13 +219,16 @@ class Product(db.Model):
 
 
 class Order(db.Model):
-    id           = db.Column(db.Integer, primary_key=True)
-    user_id      = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    total_amount = db.Column(db.Float, nullable=False)
-    status       = db.Column(db.String(20), default='pending')
-    payment_method = db.Column(db.String(20), default='cash')
-    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
-    items        = db.relationship('OrderItem', backref='order', lazy=True)
+    id              = db.Column(db.Integer, primary_key=True)
+    user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    total_amount    = db.Column(db.Float, nullable=False)
+    status          = db.Column(db.String(20), default='pending')
+    payment_method  = db.Column(db.String(20), default='cash')
+    delivery_method = db.Column(db.String(20), default='pickup')
+    ship_address    = db.Column(db.Text)
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+    items           = db.relationship('OrderItem', backref='order', lazy=True)
+
 
 class OrderItem(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
@@ -459,18 +544,59 @@ def place_order():
     if product.stock < quantity:
         flash('Not enough stock available.', 'danger')
         return redirect(url_for('customer_dashboard'))
+    
     total = product.price * quantity
-    order = Order(user_id=current_user.id, total_amount=total)
+    payment_method = request.form.get('payment_method', 'cash')
+    delivery_method = request.form.get('delivery_method', 'pickup')
+    
+    # Build shipping address if delivery method is ship
+    ship_address = ''
+    if delivery_method == 'ship':
+        ship_name = request.form.get('ship_name', '')
+        ship_mobile = request.form.get('ship_mobile', '')
+        ship_street = request.form.get('ship_street', '')
+        ship_city = request.form.get('ship_city', '')
+        ship_province = request.form.get('ship_province', '')
+        ship_zip = request.form.get('ship_zip', '')
+        ship_address = f"{ship_name}\n{ship_mobile}\n{ship_street}, {ship_city}, {ship_province} {ship_zip}"
+    
+    order = Order(
+        user_id=current_user.id,
+        total_amount=total,
+        payment_method=payment_method,
+        delivery_method=delivery_method,
+        ship_address=ship_address,
+        status='pending'
+    )
     db.session.add(order)
     db.session.flush()
     db.session.add(OrderItem(order_id=order.id, product_id=product.id, quantity=quantity, unit_price=product.price))
     product.stock -= quantity
     db.session.commit()
+    
+    # Notification
+    delivery_text = "for pickup" if delivery_method == 'pickup' else "for delivery"
     send_notification(
         current_user.id, 'Order Placed!',
-        f'Your order for {product.name} (x{quantity}) worth ₱{total:.2f} is now pending.',
+        f'Your order for {product.name} (x{quantity}) worth ₱{total:.2f} is now pending {delivery_text}.',
         type='order', status='pending'
     )
+    
+    # If GCash payment, redirect to PayMongo
+    if payment_method.lower() == 'gcash':
+        description = f"MotoTyre Order #{order.id:03d}: {product.name} x{quantity}"
+        result = create_gcash_payment(
+            amount=total,
+            description=description,
+            order_id=order.id
+        )
+        
+        if result["success"]:
+            return redirect(result["checkout_url"])
+        else:
+            flash('Could not create GCash payment. Please try again or pay in-store.', 'warning')
+            return redirect(url_for('customer_dashboard'))
+    
     flash('Order placed successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
 
@@ -771,39 +897,51 @@ def delete_user(uid):
 def import_products():
     if current_user.role != 'admin':
         return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    
     data = request.get_json()
     if not data or not data.get('products'):
         return jsonify({'success': False, 'error': 'No data received'}), 400
 
-    OrderItem.query.delete()
-    Order.query.delete()
-    Product.query.delete()
-    db.session.flush()
+    try:
+        # Clear existing products (optional - remove these 3 lines if you want to keep existing)
+        OrderItem.query.delete()
+        Order.query.delete()
+        Product.query.delete()
+        db.session.flush()
 
-    imported, errors = 0, []
-    for i, row in enumerate(data['products']):
-        try:
-            name, category = str(row.get('name', '')).strip(), str(row.get('category', '')).strip()
-            if not name or not category:
-                errors.append(f'Row {i+1}: missing name or category')
+        imported = 0
+        for row in data['products'][:500]:  # Limit to 500
+            try:
+                name = str(row.get('name', '')).strip()
+                category = str(row.get('category', '')).strip()
+                if not name or not category:
+                    continue
+                
+                price_str = str(row.get('price', '0')).replace(',', '').strip()
+                price = float(price_str) if price_str else 0
+                
+                stock_str = str(row.get('stock', '0')).replace(',', '').strip()
+                stock = int(float(stock_str)) if stock_str else 0
+                
+                db.session.add(Product(
+                    barcode=str(row.get('barcode', '')).strip() or None,
+                    name=name,
+                    category=category,
+                    price=price,
+                    stock=stock,
+                    description=str(row.get('description', '')).strip() or None
+                ))
+                imported += 1
+            except:
                 continue
-            db.session.add(Product(
-                barcode=str(row.get('barcode', '')).strip() or None,
-                name=name, category=category,
-                price=float(row.get('price', 0)),
-                stock=int(float(row.get('stock', 0))),
-                description=str(row.get('description', '')).strip() or None
-            ))
-            imported += 1
-        except (ValueError, TypeError) as e:
-            errors.append(f'Row {i+1}: {e}')
 
-    if imported == 0:
+        db.session.commit()
+        return jsonify({'success': True, 'count': imported})
+    
+    except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': 'No valid products. ' + '; '.join(errors)}), 400
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-    db.session.commit()
-    return jsonify({'success': True, 'count': imported, 'errors': errors})
 
 # ─── POS (Point of Sale) ─────────────────────────────────────────────────────
 
@@ -821,40 +959,70 @@ def pos():
 @app.route('/admin/pos/checkout', methods=['POST'])
 @login_required
 def pos_checkout():
-    if current_user.role != 'admin':
+    if current_user.role not in ['admin', 'staff']:
         return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
     data = request.get_json()
     if not data:
         return jsonify({'success': False, 'error': 'No data received'}), 400
 
-    cart        = data.get('cart', [])         # [{ product_id, quantity, unit_price }]
-    services    = data.get('services', [])     # [{ name, price }]
-    customer_id = data.get('customer_id')      # optional
-    payment_ref = data.get('payment_ref', '').strip()
+    cart        = data.get('cart', [])
+    services    = data.get('services', [])
+    customer_id = data.get('customer_id')
     total       = float(data.get('total', 0))
+    payment_method = data.get('payment_method', 'cash')
 
     if not cart and not services:
         return jsonify({'success': False, 'error': 'Cart is empty'}), 400
 
-    # --- validate stock ---
+    # Validate stock for non-pending items (new products added at POS)
     for item in cart:
-        product = Product.query.get(item['product_id'])
-        if not product:
-            return jsonify({'success': False, 'error': f'Product ID {item["product_id"]} not found'}), 400
-        if product.stock < item['quantity']:
-            return jsonify({'success': False, 'error': f'Insufficient stock for {product.name}'}), 400
+        if not item.get('source_order_id'):  # Only check stock for new items
+            product = Product.query.get(item['product_id'])
+            if not product:
+                return jsonify({'success': False, 'error': f'Product ID {item["product_id"]} not found'}), 400
+            if product.stock < item['quantity']:
+                return jsonify({'success': False, 'error': f'Insufficient stock for {product.name}'}), 400
 
-    # --- create order if there are products ---
     order_id = None
-    if cart:
-        uid   = int(customer_id) if customer_id else current_user.id
-        order = Order(user_id=uid, total_amount=total, status='completed', payment_method=data.get('payment_method', 'cash'))
+    completed_order_ids = set()
+    completed_booking_ids = set()
+
+    # ─── HANDLE PRODUCTS ────────────────────────────────────────────────────
+    
+    # Separate items: those from existing orders vs new POS items
+    new_cart_items = [item for item in cart if not item.get('source_order_id')]
+    pending_cart_items = [item for item in cart if item.get('source_order_id')]
+
+    # Mark source orders as completed
+    for item in pending_cart_items:
+        source_order_id = item.get('source_order_id')
+        if source_order_id and source_order_id not in completed_order_ids:
+            source_order = Order.query.get(source_order_id)
+            if source_order:
+                source_order.status = 'completed'
+                source_order.payment_method = payment_method
+                completed_order_ids.add(source_order_id)
+                
+                # Notify customer
+                if source_order.user_id:
+                    send_notification(
+                        source_order.user_id,
+                        'Order Completed!',
+                        f'Your order ORD-{source_order.id:03d} has been completed and paid.',
+                        type='order', status='completed'
+                    )
+
+    # Create new order for POS-added items (not from pending orders)
+    if new_cart_items:
+        uid = int(customer_id) if customer_id else current_user.id
+        new_total = sum(item['quantity'] * float(item['unit_price']) for item in new_cart_items)
+        order = Order(user_id=uid, total_amount=new_total, status='completed', payment_method=payment_method)
         db.session.add(order)
         db.session.flush()
         order_id = order.id
 
-        for item in cart:
+        for item in new_cart_items:
             product = Product.query.get(item['product_id'])
             db.session.add(OrderItem(
                 order_id=order.id,
@@ -868,35 +1036,57 @@ def pos_checkout():
             send_notification(
                 int(customer_id),
                 'Order Completed (In-Store)',
-                f'Your in-store order ORD-{order.id:03d} worth ₱{total:,.2f} has been completed.',
+                f'Your in-store order ORD-{order.id:03d} worth ₱{new_total:,.2f} has been completed.',
                 type='order', status='completed'
             )
 
-    # --- create walk-in bookings for services ---
+    # ─── HANDLE SERVICES ────────────────────────────────────────────────────
+    
     booking_ids = []
     for svc in services:
-        booking = Booking(
-            user_id=int(customer_id) if customer_id else current_user.id,
-            service=svc['name'],
-            date=date.today(),
-            time=datetime.now().time(),
-            motorcycle_model=svc.get('motorcycle_model', ''),
-            motorcycle_plate=svc.get('motorcycle_plate', ''),
-            notes=f'Walk-in POS. GCash Ref: {payment_ref}' if payment_ref else 'Walk-in POS.',
-            status='completed',
-            payment_method=data.get('payment_method', 'cash')
-        )
-        db.session.add(booking)
-        db.session.flush()
-        booking_ids.append(booking.id)
-
-        if customer_id:
-            send_notification(
-                int(customer_id),
-                'Service Completed (In-Store)',
-                f'Your {svc["name"]} walk-in service has been recorded.',
-                type='booking', status='completed'
+        source_booking_id = svc.get('source_booking_id')
+        
+        if source_booking_id:
+            # Update existing booking to completed
+            source_booking = Booking.query.get(source_booking_id)
+            if source_booking:
+                source_booking.status = 'completed'
+                source_booking.payment_method = payment_method
+                completed_booking_ids.add(source_booking_id)
+                booking_ids.append(source_booking_id)
+                
+                # Notify customer
+                if source_booking.user_id:
+                    send_notification(
+                        source_booking.user_id,
+                        'Service Completed!',
+                        f'Your {source_booking.service} service has been completed. Thank you!',
+                        type='booking', status='completed'
+                    )
+        else:
+            # Create new booking for walk-in service
+            booking = Booking(
+                user_id=int(customer_id) if customer_id else current_user.id,
+                service=svc['name'],
+                date=date.today(),
+                time=datetime.now().time(),
+                motorcycle_model=svc.get('motorcycle_model', ''),
+                motorcycle_plate=svc.get('motorcycle_plate', ''),
+                notes='Walk-in POS service.',
+                status='completed',
+                payment_method=payment_method
             )
+            db.session.add(booking)
+            db.session.flush()
+            booking_ids.append(booking.id)
+
+            if customer_id:
+                send_notification(
+                    int(customer_id),
+                    'Service Completed (In-Store)',
+                    f'Your {svc["name"]} walk-in service has been recorded.',
+                    type='booking', status='completed'
+                )
 
     db.session.commit()
 
@@ -904,6 +1094,8 @@ def pos_checkout():
         'success': True,
         'order_id': order_id,
         'booking_ids': booking_ids,
+        'completed_orders': list(completed_order_ids),
+        'completed_bookings': list(completed_booking_ids),
         'message': 'Transaction completed successfully.'
     })
 
@@ -933,6 +1125,233 @@ def pos_transactions():
         })
 
     return jsonify(result)
+
+
+@app.route('/admin/pos/customer/<int:cid>/items')
+@login_required
+def pos_customer_items(cid):
+    """Return pending orders & bookings for a customer to load into POS cart."""
+    if current_user.role not in ['admin', 'staff']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    customer = User.query.get_or_404(cid)
+
+    pending_orders = Order.query.filter(
+        Order.user_id == cid,
+        Order.status.in_(['pending', 'confirmed', 'processing'])
+    ).order_by(Order.created_at.desc()).all()
+
+    orders_data = []
+    for order in pending_orders:
+        items = []
+        for oi in order.items:
+            product = db.session.get(Product, oi.product_id)
+            items.append({
+                'product_id':   oi.product_id,
+                'product_name': product.name if product else 'Unknown Product',
+                'quantity':     oi.quantity,
+                'unit_price':   oi.unit_price,
+            })
+        orders_data.append({
+            'order_id':   order.id,
+            'status':     order.status,
+            'total':      order.total_amount,
+            'created_at': order.created_at.isoformat(),
+            'items':      items,
+        })
+
+        pending_bookings = Booking.query.filter(
+            Booking.user_id == cid,
+            func.lower(func.replace(Booking.status, '_', '')).like('%progress%')
+        ).order_by(Booking.created_at.desc()).all()
+
+    bookings_data = []
+    for b in pending_bookings:
+        bookings_data.append({
+            'booking_id': b.id,
+            'service':    b.service,
+            'date':       b.date.strftime('%Y-%m-%d'),
+            'time':       b.time.strftime('%H:%M'),
+            'status':     b.status,
+            'created_at': b.created_at.isoformat(),
+        })
+
+    return jsonify({
+        'customer_id':   cid,
+        'customer_name': customer.fullname,
+        'orders':        orders_data,
+        'bookings':      bookings_data,
+    })
+
+# ─── PAYMONGO PAYMENTS ───────────────────────────────────────────────────────
+
+@app.route('/pay/order/<int:oid>')
+@login_required
+def pay_order(oid):
+    """Generate GCash payment link for an order."""
+    order = Order.query.get_or_404(oid)
+    
+    # Verify ownership
+    if order.user_id != current_user.id:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+    
+    # Check if already paid
+    if order.status not in ['pending']:
+        flash('This order cannot be paid online.', 'warning')
+        return redirect(url_for('customer_dashboard'))
+    
+    # Get order items for description
+    items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
+    description = f"MotoTyre Order #{order.id:03d}: {items_desc[:100]}"
+    
+    result = create_gcash_payment(
+        amount=order.total_amount,
+        description=description,
+        order_id=order.id
+    )
+    
+    if result["success"]:
+        # Store payment reference
+        order.payment_method = 'gcash'
+        order.notes = f"PayMongo: {result['reference']}"
+        db.session.commit()
+        return redirect(result["checkout_url"])
+    else:
+        flash('Could not create payment. Please try again.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+
+
+@app.route('/pay/booking/<int:bid>')
+@login_required
+def pay_booking(bid):
+    """Generate GCash payment link for a booking."""
+    booking = Booking.query.get_or_404(bid)
+    
+    # Verify ownership
+    if booking.user_id != current_user.id:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+    
+    # Check if can be paid
+    if booking.status not in ['pending', 'confirmed']:
+        flash('This booking cannot be paid online.', 'warning')
+        return redirect(url_for('customer_dashboard'))
+    
+    # Get service price (you may need to adjust this based on your pricing)
+    SERVICE_PRICES = {
+        'Oil Change': 350,
+        'Tire Change – Front': 150,
+        'Tire Change – Rear': 150,
+        'Tire Change – Both': 250,
+        'Brake Inspection': 100,
+        'Brake Pad Replacement': 300,
+        'Chain Cleaning & Lube': 150,
+        'Chain Replacement': 400,
+        'Spark Plug Replacement': 200,
+        'Battery Check & Replacement': 250,
+        'General Checkup': 200,
+        'Full Tune-up': 800,
+        'CVT Cleaning': 500,
+        'FI Cleaning': 600,
+        'ECU Remapping': 1500,
+        'Full Overhaul': 3000,
+        'Overhaul': 2500,
+    }
+    
+    # Find matching price (case-insensitive partial match)
+    amount = 500  # Default service fee
+    for service_name, price in SERVICE_PRICES.items():
+        if service_name.lower() in booking.service.lower():
+            amount = price
+            break
+    
+    description = f"MotoTyre Booking #{booking.id}: {booking.service}"
+    
+    result = create_gcash_payment(
+        amount=amount,
+        description=description,
+        booking_id=booking.id
+    )
+    
+    if result["success"]:
+        booking.payment_method = 'gcash'
+        booking.notes = (booking.notes or '') + f" | PayMongo: {result['reference']}"
+        db.session.commit()
+        return redirect(result["checkout_url"])
+    else:
+        flash('Could not create payment. Please try again.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+
+
+@app.route('/payment/success')
+def payment_success():
+    """Handle successful payment redirect."""
+    flash('Payment successful! Your order has been confirmed.', 'success')
+    return redirect(url_for('customer_dashboard'))
+
+
+@app.route('/payment/failed')
+def payment_failed():
+    """Handle failed/cancelled payment."""
+    flash('Payment was cancelled or failed. You can retry from your orders.', 'warning')
+    return redirect(url_for('customer_dashboard'))
+
+@app.route('/payment/simulate')
+@login_required
+def payment_simulate():
+    """Simulated GCash payment page for thesis demo."""
+    order_id = request.args.get('order_id')
+    amount = request.args.get('amount', 0)
+    order = Order.query.get(int(order_id)) if order_id else None
+    return render_template('payment_simulate.html', order=order, amount=amount)
+
+
+@app.route('/webhook/paymongo', methods=['POST'])
+def paymongo_webhook():
+    """Handle PayMongo webhook for payment status updates."""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data'}), 400
+    
+    event_type = data.get('data', {}).get('attributes', {}).get('type')
+    resource = data.get('data', {}).get('attributes', {}).get('data', {})
+    
+    if event_type == 'link.payment.paid':
+        metadata = resource.get('attributes', {}).get('metadata', {})
+        
+        # Update order if this was an order payment
+        order_id = metadata.get('order_id')
+        if order_id:
+            order = Order.query.get(int(order_id))
+            if order and order.status == 'pending':
+                order.status = 'confirmed'
+                order.payment_method = 'gcash'
+                db.session.commit()
+                send_notification(
+                    order.user_id,
+                    'Payment Received!',
+                    f'Your payment for Order #{order.id:03d} has been confirmed.',
+                    type='order', status='confirmed'
+                )
+        
+        # Update booking if this was a booking payment
+        booking_id = metadata.get('booking_id')
+        if booking_id:
+            booking = Booking.query.get(int(booking_id))
+            if booking and booking.status == 'pending':
+                booking.status = 'confirmed'
+                booking.payment_method = 'gcash'
+                db.session.commit()
+                send_notification(
+                    booking.user_id,
+                    'Booking Payment Received!',
+                    f'Your payment for {booking.service} on {booking.date.strftime("%b %d")} has been confirmed.',
+                    type='booking', status='confirmed'
+                )
+    
+    return jsonify({'success': True})
 
 
 # ─── TEMP: CREATE ADMIN ──────────────────────────────────────────────────────

@@ -565,35 +565,46 @@
   </section>
 
   <!-- ── MY BOOKINGS ── -->
-  <section id="sec-bookings" class="c-section">
-    <div class="section-head">
-      <div><div class="section-title">MY <span>BOOKINGS</span></div><div class="section-sub">Track all your service appointments.</div></div>
-      <a class="section-link" href="#" onclick="showSection('book', null)">+ New Booking</a>
+<section id="sec-bookings" class="c-section">
+  <div class="section-head">
+    <div><div class="section-title">MY <span>BOOKINGS</span></div><div class="section-sub">Track all your service appointments.</div></div>
+    <a class="section-link" href="#" onclick="showSection('book', null)">+ New Booking</a>
+  </div>
+  <div class="card">
+    {% if bookings %}
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead><tr><th>#</th><th>Service</th><th>Date & Time</th><th>Motorcycle</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for b in bookings %}
+          <tr class="booking-row" style="cursor:pointer;" onclick="openBookingDetails({{ b.id }})">
+            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">{{ loop.index }}</span></td>
+            <td>
+              <span style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;">{{ b.service }}</span>
+            </td>
+            <td>
+              <div style="font-size:0.85rem;color:#fff;">{{ b.date.strftime('%b %d, %Y') }}</div>
+              <div style="font-size:0.75rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }}</div>
+            </td>
+            <td>
+              {% if b.motorcycle_model %}
+              <div style="font-size:0.85rem;color:#fff;">{{ b.motorcycle_model }}</div>
+              <div style="font-size:0.75rem;color:var(--muted);">{{ b.motorcycle_plate or '—' }}</div>
+              {% else %}
+              <span style="color:var(--muted);">—</span>
+              {% endif %}
+            </td>
+            <td><span class="badge badge-{{ b.status }}">{{ b.status|replace('_', ' ')|title }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <div class="card">
-      {% if bookings %}
-      <div style="overflow-x:auto;">
-        <table class="table">
-          <thead><tr><th>#</th><th>Service</th><th>Date</th><th>Time</th><th>Motorcycle</th><th>Notes</th><th>Status</th></tr></thead>
-          <tbody>
-            {% for b in bookings %}
-            <tr>
-              <td>{{ loop.index }}</td><td>{{ b.service }}</td>
-              <td>{{ b.date.strftime('%b %d, %Y') }}</td>
-              <td>{{ b.time.strftime('%I:%M %p') }}</td>
-              <td>{{ b.motorcycle_model or '—' }}</td>
-              <td>{{ b.notes or '—' }}</td>
-              <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="empty-state"><div class="empty-icon">📅</div><p>No bookings yet. <a href="#" onclick="showSection('book', null)">Book an appointment!</a></p></div>
-      {% endif %}
-    </div>
-  </section>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">📅</div><p>No bookings yet. <a href="#" onclick="showSection('book', null)">Book an appointment!</a></p></div>
+    {% endif %}
+  </div>
+</section>
 
   <!-- ── SHOP ── -->
   <section id="sec-shop" class="c-section">
@@ -634,33 +645,42 @@
   </section>
 
   <!-- ── MY ORDERS ── -->
-  <section id="sec-orders" class="c-section">
-    <div class="section-head">
-      <div><div class="section-title">MY <span>ORDERS</span></div><div class="section-sub">Track your parts and accessories orders.</div></div>
-      <a class="section-link" href="#" onclick="showSection('shop', null)">+ Order Parts</a>
+<section id="sec-orders" class="c-section">
+  <div class="section-head">
+    <div><div class="section-title">MY <span>ORDERS</span></div><div class="section-sub">Track your parts and accessories orders.</div></div>
+    <a class="section-link" href="#" onclick="showSection('shop', null)">+ Order Parts</a>
+  </div>
+  <div class="card">
+    {% if orders %}
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead><tr><th>Order #</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for o in orders %}
+          <tr class="order-row" style="cursor:pointer;" onclick="openOrderDetails({{ o.id }})">
+            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--red);">ORD-{{ '%03d'|format(o.id) }}</span></td>
+            <td>
+              <span style="font-size:0.82rem;color:var(--text);">
+                {% if o.items|length == 1 %}
+                  {{ o.items[0].product.name }}
+                {% else %}
+                  {{ o.items[0].product.name }} <span style="color:var(--muted);">+{{ o.items|length - 1 }} more</span>
+                {% endif %}
+              </span>
+            </td>
+            <td><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
+            <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
+            <td><span class="badge badge-{{ o.status }}">{{ o.status|replace('_', ' ')|title }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <div class="card">
-      {% if orders %}
-      <div style="overflow-x:auto;">
-        <table class="table">
-          <thead><tr><th>Order #</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
-          <tbody>
-            {% for o in orders %}
-            <tr>
-              <td>ORD-{{ '%03d'|format(o.id) }}</td>
-              <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
-              <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
-              <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="empty-state"><div class="empty-icon">📦</div><p>No orders yet. <a href="#" onclick="showSection('shop', null)">Browse our parts!</a></p></div>
-      {% endif %}
-    </div>
-  </section>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">📦</div><p>No orders yet. <a href="#" onclick="showSection('shop', null)">Browse our parts!</a></p></div>
+    {% endif %}
+  </div>
+</section>
 
   <!-- ── SETTINGS ── -->
   <section id="sec-profile" class="c-section">
@@ -708,6 +728,183 @@
 
 </div>
 
+<!-- ═══ BOOKING DETAILS MODAL ═══ -->
+<div class="modal-overlay" id="modal-booking-details">
+  <div class="modal-box" style="width:480px;max-width:95vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h5 style="margin:0;">📅 Booking Details</h5>
+      <button onclick="closeModal('modal-booking-details')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+    </div>
+    
+    <!-- Booking Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+      <div>
+        <div id="bd-service" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#fff;letter-spacing:0.04em;"></div>
+        <div id="bd-created" style="font-size:0.75rem;color:var(--muted);"></div>
+      </div>
+      <div id="bd-status-badge"></div>
+    </div>
+
+    <!-- Schedule Info -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+      <div style="padding:1rem;background:rgba(232,64,28,0.08);border:1px solid rgba(232,64,28,0.2);border-radius:10px;text-align:center;">
+        <div style="font-size:1.5rem;margin-bottom:0.25rem;">📆</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Date</div>
+        <div id="bd-date" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;"></div>
+      </div>
+      <div style="padding:1rem;background:rgba(29,78,216,0.08);border:1px solid rgba(29,78,216,0.2);border-radius:10px;text-align:center;">
+        <div style="font-size:1.5rem;margin-bottom:0.25rem;">🕐</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Time</div>
+        <div id="bd-time" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;"></div>
+      </div>
+    </div>
+
+    <!-- Motorcycle Info -->
+    <div style="padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">🏍️ Motorcycle Information</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Model</div>
+          <div id="bd-model" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Plate Number</div>
+          <div id="bd-plate" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div id="bd-notes-wrap" style="padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">📝 Notes</div>
+      <div id="bd-notes" style="font-size:0.85rem;color:var(--text);line-height:1.6;"></div>
+    </div>
+
+    <!-- Status Timeline -->
+    <div id="bd-timeline"></div>
+
+    <div class="modal-actions" style="margin-top:1.5rem;">
+      <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-booking-details')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ORDER DETAILS MODAL ═══ -->
+<div class="modal-overlay" id="modal-order-details">
+  <div class="modal-box" style="width:520px;max-width:95vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h5 style="margin:0;">📦 Order Details</h5>
+      <button onclick="closeModal('modal-order-details')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+    </div>
+    
+    <!-- Order Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+      <div>
+        <div id="od-order-num" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;"></div>
+        <div id="od-order-date" style="font-size:0.78rem;color:var(--muted);"></div>
+      </div>
+      <div id="od-status-badge"></div>
+    </div>
+
+    <!-- Products List -->
+    <div style="margin-bottom:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Products Ordered</div>
+      <div id="od-products-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:240px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- Order Summary -->
+    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Summary</div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text);margin-bottom:0.4rem;">
+        <span>Subtotal</span>
+        <span id="od-subtotal"></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">
+        <span>Shipping</span>
+        <span>To be arranged</span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
+        <span id="od-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);"></span>
+      </div>
+    </div>
+
+    <!-- Payment Info -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <span style="font-size:1.1rem;">💳</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#4ade80;">Payment Method</span>
+      </div>
+      <span id="od-payment" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;"></span>
+    </div>
+
+    <!-- Status Timeline -->
+    <div id="od-timeline" style="margin-top:1.25rem;"></div>
+
+    <div class="modal-actions" style="margin-top:1.5rem;">
+      <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order-details')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ORDER DETAILS MODAL ═══ -->
+<div class="modal-overlay" id="modal-order-details">
+  <div class="modal-box" style="width:520px;max-width:95vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h5 style="margin:0;">📦 Order Details</h5>
+      <button onclick="closeModal('modal-order-details')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+    </div>
+    
+    <!-- Order Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+      <div>
+        <div id="od-order-num" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;"></div>
+        <div id="od-order-date" style="font-size:0.78rem;color:var(--muted);"></div>
+      </div>
+      <div id="od-status-badge"></div>
+    </div>
+
+    <!-- Products List -->
+    <div style="margin-bottom:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Products Ordered</div>
+      <div id="od-products-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:240px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- Order Summary -->
+    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Summary</div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text);margin-bottom:0.4rem;">
+        <span>Subtotal</span>
+        <span id="od-subtotal"></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">
+        <span>Shipping</span>
+        <span>To be arranged</span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
+        <span id="od-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);"></span>
+      </div>
+    </div>
+
+    <!-- Payment Info -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <span style="font-size:1.1rem;">💳</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#4ade80;">Payment Method</span>
+      </div>
+      <span id="od-payment" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;"></span>
+    </div>
+
+    <!-- Status Timeline -->
+    <div id="od-timeline" style="margin-top:1.25rem;"></div>
+
+    <div class="modal-actions" style="margin-top:1.5rem;">
+      <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order-details')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ CART MODAL ═══ -->
 <div class="modal-overlay" id="modal-order">
   <div class="modal-box" style="width:520px;max-width:95vw;">
@@ -715,7 +912,6 @@
     <!-- STEP 1: CART -->
     <div id="step-cart">
       <h5>🛒 Order Summary</h5>
-      <input type="hidden" id="modal-product-id">
       <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
           <div>
@@ -729,7 +925,7 @@
           <div style="display:flex;align-items:center;gap:0.5rem;">
             <button type="button" onclick="changeQty(-1)" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
             <input type="number" id="modal-quantity" min="1" value="1" style="width:52px;text-align:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:0.35rem;color:#fff;font-size:0.9rem;" oninput="updateCartTotal()">
-            <button type="button" onclick="changeQty(1)"  style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+            <button type="button" onclick="changeQty(1)" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
           </div>
         </div>
       </div>
@@ -743,35 +939,76 @@
       </div>
     </div>
 
-    <!-- STEP 2: SHIPPING -->
+    <!-- STEP 2: DELIVERY METHOD -->
     <div id="step-shipping" style="display:none;">
-      <h5>📦 Shipping Address</h5>
-      <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" id="ship-name" placeholder="Juan Dela Cruz" required>
-      </div>
-      <div class="form-group">
-        <label>Mobile Number</label>
-        <input type="tel" id="ship-mobile" placeholder="09XX XXX XXXX" required>
-      </div>
-      <div class="form-group">
-        <label>Street Address</label>
-        <input type="text" id="ship-street" placeholder="123 Rizal St." required>
-      </div>
-      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
-        <div>
-          <label>City / Municipality</label>
-          <input type="text" id="ship-city" placeholder="Quezon City" required>
+      <h5>🚚 Delivery Method</h5>
+      
+      <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.25rem;">
+        <div id="opt-pickup" class="delivery-option selected" onclick="selectDelivery('pickup')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(21,128,61,0.1);border:2px solid var(--green);border-radius:10px;cursor:pointer;transition:all 0.15s;">
+          <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">🏪</div>
+          <div style="flex:1;">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">Shop Pickup</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pick up at MotoTyre North Caloocan</div>
+            <div style="font-size:0.75rem;color:#86efac;margin-top:4px;">FREE</div>
+          </div>
+          <div id="check-pickup" style="width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="color:#fff;font-size:0.75rem;">✓</span>
+          </div>
         </div>
-        <div>
-          <label>Province</label>
-          <input type="text" id="ship-province" placeholder="Metro Manila" required>
+        
+        <div id="opt-ship" class="delivery-option" onclick="selectDelivery('ship')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(255,255,255,0.03);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;">
+          <div style="width:48px;height:48px;border-radius:10px;background:rgba(29,78,216,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">🚚</div>
+          <div style="flex:1;">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">Ship to Address</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Deliver to your location</div>
+            <div style="font-size:0.75rem;color:#fbbf24;margin-top:4px;">Shipping fee to be calculated</div>
+          </div>
+          <div id="check-ship" style="width:22px;height:22px;border-radius:50%;background:transparent;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="color:#fff;font-size:0.75rem;display:none;">✓</span>
+          </div>
         </div>
       </div>
-      <div class="form-group">
-        <label>ZIP Code</label>
-        <input type="text" id="ship-zip" placeholder="1100" required>
+
+      <div id="pickup-info" style="background:rgba(21,128,61,0.08);border:1px solid rgba(21,128,61,0.2);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">📍 Pickup Location</div>
+        <div style="font-size:0.88rem;color:#fff;font-weight:600;margin-bottom:0.25rem;">MotoTyre North Caloocan</div>
+        <div style="font-size:0.82rem;color:var(--muted);line-height:1.5;">Saranay Rd, Barangay 171 Bagumbong,<br>Caloocan City, Metro Manila</div>
+        <div style="font-size:0.78rem;color:#86efac;margin-top:0.5rem;">📞 0915 269 8366</div>
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(21,128,61,0.2);">
+          <div style="font-size:0.75rem;color:var(--muted);">⏰ Operating Hours</div>
+          <div style="font-size:0.82rem;color:#fff;margin-top:0.25rem;">Mon - Sat: 8:00 AM - 7:00 PM</div>
+        </div>
       </div>
+
+      <div id="shipping-form" style="display:none;">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="ship-name" placeholder="Juan Dela Cruz">
+        </div>
+        <div class="form-group">
+          <label>Mobile Number</label>
+          <input type="tel" id="ship-mobile" placeholder="09XX XXX XXXX">
+        </div>
+        <div class="form-group">
+          <label>Street Address</label>
+          <input type="text" id="ship-street" placeholder="123 Rizal St.">
+        </div>
+        <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+          <div>
+            <label>City / Municipality</label>
+            <input type="text" id="ship-city" placeholder="Quezon City">
+          </div>
+          <div>
+            <label>Province</label>
+            <input type="text" id="ship-province" placeholder="Metro Manila">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ZIP Code</label>
+          <input type="text" id="ship-zip" placeholder="1100">
+        </div>
+      </div>
+
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="goToStep('step-cart')">‹ Back to Cart</button>
         <button type="button" class="btn-submit" style="width:auto;" onclick="goToShipping()">Proceed to Payment ›</button>
@@ -792,8 +1029,9 @@
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Order Summary</div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;"><span id="pay-product-name" style="color:var(--text);"></span><span id="pay-product-subtotal" style="color:var(--text);"></span></div>
-        <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:0.75rem;"><span>Shipping</span><span>To be arranged</span></div>
-        <div style="border-top:1px solid var(--border);padding-top:0.75rem;display:flex;justify-content:space-between;">
+        <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Delivery</span><span id="pay-delivery-method"></span></div>
+        <div id="pay-shipping-row" style="display:none;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Shipping Fee</span><span>To be calculated</span></div>
+        <div style="border-top:1px solid var(--border);padding-top:0.75rem;margin-top:0.5rem;display:flex;justify-content:space-between;">
           <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
           <span id="pay-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--red);"></span>
         </div>
@@ -811,33 +1049,41 @@
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Items</div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">
           <span id="conf-product" style="color:var(--text);"></span>
-          <span id="conf-total" style="color:var(--red);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;"></span>
+          <span id="conf-subtotal" style="color:var(--text);"></span>
         </div>
         <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Shipping To</div>
-        <div id="conf-address" style="color:var(--text);line-height:1.6;"></div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Delivery Method</div>
+        <div id="conf-delivery-info" style="color:var(--text);line-height:1.6;margin-bottom:0.75rem;"></div>
         <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Payment</span>
           <span style="color:#4ade80;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;">📱 GCash</span>
         </div>
+        <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
+          <span id="conf-total" style="color:var(--red);font-family:'Bebas Neue',sans-serif;font-size:1.3rem;"></span>
+        </div>
       </div>
       <form method="POST" action="{{ url_for('place_order') }}" id="final-order-form">
         <input type="hidden" name="product_id" id="final-product-id">
         <input type="hidden" name="quantity" id="final-quantity">
+        <input type="hidden" id="modal-product-id">
+        <input type="hidden" name="delivery_method" id="final-delivery-method">
         <input type="hidden" name="ship_name" id="final-ship-name">
         <input type="hidden" name="ship_mobile" id="final-ship-mobile">
         <input type="hidden" name="ship_street" id="final-ship-street">
         <input type="hidden" name="ship_city" id="final-ship-city">
         <input type="hidden" name="ship_province" id="final-ship-province">
         <input type="hidden" name="ship_zip" id="final-ship-zip">
-        <input type="hidden" name="payment_method" value="GCash">
+        <input type="hidden" name="payment_method" value="gcash">
         <div class="modal-actions">
           <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel Order</button>
           <button type="submit" class="btn-submit" style="width:auto;background:#15803d;">✅ Confirm and Pay</button>
         </div>
       </form>
     </div>
+
   </div>
 </div>
 
@@ -864,16 +1110,27 @@
   }
 
   let cartPrice = 0;
+  let deliveryMethod = 'pickup';
 
 function openOrderModal(btn) {
   cartPrice = parseFloat(btn.dataset.price);
+  deliveryMethod = 'pickup'; 
   document.getElementById('modal-product-id').value = btn.dataset.id;
   document.getElementById('cart-product-name').textContent = btn.dataset.name;
-  document.getElementById('cart-product-cat').textContent  = btn.dataset.category || '';
+  document.getElementById('cart-product-cat').textContent = btn.dataset.category || '';
   document.getElementById('cart-product-price').textContent = '₱' + cartPrice.toFixed(2);
   document.getElementById('modal-quantity').max = btn.dataset.stock;
   document.getElementById('modal-quantity').value = 1;
   updateCartTotal();
+  
+  // Reset delivery selection
+  selectDelivery('pickup');
+  
+  // Clear shipping form
+  ['ship-name','ship-mobile','ship-street','ship-city','ship-province','ship-zip'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  
   goToStep('step-cart');
   document.getElementById('modal-order').classList.add('open');
 }
@@ -896,58 +1153,149 @@ function changeQty(dir) {
   updateCartTotal();
 }
 
+function selectDelivery(method) {
+  deliveryMethod = method;
+  
+  const optPickup = document.getElementById('opt-pickup');
+  const optShip = document.getElementById('opt-ship');
+  const checkPickup = document.getElementById('check-pickup');
+  const checkShip = document.getElementById('check-ship');
+  const pickupInfo = document.getElementById('pickup-info');
+  const shippingForm = document.getElementById('shipping-form');
+  
+  if (!optPickup) return; 
+  
+  if (method === 'pickup') {
+    optPickup.style.background = 'rgba(21,128,61,0.1)';
+    optPickup.style.borderColor = 'var(--green)';
+    checkPickup.style.background = 'var(--green)';
+    checkPickup.style.border = 'none';
+    checkPickup.querySelector('span').style.display = 'block';
+    
+    optShip.style.background = 'rgba(255,255,255,0.03)';
+    optShip.style.borderColor = 'var(--border)';
+    checkShip.style.background = 'transparent';
+    checkShip.style.border = '2px solid var(--border)';
+    checkShip.querySelector('span').style.display = 'none';
+    
+    pickupInfo.style.display = 'block';
+    shippingForm.style.display = 'none';
+  } else {
+    optShip.style.background = 'rgba(29,78,216,0.1)';
+    optShip.style.borderColor = '#1d4ed8';
+    checkShip.style.background = '#1d4ed8';
+    checkShip.style.border = 'none';
+    checkShip.querySelector('span').style.display = 'block';
+    
+    optPickup.style.background = 'rgba(255,255,255,0.03)';
+    optPickup.style.borderColor = 'var(--border)';
+    checkPickup.style.background = 'transparent';
+    checkPickup.style.border = '2px solid var(--border)';
+    checkPickup.querySelector('span').style.display = 'none';
+    
+    pickupInfo.style.display = 'none';
+    shippingForm.style.display = 'block';
+  }
+}
+
 function updateCartTotal() {
   const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
   const total = cartPrice * qty;
+
+  document.getElementById('final-product-id').value = document.getElementById('modal-product-id').value;
+  document.getElementById('conf-product').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
   document.getElementById('cart-total').textContent = '₱' + total.toFixed(2);
 }
 
 function goToShipping() {
-  const fields = ['ship-name','ship-mobile','ship-street','ship-city','ship-province','ship-zip'];
-  for (const f of fields) {
-    if (!document.getElementById(f).value.trim()) {
-      document.getElementById(f).focus();
-      document.getElementById(f).style.borderColor = 'var(--red)';
-      return;
+  // If shipping, validate address fields
+  if (deliveryMethod === 'ship') {
+    const fields = ['ship-name','ship-mobile','ship-street','ship-city','ship-province','ship-zip'];
+    for (const f of fields) {
+      if (!document.getElementById(f).value.trim()) {
+        document.getElementById(f).focus();
+        document.getElementById(f).style.borderColor = 'var(--red)';
+        return;
+      }
+      document.getElementById(f).style.borderColor = '';
     }
-    document.getElementById(f).style.borderColor = '';
   }
+  
   const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
   const total = cartPrice * qty;
+  
   document.getElementById('pay-product-name').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
   document.getElementById('pay-product-subtotal').textContent = '₱' + total.toFixed(2);
   document.getElementById('pay-total').textContent = '₱' + total.toFixed(2);
+  
+  // Show delivery method
+  if (deliveryMethod === 'pickup') {
+    document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#86efac;">🏪 Shop Pickup (FREE)</span>';
+    document.getElementById('pay-shipping-row').style.display = 'none';
+  } else {
+    document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#93c5fd;">🚚 Ship to Address</span>';
+    document.getElementById('pay-shipping-row').style.display = 'flex';
+  }
+  
   goToStep('step-payment');
 }
 
 function goToConfirm() {
   const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
   const total = cartPrice * qty;
+  
   document.getElementById('conf-product').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
+  document.getElementById('conf-subtotal').textContent = '₱' + total.toFixed(2);
   document.getElementById('conf-total').textContent = '₱' + total.toFixed(2);
-  document.getElementById('conf-address').innerHTML =
-    document.getElementById('ship-name').value + '<br>' +
-    document.getElementById('ship-mobile').value + '<br>' +
-    document.getElementById('ship-street').value + ', ' +
-    document.getElementById('ship-city').value + ', ' +
-    document.getElementById('ship-province').value + ' ' +
-    document.getElementById('ship-zip').value;
-  document.getElementById('final-product-id').value   = document.getElementById('modal-product-id').value;
-  document.getElementById('final-quantity').value     = qty;
-  document.getElementById('final-ship-name').value    = document.getElementById('ship-name').value;
-  document.getElementById('final-ship-mobile').value  = document.getElementById('ship-mobile').value;
-  document.getElementById('final-ship-street').value  = document.getElementById('ship-street').value;
-  document.getElementById('final-ship-city').value    = document.getElementById('ship-city').value;
-  document.getElementById('final-ship-province').value= document.getElementById('ship-province').value;
-  document.getElementById('final-ship-zip').value     = document.getElementById('ship-zip').value;
+  
+  // Delivery info
+  const deliveryInfo = document.getElementById('conf-delivery-info');
+  if (deliveryMethod === 'pickup') {
+    deliveryInfo.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.5rem;color:#86efac;margin-bottom:0.25rem;">
+        <span>🏪</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;">Shop Pickup</span>
+      </div>
+      <div style="font-size:0.8rem;color:var(--muted);">MotoTyre North Caloocan<br>Saranay Rd, Brgy. 171 Bagumbong, Caloocan City</div>
+    `;
+  } else {
+    deliveryInfo.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.5rem;color:#93c5fd;margin-bottom:0.25rem;">
+        <span>🚚</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;">Ship to Address</span>
+      </div>
+      <div style="font-size:0.8rem;color:var(--muted);">
+        ${document.getElementById('ship-name').value}<br>
+        ${document.getElementById('ship-mobile').value}<br>
+        ${document.getElementById('ship-street').value}, ${document.getElementById('ship-city').value},<br>
+        ${document.getElementById('ship-province').value} ${document.getElementById('ship-zip').value}
+      </div>
+    `;
+  }
+  
+  // Set ALL hidden form values
+  document.getElementById('final-product-id').value = document.getElementById('modal-product-id').value;
+  document.getElementById('final-quantity').value = qty;
+  document.getElementById('final-delivery-method').value = deliveryMethod;
+  
+  if (deliveryMethod === 'ship') {
+    document.getElementById('final-ship-name').value = document.getElementById('ship-name').value;
+    document.getElementById('final-ship-mobile').value = document.getElementById('ship-mobile').value;
+    document.getElementById('final-ship-street').value = document.getElementById('ship-street').value;
+    document.getElementById('final-ship-city').value = document.getElementById('ship-city').value;
+    document.getElementById('final-ship-province').value = document.getElementById('ship-province').value;
+    document.getElementById('final-ship-zip').value = document.getElementById('ship-zip').value;
+  } else {
+    document.getElementById('final-ship-name').value = '';
+    document.getElementById('final-ship-mobile').value = '';
+    document.getElementById('final-ship-street').value = '';
+    document.getElementById('final-ship-city').value = '';
+    document.getElementById('final-ship-province').value = '';
+    document.getElementById('final-ship-zip').value = '';
+  }
+  
   goToStep('step-confirm');
 }
-
-  document.querySelectorAll('.modal-overlay').forEach(o => {
-    o.addEventListener('click', function(e) {
-      if (e.target === this) { this.classList.remove('open'); this.style.display = 'none'; }
-    });
-  });
 
   /* ── CALENDAR ── */
   const ALL_SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
@@ -1267,6 +1615,219 @@ document.addEventListener('click', function(e) {
 
 fetchNotifications();
 setInterval(fetchNotifications, 30000);
+
+/* ══ BOOKING DETAILS ══ */
+const bookingsData = {
+  {% for b in bookings %}
+  {{ b.id }}: {
+    id: {{ b.id }},
+    service: '{{ b.service|e }}',
+    status: '{{ b.status }}',
+    date: '{{ b.date.strftime("%B %d, %Y") }}',
+    time: '{{ b.time.strftime("%I:%M %p") }}',
+    motorcycle_model: '{{ b.motorcycle_model|e if b.motorcycle_model else "" }}',
+    motorcycle_plate: '{{ b.motorcycle_plate|e if b.motorcycle_plate else "" }}',
+    notes: '{{ b.notes|e if b.notes else "" }}',
+    created_at: '{{ b.created_at.strftime("%b %d, %Y at %I:%M %p") }}'
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+};
+
+function openBookingDetails(bookingId) {
+  const booking = bookingsData[bookingId];
+  if (!booking) return;
+
+  // Service name
+  document.getElementById('bd-service').textContent = booking.service;
+  document.getElementById('bd-created').textContent = 'Booked on ' + booking.created_at;
+  
+  // Status badge
+  const statusColors = {
+    pending:     { bg: 'rgba(180,83,9,0.2)',   color: '#fbbf24', border: 'rgba(180,83,9,0.3)' },
+    confirmed:   { bg: 'rgba(29,78,216,0.2)',  color: '#93c5fd', border: 'rgba(29,78,216,0.3)' },
+    in_progress: { bg: 'rgba(124,58,237,0.2)', color: '#c4b5fd', border: 'rgba(124,58,237,0.3)' },
+    inprogress:  { bg: 'rgba(124,58,237,0.2)', color: '#c4b5fd', border: 'rgba(124,58,237,0.3)' },
+    completed:   { bg: 'rgba(21,128,61,0.2)',  color: '#86efac', border: 'rgba(21,128,61,0.3)' },
+    cancelled:   { bg: 'rgba(220,38,38,0.15)', color: '#fca5a5', border: 'rgba(220,38,38,0.2)' },
+  };
+  const sc = statusColors[booking.status] || statusColors.pending;
+  document.getElementById('bd-status-badge').innerHTML = `
+    <span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.4em 0.9em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+      ${booking.status.replace('_', ' ')}
+    </span>`;
+
+  // Date & Time
+  document.getElementById('bd-date').textContent = booking.date;
+  document.getElementById('bd-time').textContent = booking.time;
+
+  // Motorcycle info
+  document.getElementById('bd-model').textContent = booking.motorcycle_model || '—';
+  document.getElementById('bd-plate').textContent = booking.motorcycle_plate || '—';
+
+  // Notes
+  const notesWrap = document.getElementById('bd-notes-wrap');
+  if (booking.notes) {
+    notesWrap.style.display = 'block';
+    document.getElementById('bd-notes').textContent = booking.notes;
+  } else {
+    notesWrap.style.display = 'none';
+  }
+
+  // Status timeline
+  const timeline = document.getElementById('bd-timeline');
+  const steps = ['pending', 'confirmed', 'in_progress', 'completed'];
+  const stepLabels = { pending: 'Pending', confirmed: 'Confirmed', in_progress: 'In Progress', completed: 'Completed' };
+  const stepIcons = { pending: '📝', confirmed: '✅', in_progress: '🔧', completed: '🎉' };
+  
+  // Normalize status
+  let normalizedStatus = booking.status.toLowerCase().replace(' ', '_');
+  if (normalizedStatus === 'inprogress') normalizedStatus = 'in_progress';
+  
+  const currentIdx = steps.indexOf(normalizedStatus);
+  const isCancelled = booking.status === 'cancelled';
+
+  if (isCancelled) {
+    timeline.innerHTML = `
+      <div style="text-align:center;padding:1rem;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);border-radius:10px;">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem;">❌</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fca5a5;">Booking Cancelled</div>
+      </div>`;
+  } else {
+    timeline.innerHTML = `
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Booking Progress</div>
+      <div style="display:flex;justify-content:space-between;position:relative;">
+        <div style="position:absolute;top:14px;left:20px;right:20px;height:2px;background:var(--border);z-index:0;"></div>
+        <div style="position:absolute;top:14px;left:20px;height:2px;background:var(--green);z-index:1;width:${currentIdx >= 0 ? (currentIdx / (steps.length - 1)) * 100 : 0}%;transition:width 0.3s;"></div>
+        ${steps.map((step, i) => {
+          const done = i <= currentIdx;
+          const active = i === currentIdx;
+          return `
+            <div style="display:flex;flex-direction:column;align-items:center;z-index:2;">
+              <div style="width:28px;height:28px;border-radius:50%;background:${done ? 'var(--green)' : 'var(--card)'};border:2px solid ${done ? 'var(--green)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:0.8rem;${active ? 'box-shadow:0 0 0 4px rgba(21,128,61,0.2);' : ''}">${done ? '✓' : stepIcons[step]}</div>
+              <div style="font-size:0.68rem;color:${done ? '#86efac' : 'var(--muted)'};margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:${active ? '700' : '600'};text-align:center;max-width:60px;">${stepLabels[step]}</div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  document.getElementById('modal-booking-details').classList.add('open');
+}
+
+/* ══ ORDER DETAILS ══ */
+const ordersData = {
+  {% for o in orders %}
+  {{ o.id }}: {
+    id: {{ o.id }},
+    status: '{{ o.status }}',
+    total: {{ o.total_amount }},
+    payment_method: '{{ o.payment_method or "cash" }}',
+    created_at: '{{ o.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
+    items: [
+      {% for item in o.items %}
+      {
+        product_name: '{{ item.product.name|e }}',
+        category: '{{ item.product.category|e }}',
+        quantity: {{ item.quantity }},
+        unit_price: {{ item.unit_price }},
+        subtotal: {{ item.quantity * item.unit_price }}
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+};
+
+function openOrderDetails(orderId) {
+  const order = ordersData[orderId];
+  if (!order) return;
+
+  // Order header
+  document.getElementById('od-order-num').textContent = 'ORD-' + String(order.id).padStart(3, '0');
+  document.getElementById('od-order-date').textContent = 'Placed on ' + order.created_at;
+  
+  // Status badge
+  const statusColors = {
+    pending:    { bg: 'rgba(180,83,9,0.2)',   color: '#fbbf24', border: 'rgba(180,83,9,0.3)' },
+    confirmed:  { bg: 'rgba(29,78,216,0.2)',  color: '#93c5fd', border: 'rgba(29,78,216,0.3)' },
+    processing: { bg: 'rgba(124,58,237,0.2)', color: '#c4b5fd', border: 'rgba(124,58,237,0.3)' },
+    shipped:    { bg: 'rgba(6,182,212,0.2)',  color: '#67e8f9', border: 'rgba(6,182,212,0.3)' },
+    delivered:  { bg: 'rgba(21,128,61,0.2)',  color: '#86efac', border: 'rgba(21,128,61,0.3)' },
+    completed:  { bg: 'rgba(21,128,61,0.2)',  color: '#86efac', border: 'rgba(21,128,61,0.3)' },
+    cancelled:  { bg: 'rgba(220,38,38,0.15)', color: '#fca5a5', border: 'rgba(220,38,38,0.2)' },
+  };
+  const sc = statusColors[order.status] || statusColors.pending;
+  document.getElementById('od-status-badge').innerHTML = `
+    <span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.4em 0.9em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+      ${order.status.replace('_', ' ')}
+    </span>`;
+
+  // Products list
+  const productsList = document.getElementById('od-products-list');
+  productsList.innerHTML = order.items.map(item => `
+    <div style="display:flex;align-items:center;gap:0.85rem;padding:0.85rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;">
+      <div style="width:44px;height:44px;border-radius:10px;background:rgba(232,64,28,0.12);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🔧</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.product_name}</div>
+        <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;">${item.category}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--red);">₱${item.subtotal.toFixed(2)}</div>
+        <div style="font-size:0.72rem;color:var(--muted);">₱${item.unit_price.toFixed(2)} × ${item.quantity}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // Summary
+  document.getElementById('od-subtotal').textContent = '₱' + order.total.toFixed(2);
+  document.getElementById('od-total').textContent = '₱' + order.total.toFixed(2);
+  
+  // Payment method
+  const paymentLabels = { cash: '💵 Cash', gcash: '📱 GCash', cod: '🚚 Cash on Delivery' };
+  document.getElementById('od-payment').textContent = paymentLabels[order.payment_method] || '💵 Cash';
+
+  // Status timeline
+  const timeline = document.getElementById('od-timeline');
+  const steps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+  const stepLabels = { pending: 'Order Placed', confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', delivered: 'Delivered' };
+  const stepIcons = { pending: '📝', confirmed: '✅', processing: '⚙️', shipped: '🚚', delivered: '📦' };
+  
+  const currentIdx = steps.indexOf(order.status);
+  const isCancelled = order.status === 'cancelled';
+  const isCompleted = order.status === 'completed';
+
+  if (isCancelled) {
+    timeline.innerHTML = `
+      <div style="text-align:center;padding:1rem;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);border-radius:10px;">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem;">❌</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fca5a5;">Order Cancelled</div>
+      </div>`;
+  } else if (isCompleted) {
+    timeline.innerHTML = `
+      <div style="text-align:center;padding:1rem;background:rgba(21,128,61,0.1);border:1px solid rgba(21,128,61,0.2);border-radius:10px;">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem;">✅</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#86efac;">Order Completed</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem;">Thank you for your purchase!</div>
+      </div>`;
+  } else {
+    timeline.innerHTML = `
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Progress</div>
+      <div style="display:flex;justify-content:space-between;position:relative;">
+        <div style="position:absolute;top:14px;left:20px;right:20px;height:2px;background:var(--border);z-index:0;"></div>
+        <div style="position:absolute;top:14px;left:20px;height:2px;background:var(--green);z-index:1;width:${currentIdx >= 0 ? (currentIdx / (steps.length - 1)) * 100 : 0}%;transition:width 0.3s;"></div>
+        ${steps.map((step, i) => {
+          const done = i <= currentIdx;
+          const active = i === currentIdx;
+          return `
+            <div style="display:flex;flex-direction:column;align-items:center;z-index:2;">
+              <div style="width:28px;height:28px;border-radius:50%;background:${done ? 'var(--green)' : 'var(--card)'};border:2px solid ${done ? 'var(--green)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:0.8rem;${active ? 'box-shadow:0 0 0 4px rgba(21,128,61,0.2);' : ''}">${done ? '✓' : stepIcons[step]}</div>
+              <div style="font-size:0.68rem;color:${done ? '#86efac' : 'var(--muted)'};margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:${active ? '700' : '600'};text-align:center;">${stepLabels[step]}</div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  document.getElementById('modal-order-details').classList.add('open');
+}
 
 </script>
 

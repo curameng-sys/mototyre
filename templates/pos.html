@@ -22,6 +22,7 @@
       --muted:   #6b7280;
       --border:  rgba(255,255,255,0.07);
       --text:    #e5e7eb;
+      --orange:  #f59e0b;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -222,6 +223,27 @@
     .customer-box select:focus { border-color: var(--red); }
     .customer-box select option { background: #1a1d23; }
 
+    /* PENDING ITEMS BANNER */
+    .pending-banner {
+      display: none; align-items: center; gap: 0.5rem;
+      margin-top: 0.6rem; padding: 0.5rem 0.75rem;
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 8px; font-size: 0.72rem; color: #fbbf24;
+      font-family: 'Syne', sans-serif; font-weight: 600;
+    }
+    .pending-banner.show { display: flex; }
+    .pending-banner i { font-size: 0.8rem; }
+    .pending-banner .pending-text { flex: 1; }
+    .pending-banner .btn-load-items {
+      padding: 0.3rem 0.6rem; border-radius: 6px;
+      background: rgba(245,158,11,0.2); border: 1px solid rgba(245,158,11,0.4);
+      color: #fbbf24; font-family: 'Syne', sans-serif;
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase; cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .pending-banner .btn-load-items:hover { background: var(--orange); color: #000; border-color: var(--orange); }
+
     /* CART ITEMS */
     .cart-items {
       flex: 1; overflow-y: auto; padding: 0.75rem 1.25rem;
@@ -251,9 +273,9 @@
     }
     .ci-icon.product { background: rgba(255,15,15,0.12); color: var(--red); border: 1px solid rgba(255,15,15,0.2); }
     .ci-icon.service { background: rgba(37,99,235,0.12); color: #93c5fd; border: 1px solid rgba(37,99,235,0.2); }
-    .ci-info { flex: 1; min-width: 0; }
     .ci-name { font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ci-unit { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; }
+    .ci-info { flex: 1; min-width: 0; }
     .ci-controls { display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; }
     .qty-btn {
       width: 22px; height: 22px; border-radius: 5px;
@@ -272,6 +294,16 @@
       cursor: pointer; transition: all 0.12s;
     }
     .btn-del:hover { border-color: rgba(255,15,15,0.4); color: var(--red); }
+
+    /* PENDING TAG on cart items */
+    .ci-pending-tag {
+      font-family: 'Syne', sans-serif; font-size: 0.58rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: #fbbf24; background: rgba(245,158,11,0.15);
+      border: 1px solid rgba(245,158,11,0.3);
+      padding: 0.1rem 0.4rem; border-radius: 4px;
+      margin-left: 0.4rem; flex-shrink: 0;
+    }
 
     /* CART FOOTER */
     .cart-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border); flex-shrink: 0; }
@@ -377,6 +409,7 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: toastIn 0.25s ease; min-width: 180px;
     }
     .toast.error { border-left-color: var(--red); }
+    .toast.info  { border-left-color: var(--orange); }
     @keyframes toastIn {
       from { opacity: 0; transform: translateX(12px); }
       to   { opacity: 1; transform: translateX(0); }
@@ -515,12 +548,20 @@
       </div>
       <div class="customer-box">
         <label>Customer</label>
-        <select id="customer-select">
+        <select id="customer-select" onchange="onCustomerChange()">
           <option value="">Walk-in Customer</option>
           {% for c in customers %}
           <option value="{{ c.id }}">{{ c.fullname }} — {{ c.email }}</option>
           {% endfor %}
         </select>
+      </div>
+      <!-- Pending items banner -->
+      <div class="pending-banner" id="pending-banner">
+        <i class="fas fa-clock"></i>
+        <span class="pending-text" id="pending-text">Loading...</span>
+        <button class="btn-load-items" id="btn-load-items" onclick="loadPendingItems()">
+          <i class="fas fa-download"></i> Load All
+        </button>
       </div>
     </div>
 
@@ -555,6 +596,54 @@
   </div>
 </div>
 
+<!-- CONFIRM PAYMENT MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="receipt-box" style="width:420px;">
+    <div class="receipt-head" style="background:var(--green);">
+      <i class="fas fa-question-circle"></i>
+      <h3>Confirm Payment</h3>
+    </div>
+    <div class="receipt-body">
+      <div style="text-align:center;margin-bottom:1rem;">
+        <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.25rem;">Total Amount</div>
+        <div id="confirm-total" style="font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--red);letter-spacing:0.04em;">₱0.00</div>
+      </div>
+      
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+        <div class="r-row"><span>Customer</span><span id="confirm-customer">Walk-in</span></div>
+        <div class="r-row"><span>Items</span><span id="confirm-items">0</span></div>
+        <div class="r-row"><span>Payment Method</span><span id="confirm-payment">Cash</span></div>
+      </div>
+
+      <div id="confirm-bookings-box" style="display:none;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+        <div style="font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">
+          <i class="fas fa-wrench"></i> Services to Complete
+        </div>
+        <div id="confirm-bookings-list" style="font-size:0.82rem;color:#d1d5db;"></div>
+      </div>
+
+      <div id="confirm-orders-box" style="display:none;background:rgba(255,15,15,0.08);border:1px solid rgba(255,15,15,0.25);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+        <div style="font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">
+          <i class="fas fa-box"></i> Orders to Complete
+        </div>
+        <div id="confirm-orders-list" style="font-size:0.82rem;color:#d1d5db;"></div>
+      </div>
+
+      <div style="font-size:0.78rem;color:var(--muted);text-align:center;padding:0.5rem;background:rgba(255,255,255,0.02);border-radius:8px;">
+        <i class="fas fa-info-circle"></i> This will mark all bookings & orders as <strong style="color:#86efac;">Completed</strong>
+      </div>
+    </div>
+    <div class="receipt-foot">
+      <button class="btn-print" onclick="closeConfirmModal()">
+        <i class="fas fa-times"></i> Cancel
+      </button>
+      <button class="btn-new-txn" style="background:var(--green);" onclick="confirmCheckout()">
+        <i class="fas fa-check"></i> Confirm Payment
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- RECEIPT MODAL -->
 <div class="modal-overlay" id="receipt-modal">
   <div class="receipt-box">
@@ -576,6 +665,7 @@
 const cart = [];
 let activeCat = 'all';
 let paymentMethod = 'cash';
+let pendingData = null;
 
 function tick() {
   document.getElementById('clock').textContent =
@@ -627,6 +717,118 @@ function setPayment(method) {
   document.getElementById('pay-gcash').className = 'pay-btn' + (method === 'gcash' ? ' active-gcash' : '');
 }
 
+// ─── CUSTOMER CHANGE → FETCH PENDING ITEMS ─────────────────────────────────
+
+async function onCustomerChange() {
+  const customerId = document.getElementById('customer-select').value;
+  const banner = document.getElementById('pending-banner');
+  pendingData = null;
+
+  for (let i = cart.length - 1; i >= 0; i--) {
+    if (cart[i].pending) cart.splice(i, 1);
+  }
+  renderCart();
+
+  if (!customerId) {
+    banner.classList.remove('show');
+    return;
+  }
+
+  banner.classList.add('show');
+  document.getElementById('pending-text').textContent = 'Checking pending items...';
+  document.getElementById('btn-load-items').style.display = 'none';
+
+  try {
+    const res = await fetch(`/admin/pos/customer/${customerId}/items`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      banner.classList.remove('show');
+      toast(data.error || 'Failed to fetch customer items', true);
+      return;
+    }
+
+    const orderCount = data.orders.reduce((sum, o) => sum + o.items.length, 0);
+    const bookingCount = data.bookings.length;
+    const totalItems = orderCount + bookingCount;
+
+    if (totalItems === 0) {
+      document.getElementById('pending-text').textContent = 'No pending orders or bookings';
+      document.getElementById('btn-load-items').style.display = 'none';
+      setTimeout(() => banner.classList.remove('show'), 2500);
+      return;
+    }
+
+    pendingData = data;
+    const parts = [];
+    if (orderCount > 0) parts.push(`${orderCount} product${orderCount > 1 ? 's' : ''}`);
+    if (bookingCount > 0) parts.push(`${bookingCount} service${bookingCount > 1 ? 's' : ''}`);
+    document.getElementById('pending-text').textContent = `${parts.join(' & ')} pending`;
+    document.getElementById('btn-load-items').style.display = '';
+
+  } catch (e) {
+    banner.classList.remove('show');
+    toast('Failed to fetch customer items', true);
+  }
+}
+
+function loadPendingItems() {
+  if (!pendingData) return;
+
+  for (let i = cart.length - 1; i >= 0; i--) {
+    if (cart[i].pending) cart.splice(i, 1);
+  }
+
+  for (const order of pendingData.orders) {
+    for (const item of order.items) {
+      const existing = cart.find(c => c.type === 'product' && c.id === item.product_id);
+      if (existing) {
+        existing.qty += item.quantity;
+        if (existing.qty > existing.maxQty) existing.qty = existing.maxQty;
+      } else {
+        const card = document.querySelector(`.product-card[data-id="${item.product_id}"]`);
+        const maxStock = card ? +card.dataset.stock : 999;
+        cart.push({
+          type: 'product',
+          id: item.product_id,
+          name: item.product_name,
+          price: item.unit_price,
+          qty: item.quantity,
+          maxQty: maxStock,
+          pending: true,
+          source_order_id: order.order_id
+        });
+      }
+    }
+  }
+
+  for (const booking of pendingData.bookings) {
+    const existing = cart.find(c => c.type === 'service' && c.name === booking.service && c.pending);
+    if (existing) {
+      existing.qty++;
+    } else {
+      cart.push({
+        type: 'service',
+        id: null,
+        name: booking.service,
+        price: 0,
+        qty: 1,
+        maxQty: 99,
+        pending: true,
+        source_booking_id: booking.booking_id
+      });
+    }
+  }
+
+  renderCart();
+  const totalLoaded = pendingData.orders.reduce((s, o) => s + o.items.length, 0) + pendingData.bookings.length;
+  toast(`Loaded ${totalLoaded} pending item(s) into cart`, false, 'info');
+  document.getElementById('pending-banner').classList.remove('show');
+  pendingData = null;
+}
+
+// ─── CART FUNCTIONS ─────────────────────────────────────────────────────────
+
 function addProduct(el) {
   const id    = +el.dataset.id;
   const name  = el.dataset.name;
@@ -644,7 +846,7 @@ function addProduct(el) {
 }
 
 function addService(name, price, el) {
-  const existing = cart.find(c => c.type === 'service' && c.name === name);
+  const existing = cart.find(c => c.type === 'service' && c.name === name && !c.pending);
   if (existing) {
     existing.qty++;
   } else {
@@ -661,9 +863,9 @@ function addService(name, price, el) {
 function addCustomService() {
   const name  = document.getElementById('svc-name').value.trim();
   const price = parseFloat(document.getElementById('svc-price').value);
-  if (!name)                      { toast('Enter a service name', true); return; }
+  if (!name) { toast('Enter a service name', true); return; }
   if (isNaN(price) || price <= 0) { toast('Enter a valid price', true); return; }
-  const existing = cart.find(c => c.type === 'service' && c.name === name);
+  const existing = cart.find(c => c.type === 'service' && c.name === name && !c.pending);
   if (existing) {
     existing.qty++;
   } else {
@@ -712,13 +914,20 @@ function renderCart() {
   cart.forEach((item, i) => {
     const div = document.createElement('div');
     div.className = 'cart-item';
+    const pendingTag = item.pending
+      ? `<span class="ci-pending-tag">${item.type === 'product' ? 'ORDER' : 'BOOKING'}</span>`
+      : '';
+    const priceLabel = item.price > 0 ? `₱${item.price.toFixed(2)} each` : 'Booked service';
     div.innerHTML = `
       <div class="ci-icon ${item.type}">
         <i class="fas ${item.type === 'product' ? 'fa-box' : 'fa-wrench'}"></i>
       </div>
       <div class="ci-info">
-        <div class="ci-name">${item.name}</div>
-        <div class="ci-unit">₱${item.price.toFixed(2)} each</div>
+        <div style="display:flex;align-items:center;">
+          <div class="ci-name">${item.name}</div>
+          ${pendingTag}
+        </div>
+        <div class="ci-unit">${priceLabel}</div>
       </div>
       <div class="ci-controls">
         <button class="qty-btn" onclick="changeQty(${i}, -1)"><i class="fas fa-minus"></i></button>
@@ -738,17 +947,68 @@ function updateTotals() {
   document.getElementById('grand-total').textContent = `₱${t.toFixed(2)}`;
 }
 
-async function checkout() {
+// ─── CHECKOUT WITH CONFIRMATION ─────────────────────────────────────────────
+
+function checkout() {
   if (cart.length === 0) { toast('Cart is empty', true); return; }
+  
+  const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const sel = document.getElementById('customer-select');
+  const custName = sel.value ? sel.options[sel.selectedIndex].text.split('—')[0].trim() : 'Walk-in Customer';
+  const itemCount = cart.reduce((s, c) => s + c.qty, 0);
+  
+  document.getElementById('confirm-total').textContent = '₱' + total.toFixed(2);
+  document.getElementById('confirm-customer').textContent = custName;
+  document.getElementById('confirm-items').textContent = itemCount + ' item' + (itemCount > 1 ? 's' : '');
+  document.getElementById('confirm-payment').textContent = paymentMethod === 'gcash' ? 'GCash' : 'Cash';
+  
+  const pendingBookings = cart.filter(c => c.type === 'service' && c.pending);
+  const bookingsBox = document.getElementById('confirm-bookings-box');
+  const bookingsList = document.getElementById('confirm-bookings-list');
+  if (pendingBookings.length > 0) {
+    bookingsBox.style.display = 'block';
+    bookingsList.innerHTML = pendingBookings.map(b => `• ${b.name}`).join('<br>');
+  } else {
+    bookingsBox.style.display = 'none';
+  }
+  
+  const pendingOrders = cart.filter(c => c.type === 'product' && c.pending);
+  const ordersBox = document.getElementById('confirm-orders-box');
+  const ordersList = document.getElementById('confirm-orders-list');
+  if (pendingOrders.length > 0) {
+    ordersBox.style.display = 'block';
+    ordersList.innerHTML = pendingOrders.map(o => `• ${o.name} x${o.qty}`).join('<br>');
+  } else {
+    ordersBox.style.display = 'none';
+  }
+  
+  document.getElementById('confirm-modal').classList.add('open');
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirm-modal').classList.remove('open');
+}
+
+async function confirmCheckout() {
+  closeConfirmModal();
+  
   const btn = document.getElementById('checkout-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
-  const products    = cart.filter(c => c.type === 'product').map(c => ({ product_id: c.id, quantity: c.qty, unit_price: c.price }));
-  const services    = cart.filter(c => c.type === 'service').map(c => ({ name: c.name, price: c.price }));
-  const total       = cart.reduce((s, c) => s + c.price * c.qty, 0);
+
+  const products = cart.filter(c => c.type === 'product').map(c => ({
+    product_id: c.id, quantity: c.qty, unit_price: c.price,
+    source_order_id: c.source_order_id || null
+  }));
+  const services = cart.filter(c => c.type === 'service').map(c => ({
+    name: c.name, price: c.price,
+    source_booking_id: c.source_booking_id || null
+  }));
+  const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
   const customer_id = document.getElementById('customer-select').value || null;
+
   try {
-    const res  = await fetch('/admin/pos/checkout', {
+    const res = await fetch('/admin/pos/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cart: products, services, customer_id, total, payment_method: paymentMethod })
@@ -769,9 +1029,9 @@ async function checkout() {
 }
 
 function showReceipt(data, total) {
-  const sel      = document.getElementById('customer-select');
+  const sel = document.getElementById('customer-select');
   const custName = sel.value ? sel.options[sel.selectedIndex].text.split('—')[0].trim() : 'Walk-in Customer';
-  const now      = new Date();
+  const now = new Date();
   let html = `
     <div class="r-row"><span>Date</span><span>${now.toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' })}</span></div>
     <div class="r-row"><span>Time</span><span>${now.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit', hour12:true })}</span></div>
@@ -781,7 +1041,11 @@ function showReceipt(data, total) {
     <hr class="r-divider">
     <div class="r-section-label">Items</div>`;
   cart.forEach(item => {
-    html += `<div class="r-item"><span>${item.name} x${item.qty}</span><span>&#8369;${(item.price * item.qty).toFixed(2)}</span></div>`;
+    if (item.price > 0) {
+      html += `<div class="r-item"><span>${item.name} x${item.qty}</span><span>₱${(item.price * item.qty).toFixed(2)}</span></div>`;
+    } else {
+      html += `<div class="r-item"><span>${item.name} x${item.qty}</span><span>Booked</span></div>`;
+    }
   });
   html += `
     <hr class="r-divider">
@@ -794,6 +1058,8 @@ function newTransaction() {
   document.getElementById('receipt-modal').classList.remove('open');
   clearCart();
   document.getElementById('customer-select').value = '';
+  document.getElementById('pending-banner').classList.remove('show');
+  pendingData = null;
   setPayment('cash');
   const btn = document.getElementById('checkout-btn');
   btn.disabled = false;
@@ -804,11 +1070,19 @@ document.getElementById('receipt-modal').addEventListener('click', function(e) {
   if (e.target === this) newTransaction();
 });
 
-function toast(msg, isError = false) {
+document.getElementById('confirm-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirmModal();
+});
+
+function toast(msg, isError = false, type = null) {
   const wrap = document.getElementById('toasts');
-  const t    = document.createElement('div');
-  t.className = 'toast' + (isError ? ' error' : '');
-  t.textContent = (isError ? '✗ ' : '✓ ') + msg;
+  const t = document.createElement('div');
+  let cls = 'toast';
+  if (isError) cls += ' error';
+  else if (type === 'info') cls += ' info';
+  t.className = cls;
+  const prefix = isError ? '✗ ' : (type === 'info' ? 'ℹ ' : '✓ ');
+  t.textContent = prefix + msg;
   wrap.appendChild(t);
   setTimeout(() => t.remove(), 2800);
 }
