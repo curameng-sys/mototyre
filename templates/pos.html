@@ -31,13 +31,11 @@
       background: var(--ink); color: var(--text);
     }
 
-    /* ── TOPBAR ── */
+    /* TOPBAR */
     .topbar {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 1.75rem;
-      height: 56px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
+      padding: 0 1.75rem; height: 56px;
+      background: var(--panel); border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
     .topbar-brand {
@@ -47,57 +45,42 @@
     }
     .topbar-brand span { color: var(--red); }
     .pos-badge {
-      background: rgba(255,15,15,0.2);
-      color: var(--red);
-      font-family: 'Syne', sans-serif;
-      font-size: 0.6rem; font-weight: 700;
+      background: rgba(255,15,15,0.2); color: var(--red);
+      font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700;
       letter-spacing: 0.1em; text-transform: uppercase;
       padding: 0.15rem 0.5rem; border-radius: 4px;
       border: 1px solid rgba(255,15,15,0.3);
     }
     .topbar-right { display: flex; align-items: center; gap: 1rem; }
-    .topbar-clock {
-      font-family: 'Syne', sans-serif; font-size: 0.8rem;
-      color: var(--muted); letter-spacing: 0.05em;
-    }
+    .topbar-clock { font-family: 'Syne', sans-serif; font-size: 0.8rem; color: var(--muted); letter-spacing: 0.05em; }
     .btn-back {
       display: flex; align-items: center; gap: 0.5rem;
       padding: 0.4rem 0.9rem; border-radius: 8px;
       background: rgba(255,255,255,0.05); border: 1px solid var(--border);
       color: var(--muted); font-family: 'Syne', sans-serif;
       font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em;
-      text-decoration: none; text-transform: uppercase;
-      transition: all 0.15s;
+      text-decoration: none; text-transform: uppercase; transition: all 0.15s;
     }
     .btn-back:hover { border-color: var(--red); color: #fff; background: rgba(255,15,15,0.08); }
 
-    /* ── LAYOUT ── */
+    /* LAYOUT */
     .pos-wrap {
-      display: grid;
-      grid-template-columns: 1fr 360px;
-      height: calc(100vh - 56px);
-      overflow: hidden;
+      display: grid; grid-template-columns: 1fr 360px;
+      height: calc(100vh - 56px); overflow: hidden;
     }
 
-    /* ── LEFT: CATALOG ── */
+    /* LEFT: CATALOG */
     .catalog {
       display: flex; flex-direction: column;
-      overflow: hidden;
-      border-right: 1px solid var(--border);
+      overflow: hidden; border-right: 1px solid var(--border);
       background: var(--ink);
     }
-
     .catalog-header {
       padding: 1rem 1.5rem 0.75rem;
       border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      flex-shrink: 0;
+      background: var(--panel); flex-shrink: 0;
     }
-
-    /* Tab bar matching admin sidebar style */
-    .tab-bar {
-      display: flex; gap: 0.4rem; margin-bottom: 0.75rem;
-    }
+    .tab-bar { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; }
     .tab-btn {
       display: flex; align-items: center; gap: 0.4rem;
       padding: 0.45rem 1rem; border-radius: 8px;
@@ -106,10 +89,7 @@
       font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em;
       text-transform: uppercase; cursor: pointer; transition: all 0.15s;
     }
-    .tab-btn.active {
-      background: var(--red); border-color: var(--red);
-      color: #fff;
-    }
+    .tab-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
     .tab-btn:not(.active):hover { border-color: rgba(255,255,255,0.2); color: #fff; }
 
     .search-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
@@ -125,10 +105,7 @@
     .search-box input::placeholder { color: #374151; }
     .search-box input:focus { border-color: var(--red); background: rgba(255,15,15,0.05); }
 
-    .cat-row {
-      display: flex; gap: 0.4rem; overflow-x: auto;
-      scrollbar-width: none;
-    }
+    .cat-row { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; }
     .cat-row::-webkit-scrollbar { display: none; }
     .cat-chip {
       flex-shrink: 0; padding: 0.3rem 0.75rem; border-radius: 99px;
@@ -140,56 +117,32 @@
     .cat-chip.active { background: rgba(255,15,15,0.15); border-color: rgba(255,15,15,0.4); color: var(--red); }
     .cat-chip:not(.active):hover { border-color: rgba(255,255,255,0.2); color: #fff; }
 
-    /* ── PRODUCT GRID ── */
+    /* PRODUCT LIST */
     .product-grid {
       flex: 1; overflow-y: auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-      gap: 0.75rem;
-      padding: 1rem 1.5rem;
-      align-content: start;
+      display: flex; flex-direction: column; gap: 0;
+      padding: 0.5rem 1.5rem;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
     }
     .product-grid::-webkit-scrollbar { width: 5px; }
     .product-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 
     .product-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px; padding: 1rem;
-      cursor: pointer; transition: all 0.15s;
-      position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background 0.15s; gap: 0.75rem;
     }
-    .product-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: var(--red); transform: scaleX(0); transform-origin: left;
-      transition: transform 0.2s;
-    }
-    .product-card:hover { border-color: rgba(255,15,15,0.35); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
-    .product-card:hover::before { transform: scaleX(1); }
+    .product-card:hover { background: rgba(255,15,15,0.06); }
+    .product-card::before { display: none; }
     .product-card.out-of-stock { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
-    .product-cat {
-      font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--red); background: rgba(255,15,15,0.1);
-      display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
-      border: 1px solid rgba(255,15,15,0.2); margin-bottom: 0.6rem;
-    }
-    .product-name { font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem; line-height: 1.3; }
-    .product-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 0.03em; color: #fff; }
-    .product-stock { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
-    .product-stock.low { color: #fbbf24; }
-    .product-stock.out { color: #fca5a5; }
-
-    /* ── SERVICES ── */
+    /* SERVICES */
     .services-panel {
       flex: 1; overflow-y: auto; padding: 1rem 1.5rem;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
     }
     .services-panel::-webkit-scrollbar { width: 5px; }
     .services-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-
     .custom-svc-box {
       background: var(--card); border: 1px solid var(--border);
       border-radius: 10px; padding: 1rem; margin-bottom: 1rem;
@@ -211,13 +164,12 @@
     .svc-inp::placeholder { color: #374151; }
     .btn-add-svc {
       padding: 0.5rem 0.9rem; border-radius: 8px;
-      background: var(--red); border: none;
-      color: #fff; font-family: 'Syne', sans-serif;
-      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      background: var(--red); border: none; color: #fff;
+      font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
       cursor: pointer; transition: all 0.2s; white-space: nowrap;
     }
     .btn-add-svc:hover { background: #c73418; transform: translateY(-1px); }
-
     .service-list { display: flex; flex-direction: column; gap: 0.5rem; }
     .service-item {
       display: flex; align-items: center; justify-content: space-between;
@@ -230,45 +182,31 @@
     .svc-name { font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700; color: #fff; }
     .svc-desc { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
     .svc-right { display: flex; align-items: center; gap: 0.6rem; }
-    .svc-price {
-      font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem;
-      letter-spacing: 0.03em; color: #93c5fd;
-    }
+    .svc-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.03em; color: #93c5fd; }
     .svc-add-icon {
       width: 26px; height: 26px; border-radius: 6px;
       background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.3);
       color: #93c5fd; font-size: 0.7rem;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center; transition: all 0.15s;
     }
     .service-item:hover .svc-add-icon { background: var(--blue); border-color: var(--blue); color: #fff; }
 
-    /* ── RIGHT: CART ── */
+    /* RIGHT: CART */
     .cart-panel {
       display: flex; flex-direction: column;
-      background: var(--panel);
-      border-left: 1px solid var(--border);
-      overflow: hidden;
+      background: var(--panel); border-left: 1px solid var(--border); overflow: hidden;
     }
-
-    .cart-header {
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
+    .cart-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .cart-title {
       display: flex; align-items: center; gap: 0.5rem;
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.2rem; letter-spacing: 0.04em; color: #fff;
-      margin-bottom: 0.75rem;
+      font-size: 1.2rem; letter-spacing: 0.04em; color: #fff; margin-bottom: 0.75rem;
     }
     .cart-count {
       background: var(--red); color: #fff;
-      font-family: 'Syne', sans-serif;
-      font-size: 0.65rem; font-weight: 700;
+      font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700;
       padding: 0.15rem 0.5rem; border-radius: 4px;
     }
-
     .customer-box label {
       font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700;
       letter-spacing: 0.08em; text-transform: uppercase;
@@ -284,25 +222,22 @@
     .customer-box select:focus { border-color: var(--red); }
     .customer-box select option { background: #1a1d23; }
 
-    /* ── CART ITEMS ── */
+    /* CART ITEMS */
     .cart-items {
       flex: 1; overflow-y: auto; padding: 0.75rem 1.25rem;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
     }
     .cart-items::-webkit-scrollbar { width: 5px; }
     .cart-items::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-
     .cart-empty {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 2.5rem 1rem; color: var(--muted); text-align: center; gap: 0.5rem;
     }
     .cart-empty i { font-size: 2rem; opacity: 0.3; }
     .cart-empty p { font-size: 0.82rem; }
-
     .cart-item {
       display: flex; align-items: center; gap: 0.6rem;
-      padding: 0.7rem 0;
-      border-bottom: 1px solid var(--border);
+      padding: 0.7rem 0; border-bottom: 1px solid var(--border);
       animation: slideIn 0.18s ease;
     }
     @keyframes slideIn {
@@ -338,13 +273,8 @@
     }
     .btn-del:hover { border-color: rgba(255,15,15,0.4); color: var(--red); }
 
-    /* ── CART FOOTER ── */
-    .cart-footer {
-      padding: 1rem 1.25rem;
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
+    /* CART FOOTER */
+    .cart-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border); flex-shrink: 0; }
     .totals { margin-bottom: 1rem; }
     .total-row {
       display: flex; justify-content: space-between;
@@ -357,40 +287,18 @@
       font-size: 1.4rem; letter-spacing: 0.04em; color: #fff;
     }
     .total-row.grand span:last-child { color: var(--red); }
-
-    /* Payment method toggle */
-    .payment-toggle {
-      display: flex; gap: 0.4rem; margin-bottom: 0.75rem;
-    }
+    .payment-toggle { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; }
     .pay-btn {
       flex: 1; padding: 0.45rem 0.5rem; border-radius: 8px;
       background: rgba(255,255,255,0.04); border: 1px solid var(--border);
       color: var(--muted); font-family: 'Syne', sans-serif;
       font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-      cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+      cursor: pointer; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 0.3rem;
     }
     .pay-btn.active-cash { background: rgba(22,163,74,0.15); border-color: rgba(22,163,74,0.4); color: #86efac; }
     .pay-btn.active-gcash { background: rgba(0,125,255,0.15); border-color: rgba(0,125,255,0.4); color: #93c5fd; }
     .pay-btn:not(.active-cash):not(.active-gcash):hover { border-color: rgba(255,255,255,0.2); color: #fff; }
-
-    .payment-ref-box {
-      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
-      border-radius: 8px; padding: 0.6rem 0.75rem;
-      margin-bottom: 0.75rem; display: none;
-    }
-    .payment-ref-box.show { display: block; }
-    .payment-ref-box label {
-      font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--muted); display: block; margin-bottom: 0.3rem;
-    }
-    .payment-ref-box input {
-      width: 100%; background: transparent; border: none;
-      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.88rem;
-      outline: none;
-    }
-    .payment-ref-box input::placeholder { color: #374151; }
-
     .btn-checkout {
       width: 100%; padding: 0.85rem;
       background: var(--red); border: none; border-radius: 10px;
@@ -402,7 +310,6 @@
     .btn-checkout:hover { background: #c73418; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,15,15,0.3); }
     .btn-checkout:active { transform: translateY(0); box-shadow: none; }
     .btn-checkout:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
-
     .btn-clear {
       width: 100%; padding: 0.55rem;
       background: transparent; border: 1px solid var(--border);
@@ -413,7 +320,7 @@
     }
     .btn-clear:hover { border-color: rgba(255,15,15,0.4); color: var(--red); }
 
-    /* ── RECEIPT MODAL ── */
+    /* RECEIPT MODAL */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
@@ -423,67 +330,51 @@
     .receipt-box {
       background: var(--card); border: 1px solid var(--border);
       border-radius: 16px; width: 380px; max-width: 95vw;
-      animation: fadeUp 0.2s ease both;
-      overflow: hidden;
+      animation: fadeUp 0.2s ease both; overflow: hidden;
     }
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .receipt-head {
-      background: var(--red); padding: 1.5rem;
-      text-align: center;
-    }
+    .receipt-head { background: var(--red); padding: 1.5rem; text-align: center; }
     .receipt-head i { font-size: 2rem; color: #fff; display: block; margin-bottom: 0.4rem; }
-    .receipt-head h3 {
-      font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem;
-      letter-spacing: 0.06em; color: #fff; margin: 0;
-    }
+    .receipt-head h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.06em; color: #fff; margin: 0; }
     .receipt-body { padding: 1.5rem; }
     .r-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: #d1d5db; margin-bottom: 0.4rem; }
     .r-row.bold { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: #fff; }
     .r-divider { border: none; border-top: 1px dashed var(--border); margin: 0.75rem 0; }
     .r-section-label {
       font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--muted); margin-bottom: 0.5rem;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem;
     }
     .r-item { font-size: 0.78rem; color: #9ca3af; margin-bottom: 0.3rem; display: flex; justify-content: space-between; }
-    .receipt-foot {
-      padding: 0 1.5rem 1.5rem;
-      display: flex; gap: 0.5rem;
-    }
+    .receipt-foot { padding: 0 1.5rem 1.5rem; display: flex; gap: 0.5rem; }
     .btn-print {
       flex: 1; padding: 0.65rem;
       background: rgba(255,255,255,0.05); border: 1px solid var(--border);
       border-radius: 8px; color: var(--text);
       font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
-      letter-spacing: 0.04em; text-transform: uppercase;
-      cursor: pointer; transition: all 0.15s;
+      letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
     }
     .btn-print:hover { border-color: rgba(255,255,255,0.2); }
     .btn-new-txn {
       flex: 1; padding: 0.65rem;
-      background: var(--red); border: none; border-radius: 8px;
-      color: #fff; font-family: 'Syne', sans-serif;
-      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-      cursor: pointer; transition: all 0.15s;
+      background: var(--red); border: none; border-radius: 8px; color: #fff;
+      font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
     }
     .btn-new-txn:hover { background: #c73418; }
 
-    /* ── TOAST ── */
+    /* TOAST */
     .toast-wrap {
       position: fixed; top: 70px; right: 1.25rem; z-index: 2000;
       display: flex; flex-direction: column; gap: 0.4rem;
     }
     .toast {
-      background: var(--card); border-left: 3px solid var(--green);
-      border: 1px solid var(--border); border-left: 3px solid var(--green);
-      border-radius: 8px; padding: 0.7rem 1rem;
-      font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-      animation: toastIn 0.25s ease;
-      min-width: 180px;
+      background: var(--card); border: 1px solid var(--border);
+      border-left: 3px solid var(--green); border-radius: 8px;
+      padding: 0.7rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: toastIn 0.25s ease; min-width: 180px;
     }
     .toast.error { border-left-color: var(--red); }
     @keyframes toastIn {
@@ -529,7 +420,6 @@
           <i class="fas fa-wrench"></i> Services
         </button>
       </div>
-
       <div id="product-controls">
         <div class="search-row">
           <div class="search-box">
@@ -539,9 +429,10 @@
         </div>
         <div class="cat-row" id="cat-row">
           <div class="cat-chip active" data-cat="all" onclick="selectCat(this)">All</div>
-          {% for cat in categories %}
-          <div class="cat-chip" data-cat="{{ cat }}" onclick="selectCat(this)">{{ cat }}</div>
-          {% endfor %}
+          <div class="cat-chip" data-cat="tires" onclick="selectCat(this)">Tires</div>
+          <div class="cat-chip" data-cat="engine_oil" onclick="selectCat(this)">Engine Oil</div>
+          <div class="cat-chip" data-cat="air_filter" onclick="selectCat(this)">Air Filter</div>
+          <div class="cat-chip" data-cat="brake_shoe" onclick="selectCat(this)">Brake Shoe</div>
         </div>
       </div>
     </div>
@@ -556,17 +447,20 @@
            data-stock="{{ p.stock }}"
            data-cat="{{ p.category }}"
            onclick="addProduct(this)">
-        <div class="product-cat">{{ p.category }}</div>
-        <div class="product-name">{{ p.name }}</div>
-        <div class="product-price">₱{{ '%.2f'|format(p.price) }}</div>
-        <div class="product-stock {% if p.stock == 0 %}out{% elif p.stock <= 5 %}low{% endif %}">
-          {% if p.stock == 0 %}Out of stock{% elif p.stock <= 5 %}Only {{ p.stock }} left{% else %}{{ p.stock }} in stock{% endif %}
+        <div style="flex:1; min-width:0;">
+          <div style="font-family:'Syne',sans-serif; font-size:0.82rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
+          <div style="font-size:0.7rem; color:var(--muted); margin-top:0.15rem;">{{ p.category }}</div>
+        </div>
+        <div style="text-align:right; flex-shrink:0;">
+          <div style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:#fff;">&#8369;{{ '%.2f'|format(p.price) }}</div>
+          <div style="font-size:0.68rem; {% if p.stock == 0 %}color:#fca5a5;{% elif p.stock <= 5 %}color:#fbbf24;{% else %}color:var(--muted);{% endif %}">
+            {% if p.stock == 0 %}Out of stock{% elif p.stock <= 5 %}{{ p.stock }} left{% else %}{{ p.stock }} in stock{% endif %}
+          </div>
         </div>
       </div>
       {% endfor %}
       {% if not products %}
-      <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--muted);">
-        <i class="fas fa-box-open" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+      <div style="text-align:center;padding:3rem;color:var(--muted);">
         <p style="font-size:.85rem;">No products in inventory.</p>
       </div>
       {% endif %}
@@ -582,12 +476,11 @@
           <button class="btn-add-svc" onclick="addCustomService()">+ Add</button>
         </div>
       </div>
-
       <div class="service-list">
         {% set preset_services = [
           ('Oil Change', 'Engine oil replacement', 350),
-          ('Tire Change – Front', 'Replace front tire', 150),
-          ('Tire Change – Rear', 'Replace rear tire', 150),
+          ('Tire Change - Front', 'Replace front tire', 150),
+          ('Tire Change - Rear', 'Replace rear tire', 150),
           ('Full Tune-up', 'Spark plug, filters & adjustment', 800),
           ('Chain Lubrication', 'Clean and lubricate drive chain', 120),
           ('Brake Check & Adjustment', 'Inspect and adjust brake system', 200),
@@ -603,7 +496,7 @@
             <div class="svc-desc">{{ desc }}</div>
           </div>
           <div class="svc-right">
-            <span class="svc-price">₱{{ price }}</span>
+            <span class="svc-price">&#8369;{{ price }}</span>
             <div class="svc-add-icon"><i class="fas fa-plus"></i></div>
           </div>
         </div>
@@ -640,12 +533,10 @@
 
     <div class="cart-footer">
       <div class="totals">
-        <div class="total-row"><span>Subtotal</span><span id="subtotal">₱0.00</span></div>
+        <div class="total-row"><span>Subtotal</span><span id="subtotal">&#8369;0.00</span></div>
         <div class="total-row"><span>Discount</span><span>—</span></div>
-        <div class="total-row grand"><span>Total</span><span id="grand-total">₱0.00</span></div>
+        <div class="total-row grand"><span>Total</span><span id="grand-total">&#8369;0.00</span></div>
       </div>
-
-      <!-- Payment Method Toggle -->
       <div class="payment-toggle">
         <button class="pay-btn active-cash" id="pay-cash" onclick="setPayment('cash')">
           <i class="fas fa-money-bill-wave"></i> Cash
@@ -654,7 +545,6 @@
           <i class="fas fa-mobile-alt"></i> GCash
         </button>
       </div>
-
       <button class="btn-checkout" id="checkout-btn" onclick="checkout()">
         <i class="fas fa-bolt"></i> Process Payment
       </button>
@@ -683,52 +573,60 @@
 <div class="toast-wrap" id="toasts"></div>
 
 <script>
-// ── STATE ──────────────────────────────────────────────────────────────────
 const cart = [];
 let activeCat = 'all';
 let paymentMethod = 'cash';
 
-// ── CLOCK ──────────────────────────────────────────────────────────────────
 function tick() {
   document.getElementById('clock').textContent =
     new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 tick(); setInterval(tick, 1000);
 
-// ── TABS ───────────────────────────────────────────────────────────────────
 function switchTab(tab, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const isProducts = tab === 'products';
-  document.getElementById('products-panel').style.display   = isProducts ? 'grid' : 'none';
-  document.getElementById('services-panel').style.display   = isProducts ? 'none'  : 'block';
+  document.getElementById('products-panel').style.display   = isProducts ? 'flex' : 'none';
+  document.getElementById('services-panel').style.display   = isProducts ? 'none' : 'block';
   document.getElementById('product-controls').style.display = isProducts ? 'block' : 'none';
 }
 
-// ── FILTER ─────────────────────────────────────────────────────────────────
 function selectCat(el) {
   activeCat = el.dataset.cat;
   document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   filterProducts();
 }
+
+const CAT_MAP = {
+  tires:      ['TIRE', 'TIRES'],
+  engine_oil: ['ENGINE OIL', '1L', 'ENGINE OIL 1L', 'ENGINE OIL AT 800CC', 'ENGINE OIL SCOOTER', 'ENGINE OIL SCOOTER 1L', 'ENGINE OIL SCOOTER 800ML', 'ENGINE OIL FULLY SYNTHETIC 800ML', 'ENGINE OIL GREEN 10W-40', 'ENGINE OIL BLUE 10W-40 STREET', 'ENGINE OIL  1L'],
+  air_filter: ['AIR FILTER'],
+  brake_shoe: ['BRAKE SHOE'],
+};
+
 function filterProducts() {
   const q = document.getElementById('product-search').value.toLowerCase();
   document.querySelectorAll('.product-card').forEach(card => {
-    const matchCat  = activeCat === 'all' || card.dataset.cat === activeCat;
+    let matchCat = false;
+    if (activeCat === 'all') {
+      matchCat = true;
+    } else {
+      const allowed = CAT_MAP[activeCat] || [];
+      matchCat = allowed.includes(card.dataset.cat.toUpperCase());
+    }
     const matchText = card.dataset.name.toLowerCase().includes(q);
     card.style.display = (matchCat && matchText) ? '' : 'none';
   });
 }
 
-// ── PAYMENT METHOD ─────────────────────────────────────────────────────────
 function setPayment(method) {
   paymentMethod = method;
   document.getElementById('pay-cash').className  = 'pay-btn' + (method === 'cash'  ? ' active-cash'  : '');
   document.getElementById('pay-gcash').className = 'pay-btn' + (method === 'gcash' ? ' active-gcash' : '');
 }
 
-// ── CART ───────────────────────────────────────────────────────────────────
 function addProduct(el) {
   const id    = +el.dataset.id;
   const name  = el.dataset.name;
@@ -746,14 +644,12 @@ function addProduct(el) {
 }
 
 function addService(name, price, el) {
-  // Always look up by name — never rely on a stale reference
   const existing = cart.find(c => c.type === 'service' && c.name === name);
   if (existing) {
     existing.qty++;
   } else {
     cart.push({ type: 'service', id: null, name, price, qty: 1, maxQty: 99 });
   }
-  // Flash the row element safely
   if (el) {
     el.classList.add('flash');
     setTimeout(() => el.classList.remove('flash'), 500);
@@ -765,9 +661,8 @@ function addService(name, price, el) {
 function addCustomService() {
   const name  = document.getElementById('svc-name').value.trim();
   const price = parseFloat(document.getElementById('svc-price').value);
-  if (!name)                    { toast('Enter a service name', true); return; }
+  if (!name)                      { toast('Enter a service name', true); return; }
   if (isNaN(price) || price <= 0) { toast('Enter a valid price', true); return; }
-  // Custom services are always additive (no qty merge) unless same name exists
   const existing = cart.find(c => c.type === 'service' && c.name === name);
   if (existing) {
     existing.qty++;
@@ -801,16 +696,12 @@ function clearCart() {
   renderCart();
 }
 
-// ── RENDER ─────────────────────────────────────────────────────────────────
 function renderCart() {
   const wrap = document.getElementById('cart-items');
-
-  // Always rebuild from scratch — no stale DOM references
   wrap.innerHTML = '';
-
   if (cart.length === 0) {
     wrap.innerHTML = `
-      <div class="cart-empty" id="cart-empty">
+      <div class="cart-empty">
         <i class="fas fa-shopping-basket"></i>
         <p>Cart is empty.<br>Add products or services.</p>
       </div>`;
@@ -818,7 +709,6 @@ function renderCart() {
     updateTotals();
     return;
   }
-
   cart.forEach((item, i) => {
     const div = document.createElement('div');
     div.className = 'cart-item';
@@ -838,7 +728,6 @@ function renderCart() {
       </div>`;
     wrap.appendChild(div);
   });
-
   document.getElementById('cart-count').textContent = cart.reduce((s, c) => s + c.qty, 0);
   updateTotals();
 }
@@ -849,19 +738,15 @@ function updateTotals() {
   document.getElementById('grand-total').textContent = `₱${t.toFixed(2)}`;
 }
 
-// ── CHECKOUT ───────────────────────────────────────────────────────────────
 async function checkout() {
   if (cart.length === 0) { toast('Cart is empty', true); return; }
-
   const btn = document.getElementById('checkout-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
-
   const products    = cart.filter(c => c.type === 'product').map(c => ({ product_id: c.id, quantity: c.qty, unit_price: c.price }));
   const services    = cart.filter(c => c.type === 'service').map(c => ({ name: c.name, price: c.price }));
   const total       = cart.reduce((s, c) => s + c.price * c.qty, 0);
   const customer_id = document.getElementById('customer-select').value || null;
-
   try {
     const res  = await fetch('/admin/pos/checkout', {
       method: 'POST',
@@ -883,12 +768,10 @@ async function checkout() {
   }
 }
 
-// ── RECEIPT ────────────────────────────────────────────────────────────────
 function showReceipt(data, total) {
   const sel      = document.getElementById('customer-select');
   const custName = sel.value ? sel.options[sel.selectedIndex].text.split('—')[0].trim() : 'Walk-in Customer';
   const now      = new Date();
-
   let html = `
     <div class="r-row"><span>Date</span><span>${now.toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' })}</span></div>
     <div class="r-row"><span>Time</span><span>${now.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit', hour12:true })}</span></div>
@@ -897,15 +780,12 @@ function showReceipt(data, total) {
     <div class="r-row"><span>Payment</span><span>${paymentMethod === 'gcash' ? 'GCash' : 'Cash'}</span></div>
     <hr class="r-divider">
     <div class="r-section-label">Items</div>`;
-
   cart.forEach(item => {
-    html += `<div class="r-item"><span>${item.name} ×${item.qty}</span><span>₱${(item.price * item.qty).toFixed(2)}</span></div>`;
+    html += `<div class="r-item"><span>${item.name} x${item.qty}</span><span>&#8369;${(item.price * item.qty).toFixed(2)}</span></div>`;
   });
-
   html += `
     <hr class="r-divider">
     <div class="r-row bold"><span>Total Paid</span><span>₱${total.toFixed(2)}</span></div>`;
-
   document.getElementById('receipt-body').innerHTML = html;
   document.getElementById('receipt-modal').classList.add('open');
 }
@@ -924,7 +804,6 @@ document.getElementById('receipt-modal').addEventListener('click', function(e) {
   if (e.target === this) newTransaction();
 });
 
-// ── TOAST ──────────────────────────────────────────────────────────────────
 function toast(msg, isError = false) {
   const wrap = document.getElementById('toasts');
   const t    = document.createElement('div');

@@ -422,9 +422,9 @@ def customer_dashboard():
     bookings   = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
     orders     = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
     products   = Product.query.filter(Product.stock > 0).all()
-    categories = [c[0] for c in db.session.query(Product.category).distinct().order_by(Product.category).all()]
+    categories = ['Tires', 'Engine Oil', 'Air Filter', 'Brake Shoe']
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders,
-                           products=products, categories=categories)
+                           products=products)
 
 
 @app.route('/customer/book', methods=['POST'])
@@ -814,9 +814,8 @@ def pos():
         flash('Access denied.', 'danger')
         return redirect(url_for('customer_dashboard'))
     products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
-    categories = [c[0] for c in db.session.query(Product.category).distinct().order_by(Product.category).all()]
     customers = User.query.filter_by(role='customer').order_by(User.fullname).all()
-    return render_template('pos.html', products=products, categories=categories, customers=customers)
+    return render_template('pos.html', products=products, customers=customers)
 
 
 @app.route('/admin/pos/checkout', methods=['POST'])
