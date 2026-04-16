@@ -181,6 +181,7 @@
     /* ── BADGES ── */
     .badge { font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; padding: 0.3em 0.65em; border-radius: 6px; text-transform: uppercase; }
     .badge-pending   { background: rgba(180,83,9,0.2);   color: #fbbf24; border: 1px solid rgba(180,83,9,0.3); }
+    .badge-awaitingpayment { background: rgba(249,115,22,0.2); color: #fdba74; border: 1px solid rgba(249,115,22,0.4); }
     .badge-confirmed { background: rgba(29,78,216,0.2);  color: #93c5fd; border: 1px solid rgba(29,78,216,0.3); }
     .badge-in_progress { background: rgba(234,179,8,0.2); color: #fde047; border: 1px solid rgba(234,179,8,0.4); }
     .badge-completed { background: rgba(21,128,61,0.2);  color: #86efac; border: 1px solid rgba(21,128,61,0.3); }
@@ -443,7 +444,7 @@
               <tr>
                 <td>ORD-{{ '%03d'|format(o.id) }}</td>
                 <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
-                <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
+                <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
               </tr>
               {% endfor %}
             </tbody>
@@ -670,7 +671,7 @@
             </td>
             <td><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
             <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
-            <td><span class="badge badge-{{ o.status }}">{{ o.status|replace('_', ' ')|title }}</span></td>
+            <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -1261,13 +1262,16 @@ function goToConfirm() {
   const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
   const total = cartPrice * qty;
 
-  selectPayment('cash');
-  selectedPayment = 'cash';
   
   document.getElementById('conf-product').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
   document.getElementById('conf-subtotal').textContent = '₱' + total.toFixed(2);
   document.getElementById('conf-total').textContent = '₱' + total.toFixed(2);
   document.getElementById('final-payment-method').value = selectedPayment;
+
+  const paymentLabels = { cash: '💵 Cash', gcash: '📱 GCash' };
+  document.getElementById('conf-payment-display').innerHTML = paymentLabels[selectedPayment] || '💵 Cash';
+  
+  
   
   // Delivery info
   const deliveryInfo = document.getElementById('conf-delivery-info');
@@ -1701,6 +1705,10 @@ function openBookingDetails(bookingId) {
   
   // Status badge
   const statusColors = {
+    pending:          { bg: 'rgba(180,83,9,0.2)',   color: '#fbbf24', border: 'rgba(180,83,9,0.3)' },
+    awaiting_payment: { bg: 'rgba(249,115,22,0.2)', color: '#fdba74', border: 'rgba(249,115,22,0.4)' },
+    awaitingpayment:  { bg: 'rgba(249,115,22,0.2)', color: '#fdba74', border: 'rgba(249,115,22,0.4)' },
+    confirmed:        { bg: 'rgba(29,78,216,0.2)',  color: '#93c5fd', border: 'rgba(29,78,216,0.3)' },
     pending:     { bg: 'rgba(180,83,9,0.2)',   color: '#fbbf24', border: 'rgba(180,83,9,0.3)' },
     confirmed:   { bg: 'rgba(29,78,216,0.2)',  color: '#93c5fd', border: 'rgba(29,78,216,0.3)' },
     in_progress: { bg: 'rgba(124,58,237,0.2)', color: '#c4b5fd', border: 'rgba(124,58,237,0.3)' },

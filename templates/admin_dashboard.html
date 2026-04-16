@@ -71,6 +71,7 @@
     .table tr:hover td { background: rgba(255,255,255,0.03) !important; }
 
     .badge { display: inline-block; padding: 0.2rem 0.65rem; border-radius: 99px; font-size: 0.67rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+    .badge-awaitingpayment { background: rgba(249,115,22,0.2); color: #fdba74; border: 1px solid rgba(249,115,22,0.4); }
     .badge-pending    { background: rgba(217,119,6,0.2);    color: #fbbf24; border: 1px solid rgba(217,119,6,0.4); }
     .badge-confirmed  { background: rgba(37,99,235,0.2);    color: #93c5fd; border: 1px solid rgba(37,99,235,0.4); }
     .badge-inprogress { background: rgba(234,179,8,0.2);    color: #fde047; border: 1px solid rgba(234,179,8,0.4); }
@@ -385,7 +386,7 @@
                   {% endif %}
                 </td>
                 <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
-                <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
+                <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
                 <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
                 <td>
                   {% if o.payment_method == 'gcash' %}

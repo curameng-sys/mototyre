@@ -46,12 +46,6 @@ PAYMONGO_API_URL = "https://api.paymongo.com/v1"
 BASE_URL = "https://ninja-portion-recycler.ngrok-free.dev"
 
 def create_gcash_payment(amount, description, order_id=None, booking_id=None):
-    metadata = {}
-    if order_id:
-        metadata["order_id"] = str(order_id)
-    if booking_id:
-        metadata["booking_id"] = str(booking_id)
-
     headers = {
         "Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}",
         "Content-Type": "application/json"
@@ -60,21 +54,23 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
     payload = {
         "data": {
             "attributes": {
-                "amount": int(amount * 100),
-                "currency": "PHP",
-                "description": description,
-                "payment_method_allowed": ["gcash"],
-                "metadata": metadata,
-                "redirect": {
-                    "success": f"{BASE_URL}/payment/success",
-                    "failed": f"{BASE_URL}/payment/failed"
-                }
+                "line_items": [
+                    {
+                        "name": description,
+                        "quantity": 1,
+                        "amount": int(amount * 100),
+                        "currency": "PHP"
+                    }
+                ],
+                "payment_method_types": ["card", "gcash"],
+                "success_url": f"{BASE_URL}/payment/success?order_id={order_id or ''}&booking_id={booking_id or ''}",
+                "cancel_url": f"{BASE_URL}/payment/failed?order_id={order_id or ''}&booking_id={booking_id or ''}"
             }
         }
     }
 
     response = requests.post(
-        f"{PAYMONGO_API_URL}/links",
+        f"{PAYMONGO_API_URL}/checkout_sessions",
         json=payload,
         headers=headers
     )
@@ -84,7 +80,7 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
         return {
             "success": True,
             "checkout_url": data["data"]["attributes"]["checkout_url"],
-            "reference": data["data"]["id"]
+            "checkout_id": data["data"]["id"]
         }
     else:
         print(f"PayMongo Error: {response.json()}")
@@ -267,6 +263,29 @@ def _verify_otp(email, otp_input, purpose):
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def cleanup_abandoned_gcash_orders():
+    """Cancel GCash orders that haven't been paid within 30 minutes."""
+    cutoff = datetime.utcnow() - timedelta(minutes=30)
+    abandoned = Order.query.filter(
+        Order.status == 'awaiting_payment',
+        Order.payment_method == 'gcash',
+        Order.created_at < cutoff
+    ).all()
+    
+    for order in abandoned:
+        # Restore stock
+        for item in order.items:
+            product = Product.query.get(item.product_id)
+            if product:
+                product.stock += item.quantity
+        
+        # Delete order items and order
+        OrderItem.query.filter_by(order_id=order.id).delete()
+        db.session.delete(order)
+    
+    db.session.commit()
+    return len(abandoned)
 
 
 # ─── AUTH ────────────────────────────────────────────────────────────────────
@@ -530,6 +549,13 @@ def place_order():
         ship_province = request.form.get('ship_province', '')
         ship_zip = request.form.get('ship_zip', '')
         ship_address = f"{ship_name}\n{ship_mobile}\n{ship_street}, {ship_city}, {ship_province} {ship_zip}"
+        
+    if payment_method.lower() == 'gcash':
+        order_status = 'awaiting_payment'
+    elif delivery_method == 'pickup':
+        order_status = 'awaiting_payment'
+    else:
+        order_status = 'pending'
     
     order = Order(
         user_id=current_user.id,
@@ -537,7 +563,7 @@ def place_order():
         payment_method=payment_method,
         delivery_method=delivery_method,
         ship_address=ship_address,
-        status='pending'
+        status=order_status
     )
     db.session.add(order)
     db.session.flush()
@@ -712,6 +738,9 @@ def admin_dashboard():
     if current_user.role not in ['admin', 'staff']:
         flash('Access denied.', 'danger')
         return redirect(url_for('customer_dashboard'))
+    
+    cleanup_abandoned_gcash_orders()
+    
     return render_template('admin_dashboard.html',
         total_bookings=Booking.query.count(),
         total_orders=Order.query.count(),
@@ -1108,7 +1137,7 @@ def pos_customer_items(cid: int):
 
     pending_orders = Order.query.filter(
     Order.user_id == cid,
-    Order.status.in_(['pending', 'processing']),
+    Order.status.in_(['pending', 'processing', 'awaiting_payment']),
     Order.payment_method != 'gcash',
     Order.delivery_method == 'pickup'
 ).order_by(Order.created_at.desc()).all()
@@ -1259,24 +1288,34 @@ def pay_booking(bid):
 @app.route('/payment/success')
 def payment_success():
     """Handle successful payment redirect."""
-    flash('Payment successful! Your order has been confirmed.', 'success')
-    return redirect(url_for('customer_dashboard'))
-
-
-@app.route('/payment/failed')
-def payment_failed():
-    """Handle failed/cancelled payment."""
-    flash('Payment was cancelled or failed. You can retry from your orders.', 'warning')
-    return redirect(url_for('customer_dashboard'))
-
-@app.route('/payment/simulate')
-@login_required
-def payment_simulate():
-    """Simulated GCash payment page for thesis demo."""
     order_id = request.args.get('order_id')
-    amount = request.args.get('amount', 0)
-    order = Order.query.get(int(order_id)) if order_id else None
-    return render_template('payment_simulate.html', order=order, amount=amount)
+    booking_id = request.args.get('booking_id')
+    
+    if order_id:
+        try:
+            order = Order.query.get(int(order_id))
+            if order and order.status == 'awaiting_payment':
+                order.status = 'confirmed'
+                db.session.commit()
+                send_notification(
+                    order.user_id,
+                    'Payment Received!',
+                    f'Your GCash payment for Order ORD-{order.id:03d} has been confirmed.',
+                    type='order', status='confirmed'
+                )
+        except:
+            pass
+    
+    if booking_id:
+        try:
+            booking = Booking.query.get(int(booking_id))
+            if booking and booking.status == 'pending':
+                booking.status = 'confirmed'
+                db.session.commit()
+        except:
+            pass
+    
+    return redirect('http://127.0.0.1:5000/customer/dashboard')
 
 
 @app.route('/webhook/paymongo', methods=['POST'])
@@ -1297,7 +1336,7 @@ def paymongo_webhook():
         order_id = metadata.get('order_id')
         if order_id:
             order = Order.query.get(int(order_id))
-            if order and order.status == 'pending':
+            if order and order.status in ['pending', 'awaiting_payment']:
                 order.status = 'confirmed'
                 order.payment_method = 'gcash'
                 db.session.commit()
@@ -1324,6 +1363,51 @@ def paymongo_webhook():
                 )
     
     return jsonify({'success': True})
+
+@app.route('/test-paymongo')
+@login_required
+def test_paymongo():
+    """Test PayMongo connection."""
+    result = create_gcash_payment(
+        amount=100,
+        description="Test Payment",
+        order_id=9999
+    )
+    return jsonify(result)
+
+@app.route('/payment/failed')
+def payment_failed():
+    """Handle cancelled/failed payment - remove the order."""
+    order_id = request.args.get('order_id')
+    booking_id = request.args.get('booking_id')
+    
+    if order_id:
+        try:
+            order = Order.query.get(int(order_id))
+            if order and order.status == 'awaiting_payment':
+                # Restore stock
+                for item in order.items:
+                    product = Product.query.get(item.product_id)
+                    if product:
+                        product.stock += item.quantity
+                
+                # Delete order items and order
+                OrderItem.query.filter_by(order_id=order.id).delete()
+                db.session.delete(order)
+                db.session.commit()
+        except:
+            pass
+    
+    if booking_id:
+        try:
+            booking = Booking.query.get(int(booking_id))
+            if booking and booking.status == 'pending':
+                db.session.delete(booking)
+                db.session.commit()
+        except:
+            pass
+    
+    return redirect('http://127.0.0.1:5000/customer/dashboard')
 
 
 # ─── TEMP: CREATE ADMIN ──────────────────────────────────────────────────────
