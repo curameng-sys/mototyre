@@ -43,49 +43,42 @@ OTP_EXPIRY_MINS  = 10
 
 PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
-BASE_URL = "http://127.0.0.1:5000"
+BASE_URL = "https://ninja-portion-recycler.ngrok-free.dev"
 
 def create_gcash_payment(amount, description, order_id=None, booking_id=None):
-    """Simulate GCash payment for thesis demo."""
-    # For thesis demo - skip real PayMongo, just return success URL
-    return {
-        "success": True,
-        "checkout_url": f"{BASE_URL}/payment/simulate?order_id={order_id}&amount={amount}",
-        "reference": f"SIM-{order_id}"
-    }
-    
-    # Build metadata to track what this payment is for
     metadata = {}
     if order_id:
         metadata["order_id"] = str(order_id)
     if booking_id:
         metadata["booking_id"] = str(booking_id)
-    
-    # Get base URL for redirects
-    base_url = os.getenv("BASE_URL", "http://127.0.0.1:5000")
-    
+
+    headers = {
+        "Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}",
+        "Content-Type": "application/json"
+    }
+
     payload = {
         "data": {
             "attributes": {
-                "amount": int(amount * 100),  # PayMongo uses centavos
+                "amount": int(amount * 100),
                 "currency": "PHP",
                 "description": description,
                 "payment_method_allowed": ["gcash"],
                 "metadata": metadata,
                 "redirect": {
-                    "success": f"{base_url}/payment/success",
-                    "failed": f"{base_url}/payment/failed"
+                    "success": f"{BASE_URL}/payment/success",
+                    "failed": f"{BASE_URL}/payment/failed"
                 }
             }
         }
     }
-    
+
     response = requests.post(
         f"{PAYMONGO_API_URL}/links",
         json=payload,
         headers=headers
     )
-    
+
     if response.status_code == 200:
         data = response.json()
         return {
@@ -96,28 +89,6 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
     else:
         print(f"PayMongo Error: {response.json()}")
         return {"success": False, "error": response.json()}
-
-
-def get_payment_status(link_id):
-    """Check payment status from PayMongo."""
-    headers = {
-        "Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"
-    }
-    
-    response = requests.get(
-        f"{PAYMONGO_API_URL}/links/{link_id}",
-        headers=headers
-    )
-    
-    if response.status_code == 200:
-        data = response.json()
-        attrs = data["data"]["attributes"]
-        return {
-            "success": True,
-            "status": attrs.get("status"),  # unpaid, paid, expired
-            "metadata": attrs.get("metadata", {})
-        }
-    return {"success": False}
 
 
 def _get_gmail_service():
@@ -1129,17 +1100,18 @@ def pos_transactions():
 
 @app.route('/admin/pos/customer/<int:cid>/items')
 @login_required
-def pos_customer_items(cid):
-    """Return pending orders & bookings for a customer to load into POS cart."""
+def pos_customer_items(cid: int):
     if current_user.role not in ['admin', 'staff']:
         return jsonify({'error': 'Unauthorized'}), 403
 
     customer = User.query.get_or_404(cid)
 
     pending_orders = Order.query.filter(
-        Order.user_id == cid,
-        Order.status.in_(['pending', 'confirmed', 'processing'])
-    ).order_by(Order.created_at.desc()).all()
+    Order.user_id == cid,
+    Order.status.in_(['pending', 'processing']),
+    Order.payment_method != 'gcash',
+    Order.delivery_method == 'pickup'
+).order_by(Order.created_at.desc()).all()
 
     orders_data = []
     for order in pending_orders:
@@ -1160,10 +1132,10 @@ def pos_customer_items(cid):
             'items':      items,
         })
 
-        pending_bookings = Booking.query.filter(
-            Booking.user_id == cid,
-            func.lower(func.replace(Booking.status, '_', '')).like('%progress%')
-        ).order_by(Booking.created_at.desc()).all()
+    pending_bookings = Booking.query.filter(
+        Booking.user_id == cid,
+        Booking.status.in_(['in_progress'])
+    ).order_by(Booking.created_at.desc()).all()
 
     bookings_data = []
     for b in pending_bookings:

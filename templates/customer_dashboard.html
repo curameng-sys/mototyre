@@ -1016,31 +1016,48 @@
     </div>
 
     <!-- STEP 3: PAYMENT -->
-    <div id="step-payment" style="display:none;">
-      <h5>💳 Payment Method</h5>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,168,107,0.3);border-radius:10px;padding:1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;">
-        <div style="width:48px;height:48px;border-radius:10px;background:rgba(0,168,107,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">📱</div>
-        <div>
-          <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">GCash</div>
-          <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Only available payment method at this time.</div>
-        </div>
-        <div style="margin-left:auto;width:18px;height:18px;border-radius:50%;background:var(--red);border:2px solid var(--red);flex-shrink:0;"></div>
-      </div>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Order Summary</div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;"><span id="pay-product-name" style="color:var(--text);"></span><span id="pay-product-subtotal" style="color:var(--text);"></span></div>
-        <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Delivery</span><span id="pay-delivery-method"></span></div>
-        <div id="pay-shipping-row" style="display:none;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Shipping Fee</span><span>To be calculated</span></div>
-        <div style="border-top:1px solid var(--border);padding-top:0.75rem;margin-top:0.5rem;display:flex;justify-content:space-between;">
-          <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
-          <span id="pay-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--red);"></span>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn-cancel-modal" onclick="goToStep('step-shipping')">‹ Back</button>
-        <button type="button" class="btn-submit" style="width:auto;" onclick="goToConfirm()">Review Order ›</button>
-      </div>
+<div id="step-payment" style="display:none;">
+  <h5>💳 Payment Method</h5>
+
+  <!-- Cash Option -->
+  <div id="opt-cash" onclick="selectPayment('cash')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(21,128,61,0.1);border:2px solid var(--green);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:0.75rem;">
+    <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">💵</div>
+    <div style="flex:1;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">Cash</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pay in-store upon pickup</div>
     </div>
+    <div id="check-cash" style="width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <span style="color:#fff;font-size:0.75rem;">✓</span>
+    </div>
+  </div>
+
+  <!-- GCash Option -->
+  <div id="opt-gcash" onclick="selectPayment('gcash')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(255,255,255,0.03);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:1.25rem;">
+    <div style="width:48px;height:48px;border-radius:10px;background:rgba(0,168,107,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">📱</div>
+    <div style="flex:1;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">GCash</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pay online via GCash</div>
+    </div>
+    <div id="check-gcash" style="width:22px;height:22px;border-radius:50%;background:transparent;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <span style="color:#fff;font-size:0.75rem;display:none;">✓</span>
+    </div>
+  </div>
+
+  <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Order Summary</div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;"><span id="pay-product-name" style="color:var(--text);"></span><span id="pay-product-subtotal" style="color:var(--text);"></span></div>
+    <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Delivery</span><span id="pay-delivery-method"></span></div>
+    <div id="pay-shipping-row" style="display:none;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Shipping Fee</span><span>To be calculated</span></div>
+    <div style="border-top:1px solid var(--border);padding-top:0.75rem;margin-top:0.5rem;display:flex;justify-content:space-between;">
+      <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
+      <span id="pay-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--red);"></span>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <button type="button" class="btn-cancel-modal" onclick="goToStep('step-shipping')">‹ Back</button>
+    <button type="button" class="btn-submit" style="width:auto;" onclick="goToConfirm()">Review Order ›</button>
+  </div>
+</div>
 
     <!-- STEP 4: CONFIRMATION -->
     <div id="step-confirm" style="display:none;">
@@ -1057,7 +1074,7 @@
         <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Payment</span>
-          <span style="color:#4ade80;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;">📱 GCash</span>
+          <span style="color:#4ade80;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;" id="conf-payment-display">💵 Cash</span>
         </div>
         <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1076,7 +1093,7 @@
         <input type="hidden" name="ship_city" id="final-ship-city">
         <input type="hidden" name="ship_province" id="final-ship-province">
         <input type="hidden" name="ship_zip" id="final-ship-zip">
-        <input type="hidden" name="payment_method" value="gcash">
+        <input type="hidden" name="payment_method" id="final-payment-method" value="cash">
         <div class="modal-actions">
           <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel Order</button>
           <button type="submit" class="btn-submit" style="width:auto;background:#15803d;">✅ Confirm and Pay</button>
@@ -1243,10 +1260,14 @@ function goToShipping() {
 function goToConfirm() {
   const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
   const total = cartPrice * qty;
+
+  selectPayment('cash');
+  selectedPayment = 'cash';
   
   document.getElementById('conf-product').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
   document.getElementById('conf-subtotal').textContent = '₱' + total.toFixed(2);
   document.getElementById('conf-total').textContent = '₱' + total.toFixed(2);
+  document.getElementById('final-payment-method').value = selectedPayment;
   
   // Delivery info
   const deliveryInfo = document.getElementById('conf-delivery-info');
@@ -1295,6 +1316,43 @@ function goToConfirm() {
   }
   
   goToStep('step-confirm');
+}
+
+let selectedPayment = 'cash';
+
+function selectPayment(method) {
+  selectedPayment = method;
+  
+  const optCash  = document.getElementById('opt-cash');
+  const optGcash = document.getElementById('opt-gcash');
+  const checkCash  = document.getElementById('check-cash');
+  const checkGcash = document.getElementById('check-gcash');
+
+  if (method === 'cash') {
+    optCash.style.background = 'rgba(21,128,61,0.1)';
+    optCash.style.borderColor = 'var(--green)';
+    checkCash.style.background = 'var(--green)';
+    checkCash.style.border = 'none';
+    checkCash.querySelector('span').style.display = 'block';
+
+    optGcash.style.background = 'rgba(255,255,255,0.03)';
+    optGcash.style.borderColor = 'var(--border)';
+    checkGcash.style.background = 'transparent';
+    checkGcash.style.border = '2px solid var(--border)';
+    checkGcash.querySelector('span').style.display = 'none';
+  } else {
+    optGcash.style.background = 'rgba(0,168,107,0.1)';
+    optGcash.style.borderColor = '#15803d';
+    checkGcash.style.background = '#15803d';
+    checkGcash.style.border = 'none';
+    checkGcash.querySelector('span').style.display = 'block';
+
+    optCash.style.background = 'rgba(255,255,255,0.03)';
+    optCash.style.borderColor = 'var(--border)';
+    checkCash.style.background = 'transparent';
+    checkCash.style.border = '2px solid var(--border)';
+    checkCash.querySelector('span').style.display = 'none';
+  }
 }
 
   /* ── CALENDAR ── */

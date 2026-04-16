@@ -73,11 +73,13 @@
     .badge { display: inline-block; padding: 0.2rem 0.65rem; border-radius: 99px; font-size: 0.67rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
     .badge-pending    { background: rgba(217,119,6,0.2);    color: #fbbf24; border: 1px solid rgba(217,119,6,0.4); }
     .badge-confirmed  { background: rgba(37,99,235,0.2);    color: #93c5fd; border: 1px solid rgba(37,99,235,0.4); }
-    .badge-inprogress { background: rgba(234,179,8,0.2); color: #fde047; border: 1px solid rgba(234,179,8,0.4); }
+    .badge-inprogress { background: rgba(234,179,8,0.2);    color: #fde047; border: 1px solid rgba(234,179,8,0.4); }
+    .badge-in_progress{ background: rgba(234,179,8,0.2);    color: #fde047; border: 1px solid rgba(234,179,8,0.4); }
     .badge-completed  { background: rgba(22,163,74,0.2);    color: #86efac; border: 1px solid rgba(22,163,74,0.4); }
     .badge-cancelled  { background: rgba(232,64,28,0.15);   color: #fca5a5; border: 1px solid rgba(232,64,28,0.3); }
     .badge-processing { background: rgba(109,40,217,0.2);   color: #c4b5fd; border: 1px solid rgba(109,40,217,0.4); }
     .badge-shipped    { background: rgba(6,182,212,0.2);    color: #67e8f9; border: 1px solid rgba(6,182,212,0.4); }
+    .badge-delivered  { background: rgba(21,128,61,0.2);    color: #86efac; border: 1px solid rgba(21,128,61,0.4); }
     .badge-admin      { background: rgba(232,64,28,0.15);   color: #fca5a5; border: 1px solid rgba(232,64,28,0.3); }
     .badge-staff      { background: rgba(37,99,235,0.2);    color: #93c5fd; border: 1px solid rgba(37,99,235,0.4); }
     .badge-customer   { background: rgba(255,255,255,0.06); color: #9ca3af; border: 1px solid rgba(255,255,255,0.1); }
@@ -240,7 +242,7 @@
                 <td>{{ b.service }}</td>
                 <td>{{ b.date.strftime('%b %d, %Y') }}</td>
                 <td>{{ b.time.strftime('%I:%M %p') }}</td>
-                <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
+                <td><span class="badge badge-{{ b.status|replace('_','') }}">{{ b.status|replace('_',' ')|title }}</span></td>
               </tr>
               {% endfor %}
             </tbody>
@@ -320,20 +322,15 @@
                 </td>
                 <td>
                   <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
-                  <select name="status">
-                    {% if b.status == 'pending' %}
-                      <option value="pending" selected>Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="cancelled">Cancelled</option>
-                    {% else %}
-                      <option value="confirmed"   {% if b.status=='confirmed' %}selected{% endif %}>Confirmed</option>
-                      <option value="in_progress" {% if b.status=='in_progress' %}selected{% endif %}>In Progress</option>
-                      <option value="completed"   {% if b.status=='completed' %}selected{% endif %}>Completed</option>
-                      <option value="cancelled"   {% if b.status=='cancelled' %}selected{% endif %}>Cancelled</option>
-                    {% endif %}
-                  </select>
-                  <button type="submit">Save</button>
-                </form>
+                    <select name="status">
+                      <option value="pending"      {% if b.status=='pending' %}selected{% endif %}>Pending</option>
+                      <option value="confirmed"    {% if b.status=='confirmed' %}selected{% endif %}>Confirmed</option>
+                      <option value="in_progress"  {% if b.status=='in_progress' %}selected{% endif %}>In Progress</option>
+                      <option value="completed"    {% if b.status=='completed' %}selected{% endif %}>Completed</option>
+                      <option value="cancelled"    {% if b.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                    <button type="submit">Save</button>
+                  </form>
                 </td>
               </tr>
               {% endfor %}
@@ -352,16 +349,22 @@
       <div class="page-sub">Track and update parts and accessories orders.</div>
       <div class="filter-bar">
         <input type="text" placeholder="🔍 Search customer or product..." oninput="filterTable('orders-table', this.value)">
-        <select onchange="filterTableByCol('orders-table', 3, this.value)">
+        <select onchange="filterTableByCol('orders-table', 4, this.value)">
           <option value="">All Status</option>
-          <option>pending</option><option>processing</option><option>shipped</option><option>completed</option><option>cancelled</option>
+          <option>pending</option>
+          <option>confirmed</option>
+          <option>processing</option>
+          <option>shipped</option>
+          <option>delivered</option>
+          <option>completed</option>
+          <option>cancelled</option>
         </select>
       </div>
       <div class="card">
         {% if all_orders %}
         <div style="overflow-x:auto;">
           <table class="table" id="orders-table">
-            <thead><tr><th>Order #</th><th>Customer</th><th>Products</th><th>Total</th><th>Status</th><th>Date</th><th>Payment</th><th>Update Status</th></tr></thead>
+           <thead><tr><th>Order #</th><th>Customer</th><th>Products</th><th>Total</th><th>Status</th><th>Date</th><th>Payment</th><th>Delivery</th><th>Update Status</th></tr></thead>
             <tbody>
               {% for o in all_orders %}
               <tr>
@@ -390,18 +393,34 @@
                   {% else %}
                     <span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>
                   {% endif %}
+                </td><td>
+                  {% if o.delivery_method == 'ship' %}
+                    <span class="badge" style="background:rgba(6,182,212,0.15);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);">🚚 Ship</span>
+                  {% else %}
+                    <span class="badge" style="background:rgba(109,40,217,0.15);color:#c4b5fd;border:1px solid rgba(109,40,217,0.3);">🏪 Pickup</span>
+                  {% endif %}
                 </td>
                 <td>
-                  <form method="POST" action="{{ url_for('update_order_status', oid=o.id) }}" class="status-form">
-                    <select name="status">
+                <form method="POST" action="{{ url_for('update_order_status', oid=o.id) }}" class="status-form">
+                  <select name="status">
+                    {% if o.delivery_method == 'ship' %}
+                      <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
+                      <option value="confirmed"  {% if o.status=='confirmed' %}selected{% endif %}>Confirmed</option>
                       <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
                       <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
+                      <option value="delivered"  {% if o.status=='delivered' %}selected{% endif %}>Delivered</option>
+                      <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                    {% else %}
+                      <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
+                      <option value="confirmed"  {% if o.status=='confirmed' %}selected{% endif %}>Confirmed</option>
+                      <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
                       <option value="completed"  {% if o.status=='completed' %}selected{% endif %}>Completed</option>
                       <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
-                    </select>
-                    <button type="submit">Save</button>
-                  </form>
-                </td>
+                    {% endif %}
+                  </select>
+                  <button type="submit">Save</button>
+                </form>
+              </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -863,38 +882,38 @@
   }
 
   function filterTableByCol(tableId, colIndex, value) {
-  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
-    const cell = row.cells[colIndex];
-    if (!value) {
-      row.style.display = '';
-    } else {
-      const cellText = cell ? cell.textContent.toLowerCase().replace(/\s+/g, '') : '';
-      const filterVal = value.toLowerCase().replace(/\s+/g, '');
-      row.style.display = cellText.includes(filterVal) ? '' : 'none';
-    }
-  });
-}
+    document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+      const cell = row.cells[colIndex];
+      if (!value) {
+        row.style.display = '';
+      } else {
+        const cellText = cell ? cell.textContent.toLowerCase().replace(/\s+/g, '') : '';
+        const filterVal = value.toLowerCase().replace(/\s+/g, '');
+        row.style.display = cellText.includes(filterVal) ? '' : 'none';
+      }
+    });
+  }
 
   document.querySelectorAll('.chart-bar-fill[data-width]').forEach(bar => {
     setTimeout(() => { bar.style.width = bar.dataset.width + '%'; }, 100);
   });
 
-function openEditProduct(id, name, category, price, stock, description, barcode) {
-  document.getElementById('edit-product-barcode').value = barcode || '';
-  document.getElementById('edit-product-name').value    = name;
-  document.getElementById('edit-product-price').value   = price;
-  document.getElementById('edit-product-stock').value   = stock;
-  document.getElementById('edit-product-desc').value    = description;
-  document.getElementById('edit-product-form').action   = '/admin/product/' + id + '/edit';
-  document.getElementById('delete-product-form').action = '/admin/product/' + id + '/delete';
-  const sel = document.getElementById('edit-product-category');
-  for (let opt of sel.options) { opt.selected = opt.value === category; }
-  openModal('modal-edit-product');
-}
+  function openEditProduct(id, name, category, price, stock, description, barcode) {
+    document.getElementById('edit-product-barcode').value = barcode || '';
+    document.getElementById('edit-product-name').value    = name;
+    document.getElementById('edit-product-price').value   = price;
+    document.getElementById('edit-product-stock').value   = stock;
+    document.getElementById('edit-product-desc').value    = description;
+    document.getElementById('edit-product-form').action   = '/admin/product/' + id + '/edit';
+    document.getElementById('delete-product-form').action = '/admin/product/' + id + '/delete';
+    const sel = document.getElementById('edit-product-category');
+    for (let opt of sel.options) { opt.selected = opt.value === category; }
+    openModal('modal-edit-product');
+  }
 
-function openEditProductFromRow(row) {
-  openEditProduct(row.dataset.id, row.dataset.name, row.dataset.category, row.dataset.price, row.dataset.stock, row.dataset.description, row.dataset.barcode);
-}
+  function openEditProductFromRow(row) {
+    openEditProduct(row.dataset.id, row.dataset.name, row.dataset.category, row.dataset.price, row.dataset.stock, row.dataset.description, row.dataset.barcode);
+  }
 
   function previewPic(input) {
     if (input.files && input.files[0]) {
@@ -953,13 +972,13 @@ function openEditProductFromRow(row) {
       csvParsedRows = lines.slice(1).map(line => {
         const cols = parseCSVLine(line);
         return {
-        barcode:     barIdx  !== -1 ? (cols[barIdx]   || '').trim() : '',
-        name:        (cols[nameIdx]  || '').trim().replace(/^"|"$/g, ''),
-        category:    catIdx  !== -1 ? (cols[catIdx]   || '').trim().replace(/^"|"$/g, '') : '',
-        price:       (cols[priceIdx] || '0').replace(/,/g, '').replace(/"/g, '').trim(),
-        stock:       stockIdx !== -1 ? (cols[stockIdx] || '0').replace(/,/g, '').replace(/"/g, '').trim() : '0',
-        description: descIdx !== -1 ? (cols[descIdx]  || '').trim().replace(/^"|"$/g, '') : '',
-      };
+          barcode:     barIdx  !== -1 ? (cols[barIdx]   || '').trim() : '',
+          name:        (cols[nameIdx]  || '').trim().replace(/^"|"$/g, ''),
+          category:    catIdx  !== -1 ? (cols[catIdx]   || '').trim().replace(/^"|"$/g, '') : '',
+          price:       (cols[priceIdx] || '0').replace(/,/g, '').replace(/"/g, '').trim(),
+          stock:       stockIdx !== -1 ? (cols[stockIdx] || '0').replace(/,/g, '').replace(/"/g, '').trim() : '0',
+          description: descIdx !== -1 ? (cols[descIdx]  || '').trim().replace(/^"|"$/g, '') : '',
+        };
       }).filter(row => row.name);
       nameEl.textContent = '📄 ' + file.name + ' — ' + csvParsedRows.length + ' rows found';
       nameEl.style.display = 'block';
@@ -1003,7 +1022,6 @@ function openEditProductFromRow(row) {
     } else {
       importBtn.disabled = false; importBtn.style.opacity = '1';
       importBtn.textContent = '✅ Import ' + validCount + ' Product' + (validCount > 1 ? 's' : '');
-
       if (validCount > 500) {
         importBtn.textContent = '✅ Import First 500 Products';
         document.getElementById('csv-import-error').textContent = '⚠️ Only first 500 products will be imported.';
@@ -1021,98 +1039,91 @@ function openEditProductFromRow(row) {
   }
 
   function csvSubmitImport() {
-  const validRows = csvParsedRows.filter(row => row.name && row.category && !isNaN(parseFloat(row.price)) && !isNaN(parseInt(row.stock)));
-  
-  // Limit to 500 products
-  const limitedRows = validRows.slice(0, 500);
-  
-  const btn = document.getElementById('csv-import-btn');
-  btn.textContent = '⏳ Importing ' + limitedRows.length + ' products...'; 
-  btn.disabled = true;
-  
-  fetch('/admin/import-products', {
-    method: 'POST', 
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ products: limitedRows })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.success) {
-      document.getElementById('csv-step-preview').style.display = 'none';
-      document.getElementById('csv-step-success').style.display = 'block';
-      document.getElementById('csv-success-msg').textContent = data.count + ' PRODUCT' + (data.count > 1 ? 'S' : '') + ' IMPORTED!';
-    } else {
-      document.getElementById('csv-import-error').textContent = '❌ ' + (data.error || 'Import failed.');
+    const validRows = csvParsedRows.filter(row => row.name && row.category && !isNaN(parseFloat(row.price)) && !isNaN(parseInt(row.stock)));
+    const limitedRows = validRows.slice(0, 500);
+    const btn = document.getElementById('csv-import-btn');
+    btn.textContent = '⏳ Importing ' + limitedRows.length + ' products...';
+    btn.disabled = true;
+    fetch('/admin/import-products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ products: limitedRows })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('csv-step-preview').style.display = 'none';
+        document.getElementById('csv-step-success').style.display = 'block';
+        document.getElementById('csv-success-msg').textContent = data.count + ' PRODUCT' + (data.count > 1 ? 'S' : '') + ' IMPORTED!';
+      } else {
+        document.getElementById('csv-import-error').textContent = '❌ ' + (data.error || 'Import failed.');
+        document.getElementById('csv-import-error').style.display = 'block';
+        btn.disabled = false; btn.textContent = '✅ Import All';
+      }
+    })
+    .catch(err => {
+      document.getElementById('csv-import-error').textContent = '❌ Server error: ' + err.message;
       document.getElementById('csv-import-error').style.display = 'block';
       btn.disabled = false; btn.textContent = '✅ Import All';
-    }
-  })
-  .catch(err => {
-    document.getElementById('csv-import-error').textContent = '❌ Server error: ' + err.message;
-    document.getElementById('csv-import-error').style.display = 'block';
-    btn.disabled = false; btn.textContent = '✅ Import All';
-  });
-}
-  // Order items data for the modal
-const orderItemsData = {
-  {% for o in all_orders %}
-  {{ o.id }}: [
-    {% for item in o.items %}
-    { name: "{{ item.product.name|e }}", qty: {{ item.quantity }}, price: {{ item.unit_price }}, category: "{{ item.product.category|e }}" },
-    {% endfor %}
-  ],
-  {% endfor %}
-};
-
-function viewOrder(id, customer, email, phone, motoModel, motoPlate, total, status, payment, dateStr, itemCount) {
-  document.getElementById('od-title').textContent = 'Order ORD-' + String(id).padStart(3, '0');
-  document.getElementById('od-customer').textContent = customer;
-  document.getElementById('od-email').textContent = email;
-  document.getElementById('od-phone').textContent = phone;
-  document.getElementById('od-moto-model').textContent = motoModel || '—';
-  document.getElementById('od-moto-plate').textContent = motoPlate ? '🏍️ ' + motoPlate : '';
-  document.getElementById('od-date').textContent = dateStr;
-  document.getElementById('od-total').textContent = '₱' + total.toFixed(2);
-
-  // Status badge
-  const statusColors = {
-    pending: 'badge-pending', processing: 'badge-processing', shipped: 'badge-shipped',
-    completed: 'badge-completed', cancelled: 'badge-cancelled'
-  };
-  document.getElementById('od-status').innerHTML =
-    '<span class="badge ' + (statusColors[status] || 'badge-pending') + '">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span>';
-
-  // Payment badge
-  if (payment === 'gcash') {
-    document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:rgba(0,125,255,0.15);color:#93c5fd;border:1px solid rgba(0,125,255,0.3);">💳 GCash</span>';
-  } else {
-    document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>';
-  }
-
-  // Items list
-  const items = orderItemsData[id] || [];
-  const itemsDiv = document.getElementById('od-items');
-  if (items.length === 0) {
-    itemsDiv.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">No items found</div>';
-  } else {
-    let html = '';
-    items.forEach((item, i) => {
-      const subtotal = (item.qty * item.price).toFixed(2);
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;' +
-        (i < items.length - 1 ? 'border-bottom:1px solid var(--border);' : '') + '">' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div style="font-weight:600;color:#fff;font-size:0.82rem;">' + item.name + '</div>' +
-          '<div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">' + item.category + ' · Qty: ' + item.qty + ' × ₱' + item.price.toFixed(2) + '</div>' +
-        '</div>' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.05rem;color:#fff;margin-left:1rem;">₱' + subtotal + '</div>' +
-      '</div>';
     });
-    itemsDiv.innerHTML = html;
   }
 
-  openModal('modal-order-detail');
-}
+  const orderItemsData = {
+    {% for o in all_orders %}
+    {{ o.id }}: [
+      {% for item in o.items %}
+      { name: "{{ item.product.name|e }}", qty: {{ item.quantity }}, price: {{ item.unit_price }}, category: "{{ item.product.category|e }}" },
+      {% endfor %}
+    ],
+    {% endfor %}
+  };
 
+  function viewOrder(id, customer, email, phone, motoModel, motoPlate, total, status, payment, dateStr, itemCount) {
+    document.getElementById('od-title').textContent = 'Order ORD-' + String(id).padStart(3, '0');
+    document.getElementById('od-customer').textContent = customer;
+    document.getElementById('od-email').textContent = email;
+    document.getElementById('od-phone').textContent = phone;
+    document.getElementById('od-moto-model').textContent = motoModel || '—';
+    document.getElementById('od-moto-plate').textContent = motoPlate ? '🏍️ ' + motoPlate : '';
+    document.getElementById('od-date').textContent = dateStr;
+    document.getElementById('od-total').textContent = '₱' + total.toFixed(2);
+
+    const statusColors = {
+      pending: 'badge-pending', confirmed: 'badge-confirmed', processing: 'badge-processing',
+      shipped: 'badge-shipped', delivered: 'badge-delivered',
+      completed: 'badge-completed', cancelled: 'badge-cancelled'
+    };
+    document.getElementById('od-status').innerHTML =
+      '<span class="badge ' + (statusColors[status] || 'badge-pending') + '">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span>';
+
+    if (payment === 'gcash') {
+      document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:rgba(0,125,255,0.15);color:#93c5fd;border:1px solid rgba(0,125,255,0.3);">💳 GCash</span>';
+    } else {
+      document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>';
+    }
+
+    const items = orderItemsData[id] || [];
+    const itemsDiv = document.getElementById('od-items');
+    if (items.length === 0) {
+      itemsDiv.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">No items found</div>';
+    } else {
+      let html = '';
+      items.forEach((item, i) => {
+        const subtotal = (item.qty * item.price).toFixed(2);
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;' +
+          (i < items.length - 1 ? 'border-bottom:1px solid var(--border);' : '') + '">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;color:#fff;font-size:0.82rem;">' + item.name + '</div>' +
+            '<div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">' + item.category + ' · Qty: ' + item.qty + ' × ₱' + item.price.toFixed(2) + '</div>' +
+          '</div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.05rem;color:#fff;margin-left:1rem;">₱' + subtotal + '</div>' +
+        '</div>';
+      });
+      itemsDiv.innerHTML = html;
+    }
+
+    openModal('modal-order-detail');
+  }
 </script>
 
 </body>
