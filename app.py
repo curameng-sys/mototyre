@@ -5,6 +5,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
 from sqlalchemy import func
+def ph_now():
+    """Current Philippine time (UTC+8)."""
+    return datetime.utcnow() + timedelta(hours=8)
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -156,7 +159,7 @@ class OTPRecord(db.Model):
     purpose    = db.Column(db.String(10), nullable=False)
     expires_at = db.Column(db.DateTime, nullable=False)
     used       = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=ph_now)
 
 
 class Booking(db.Model):
@@ -170,7 +173,8 @@ class Booking(db.Model):
     notes            = db.Column(db.Text)
     status           = db.Column(db.String(20), default='pending')
     payment_method   = db.Column(db.String(20), default='cash')
-    created_at       = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=ph_now)
+    reminder_sent    = db.Column(db.Boolean, default=False)
 
 
 class Product(db.Model):
@@ -181,7 +185,7 @@ class Product(db.Model):
     description = db.Column(db.Text)
     price       = db.Column(db.Float, nullable=False)
     stock       = db.Column(db.Integer, default=0)
-    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=ph_now)
     order_items = db.relationship('OrderItem', backref='product', lazy=True)
 
 
@@ -193,7 +197,7 @@ class Order(db.Model):
     payment_method  = db.Column(db.String(20), default='cash')
     delivery_method = db.Column(db.String(20), default='pickup')
     ship_address    = db.Column(db.Text)
-    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=ph_now)
     items           = db.relationship('OrderItem', backref='order', lazy=True)
 
 
@@ -213,7 +217,7 @@ class Notification(db.Model):
     type       = db.Column(db.String(30), default='update')
     status     = db.Column(db.String(30))
     is_read    = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=ph_now)
 
 
 @login_manager.user_loader
@@ -223,9 +227,40 @@ def load_user(user_id):
 
 # ─── HELPERS ────────────────────────────────────────────────────────────────
 
+def ph_now():
+    """Current time in Philippine timezone (UTC+8)."""
+    return datetime.utcnow() + timedelta(hours=8)
+
 def send_notification(user_id, title, message, type='update', status=None):
     db.session.add(Notification(user_id=user_id, title=title, message=message, type=type, status=status))
     db.session.commit()
+
+def check_upcoming_bookings():
+    """Every minute: find bookings starting in ~15 min and send in-app reminder."""
+    with app.app_context():
+        now = datetime.now()
+        target_start = now + timedelta(minutes=14)
+        target_end   = now + timedelta(minutes=16)
+
+        upcoming = Booking.query.filter(
+            Booking.status.in_(['confirmed', 'in_progress', 'inprogress']),
+            Booking.reminder_sent == False,
+            Booking.date == now.date()
+        ).all()
+
+        for b in upcoming:
+            booking_dt = datetime.combine(b.date, b.time)
+            if target_start <= booking_dt <= target_end:
+                send_notification(
+                    b.user_id,
+                    'Upcoming Appointment Reminder',
+                    f'Your {b.service} booking is in 15 minutes at {b.time.strftime("%I:%M %p")}. Please arrive on time.',
+                    type='reminder',
+                    status='reminder'
+                )
+                b.reminder_sent = True
+                db.session.commit()
+                print(f'[REMINDER] Sent for booking #{b.id} to user {b.user_id}')
 
 
 def _generate_otp(length=6):
@@ -238,7 +273,7 @@ def _save_otp(email, purpose):
     otp = _generate_otp()
     db.session.add(OTPRecord(
         email=email, otp=otp, purpose=purpose,
-        expires_at=datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINS)
+        expires_at=ph_now() + timedelta(minutes=OTP_EXPIRY_MINS)
     ))
     db.session.commit()
     return otp
@@ -249,7 +284,7 @@ def _verify_otp(email, otp_input, purpose):
                             .order_by(OTPRecord.created_at.desc()).first()
     if not record:
         return {"valid": False, "message": "No OTP found. Please request a new one."}
-    if datetime.utcnow() > record.expires_at:
+    if ph_now() > record.expires_at:
         record.used = True
         db.session.commit()
         return {"valid": False, "message": "OTP has expired. Please request a new one."}
@@ -266,7 +301,7 @@ def allowed_file(filename):
 
 def cleanup_abandoned_gcash_orders():
     """Cancel GCash orders that haven't been paid within 30 minutes."""
-    cutoff = datetime.utcnow() - timedelta(minutes=30)
+    cutoff = ph_now() - timedelta(minutes=30)
     abandoned = Order.query.filter(
         Order.status == 'awaiting_payment',
         Order.payment_method == 'gcash',
@@ -506,22 +541,44 @@ def customer_dashboard():
 @login_required
 def book_service():
     service = request.form['service']
+    booking_date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
+    booking_time = datetime.strptime(request.form['time'], '%H:%M').time()
+    
+    # Validate: prevent booking in the past
+    booking_datetime = datetime.combine(booking_date, booking_time)
+    if booking_datetime <= ph_now():
+        flash('Cannot book a past or current time slot. Please choose a future time.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+    
     booking = Booking(
         user_id=current_user.id,
         service=service,
-        date=datetime.strptime(request.form['date'], '%Y-%m-%d').date(),
-        time=datetime.strptime(request.form['time'], '%H:%M').time(),
+        date=booking_date,
+        time=booking_time,
         motorcycle_model=request.form.get('motorcycle_model', current_user.motorcycle_model),
         motorcycle_plate=request.form.get('motorcycle_plate', current_user.motorcycle_plate),
         notes=request.form.get('notes', '')
     )
     db.session.add(booking)
     db.session.commit()
+    
+    # Notify customer
     send_notification(
         current_user.id, 'Booking Received!',
         f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} is pending confirmation.',
         type='booking', status='pending'
     )
+    
+    # Notify all admins (NEW)
+    admins = User.query.filter_by(role='admin').all()
+    for admin in admins:
+        send_notification(
+            admin.id,
+            'New Booking Received',
+            f'{current_user.fullname} booked {service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")}.',
+            type='booking', status='pending'
+        )
+    
     flash('Appointment booked successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
 
@@ -659,7 +716,8 @@ def get_notifications():
     return jsonify([{
         'id': n.id, 'title': n.title, 'message': n.message,
         'type': n.type, 'status': n.status,
-        'is_read': n.is_read, 'created_at': n.created_at.isoformat()
+        'is_read': n.is_read,
+        'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
     } for n in notifs])
 
 
@@ -1409,20 +1467,34 @@ def payment_failed():
     
     return redirect('http://127.0.0.1:5000/customer/dashboard')
 
+@app.route('/debug-time')
+@login_required
+def debug_time():
+    latest = Notification.query.order_by(Notification.id.desc()).first()
+    return f"""
+    <pre style="font-size:16px;padding:20px;background:#000;color:#0f0;">
+Server datetime.utcnow():   {datetime.utcnow()}
+Server datetime.now():      {datetime.now()}
+Your ph_now():              {ph_now()}
+Latest notif.created_at:    {latest.created_at if latest else 'None'}
+Latest notif ID:            {latest.id if latest else 'None'}
+    </pre>
+    """
 
-# ─── TEMP: CREATE ADMIN ──────────────────────────────────────────────────────
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
-@app.route('/create-admin')
-def create_admin():
-    if User.query.filter_by(email='admin@mototyre.com').first():
-        return 'Admin already exists!'
-    admin = User(fullname='Admin', email='admin@mototyre.com',
-                 phone='09204434180', role='admin', email_verified=True)
-    admin.set_password('admin123')
-    db.session.add(admin)
-    db.session.commit()
-    return 'Admin created! Now delete this route.'
-
+scheduler = BackgroundScheduler(timezone='Asia/Manila')
+scheduler.add_job(
+    func=check_upcoming_bookings,
+    trigger='interval',
+    minutes=1,
+    id='booking_reminder_job',
+    replace_existing=True
+)
+scheduler.start()
+print('[SCHEDULER] Booking reminder service started — checking every 1 minute')
+atexit.register(lambda: scheduler.shutdown())
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)

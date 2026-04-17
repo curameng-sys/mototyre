@@ -1386,9 +1386,27 @@ function selectPayment(method) {
       const dateStr = `${currentYear}-${mm}-${dd}`;
       const cell = document.createElement('div'); cell.className = 'cal-day'; cell.textContent = d;
       if (dateObj.getTime() === today.getTime()) cell.classList.add('today');
-      if (dateObj < today || dateObj.getDay() === 0) { cell.classList.add('past'); cell.title = dateObj.getDay() === 0 ? 'Closed Sundays' : 'Past date'; }
-      else if (isFullyBooked(dateStr)) { cell.classList.add('fully-booked'); cell.title = 'Fully booked'; }
-      else { cell.classList.add('available'); cell.onclick = () => selectDate(dateStr, d, cell); }
+      // Check if today is past closing time (last slot is 19:00 / 7 PM)
+const isToday = dateObj.getTime() === today.getTime();
+const now = new Date();
+const pastClosing = isToday && now.getHours() >= 19;
+
+if (dateObj < today || dateObj.getDay() === 0) { 
+  cell.classList.add('past'); 
+  cell.title = dateObj.getDay() === 0 ? 'Closed Sundays' : 'Past date'; 
+}
+else if (pastClosing) {
+  cell.classList.add('past');
+  cell.title = 'Shop closed for today';
+}
+else if (isFullyBooked(dateStr)) { 
+  cell.classList.add('fully-booked'); 
+  cell.title = 'Fully booked'; 
+}
+else { 
+  cell.classList.add('available'); 
+  cell.onclick = () => selectDate(dateStr, d, cell); 
+}
       if (selectedDate === dateStr) cell.classList.add('selected');
       grid.appendChild(cell);
     }
@@ -1409,11 +1427,39 @@ function selectPayment(method) {
 
   function renderTimeSlots(dateStr) {
     const booked = bookedData[dateStr] || [];
-    const wrap = document.getElementById('time-slots-wrap'); wrap.innerHTML = '';
+    const wrap = document.getElementById('time-slots-wrap'); 
+    wrap.innerHTML = '';
+    
+    // Check if selected date is today
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    const currentHour = now.getHours();
+    const currentMinutes = now.getMinutes();
+    
     ALL_SLOTS.forEach(slot => {
-      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'time-slot-btn'; btn.textContent = SLOT_LABELS[slot];
-      if (booked.includes(slot)) { btn.classList.add('booked'); btn.disabled = true; }
-      else { btn.onclick = () => selectTime(slot, btn); }
+      const btn = document.createElement('button'); 
+      btn.type = 'button'; 
+      btn.className = 'time-slot-btn'; 
+      btn.textContent = SLOT_LABELS[slot];
+      
+      // Parse slot hour (e.g. "09:00" → 9)
+      const slotHour = parseInt(slot.split(':')[0]);
+      
+      // Disable if slot is in the past (for today only)
+      const isPastSlot = isToday && (slotHour <= currentHour);
+      
+      if (booked.includes(slot)) { 
+        btn.classList.add('booked'); 
+        btn.disabled = true; 
+        btn.title = 'Already booked';
+      } else if (isPastSlot) {
+        btn.classList.add('booked');  // reuse same style
+        btn.disabled = true;
+        btn.title = 'This time has already passed';
+      } else { 
+        btn.onclick = () => selectTime(slot, btn); 
+      }
       wrap.appendChild(btn);
     });
   }
@@ -1585,7 +1631,8 @@ function renderNotifications() {
     const scheme = colorMap[n.status] || colorMap.default;
     const time   = new Date(n.created_at).toLocaleString('en-PH', {
       month: 'short', day: 'numeric',
-      hour: 'numeric', minute: '2-digit', hour12: true
+      hour: 'numeric', minute: '2-digit', hour12: true,
+      timeZone: 'Asia/Manila'
     });
 
     const div = document.createElement('div');
