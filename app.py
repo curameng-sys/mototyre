@@ -175,6 +175,17 @@ class Booking(db.Model):
     payment_method   = db.Column(db.String(20), default='cash')
     created_at = db.Column(db.DateTime, default=ph_now)
     reminder_sent    = db.Column(db.Boolean, default=False)
+    mechanic_name           = db.Column(db.String(100))
+    mechanic_specialization = db.Column(db.String(100))
+    contact_name  = db.Column(db.String(100))
+    contact_mobile = db.Column(db.String(20))
+
+class Mechanic(db.Model):
+    id             = db.Column(db.Integer, primary_key=True)
+    name           = db.Column(db.String(100), nullable=False)
+    specialization = db.Column(db.String(100), nullable=False)
+    status         = db.Column(db.String(20), default='available')
+    created_at     = db.Column(db.DateTime, default=ph_now)
 
 
 class Product(db.Model):
@@ -551,14 +562,22 @@ def book_service():
         return redirect(url_for('customer_dashboard'))
     
     booking = Booking(
-        user_id=current_user.id,
-        service=service,
-        date=booking_date,
-        time=booking_time,
-        motorcycle_model=request.form.get('motorcycle_model', current_user.motorcycle_model),
-        motorcycle_plate=request.form.get('motorcycle_plate', current_user.motorcycle_plate),
-        notes=request.form.get('notes', '')
+    user_id=current_user.id,
+    service=service,
+    date=booking_date,
+    time=booking_time,
+    motorcycle_model=request.form.get('motorcycle_model', current_user.motorcycle_model),
+    motorcycle_plate=request.form.get('motorcycle_plate', current_user.motorcycle_plate),
+    notes=request.form.get('notes', ''),
+    contact_name=request.form.get('contact_name', ''),
+    contact_mobile=request.form.get('contact_mobile', ''),
     )
+    mechanic_id = request.form.get('mechanic_id', '')
+    if mechanic_id:
+        mechanic = Mechanic.query.get(int(mechanic_id))
+        if mechanic:
+            booking.mechanic_name = mechanic.name
+            booking.mechanic_specialization = mechanic.specialization
     db.session.add(booking)
     db.session.commit()
     
@@ -569,7 +588,6 @@ def book_service():
         type='booking', status='pending'
     )
     
-    # Notify all admins (NEW)
     admins = User.query.filter_by(role='admin').all()
     for admin in admins:
         send_notification(
@@ -705,6 +723,16 @@ def get_booked_slots():
         result.setdefault(b.date.strftime('%Y-%m-%d'), []).append(b.time.strftime('%H:%M'))
     return jsonify(result)
 
+@app.route('/api/mechanics')
+@login_required
+def get_mechanics():
+    mechanics = Mechanic.query.filter_by(status='available').order_by(Mechanic.name).all()
+    return jsonify([{
+        'id': m.id,
+        'name': m.name,
+        'specialization': m.specialization
+    } for m in mechanics])
+
 
 # ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
 
@@ -813,6 +841,7 @@ def admin_dashboard():
         all_orders=Order.query.order_by(Order.created_at.desc()).all(),
         all_products=Product.query.all(),
         all_users=User.query.all(),
+        all_mechanics=Mechanic.query.order_by(Mechanic.name).all(),
     )
 
 
@@ -825,11 +854,12 @@ def update_booking_status(bid):
     db.session.commit()
 
     messages = {
-        'confirmed':  ('Booking Confirmed!',  f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} is confirmed.'),
-        'inprogress': ('Service In Progress', f'Your {booking.service} is now in progress.'),
-        'completed':  ('Service Completed!',  f'Your {booking.service} has been completed. Thank you!'),
-        'cancelled':  ('Booking Cancelled',   f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} was cancelled.'),
-    }
+    'confirmed':  ('Booking Confirmed! ✅', f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been confirmed. Please arrive 15 minutes before your schedule or your booking will be automatically cancelled.'),
+    'inprogress': ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
+    'in_progress': ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
+    'completed':  ('Service Completed! 🎉',  f'Your {booking.service} has been completed. Thank you!'),
+    'cancelled':  ('Booking Cancelled ❌',   f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} was cancelled by the admin.'),
+}
     if new_status in messages:
         title, msg = messages[new_status]
         send_notification(booking.user_id, title, msg, type='booking', status=new_status)
@@ -904,6 +934,33 @@ def delete_product(pid):
     flash(f'Product "{p.name}" deleted!', 'success')
     return redirect(url_for('admin_dashboard'))
 
+@app.route('/admin/mechanic/add', methods=['POST'])
+@login_required
+def add_mechanic():
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    db.session.add(Mechanic(
+        name=request.form['name'],
+        specialization=request.form['specialization'],
+        status=request.form.get('status', 'available')
+    ))
+    db.session.commit()
+    flash('Mechanic added!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@app.route('/admin/mechanic/<int:mid>/delete', methods=['POST'])
+@login_required
+def delete_mechanic(mid):
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    m = Mechanic.query.get_or_404(mid)
+    db.session.delete(m)
+    db.session.commit()
+    flash(f'Mechanic "{m.name}" deleted!', 'success')
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/add-staff', methods=['POST'])
 @login_required

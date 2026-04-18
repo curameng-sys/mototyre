@@ -492,7 +492,7 @@
       <div class="card">
         <div class="card-head"><h5>Booking Details</h5></div>
         <div class="card-body">
-          <form method="POST" action="{{ url_for('book_service') }}" id="booking-form">
+          <form method="POST" action="{{ url_for('book_service') }}" id="booking-form" onsubmit="return validateBookingForm()">
             <div class="form-group">
               <label>Selected Date</label>
               <input type="text" id="selected-date-display" placeholder="Click a date on the calendar" disabled>
@@ -538,6 +538,15 @@
               <input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
             </div>
             <div class="form-group">
+            <label>Preferred Mechanic</label>
+            <select name="mechanic_id" id="mechanic-select">
+              <option value="">-- No preference --</option>
+            </select>
+            <div id="mechanic-info" style="display:none;margin-top:0.5rem;padding:0.6rem 0.85rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.78rem;color:var(--muted);">
+              🔧 Specialization: <span id="mechanic-spec-display"></span>
+            </div>
+          </div>
+            <div class="form-group">
               <label>Additional Notes</label>
               <textarea name="notes" rows="2" placeholder="Describe your concern..."></textarea>
             </div>
@@ -547,17 +556,20 @@
 
             <div class="form-group">
               <label>Full Name</label>
-              <input type="text" name="contact_name" placeholder="Juan Dela Cruz" required>
+              <input type="text" name="contact_name" id="contact-name" placeholder="Juan Dela Cruz"
+                oninput="this.value=this.value.replace(/[^a-zA-Z\s]/g,'')"
+                required>
+              <div id="name-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Name must contain letters only.</div>
             </div>
             <div class="form-group">
               <label>Mobile Number</label>
-              <input type="tel" name="contact_mobile" placeholder="09XX XXX XXXX" required>
+              <input type="tel" name="contact_mobile" id="contact-mobile" placeholder="09XX XXX XXXX"
+                oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)"
+                maxlength="11"
+                required>
+              <div id="mobile-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Must start with 0 and be exactly 11 digits.</div>
             </div>
-            <div class="form-group">
-              <label>Contact Email</label>
-              <input type="email" name="contact_email" placeholder="email@example.com" required>
             </div>
-
             <button type="submit" class="btn-submit" id="btn-book" disabled>📅 Confirm Booking</button>
           </form>
         </div>
@@ -774,6 +786,21 @@
         </div>
       </div>
     </div>
+
+    <!-- Mechanic Info -->
+<div id="bd-mechanic-wrap" style="display:none;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">🔧 Assigned Mechanic</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+    <div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Name</div>
+      <div id="bd-mechanic-name" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+    </div>
+    <div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Specialization</div>
+      <div id="bd-mechanic-spec" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+    </div>
+  </div>
+</div>
 
     <!-- Notes -->
     <div id="bd-notes-wrap" style="padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
@@ -1538,6 +1565,35 @@ function searchProducts() {
   document.getElementById('product-grid').style.display = visible === 0 ? 'none' : 'grid';
 }
 
+async function loadMechanics() {
+  try {
+    const res = await fetch('/api/mechanics');
+    const mechanics = await res.json();
+    const sel = document.getElementById('mechanic-select');
+    mechanics.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name + ' — ' + m.specialization;
+      opt.dataset.spec = m.specialization;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.error('Could not load mechanics', e); }
+}
+
+document.getElementById('mechanic-select').addEventListener('change', function() {
+  const selected = this.options[this.selectedIndex];
+  const info = document.getElementById('mechanic-info');
+  const spec = document.getElementById('mechanic-spec-display');
+  if (this.value) {
+    info.style.display = 'block';
+    spec.textContent = selected.dataset.spec;
+  } else {
+    info.style.display = 'none';
+  }
+});
+
+loadMechanics();
+
 /* ══ NOTIFICATIONS ══ */
 let notifOpen = false;
 let notifications = [];
@@ -1722,6 +1778,37 @@ document.addEventListener('click', function(e) {
   }
 });
 
+
+function validateBookingForm() {
+  let valid = true;
+
+  // Validate full name — letters only
+  const name = document.getElementById('contact-name');
+  const nameError = document.getElementById('name-error');
+  if (!/^[a-zA-Z\s]+$/.test(name.value.trim()) || name.value.trim() === '') {
+    nameError.style.display = 'block';
+    name.style.borderColor = 'var(--red)';
+    valid = false;
+  } else {
+    nameError.style.display = 'none';
+    name.style.borderColor = '';
+  }
+
+  // Validate mobile — starts with 0, exactly 11 digits
+  const mobile = document.getElementById('contact-mobile');
+  const mobileError = document.getElementById('mobile-error');
+  if (!/^0\d{10}$/.test(mobile.value.trim())) {
+    mobileError.style.display = 'block';
+    mobile.style.borderColor = 'var(--red)';
+    valid = false;
+  } else {
+    mobileError.style.display = 'none';
+    mobile.style.borderColor = '';
+  }
+
+  return valid;
+}
+
 fetchNotifications();
 setInterval(fetchNotifications, 30000);
 
@@ -1737,6 +1824,8 @@ const bookingsData = {
     motorcycle_model: '{{ b.motorcycle_model|e if b.motorcycle_model else "" }}',
     motorcycle_plate: '{{ b.motorcycle_plate|e if b.motorcycle_plate else "" }}',
     notes: '{{ b.notes|e if b.notes else "" }}',
+    mechanic_name: '{{ b.mechanic_name|e if b.mechanic_name else "" }}',
+    mechanic_spec: '{{ b.mechanic_specialization|e if b.mechanic_specialization else "" }}',
     created_at: '{{ b.created_at.strftime("%b %d, %Y at %I:%M %p") }}'
   }{% if not loop.last %},{% endif %}
   {% endfor %}
@@ -1776,6 +1865,16 @@ function openBookingDetails(bookingId) {
   // Motorcycle info
   document.getElementById('bd-model').textContent = booking.motorcycle_model || '—';
   document.getElementById('bd-plate').textContent = booking.motorcycle_plate || '—';
+
+  // Mechanic info
+  const mechanicWrap = document.getElementById('bd-mechanic-wrap');
+  if (booking.mechanic_name) {
+    mechanicWrap.style.display = 'block';
+    document.getElementById('bd-mechanic-name').textContent = booking.mechanic_name;
+    document.getElementById('bd-mechanic-spec').textContent = booking.mechanic_spec || '—';
+  } else {
+    mechanicWrap.style.display = 'none';
+  }
 
   // Notes
   const notesWrap = document.getElementById('bd-notes-wrap');

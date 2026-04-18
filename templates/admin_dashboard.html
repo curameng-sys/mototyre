@@ -183,6 +183,7 @@
     <a href="#" onclick="showSection('orders', this)">📦 Orders</a>
     <a href="#" onclick="showSection('products', this)">🔧 Products</a>
     <a href="#" onclick="showSection('users', this)">👥 Users</a>
+    <a href="#" onclick="showSection('mechanics', this)">🔧 Mechanics</a>
     <a href="{{ url_for('pos') }}">🖥️ POS</a>
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
@@ -291,6 +292,7 @@
                 <th>Status</th>
                 <th>Payment</th>
                 <th>Notes</th>
+                <th>Mechanic</th>
                 <th>Update</th>
               </tr>
             </thead>
@@ -299,11 +301,17 @@
               <tr>
                 <td>{{ b.id }}</td>
                 <td>
-                  <div style="font-weight:600;color:#fff;">{{ b.customer.fullname }}</div>
-                  {% if b.motorcycle_model %}
-                  <div style="font-size:0.72rem;color:var(--muted);">🏍️ {{ b.motorcycle_model }}</div>
-                  {% endif %}
-                </td>
+                <div style="font-weight:600;color:#fff;">{{ b.customer.fullname }}</div>
+                {% if b.contact_name %}
+                <div style="font-size:0.72rem;color:var(--muted);">👤 {{ b.contact_name }}</div>
+                {% endif %}
+                {% if b.contact_mobile %}
+                <div style="font-size:0.72rem;color:var(--muted);">📞 {{ b.contact_mobile }}</div>
+                {% endif %}
+                {% if b.motorcycle_model %}
+                <div style="font-size:0.72rem;color:var(--muted);">🏍️ {{ b.motorcycle_model }}</div>
+                {% endif %}
+              </td>
                 <td>{{ b.service }}</td>
                 <td>
                   <div>{{ b.date.strftime('%b %d, %Y') }}</div>
@@ -327,6 +335,14 @@
                     <span style="color:var(--muted);">—</span>
                   {% endif %}
                 </td>
+                <td>
+                {% if b.mechanic_name %}
+                  <div style="font-weight:600;color:#fff;font-size:0.82rem;">{{ b.mechanic_name }}</div>
+                  <div style="font-size:0.72rem;color:var(--muted);">{{ b.mechanic_specialization or '—' }}</div>
+                {% else %}
+                  <span style="color:var(--muted);">—</span>
+                {% endif %}
+              </td>
                 <td>
                   <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
                     <select name="status">
@@ -526,6 +542,41 @@
         {% endif %}
       </div>
     </section>
+
+    <!-- MECHANICS -->
+<section id="sec-mechanics" class="page-section">
+  <div class="page-title">MANAGE <span class="accent">MECHANICS</span></div>
+  <div class="page-sub">Add and manage your shop mechanics.</div>
+  <div class="filter-bar">
+    <button class="btn-primary-custom" onclick="openModal('modal-add-mechanic')">+ Add Mechanic</button>
+  </div>
+  <div class="card">
+    {% if all_mechanics %}
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead><tr><th>#</th><th>Name</th><th>Specialization</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for m in all_mechanics %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td style="font-weight:600;color:#fff;">{{ m.name }}</td>
+            <td>{{ m.specialization }}</td>
+            <td><span class="badge badge-{{ 'completed' if m.status == 'available' else 'cancelled' }}">{{ m.status }}</span></td>
+            <td>
+              <form method="POST" action="{{ url_for('delete_mechanic', mid=m.id) }}" onsubmit="return confirm('Delete {{ m.name }}?')">
+                <button type="submit" class="btn-action-delete">🗑️ Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="ei">🔧</div><p>No mechanics yet. Add one!</p></div>
+    {% endif %}
+  </div>
+</section>
 
     <!-- REPORTS -->
     <section id="sec-reports" class="page-section">
@@ -816,6 +867,34 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('modal-order-detail')">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- ADD MECHANIC MODAL -->
+<div class="modal-overlay" id="modal-add-mechanic">
+  <div class="modal-box">
+    <h5>🔧 Add Mechanic</h5>
+    <form method="POST" action="{{ url_for('add_mechanic') }}">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" name="name" placeholder="e.g. Juan dela Cruz" required>
+      </div>
+      <div class="form-group">
+        <label>Specialization</label>
+        <input type="text" name="specialization" placeholder="e.g. CVT, Engine, FI Cleaning" required>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+          <option value="available">Available</option>
+          <option value="unavailable">Unavailable</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeModal('modal-add-mechanic')">Cancel</button>
+        <button type="submit" class="btn-primary-custom">Add Mechanic</button>
+      </div>
+    </form>
   </div>
 </div>
 
