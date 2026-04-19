@@ -14,6 +14,13 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from io import BytesIO
+from flask import make_response
 import os, uuid, random, string, base64, requests
 import requests
 import base64
@@ -179,6 +186,7 @@ class Booking(db.Model):
     mechanic_specialization = db.Column(db.String(100))
     contact_name  = db.Column(db.String(100))
     contact_mobile = db.Column(db.String(20))
+    is_archived = db.Column(db.Boolean, default=False)
 
 class Mechanic(db.Model):
     id             = db.Column(db.Integer, primary_key=True)
@@ -210,6 +218,7 @@ class Order(db.Model):
     ship_address    = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=ph_now)
     items           = db.relationship('OrderItem', backref='order', lazy=True)
+    is_archived = db.Column(db.Boolean, default=False)
 
 
 class OrderItem(db.Model):
@@ -815,7 +824,6 @@ def staff_dashboard():
         order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all())
     )
 
-
 # ─── ADMIN ───────────────────────────────────────────────────────────────────
 
 @app.route('/admin/dashboard')
@@ -824,27 +832,29 @@ def admin_dashboard():
     if current_user.role not in ['admin', 'staff']:
         flash('Access denied.', 'danger')
         return redirect(url_for('customer_dashboard'))
-    
+
     cleanup_abandoned_gcash_orders()
-    
+
     return render_template('admin_dashboard.html',
-        total_bookings=Booking.query.count(),
-        total_orders=Order.query.count(),
-        total_users=User.query.count(),
-        total_revenue=f'{db.session.query(func.sum(Order.total_amount)).scalar() or 0:,.2f}',
-        booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).group_by(Booking.status).all()),
-        order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
-        top_services=db.session.query(Booking.service, func.count(Booking.id).label('count')).group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all(),
-        new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
-        recent_bookings=Booking.query.order_by(Booking.created_at.desc()).limit(5).all(),
-        all_bookings=Booking.query.order_by(Booking.created_at.desc()).all(),
-        all_orders=Order.query.order_by(Order.created_at.desc()).all(),
-        all_products=Product.query.all(),
-        all_users=User.query.all(),
-        all_mechanics=Mechanic.query.order_by(Mechanic.name).all(),
-    )
-
-
+    total_bookings=Booking.query.count(),
+    total_orders=Order.query.count(),
+    total_users=User.query.count(),
+    total_revenue=f'{db.session.query(func.sum(Order.total_amount)).filter(Order.status.notin_(["cancelled", "awaiting_payment"])).scalar() or 0:,.2f}',
+    booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).group_by(Booking.status).all()),
+    order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
+    top_services=db.session.query(Booking.service, func.count(Booking.id).label('count')).group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all(),
+    new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
+    recent_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).limit(5).all(),
+    all_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all(),
+    all_orders=Order.query.filter_by(is_archived=False).order_by(Order.created_at.desc()).all(),
+    all_products=Product.query.all(),
+    all_users=User.query.all(),
+    all_mechanics=Mechanic.query.order_by(Mechanic.name).all(),
+    archived_orders=Order.query.filter_by(is_archived=True).order_by(Order.created_at.desc()).all(),
+    archived_bookings=Booking.query.filter_by(is_archived=True).order_by(Booking.created_at.desc()).all(),
+    now=ph_now(),
+    today=ph_now().date(),
+)
 @app.route('/admin/booking/<int:bid>/status', methods=['POST'])
 @login_required
 def update_booking_status(bid):
@@ -854,15 +864,15 @@ def update_booking_status(bid):
     db.session.commit()
 
     messages = {
-    'confirmed':  ('Booking Confirmed! ✅', f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been confirmed. Please arrive 15 minutes before your schedule or your booking will be automatically cancelled.'),
-    'inprogress': ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
-    'in_progress': ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
-    'completed':  ('Service Completed! 🎉',  f'Your {booking.service} has been completed. Thank you!'),
-    'cancelled':  ('Booking Cancelled ❌',   f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} was cancelled by the admin.'),
-}
+        'confirmed':   ('Booking Confirmed! ✅', f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been confirmed. Please arrive 15 minutes before your schedule or your booking will be automatically cancelled.'),
+        'inprogress':  ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
+        'in_progress': ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
+        'completed':   ('Service Completed! 🎉',  f'Your {booking.service} has been completed. Thank you!'),
+        'cancelled':   ('Booking Cancelled ❌',   f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} was cancelled by the admin.'),
+    }
     if new_status in messages:
         title, msg = messages[new_status]
-        send_notification(booking.user_id, title, msg, type='booking', status=new_status)
+        send_notification(booking.user_id, title, msg, type='booking', status=new_status.replace('_', ''))
 
     flash('Booking status updated!', 'success')
     return redirect(url_for('admin_dashboard'))
@@ -871,8 +881,17 @@ def update_booking_status(bid):
 @app.route('/admin/order/<int:oid>/status', methods=['POST'])
 @login_required
 def update_order_status(oid):
-    order      = Order.query.get_or_404(oid)
+    order = Order.query.get_or_404(oid)
     new_status = request.form['status']
+
+    # Restore stock when cancelling
+    if new_status == 'cancelled' and order.status != 'cancelled':
+        for item in OrderItem.query.filter_by(order_id=order.id).all():
+            product = Product.query.get(item.product_id)
+            if product:
+                product.stock += item.quantity
+                print(f'[STOCK RESTORED] Product {product.name}: +{item.quantity} → {product.stock}')
+
     order.status = new_status
     db.session.commit()
 
@@ -1490,6 +1509,305 @@ def test_paymongo():
     )
     return jsonify(result)
 
+@app.route('/admin/report/generate', methods=['POST'])
+@login_required
+def generate_report():
+    if current_user.role not in ['admin', 'staff']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    date_from = request.form.get('date_from')
+    date_to   = request.form.get('date_to')
+
+    try:
+        d_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+        d_to   = datetime.strptime(date_to,   '%Y-%m-%d').date()
+    except:
+        flash('Invalid date range.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    # ── Fetch data ──
+    orders = Order.query.filter(
+        func.date(Order.created_at) >= d_from,
+        func.date(Order.created_at) <= d_to
+    ).order_by(Order.created_at.desc()).all()
+
+    bookings = Booking.query.filter(
+        Booking.date >= d_from,
+        Booking.date <= d_to
+    ).order_by(Booking.date.desc()).all()
+
+    total_revenue = sum(o.total_amount for o in orders if o.status not in ['cancelled', 'awaiting_payment'])
+    total_orders    = len(orders)
+    total_bookings  = len(bookings)
+    cancelled_orders   = sum(1 for o in orders if o.status == 'cancelled')
+    completed_orders   = sum(1 for o in orders if o.status == 'completed')
+    completed_bookings = sum(1 for b in bookings if b.status == 'completed')
+    cancelled_bookings = sum(1 for b in bookings if b.status == 'cancelled')
+
+    # ── Build PDF ──
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            rightMargin=40, leftMargin=40,
+                            topMargin=40, bottomMargin=40)
+    story = []
+    W = A4[0] - 80
+
+    # Colors
+    RED    = colors.HexColor('#e8401c')
+    DARK   = colors.HexColor('#1a1d23')
+    LIGHT  = colors.HexColor('#f3f4f6')
+    MUTED  = colors.HexColor('#6b7280')
+    GREEN  = colors.HexColor('#16a34a')
+    YELLOW = colors.HexColor('#d97706')
+
+    styles = getSampleStyleSheet()
+
+    def style(name, **kwargs):
+        return ParagraphStyle(name, **kwargs)
+
+    title_style    = style('T', fontSize=24, fontName='Helvetica-Bold', textColor=RED, spaceAfter=2)
+    sub_style      = style('S', fontSize=10, fontName='Helvetica',      textColor=MUTED, spaceAfter=4)
+    heading_style  = style('H', fontSize=12, fontName='Helvetica-Bold', textColor=DARK, spaceBefore=14, spaceAfter=6)
+    normal_style   = style('N', fontSize=9,  fontName='Helvetica',      textColor=DARK)
+    small_style    = style('SM', fontSize=8, fontName='Helvetica',      textColor=MUTED)
+
+    # Header
+    story.append(Paragraph('MOTOTYRE MOTO SHOP', title_style))
+    story.append(Paragraph('Sales & Operations Report', style('ST', fontSize=13, fontName='Helvetica-Bold', textColor=DARK, spaceAfter=2)))
+    story.append(Paragraph(f'Period: {d_from.strftime("%b %d, %Y")} — {d_to.strftime("%b %d, %Y")}', sub_style))
+    story.append(Paragraph(f'Generated: {ph_now().strftime("%b %d, %Y at %I:%M %p")}', sub_style))
+    story.append(HRFlowable(width=W, thickness=2, color=RED, spaceAfter=12))
+
+    # Summary cards
+    story.append(Paragraph('SUMMARY', heading_style))
+    summary_data = [
+        ['Total Revenue', 'Total Orders', 'Total Bookings', 'Completed Orders'],
+        [f'P{total_revenue:,.2f}', str(total_orders), str(total_bookings), str(completed_orders)],
+    ]
+    summary_table = Table(summary_data, colWidths=[W/4]*4)
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), DARK),
+        ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
+        ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE',   (0,0), (-1,0), 9),
+        ('BACKGROUND', (0,1), (-1,1), LIGHT),
+        ('FONTNAME',   (0,1), (-1,1), 'Helvetica-Bold'),
+        ('FONTSIZE',   (0,1), (-1,1), 14),
+        ('TEXTCOLOR',  (0,1), (0,1),  RED),
+        ('ALIGN',      (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN',     (0,0), (-1,-1), 'MIDDLE'),
+        ('ROWBACKGROUNDS', (0,0), (-1,-1), [DARK, LIGHT]),
+        ('ROWHEIGHT',  (0,0), (-1,-1), 28),
+        ('GRID',       (0,0), (-1,-1), 0.5, colors.white),
+        ('ROUNDEDCORNERS', [4,4,4,4]),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 8))
+
+    # Orders breakdown
+    story.append(Paragraph('ORDERS BREAKDOWN', heading_style))
+    status_counts = {}
+    for o in orders:
+        status_counts[o.status] = status_counts.get(o.status, 0) + 1
+
+    breakdown_data = [['Status', 'Count', 'Amount']]
+    for status, count in sorted(status_counts.items()):
+        amount = sum(o.total_amount for o in orders if o.status == status)
+        breakdown_data.append([status.replace('_',' ').title(), str(count), f'P{amount:,.2f}'])
+
+    if len(breakdown_data) > 1:
+        bt = Table(breakdown_data, colWidths=[W*0.4, W*0.2, W*0.4])
+        bt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), DARK),
+            ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
+            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE',   (0,0), (-1,-1), 9),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT]),
+            ('ALIGN',      (1,0), (-1,-1), 'CENTER'),
+            ('GRID',       (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+            ('ROWHEIGHT',  (0,0), (-1,-1), 22),
+        ]))
+        story.append(bt)
+    story.append(Spacer(1, 8))
+
+    # Recent orders table
+    story.append(Paragraph('ORDERS LOG', heading_style))
+    order_data = [['Order #', 'Customer', 'Amount', 'Status', 'Date']]
+    for o in orders[:20]:
+        customer = db.session.get(User, o.user_id)
+        order_data.append([
+            f'ORD-{o.id:03d}',
+            customer.fullname if customer else '—',
+            f'P{o.total_amount:,.2f}',
+            o.status.replace('_',' ').title(),
+            o.created_at.strftime('%b %d, %Y'),
+        ])
+
+    if len(order_data) > 1:
+        ot = Table(order_data, colWidths=[W*0.12, W*0.28, W*0.18, W*0.18, W*0.24])
+        ot.setStyle(TableStyle([
+            ('BACKGROUND',  (0,0), (-1,0), DARK),
+            ('TEXTCOLOR',   (0,0), (-1,0), colors.white),
+            ('FONTNAME',    (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE',    (0,0), (-1,-1), 8),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT]),
+            ('GRID',        (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+            ('ROWHEIGHT',   (0,0), (-1,-1), 20),
+            ('ALIGN',       (2,0), (3,-1), 'CENTER'),
+        ]))
+        story.append(ot)
+    story.append(Spacer(1, 8))
+
+    # Bookings breakdown
+    story.append(Paragraph('BOOKINGS BREAKDOWN', heading_style))
+    booking_status_counts = {}
+    for b in bookings:
+        booking_status_counts[b.status] = booking_status_counts.get(b.status, 0) + 1
+
+    bbd = [['Status', 'Count']]
+    for status, count in sorted(booking_status_counts.items()):
+        bbd.append([status.replace('_',' ').title(), str(count)])
+
+    if len(bbd) > 1:
+        bbt = Table(bbd, colWidths=[W*0.6, W*0.4])
+        bbt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), DARK),
+            ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
+            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE',   (0,0), (-1,-1), 9),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT]),
+            ('ALIGN',      (1,0), (1,-1), 'CENTER'),
+            ('GRID',       (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+            ('ROWHEIGHT',  (0,0), (-1,-1), 22),
+        ]))
+        story.append(bbt)
+    story.append(Spacer(1, 8))
+
+    # Bookings log
+    story.append(Paragraph('BOOKINGS LOG', heading_style))
+    booking_data = [['Customer', 'Service', 'Date', 'Time', 'Status']]
+    for b in bookings[:20]:
+        customer = db.session.get(User, b.user_id)
+        booking_data.append([
+            customer.fullname if customer else '—',
+            b.service[:25],
+            b.date.strftime('%b %d, %Y'),
+            b.time.strftime('%I:%M %p'),
+            b.status.replace('_',' ').title(),
+        ])
+
+    if len(booking_data) > 1:
+        blt = Table(booking_data, colWidths=[W*0.22, W*0.28, W*0.18, W*0.14, W*0.18])
+        blt.setStyle(TableStyle([
+            ('BACKGROUND',  (0,0), (-1,0), DARK),
+            ('TEXTCOLOR',   (0,0), (-1,0), colors.white),
+            ('FONTNAME',    (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE',    (0,0), (-1,-1), 8),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT]),
+            ('GRID',        (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+            ('ROWHEIGHT',   (0,0), (-1,-1), 20),
+        ]))
+        story.append(blt)
+
+    # Footer
+    story.append(Spacer(1, 16))
+    story.append(HRFlowable(width=W, thickness=1, color=MUTED, spaceAfter=6))
+    story.append(Paragraph('This report was automatically generated by MotoTyre Admin Dashboard.', small_style))
+
+    doc.build(story)
+    buffer.seek(0)
+
+    filename = f'mototyre_report_{d_from}_{d_to}.pdf'
+    response = make_response(buffer.read())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
+
+@app.route('/admin/order/<int:oid>/archive', methods=['POST'])
+@login_required
+def archive_order(oid):
+    if current_user.role not in ['admin', 'staff']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    order = Order.query.get_or_404(oid)
+    
+    if order.status == 'completed':
+        min_days = 30
+    elif order.status == 'cancelled':
+        min_days = 7
+
+    age = (ph_now() - order.created_at).days
+    if age < min_days:
+        flash(f'Order ORD-{order.id:03d} must be at least {min_days} days old to archive. ({age} days old)', 'warning')
+        return redirect(url_for('admin_dashboard'))
+    
+    order.is_archived = True
+    db.session.commit()
+    flash(f'Order ORD-{order.id:03d} archived.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@app.route('/admin/booking/<int:bid>/archive', methods=['POST'])
+@login_required
+def archive_booking(bid):
+    if current_user.role not in ['admin', 'staff']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    booking = Booking.query.get_or_404(bid)
+    
+    if booking.status == 'completed':
+        min_days = 30
+    elif booking.status == 'cancelled':
+        min_days = 7
+
+    age = (ph_now().date() - booking.date).days
+    if age < min_days:
+        flash(f'Booking #{booking.id} must be at least {min_days} days old to archive. ({age} days old)', 'warning')
+        return redirect(url_for('admin_dashboard'))
+    
+    booking.is_archived = True
+    db.session.commit()
+    flash(f'Booking #{booking.id} archived.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@app.route('/admin/archive-all', methods=['POST'])
+@login_required
+def archive_all_old():
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    completed_cutoff = ph_now() - timedelta(days=30)
+    cancelled_cutoff = ph_now() - timedelta(days=7)
+
+    old_orders = Order.query.filter(
+        db.or_(
+            db.and_(Order.status == 'completed', Order.created_at < completed_cutoff),
+            db.and_(Order.status == 'cancelled', Order.created_at < cancelled_cutoff)
+        ),
+        Order.is_archived == False
+    ).all()
+
+    old_bookings = Booking.query.filter(
+        db.or_(
+            db.and_(Booking.status == 'completed', Booking.date < completed_cutoff.date()),
+            db.and_(Booking.status == 'cancelled', Booking.date < cancelled_cutoff.date())
+        ),
+        Booking.is_archived == False
+    ).all()
+
+    for o in old_orders:
+        o.is_archived = True
+    for b in old_bookings:
+        b.is_archived = True
+
+    db.session.commit()
+
+    flash(f'Archived {len(old_orders)} orders and {len(old_bookings)} bookings.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/payment/failed')
 def payment_failed():
     """Handle cancelled/failed payment - remove the order."""
@@ -1523,20 +1841,6 @@ def payment_failed():
             pass
     
     return redirect('http://127.0.0.1:5000/customer/dashboard')
-
-@app.route('/debug-time')
-@login_required
-def debug_time():
-    latest = Notification.query.order_by(Notification.id.desc()).first()
-    return f"""
-    <pre style="font-size:16px;padding:20px;background:#000;color:#0f0;">
-Server datetime.utcnow():   {datetime.utcnow()}
-Server datetime.now():      {datetime.now()}
-Your ph_now():              {ph_now()}
-Latest notif.created_at:    {latest.created_at if latest else 'None'}
-Latest notif ID:            {latest.id if latest else 'None'}
-    </pre>
-    """
 
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit

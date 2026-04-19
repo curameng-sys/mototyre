@@ -187,6 +187,7 @@
     <a href="{{ url_for('pos') }}">🖥️ POS</a>
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
+    <a href="#" onclick="showSection('archive', this)">🗃️ Archive</a>
     <div class="sidebar-bottom">
       <div class="sidebar-label">Account</div>
       <a href="#" onclick="showSection('settings', this)">⚙️ Settings</a>
@@ -294,6 +295,7 @@
                 <th>Notes</th>
                 <th>Mechanic</th>
                 <th>Update</th>
+                <th>Archive</th>
               </tr>
             </thead>
             <tbody>
@@ -355,6 +357,20 @@
                     <button type="submit">Save</button>
                   </form>
                 </td>
+                <td>
+                <td>
+                {% set age = (today - b.date).days %}
+                {% set min_days = 30 if b.status == 'completed' else 7 %}
+                {% if b.status in ['completed', 'cancelled'] and age >= min_days %}
+                  <form method="POST" action="{{ url_for('archive_booking', bid=b.id) }}" onsubmit="return confirm('Archive Booking #{{ b.id }}?')">
+                    <button type="submit" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9ca3af;padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">🗃️ Archive</button>
+                  </form>
+                {% elif b.status not in ['completed', 'cancelled'] %}
+                  <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">Not eligible</span>
+                {% else %}
+                  <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">{{ min_days - age }}d left</span>
+                {% endif %}
+              </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -387,7 +403,7 @@
         {% if all_orders %}
         <div style="overflow-x:auto;">
           <table class="table" id="orders-table">
-           <thead><tr><th>Order #</th><th>Customer</th><th>Products</th><th>Total</th><th>Status</th><th>Date</th><th>Payment</th><th>Delivery</th><th>Update Status</th></tr></thead>
+           <thead><tr><th>Order #</th><th>Customer</th><th>Products</th><th>Total</th><th>Status</th><th>Date</th><th>Payment</th><th>Delivery</th><th>Update Status</th><th>Archive</th></tr></thead>
             <tbody>
               {% for o in all_orders %}
               <tr>
@@ -444,7 +460,21 @@
                   <button type="submit">Save</button>
                 </form>
               </td>
+              <td style="white-space:nowrap;text-align:left;vertical-align:middle;">
+                {% set age = (now - o.created_at).days %}
+                {% set min_days = 30 if o.status == 'completed' else 7 %}
+                {% if o.status in ['completed', 'cancelled'] and age >= min_days %}
+                  <form method="POST" action="{{ url_for('archive_order', oid=o.id) }}" onsubmit="return confirm('Archive ORD-{{ '%03d'|format(o.id) }}?')">
+                    <button type="submit" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9ca3af;padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">🗃️ Archive</button>
+                  </form>
+                {% elif o.status not in ['completed', 'cancelled'] %}
+                  <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">Not eligible</span>
+                {% else %}
+                  <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">{{ min_days - age }}d left</span>
+                {% endif %}
+              </td>
               </tr>
+
               {% endfor %}
             </tbody>
           </table>
@@ -582,6 +612,20 @@
     <section id="sec-reports" class="page-section">
       <div class="page-title">REPORTS <span class="accent">& SALES</span></div>
       <div class="page-sub">Overview of revenue, services, and order performance.</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#fff;margin-right:0.5rem;">📄 Generate Report</div>
+        <form method="POST" action="{{ url_for('generate_report') }}" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <label style="font-size:0.78rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;">From</label>
+            <input type="date" name="date_from" required style="padding:0.45rem 0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(255,255,255,0.05);color:#fff;font-size:0.82rem;outline:none;">
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <label style="font-size:0.78rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;">To</label>
+            <input type="date" name="date_to" required style="padding:0.45rem 0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(255,255,255,0.05);color:#fff;font-size:0.82rem;outline:none;">
+          </div>
+          <button type="submit" class="btn-primary-custom">⬇️ Download PDF</button>
+        </form>
+      </div>
       <div class="stats-grid">
         <div class="stat-card red"><div class="stat-icon">💵</div><div class="stat-value">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div></div>
         <div class="stat-card blue"><div class="stat-icon">🔧</div><div class="stat-value">{{ booking_status_counts.get('completed', 0) }}</div><div class="stat-label">Services Completed</div></div>
@@ -650,6 +694,80 @@
         {% endif %}
       </div>
     </section>
+
+    <!-- ARCHIVE -->
+<section id="sec-archive" class="page-section">
+  <div class="page-title">ARCHIVE <span class="accent">RECORDS</span></div>
+  <div class="page-sub">View and restore archived orders and bookings.</div>
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;margin-bottom:0.25rem;">🗃️ Bulk Archive</div>
+      <div style="font-size:0.8rem;color:var(--muted);">Automatically archive all completed & cancelled records older than 30 days.</div>
+    </div>
+    <form method="POST" action="{{ url_for('archive_all_old') }}" onsubmit="return confirm('Archive completed records older than 30 days and cancelled records older than 7 days?')">
+      <button type="submit" class="btn-primary-custom">🗃️ Archive All Old Records</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h5>📦 Archived Orders</h5></div>
+    {% if archived_orders %}
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead><tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th><th>Restore</th></tr></thead>
+        <tbody>
+          {% for o in archived_orders %}
+          <tr>
+            <td style="font-weight:700;color:#93c5fd;">ORD-{{ '%03d'|format(o.id) }}</td>
+            <td>{{ o.customer.fullname }}</td>
+            <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
+            <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
+            <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('unarchive_order', oid=o.id) }}">
+                <button type="submit" style="background:rgba(22,163,74,0.12);border:1px solid rgba(22,163,74,0.25);color:#86efac;padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">↩️ Restore</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="ei">📦</div><p>No archived orders.</p></div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h5>📅 Archived Bookings</h5></div>
+    {% if archived_bookings %}
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead><tr><th>#</th><th>Customer</th><th>Service</th><th>Date</th><th>Status</th><th>Restore</th></tr></thead>
+        <tbody>
+          {% for b in archived_bookings %}
+          <tr>
+            <td>{{ b.id }}</td>
+            <td>{{ b.customer.fullname }}</td>
+            <td>{{ b.service }}</td>
+            <td>{{ b.date.strftime('%b %d, %Y') }}</td>
+            <td><span class="badge badge-{{ b.status|replace('_','') }}">{{ b.status|replace('_',' ')|title }}</span></td>
+            <td>
+              <form method="POST" action="{{ url_for('unarchive_booking', bid=b.id) }}">
+                <button type="submit" style="background:rgba(22,163,74,0.12);border:1px solid rgba(22,163,74,0.25);color:#86efac;padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">↩️ Restore</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="ei">📅</div><p>No archived bookings.</p></div>
+    {% endif %}
+  </div>
+</section>
 
     <!-- SETTINGS -->
     <section id="sec-settings" class="page-section">
@@ -1241,6 +1359,11 @@ async function fetchAdminNotifications() {
   } catch(e) { console.error('Notif fetch error', e); }
 }
 
+function formatStatusInText(text) {
+  return text.replace(/\b(IN_PROGRESS|in_progress)\b/gi, 'In Progress')
+             .replace(/\b(AWAITING_PAYMENT|awaiting_payment)\b/gi, 'Awaiting Payment');
+}
+
 function renderAdminNotifications() {
   const list = document.getElementById('admin-notif-list');
   const empty = document.getElementById('admin-notif-empty');
@@ -1280,7 +1403,7 @@ function renderAdminNotifications() {
           ${n.title}
           ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:#ff0f0f;display:inline-block;"></span>' : ''}
         </div>
-        <div style="font-size:0.78rem;color:#9ca3af;line-height:1.5;margin-bottom:0.3rem;">${n.message}</div>
+        <div style="font-size:0.78rem;color:#9ca3af;line-height:1.5;margin-bottom:0.3rem;">${formatStatusInText(n.message)}</div>
         <div style="font-size:0.7rem;color:#4b5563;">${time}</div>
       </div>
     `;
