@@ -72,7 +72,7 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
                         "currency": "PHP"
                     }
                 ],
-                "payment_method_types": ["card", "gcash"],
+                "payment_method_types": ["gcash"],
                 "success_url": f"{BASE_URL}/payment/success?order_id={order_id or ''}&booking_id={booking_id or ''}",
                 "cancel_url": f"{BASE_URL}/payment/failed?order_id={order_id or ''}&booking_id={booking_id or ''}"
             }
@@ -329,6 +329,13 @@ def cleanup_abandoned_gcash_orders():
     ).all()
     
     for order in abandoned:
+        # Delete orphaned notifications
+        Notification.query.filter(
+            Notification.user_id == order.user_id,
+            Notification.type == 'order',
+            Notification.created_at >= order.created_at
+        ).delete(synchronize_session=False)
+        
         # Restore stock
         for item in order.items:
             product = Product.query.get(item.product_id)
@@ -549,10 +556,15 @@ def logout():
 @app.route('/customer/dashboard')
 @login_required
 def customer_dashboard():
+    # Delete "pending" order notifications that have no matching real order
+    Notification.query.filter_by(
+        user_id=current_user.id, type='order', status='pending'
+    ).delete(synchronize_session=False)
+    db.session.commit()
+
     bookings   = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
     orders     = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
     products   = Product.query.filter(Product.stock > 0).all()
-    categories = ['Tires', 'Engine Oil', 'Air Filter', 'Brake Shoe']
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders,
                            products=products)
 
@@ -655,13 +667,14 @@ def place_order():
     product.stock -= quantity
     db.session.commit()
     
-    # Notification
-    delivery_text = "for pickup" if delivery_method == 'pickup' else "for delivery"
-    send_notification(
-        current_user.id, 'Order Placed!',
-        f'Your order for {product.name} (x{quantity}) worth ₱{total:.2f} is now pending {delivery_text}.',
-        type='order', status='pending'
-    )
+    # Only notify for non-GCash orders — GCash notification is sent after payment succeeds
+    if payment_method.lower() != 'gcash':
+        delivery_text = "for pickup" if delivery_method == 'pickup' else "for delivery"
+        send_notification(
+            current_user.id, 'Order Placed!',
+            f'Your order for {product.name} (x{quantity}) worth ₱{total:.2f} is now pending {delivery_text}.',
+            type='order', status='pending'
+        )
     
     # If GCash payment, redirect to PayMongo
     if payment_method.lower() == 'gcash':
@@ -1089,6 +1102,32 @@ def pos():
     customers = User.query.filter_by(role='customer').order_by(User.fullname).all()
     return render_template('pos.html', products=products, customers=customers)
 
+@app.route('/admin/pos')
+@login_required
+def pos():
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+    products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
+    customers = User.query.filter_by(role='customer').order_by(User.fullname).all()
+    return render_template('pos.html', products=products, customers=customers)
+
+
+@app.route('/admin/pos/products')
+@login_required
+def pos_products():
+    """Return fresh product data as JSON for POS refresh."""
+    if current_user.role not in ['admin', 'staff']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
+    return jsonify([{
+        'id': p.id,
+        'name': p.name,
+        'price': p.price,
+        'stock': p.stock,
+        'category': p.category
+    } for p in products])
+
 
 @app.route('/admin/pos/checkout', methods=['POST'])
 @login_required
@@ -1177,19 +1216,22 @@ def pos_checkout():
     # ─── HANDLE SERVICES ────────────────────────────────────────────────────
     
     booking_ids = []
+    service_revenue = 0
+    
     for svc in services:
         source_booking_id = svc.get('source_booking_id')
+        svc_price = float(svc.get('price', 0))
+        svc_qty = int(svc.get('qty', 1))
         
         if source_booking_id:
-            # Update existing booking to completed
             source_booking = Booking.query.get(source_booking_id)
             if source_booking:
                 source_booking.status = 'completed'
                 source_booking.payment_method = payment_method
                 completed_booking_ids.add(source_booking_id)
                 booking_ids.append(source_booking_id)
+                service_revenue += svc_price * svc_qty
                 
-                # Notify customer
                 if source_booking.user_id:
                     send_notification(
                         source_booking.user_id,
@@ -1198,7 +1240,6 @@ def pos_checkout():
                         type='booking', status='completed'
                     )
         else:
-            # Create new booking for walk-in service
             booking = Booking(
                 user_id=int(customer_id) if customer_id else current_user.id,
                 service=svc['name'],
@@ -1213,6 +1254,7 @@ def pos_checkout():
             db.session.add(booking)
             db.session.flush()
             booking_ids.append(booking.id)
+            service_revenue += svc_price * svc_qty
 
             if customer_id:
                 send_notification(
@@ -1221,6 +1263,21 @@ def pos_checkout():
                     f'Your {svc["name"]} walk-in service has been recorded.',
                     type='booking', status='completed'
                 )
+    
+    # Create an order for service revenue so it counts in total revenue
+    if service_revenue > 0:
+        uid = int(customer_id) if customer_id else current_user.id
+        svc_order = Order(
+            user_id=uid,
+            total_amount=service_revenue,
+            status='completed',
+            payment_method=payment_method,
+            delivery_method='pickup'
+        )
+        db.session.add(svc_order)
+        db.session.flush()
+        if not order_id:
+            order_id = svc_order.id
 
     db.session.commit()
 
@@ -1305,6 +1362,7 @@ def pos_customer_items(cid: int):
         bookings_data.append({
             'booking_id': b.id,
             'service':    b.service,
+            'price':      b.price if hasattr(b, 'price') and b.price else 0,
             'date':       b.date.strftime('%Y-%m-%d'),
             'time':       b.time.strftime('%H:%M'),
             'status':     b.status,
@@ -1431,10 +1489,13 @@ def payment_success():
             if order and order.status == 'awaiting_payment':
                 order.status = 'confirmed'
                 db.session.commit()
+                
+                # NOW send the notification — payment is confirmed
+                items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
                 send_notification(
                     order.user_id,
-                    'Payment Received!',
-                    f'Your GCash payment for Order ORD-{order.id:03d} has been confirmed.',
+                    'Order Confirmed! ✅',
+                    f'Your payment for Order ORD-{order.id:03d} ({items_desc}) worth ₱{order.total_amount:.2f} has been confirmed.',
                     type='order', status='confirmed'
                 )
         except:
@@ -1810,7 +1871,7 @@ def archive_all_old():
 
 @app.route('/payment/failed')
 def payment_failed():
-    """Handle cancelled/failed payment - remove the order."""
+    """Handle cancelled/failed payment - remove the order and its notifications."""
     order_id = request.args.get('order_id')
     booking_id = request.args.get('booking_id')
     
@@ -1818,6 +1879,13 @@ def payment_failed():
         try:
             order = Order.query.get(int(order_id))
             if order and order.status == 'awaiting_payment':
+                # Delete the "Order Placed" notification that was sent
+                Notification.query.filter(
+                    Notification.user_id == order.user_id,
+                    Notification.type == 'order',
+                    Notification.created_at >= order.created_at
+                ).delete(synchronize_session=False)
+                
                 # Restore stock
                 for item in order.items:
                     product = Product.query.get(item.product_id)
@@ -1829,16 +1897,22 @@ def payment_failed():
                 db.session.delete(order)
                 db.session.commit()
         except:
-            pass
+            db.session.rollback()
     
     if booking_id:
         try:
             booking = Booking.query.get(int(booking_id))
             if booking and booking.status == 'pending':
+                Notification.query.filter(
+                    Notification.user_id == booking.user_id,
+                    Notification.type == 'booking',
+                    Notification.created_at >= booking.created_at
+                ).delete(synchronize_session=False)
+                
                 db.session.delete(booking)
                 db.session.commit()
         except:
-            pass
+            db.session.rollback()
     
     return redirect('http://127.0.0.1:5000/customer/dashboard')
 

@@ -511,16 +511,24 @@
       </div>
       <div class="service-list">
         {% set preset_services = [
-          ('Oil Change', 'Engine oil replacement', 350),
-          ('Tire Change - Front', 'Replace front tire', 150),
-          ('Tire Change - Rear', 'Replace rear tire', 150),
-          ('Full Tune-up', 'Spark plug, filters & adjustment', 800),
-          ('Chain Lubrication', 'Clean and lubricate drive chain', 120),
-          ('Brake Check & Adjustment', 'Inspect and adjust brake system', 200),
-          ('Wheel Alignment', 'Front & rear alignment', 250),
-          ('Battery Check', 'Test and inspect battery', 80),
-          ('Carburetor Cleaning', 'Full carb cleaning', 500),
-          ('General Checkup', 'Overall motorcycle inspection', 150),
+          ('FI Cleaning', 'Fuel injection system cleaning', 600),
+          ('Throttle Body Cleaning', 'Clean throttle body assembly', 400),
+          ('Tune-Up', 'Spark plug, filters & adjustment', 800),
+          ('Ball Race Installation', 'Steering ball race replacement', 350),
+          ('General Rewiring', 'Full electrical rewiring', 500),
+          ('CVT Upgrade', 'CVT performance upgrade', 700),
+          ('CVT Cleaning', 'CVT belt & pulley cleaning', 500),
+          ('Diagnostic (API Tech / MST)', 'Electronic diagnostic scan', 300),
+          ('Suspension Tuning', 'Front & rear suspension setup', 400),
+          ('Overhaul', 'Full engine overhaul', 2500),
+          ('Top Overhaul', 'Top-end engine rebuild', 1500),
+          ('Brake Cleaning', 'Brake system cleaning', 200),
+          ('Remap', 'ECU remapping & tuning', 1500),
+          ('Change Oil', 'Engine oil replacement', 350),
+          ('Horn Installation', 'Horn install & wiring', 150),
+          ('Rubber Link Stopper', 'Rubber link stopper replacement', 100),
+          ('Change Brake Pad', 'Brake pad replacement', 300),
+          ('Full Maintenance Package', 'Complete maintenance service', 1200),
         ] %}
         {% for name, desc, price in preset_services %}
         <div class="service-item" onclick="addService('{{ name }}', {{ price }}, this)">
@@ -802,6 +810,27 @@ function loadPendingItems() {
     }
   }
 
+  const SVC_PRICES = {
+    'FI Cleaning': 600,
+    'Throttle Body Cleaning': 400,
+    'Tune-Up': 800,
+    'Ball Race Installation': 350,
+    'General Rewiring': 500,
+    'CVT Upgrade': 700,
+    'CVT Cleaning': 500,
+    'Diagnostic (API Tech / MST)': 300,
+    'Suspension Tuning': 400,
+    'Overhaul': 2500,
+    'Top Overhaul': 1500,
+    'Brake Cleaning': 200,
+    'Remap': 1500,
+    'Change Oil': 350,
+    'Horn Installation': 150,
+    'Rubber Link Stopper': 100,
+    'Change Brake Pad': 300,
+    'Full Maintenance Package': 1200,
+  };
+
   for (const booking of pendingData.bookings) {
     const existing = cart.find(c => c.type === 'service' && c.name === booking.service && c.pending);
     if (existing) {
@@ -811,7 +840,7 @@ function loadPendingItems() {
         type: 'service',
         id: null,
         name: booking.service,
-        price: 0,
+        price: booking.price || SVC_PRICES[booking.service] || 0,
         qty: 1,
         maxQty: 99,
         pending: true,
@@ -1001,7 +1030,7 @@ async function confirmCheckout() {
     source_order_id: c.source_order_id || null
   }));
   const services = cart.filter(c => c.type === 'service').map(c => ({
-    name: c.name, price: c.price,
+    name: c.name, price: c.price, qty: c.qty,
     source_booking_id: c.source_booking_id || null
   }));
   const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
@@ -1029,6 +1058,31 @@ async function confirmCheckout() {
 }
 
 function showReceipt(data, total) {
+  // Update stock numbers in the product grid after checkout
+  cart.forEach(item => {
+    if (item.type === 'product') {
+      const card = document.querySelector(`.product-card[data-id="${item.id}"]`);
+      if (card) {
+        const newStock = Math.max(0, (+card.dataset.stock) - item.qty);
+        card.dataset.stock = newStock;
+        const stockEl = card.querySelector('div[style*="text-align:right"] > div:last-child');
+        if (stockEl) {
+          if (newStock === 0) {
+            stockEl.textContent = 'Out of stock';
+            stockEl.style.color = '#fca5a5';
+            card.classList.add('out-of-stock');
+          } else if (newStock <= 5) {
+            stockEl.textContent = newStock + ' left';
+            stockEl.style.color = '#fbbf24';
+          } else {
+            stockEl.textContent = newStock + ' in stock';
+            stockEl.style.color = 'var(--muted)';
+          }
+        }
+      }
+    }
+  });
+
   const sel = document.getElementById('customer-select');
   const custName = sel.value ? sel.options[sel.selectedIndex].text.split('—')[0].trim() : 'Walk-in Customer';
   const now = new Date();
@@ -1064,6 +1118,7 @@ function newTransaction() {
   const btn = document.getElementById('checkout-btn');
   btn.disabled = false;
   btn.innerHTML = '<i class="fas fa-bolt"></i> Process Payment';
+  refreshProducts();
 }
 
 document.getElementById('receipt-modal').addEventListener('click', function(e) {
@@ -1086,6 +1141,44 @@ function toast(msg, isError = false, type = null) {
   wrap.appendChild(t);
   setTimeout(() => t.remove(), 2800);
 }
+
+async function refreshProducts() {
+  try {
+    const res = await fetch('/admin/pos/products');
+    const products = await res.json();
+    const grid = document.getElementById('products-panel');
+    
+    if (products.length === 0) {
+      grid.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);"><p style="font-size:.85rem;">No products in inventory.</p></div>';
+      return;
+    }
+    
+    grid.innerHTML = products.map(p => `
+      <div class="product-card ${p.stock === 0 ? 'out-of-stock' : ''}"
+           data-id="${p.id}"
+           data-name="${p.name}"
+           data-price="${p.price}"
+           data-stock="${p.stock}"
+           data-cat="${p.category}"
+           onclick="addProduct(this)">
+        <div style="flex:1; min-width:0;">
+          <div style="font-family:'Syne',sans-serif; font-size:0.82rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name}</div>
+          <div style="font-size:0.7rem; color:var(--muted); margin-top:0.15rem;">${p.category}</div>
+        </div>
+        <div style="text-align:right; flex-shrink:0;">
+          <div style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:#fff;">₱${p.price.toFixed(2)}</div>
+          <div style="font-size:0.68rem; ${p.stock === 0 ? 'color:#fca5a5;' : p.stock <= 5 ? 'color:#fbbf24;' : 'color:var(--muted);'}">
+            ${p.stock === 0 ? 'Out of stock' : p.stock <= 5 ? p.stock + ' left' : p.stock + ' in stock'}
+          </div>
+        </div>
+      </div>
+    `).join('');
+    
+    filterProducts();
+  } catch(e) { console.error('Failed to refresh products', e); }
+}
+
+refreshProducts();
 </script>
 </body>
 </html>

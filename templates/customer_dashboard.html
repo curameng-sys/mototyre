@@ -674,7 +674,9 @@
             <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--red);">ORD-{{ '%03d'|format(o.id) }}</span></td>
             <td>
               <span style="font-size:0.82rem;color:var(--text);">
-                {% if o.items|length == 1 %}
+                {% if o.items|length == 0 %}
+                  <span style="color:var(--muted);">Service Payment</span>
+                {% elif o.items|length == 1 %}
                   {{ o.items[0].product.name }}
                 {% else %}
                   {{ o.items[0].product.name }} <span style="color:var(--muted);">+{{ o.items|length - 1 }} more</span>
