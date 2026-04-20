@@ -1102,16 +1102,6 @@ def pos():
     customers = User.query.filter_by(role='customer').order_by(User.fullname).all()
     return render_template('pos.html', products=products, customers=customers)
 
-@app.route('/admin/pos')
-@login_required
-def pos():
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('customer_dashboard'))
-    products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
-    customers = User.query.filter_by(role='customer').order_by(User.fullname).all()
-    return render_template('pos.html', products=products, customers=customers)
-
 
 @app.route('/admin/pos/products')
 @login_required
