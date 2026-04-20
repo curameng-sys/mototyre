@@ -57,8 +57,28 @@
       font-size: 0.875rem;
       font-weight: 500;
       transition: color 0.15s;
+      position: relative;
+      padding: 0.35rem 0;
     }
-    .nav-links a:hover { color: #fff; }
+    .nav-links a:not(.nav-cta)::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--red);
+      transform: scaleX(0);
+      transform-origin: right;
+      transition: transform 0.3s ease;
+    }
+    .nav-links a:not(.nav-cta):hover {
+      color: #fff;
+    }
+    .nav-links a:not(.nav-cta):hover::after {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
 
     .nav-cta {
       background: var(--red);
@@ -66,9 +86,54 @@
       padding: 0.5rem 1.25rem;
       border-radius: 6px;
       font-weight: 600 !important;
-      transition: background 0.15s !important;
+      transition: all 0.2s ease !important;
     }
-    .nav-cta:hover { background: #c73418 !important; color: #fff !important; }
+    .nav-cta:hover {
+      background: #c73418 !important;
+      color: #fff !important;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255,15,15,0.4);
+    }
+
+    /* Hamburger Button */
+    .nav-toggle {
+      display: none;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0.5rem;
+      z-index: 101;
+      width: 40px;
+      height: 40px;
+      position: relative;
+    }
+
+    .nav-toggle span {
+      display: block;
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      height: 2px;
+      background: #fff;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .nav-toggle span:nth-child(1) { top: 12px; }
+    .nav-toggle span:nth-child(2) { top: 19px; }
+    .nav-toggle span:nth-child(3) { top: 26px; }
+
+    .nav-toggle.active span:nth-child(1) {
+      top: 19px;
+      transform: rotate(45deg);
+    }
+    .nav-toggle.active span:nth-child(2) {
+      opacity: 0;
+    }
+    .nav-toggle.active span:nth-child(3) {
+      top: 19px;
+      transform: rotate(-45deg);
+    }
 
     /* ── HERO ── */
     .hero {
@@ -313,6 +378,69 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 1.5rem;
+    }
+
+    /* Services Pagination */
+    .service-card.hidden {
+      display: none;
+    }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .page-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #9ca3af;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .page-btn:hover:not(:disabled):not(.active) {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,15,15,0.4);
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    .page-btn.active {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(255,15,15,0.35);
+    }
+
+    .page-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .page-btn.nav-arrow {
+      width: auto;
+      padding: 0 1rem;
+      gap: 0.35rem;
+    }
+
+    .page-info {
+      color: #6b7280;
+      font-size: 0.8rem;
+      margin: 0 0.75rem;
+      letter-spacing: 0.05em;
     }
 
     .service-card {
@@ -581,9 +709,10 @@
       border-top: 1px solid rgba(255,255,255,0.06);
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       flex-wrap: wrap;
-      gap: 1rem;
+      gap: 1.5rem 3rem;
+      text-align: center;
     }
 
     .footer-logo {
@@ -601,6 +730,8 @@
     .footer-links {
       display: flex;
       gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
     }
     .footer-links a {
       color: #4b5563;
@@ -724,14 +855,123 @@
     .feedback-success .big { font-size: 3rem; margin-bottom: 0.5rem; }
     .feedback-success h4 { color: #fff; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.04em; }
 
+    /* ── PRODUCTS PREVIEW ── */
+    .products-preview {
+      padding: 6rem 4rem;
+      background: var(--ink);
+    }
+
+    .btn-view-all {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,255,255,0.07);
+      color: #fff;
+      padding: 0.875rem 2rem;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.12);
+      transition: all 0.2s;
+    }
+    .btn-view-all:hover {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(232,64,28,0.35);
+    }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 900px) {
       .hero { padding: 6rem 2rem 4rem; min-height: auto; }
       .hero-visual { display: none; }
-      .services, .how-it-works, .testimonials, .cta-section, .contact, .feedback { padding: 4rem 2rem; }
+      .services, .products-preview, .how-it-works, .testimonials, .cta-section, .contact, .feedback { padding: 4rem 2rem; }
+
       .nav-bar { padding: 1rem 1.5rem; }
-      .nav-links { display: none; }
-      .footer { padding: 2rem; flex-direction: column; text-align: center; }
+
+      .nav-toggle { display: block; }
+
+      .nav-links {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 75%;
+        max-width: 320px;
+        height: 100vh;
+        background: rgba(12,13,15,0.98);
+        backdrop-filter: blur(16px);
+        border-left: 1px solid rgba(255,255,255,0.08);
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        padding: 5.5rem 2rem 2rem;
+        gap: 1.75rem;
+        transform: translateX(100%);
+        transition: transform 0.35s ease;
+        z-index: 99;
+      }
+
+      .nav-links.active {
+        transform: translateX(0);
+      }
+
+      .nav-links a {
+        font-size: 1.05rem;
+        width: 100%;
+        padding: 0.5rem 0 0.5rem 1rem;
+        border-left: 2px solid transparent;
+        transition: all 0.2s ease;
+      }
+
+      .nav-links a:not(.nav-cta)::after {
+        display: none;
+      }
+
+      .nav-links a:not(.nav-cta):hover,
+      .nav-links a:not(.nav-cta):active {
+        color: #fff;
+        border-left-color: var(--red);
+        padding-left: 1.25rem;
+      }
+
+      .nav-cta {
+        display: inline-block;
+        width: auto !important;
+        margin-top: 0.5rem;
+        padding: 0.6rem 1.5rem !important;
+      }
+
+      /* Overlay when menu is open */
+      .nav-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        z-index: 98;
+      }
+
+      .nav-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .footer { padding: 2rem 1.5rem; }
+    }
+
+    @media (max-width: 480px) {
+      .nav-bar { padding: 0.85rem 1.25rem; }
+      .nav-logo { font-size: 1.35rem; }
+      .hero { padding: 5.5rem 1.25rem 3rem; }
+      .services, .products-preview, .how-it-works, .testimonials, .cta-section, .contact, .feedback { padding: 3.5rem 1.25rem; }
+      .feedback-form { padding: 1.75rem 1.25rem; }
+      .service-card, .contact-card, .testi-card { padding: 1.5rem; }
+      .hero-actions, .cta-buttons { flex-direction: column; width: 100%; }
+      .btn-hero-primary, .btn-hero-secondary { width: 100%; justify-content: center; }
     }
   </style>
 </head>
@@ -739,8 +979,14 @@
 
   <!-- NAVBAR -->
   <nav class="nav-bar">
-    <a class="nav-logo" href="#">MOTO<span>TYRE</span></a>
-    <div class="nav-links">
+    <a class="nav-logo" href="/">MOTO<span>TYRE</span></a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="nav-links" id="navLinks">
+      <a href="#products">Products</a>
       <a href="#services">Services</a>
       <a href="#how">How It Works</a>
       <a href="#contact">Contact</a>
@@ -748,6 +994,7 @@
       <a href="/login" class="nav-cta">Login</a>
     </div>
   </nav>
+  <div class="nav-overlay" id="navOverlay"></div>
 
   <!-- HERO -->
   <section class="hero">
@@ -881,6 +1128,55 @@
         <div class="service-name">Full Maintenance Package</div>
         <p class="service-desc">All-in-one maintenance package covering oil, brakes, chain, filters, and a full mechanical inspection.</p>
       </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="servicesPagination">
+      <button class="page-btn nav-arrow" id="prevPage" aria-label="Previous page">←</button>
+      <button class="page-btn active" data-page="1">1</button>
+      <button class="page-btn" data-page="2">2</button>
+      <button class="page-btn" data-page="3">3</button>
+      <button class="page-btn" data-page="4">4</button>
+      <button class="page-btn nav-arrow" id="nextPage" aria-label="Next page">→</button>
+    </div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section class="products-preview" id="products">
+    <div class="section-tag">Parts &amp; Accessories</div>
+    <div class="section-title">OUR PRODUCTS</div>
+    <p class="section-sub">Quality motorcycle parts, tires, and accessories — hand-picked for durability, performance, and rider safety.</p>
+
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon">🛞</div>
+        <div class="service-name">IRC Street Sport Tire</div>
+        <p class="service-desc">Grippy all-weather street tire for commuter and sport motorcycles. Durable tread pattern for long mileage.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🛢️</div>
+        <div class="service-name">Motul 5100 4T 10W-40</div>
+        <p class="service-desc">Semi-synthetic engine oil for 4-stroke motorcycles — smooth gear shifts and strong engine protection.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🛑</div>
+        <div class="service-name">Brembo Semi-Metallic Pads</div>
+        <p class="service-desc">High-performance brake pads for strong, consistent stopping power with minimal fade.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔋</div>
+        <div class="service-name">Motolite MF Battery</div>
+        <p class="service-desc">Maintenance-free motorcycle battery with strong cranking amps and long service life.</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🪖</div>
+        <div class="service-name">HJC Full Face Helmet</div>
+        <p class="service-desc">DOT-certified full face helmet with ventilation system and anti-fog visor.</p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:2.5rem;">
+      <a href="/products" class="btn-view-all">More &rarr;</a>
     </div>
   </section>
 
@@ -1019,6 +1315,7 @@
     <div class="footer-logo">MOTO<span>TYRE</span> MOTO SHOP</div>
     <div class="footer-copy">© 2025 Mototyre Moto Shop. All rights reserved.</div>
     <div class="footer-links">
+      <a href="/products">Products</a>
       <a href="#services">Services</a>
       <a href="#how">How It Works</a>
       <a href="#contact">Contact</a>
@@ -1032,6 +1329,88 @@
       document.getElementById('formContent').style.display = 'none';
       document.getElementById('feedbackSuccess').style.display = 'block';
     }
+
+    // Mobile menu toggle
+    const navToggle = document.getElementById('navToggle');
+    const navLinks = document.getElementById('navLinks');
+    const navOverlay = document.getElementById('navOverlay');
+
+    function closeMenu() {
+      navToggle.classList.remove('active');
+      navLinks.classList.remove('active');
+      navOverlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function toggleMenu() {
+      const isActive = navLinks.classList.toggle('active');
+      navToggle.classList.toggle('active');
+      navOverlay.classList.toggle('active');
+      document.body.style.overflow = isActive ? 'hidden' : '';
+    }
+
+    navToggle.addEventListener('click', toggleMenu);
+    navOverlay.addEventListener('click', closeMenu);
+
+    // Close menu when a link is tapped
+    navLinks.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', closeMenu);
+    });
+
+    // Close menu if resized to desktop
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 900) closeMenu();
+    });
+
+    // Services Pagination
+    const SERVICES_PER_PAGE = 5;
+    const serviceCards = document.querySelectorAll('#services .service-card');
+    const pageButtons = document.querySelectorAll('.page-btn[data-page]');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const totalPages = Math.ceil(serviceCards.length / SERVICES_PER_PAGE);
+    let currentPage = 1;
+
+    function showPage(page, scroll = true) {
+      currentPage = page;
+      const start = (page - 1) * SERVICES_PER_PAGE;
+      const end = start + SERVICES_PER_PAGE;
+
+      serviceCards.forEach((card, idx) => {
+        if (idx >= start && idx < end) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+
+      pageButtons.forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.page) === page);
+      });
+
+      prevBtn.disabled = page === 1;
+      nextBtn.disabled = page === totalPages;
+
+      // Scroll to top of services section smoothly (skip on initial load)
+      if (scroll) {
+        document.getElementById('services').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    pageButtons.forEach(btn => {
+      btn.addEventListener('click', () => showPage(parseInt(btn.dataset.page)));
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (currentPage > 1) showPage(currentPage - 1);
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (currentPage < totalPages) showPage(currentPage + 1);
+    });
+
+    // Initialize without scrolling
+    showPage(1, false);
 
     document.querySelectorAll('a[href^="#"]').forEach(a => {
       a.addEventListener('click', e => {
@@ -1057,7 +1436,7 @@
       });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.service-card, .step, .testi-card, .stat-badge, .contact-card').forEach(el => {
+    document.querySelectorAll('#services .service-card, #products .service-card, .step, .testi-card, .stat-badge, .contact-card').forEach(el => {
       el.style.opacity = '0';
       el.style.transform = 'translateY(20px)';
       el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';

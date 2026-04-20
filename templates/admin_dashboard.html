@@ -184,7 +184,7 @@
     <a href="#" onclick="showSection('products', this)">🔧 Products</a>
     <a href="#" onclick="showSection('users', this)">👥 Users</a>
     <a href="#" onclick="showSection('mechanics', this)">🔧 Mechanics</a>
-    <a href="{{ url_for('pos') }}">🖥️ POS</a>
+    <a href="{{ url_for('pos') }}">🖥️ Quotation</a>
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
     <a href="#" onclick="showSection('archive', this)">🗃️ Archive</a>
@@ -402,37 +402,49 @@
       <div class="card">
         {% if all_orders %}
         <div style="overflow-x:auto;">
-          <table class="table" id="orders-table">
-           <thead><tr><th>Order #</th><th>Customer</th><th>Products</th><th>Total</th><th>Status</th><th>Date</th><th>Payment</th><th>Delivery</th><th>Update Status</th><th>Archive</th></tr></thead>
+          <table class="table" id="orders-table" style="table-layout:fixed;width:100%;">
+            <colgroup>
+              <col style="width:100px;">
+              <col style="width:130px;">
+              <col style="width:auto;">
+              <col style="width:115px;">
+              <col style="width:105px;">
+              <col style="width:100px;">
+              <col style="width:175px;">
+              <col style="width:100px;">
+            </colgroup>
+           <thead><tr>
+             <th style="white-space:nowrap;">Order #</th>
+             <th style="white-space:nowrap;">Customer</th>
+             <th style="white-space:nowrap;">Products</th>
+             <th style="white-space:nowrap;">Status</th>
+             <th style="white-space:nowrap;">Date</th>
+             <th style="white-space:nowrap;">Delivery</th>
+             <th style="white-space:nowrap;">Update Status</th>
+             <th style="white-space:nowrap;">Archive</th>
+           </tr></thead>
             <tbody>
               {% for o in all_orders %}
               <tr>
-                <td>
+                <td style="white-space:nowrap;">
                   <a href="#" onclick="viewOrder({{ o.id }}, '{{ o.customer.fullname|e }}', '{{ o.customer.email }}', '{{ o.customer.phone }}', '{{ o.customer.motorcycle_model or '' }}', '{{ o.customer.motorcycle_plate or '' }}', {{ o.total_amount }}, '{{ o.status }}', '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y — %I:%M %p') }}', {{ o.items|length }}); return false;"
                     style="color:#93c5fd;text-decoration:none;font-weight:700;cursor:pointer;">
                     ORD-{{ '%03d'|format(o.id) }}
                   </a>
                 </td>
-                <td>{{ o.customer.fullname }}</td>
-                <td>
+                <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">{{ o.customer.fullname }}</td>
+                <td style="overflow:hidden;">
                   {% if o.items %}
-                    {% for item in o.items %}
-                      <span style="font-size:0.78rem;color:#d1d5db;">{{ item.product.name }}{% if not loop.last %}, {% endif %}</span>
-                    {% endfor %}
+                    <span style="font-size:0.78rem;color:#d1d5db;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                      {% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                    </span>
                   {% else %}
                     <span style="color:var(--muted);font-size:0.75rem;">No items</span>
                   {% endif %}
                 </td>
-                <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
                 <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
-                <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
+                <td style="white-space:nowrap;">{{ o.created_at.strftime('%b %d, %Y') }}</td>
                 <td>
-                  {% if o.payment_method == 'gcash' %}
-                    <span class="badge" style="background:rgba(0,125,255,0.15);color:#93c5fd;border:1px solid rgba(0,125,255,0.3);">💳 GCash</span>
-                  {% else %}
-                    <span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>
-                  {% endif %}
-                </td><td>
                   {% if o.delivery_method == 'ship' %}
                     <span class="badge" style="background:rgba(6,182,212,0.15);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);">🚚 Ship</span>
                   {% else %}
@@ -498,15 +510,14 @@
         {% if all_products %}
         <div style="overflow-x:auto;">
           <table class="table" id="products-table">
-            <thead><tr><th>#</th><th>Barcode</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Description</th></tr></thead>
+            <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
             <tbody>
               {% for p in all_products %}
               <tr style="cursor:pointer;" onclick="openEditProductFromRow(this)"
                   data-id="{{ p.id }}" data-name="{{ p.name|e }}" data-category="{{ p.category|e }}"
                   data-price="{{ p.price }}" data-stock="{{ p.stock }}"
-                  data-description="{{ (p.description or '')|e }}" data-barcode="{{ (p.barcode or '')|e }}">
+                  data-description="{{ (p.description or '')|e }}">
                 <td>{{ loop.index }}</td>
-                <td style="font-family:'Courier New',monospace;font-size:0.78rem;color:#9ca3af;">{{ p.barcode or '—' }}</td>
                 <td style="font-weight:600;color:#fff;">{{ p.name }}</td>
                 <td>{{ p.category }}</td>
                 <td>₱{{ '%.2f'|format(p.price) }}</td>
@@ -515,7 +526,6 @@
                   {% elif p.stock < 5 %}<span style="color:#fbbf24;font-weight:700;">{{ p.stock }}</span>
                   {% else %}<span style="color:#86efac;font-weight:700;">{{ p.stock }}</span>{% endif %}
                 </td>
-                <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);">{{ p.description or '—' }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -835,7 +845,6 @@
   <div class="modal-box">
     <h5>🔧 Add New Product</h5>
     <form method="POST" action="{{ url_for('add_product') }}">
-      <div class="form-group"><label>Barcode (optional)</label><input type="text" name="barcode" placeholder="e.g. MTT0000000001"></div>
       <div class="form-group"><label>Product Name</label><input type="text" name="name" placeholder="e.g. IRC MB99 Front Tire" required></div>
       <div class="form-group">
         <label>Category</label>
@@ -867,7 +876,6 @@
       </form>
     </div>
     <form method="POST" id="edit-product-form" action="">
-      <div class="form-group"><label>Barcode (optional)</label><input type="text" name="barcode" id="edit-product-barcode"></div>
       <div class="form-group"><label>Product Name</label><input type="text" name="name" id="edit-product-name" required></div>
       <div class="form-group">
         <label>Category</label>
@@ -1024,7 +1032,7 @@
     <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:1.5rem;">Are you sure you want to log out?</p>
     <div class="modal-actions" style="justify-content:center;">
       <button class="btn-cancel" onclick="document.getElementById('modal-logout').style.display='none'">Cancel</button>
-      <a href="{{ url_for('logout') }}" style="text-decoration:none;padding:0.6rem 1.5rem;background:var(--red);color:#fff;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;">Yes, Logout</a>
+      <a href="{{ url_for('admin_logout') }}" style="text-decoration:none;padding:0.6rem 1.5rem;background:var(--red);color:#fff;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;">Yes, Logout</a>
     </div>
   </div>
 </div>
@@ -1102,8 +1110,7 @@
     setTimeout(() => { bar.style.width = bar.dataset.width + '%'; }, 100);
   });
 
-  function openEditProduct(id, name, category, price, stock, description, barcode) {
-    document.getElementById('edit-product-barcode').value = barcode || '';
+  function openEditProduct(id, name, category, price, stock, description) {
     document.getElementById('edit-product-name').value    = name;
     document.getElementById('edit-product-price').value   = price;
     document.getElementById('edit-product-stock').value   = stock;
@@ -1116,7 +1123,7 @@
   }
 
   function openEditProductFromRow(row) {
-    openEditProduct(row.dataset.id, row.dataset.name, row.dataset.category, row.dataset.price, row.dataset.stock, row.dataset.description, row.dataset.barcode);
+    openEditProduct(row.dataset.id, row.dataset.name, row.dataset.category, row.dataset.price, row.dataset.stock, row.dataset.description);
   }
 
   function previewPic(input) {

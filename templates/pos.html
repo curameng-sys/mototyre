@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>POS – Mototyre Moto Shop</title>
+  <title>Quotation – Mototyre Moto Shop</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -429,11 +429,11 @@
 <header class="topbar">
   <div class="topbar-brand">
     MOTO<span>TYRE</span>
-    <span class="pos-badge">POS</span>
+    <span class="pos-badge">Quotation</span>
   </div>
   <div class="topbar-right">
     <div class="topbar-clock" id="clock">--:-- --</div>
-    <a href="/admin/dashboard" class="btn-back">
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-back">
       <i class="fas fa-arrow-left"></i> Dashboard
     </a>
   </div>

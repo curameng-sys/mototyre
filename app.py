@@ -329,20 +329,17 @@ def cleanup_abandoned_gcash_orders():
     ).all()
     
     for order in abandoned:
-        # Delete orphaned notifications
         Notification.query.filter(
             Notification.user_id == order.user_id,
             Notification.type == 'order',
             Notification.created_at >= order.created_at
         ).delete(synchronize_session=False)
         
-        # Restore stock
         for item in order.items:
             product = Product.query.get(item.product_id)
             if product:
                 product.stock += item.quantity
         
-        # Delete order items and order
         OrderItem.query.filter_by(order_id=order.id).delete()
         db.session.delete(order)
     
@@ -350,21 +347,35 @@ def cleanup_abandoned_gcash_orders():
     return len(abandoned)
 
 
-# ─── AUTH ────────────────────────────────────────────────────────────────────
+# ─── AUTH (CUSTOMER ONLY) ────────────────────────────────────────────────────
 
 @app.route('/')
 def home():
     return render_template('landing.html')
 
+@app.route('/products')
+def products():
+    return render_template('Products.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for(f'{current_user.role}_dashboard'))
+        # Admins/staff should not be using this portal — redirect them out
+        if current_user.role in ['admin', 'staff']:
+            logout_user()
+            flash('Please use the Admin Portal to log in.', 'warning')
+            return redirect(url_for('login'))
+        return redirect(url_for('customer_dashboard'))
 
     if request.method == 'POST':
         email, password = request.form['email'], request.form['password']
         user = User.query.filter_by(email=email).first()
+
+        # Block admin/staff from logging in through the user portal
+        if user and user.role in ['admin', 'staff']:
+            flash('Admin and staff accounts must use the Admin Portal at port 5001.', 'danger')
+            return redirect(url_for('login'))
 
         if user and user.check_password(password):
             if not user.email_verified:
@@ -399,7 +410,7 @@ def verify_login_otp():
             next_page = request.args.get('next') or session.pop('next', None)
             if next_page and next_page.startswith('/'):
                 return redirect(next_page)
-            return redirect(url_for(f'{user.role}_dashboard'))
+            return redirect(url_for('customer_dashboard'))
         flash(result['message'], 'danger')
 
     return render_template('verify_otp.html', purpose='login', email=email)
@@ -556,7 +567,11 @@ def logout():
 @app.route('/customer/dashboard')
 @login_required
 def customer_dashboard():
-    # Delete "pending" order notifications that have no matching real order
+    if current_user.role in ['admin', 'staff']:
+        logout_user()
+        flash('Please use the Admin Portal.', 'warning')
+        return redirect(url_for('login'))
+
     Notification.query.filter_by(
         user_id=current_user.id, type='order', status='pending'
     ).delete(synchronize_session=False)
@@ -576,7 +591,6 @@ def book_service():
     booking_date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
     booking_time = datetime.strptime(request.form['time'], '%H:%M').time()
     
-    # Validate: prevent booking in the past
     booking_datetime = datetime.combine(booking_date, booking_time)
     if booking_datetime <= ph_now():
         flash('Cannot book a past or current time slot. Please choose a future time.', 'danger')
@@ -602,7 +616,6 @@ def book_service():
     db.session.add(booking)
     db.session.commit()
     
-    # Notify customer
     send_notification(
         current_user.id, 'Booking Received!',
         f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} is pending confirmation.',
@@ -622,6 +635,61 @@ def book_service():
     return redirect(url_for('customer_dashboard'))
 
 
+@app.route('/customer/cart/checkout', methods=['POST'])
+@login_required
+def cart_checkout():
+    data = request.get_json()
+    if not data or not data.get('items'):
+        return jsonify({'success': False, 'error': 'Cart is empty'}), 400
+
+    items_data      = data['items']
+    delivery_method = data.get('delivery_method', 'pickup')
+    payment_method  = data.get('payment_method', 'cash')
+    ship_address    = data.get('ship_address', '')
+
+    resolved = []
+    for item in items_data:
+        product = Product.query.get(item['product_id'])
+        if not product:
+            return jsonify({'success': False, 'error': f'Product not found'}), 400
+        qty = int(item['quantity'])
+        if product.stock < qty:
+            return jsonify({'success': False, 'error': f'Not enough stock for {product.name}'}), 400
+        resolved.append((product, qty))
+
+    total = sum(p.price * q for p, q in resolved)
+    order_status = 'awaiting_payment' if payment_method.lower() == 'gcash' else 'pending'
+
+    order = Order(user_id=current_user.id, total_amount=total,
+                  payment_method=payment_method, delivery_method=delivery_method,
+                  ship_address=ship_address, status=order_status)
+    db.session.add(order)
+    db.session.flush()
+
+    for product, qty in resolved:
+        db.session.add(OrderItem(order_id=order.id, product_id=product.id, quantity=qty, unit_price=product.price))
+        product.stock -= qty
+
+    db.session.commit()
+
+    if payment_method.lower() == 'gcash':
+        desc = f"MotoTyre Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
+        result = create_gcash_payment(amount=total, description=desc[:100], order_id=order.id)
+        if result['success']:
+            return jsonify({'success': True, 'gcash': True, 'checkout_url': result['checkout_url']})
+        return jsonify({'success': False, 'error': 'Could not create GCash payment'}), 500
+
+    items_desc = ', '.join(f"{p.name} x{q}" for p, q in resolved)
+    send_notification(current_user.id, 'Order Placed!',
+        f'Your order for {items_desc[:80]} worth ₱{total:.2f} is now pending.',
+        type='order', status='pending')
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(admin.id, 'New Order Received',
+            f'{current_user.fullname} placed an order for ₱{total:.2f}.', type='order', status='pending')
+
+    return jsonify({'success': True, 'gcash': False})
+
+
 @app.route('/customer/order', methods=['POST'])
 @login_required
 def place_order():
@@ -635,7 +703,6 @@ def place_order():
     payment_method = request.form.get('payment_method', 'cash')
     delivery_method = request.form.get('delivery_method', 'pickup')
     
-    # Build shipping address if delivery method is ship
     ship_address = ''
     if delivery_method == 'ship':
         ship_name = request.form.get('ship_name', '')
@@ -667,7 +734,6 @@ def place_order():
     product.stock -= quantity
     db.session.commit()
     
-    # Only notify for non-GCash orders — GCash notification is sent after payment succeeds
     if payment_method.lower() != 'gcash':
         delivery_text = "for pickup" if delivery_method == 'pickup' else "for delivery"
         send_notification(
@@ -676,7 +742,6 @@ def place_order():
             type='order', status='pending'
         )
     
-    # If GCash payment, redirect to PayMongo
     if payment_method.lower() == 'gcash':
         description = f"MotoTyre Order #{order.id:03d}: {product.name} x{quantity}"
         result = create_gcash_payment(
@@ -726,8 +791,7 @@ def upload_profile_pic():
         flash('Profile picture updated!', 'success')
     else:
         flash('Invalid file type.', 'danger')
-    dest = {'admin': 'admin_dashboard', 'staff': 'staff_dashboard'}.get(current_user.role, 'customer_dashboard')
-    return redirect(url_for(dest))
+    return redirect(url_for('customer_dashboard'))
 
 
 @app.route('/api/booked-slots')
@@ -797,607 +861,23 @@ def delete_notification(nid):
     return jsonify({'success': True})
 
 
-# ─── PROFILE UPDATES ─────────────────────────────────────────────────────────
-
-@app.route('/admin/update-profile', methods=['POST'])
-@login_required
-def update_admin_profile():
-    current_user.fullname = request.form['fullname']
-    current_user.phone    = request.form['phone']
-    db.session.commit()
-    flash('Profile updated!', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/staff/update-profile', methods=['POST'])
-@login_required
-def update_staff_profile():
-    current_user.fullname = request.form['fullname']
-    current_user.phone    = request.form['phone']
-    db.session.commit()
-    flash('Profile updated!', 'success')
-    return redirect(url_for('staff_dashboard'))
-
-
-# ─── STAFF ───────────────────────────────────────────────────────────────────
-
-@app.route('/staff/dashboard')
-@login_required
-def staff_dashboard():
-    if current_user.role != 'staff':
-        return redirect(url_for('customer_dashboard'))
-    return render_template('staff_dashboard.html',
-        all_bookings=Booking.query.order_by(Booking.created_at.desc()).all(),
-        all_orders=Order.query.order_by(Order.created_at.desc()).all(),
-        all_customers=User.query.filter_by(role='customer').all(),
-        all_products=Product.query.all(),
-        recent_bookings=Booking.query.order_by(Booking.created_at.desc()).limit(5).all(),
-        today=date.today(),
-        booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).group_by(Booking.status).all()),
-        order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all())
-    )
-
-# ─── ADMIN ───────────────────────────────────────────────────────────────────
-
-@app.route('/admin/dashboard')
-@login_required
-def admin_dashboard():
-    if current_user.role not in ['admin', 'staff']:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('customer_dashboard'))
-
-    cleanup_abandoned_gcash_orders()
-
-    return render_template('admin_dashboard.html',
-    total_bookings=Booking.query.count(),
-    total_orders=Order.query.count(),
-    total_users=User.query.count(),
-    total_revenue=f'{db.session.query(func.sum(Order.total_amount)).filter(Order.status.notin_(["cancelled", "awaiting_payment"])).scalar() or 0:,.2f}',
-    booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).group_by(Booking.status).all()),
-    order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
-    top_services=db.session.query(Booking.service, func.count(Booking.id).label('count')).group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all(),
-    new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
-    recent_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).limit(5).all(),
-    all_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all(),
-    all_orders=Order.query.filter_by(is_archived=False).order_by(Order.created_at.desc()).all(),
-    all_products=Product.query.all(),
-    all_users=User.query.all(),
-    all_mechanics=Mechanic.query.order_by(Mechanic.name).all(),
-    archived_orders=Order.query.filter_by(is_archived=True).order_by(Order.created_at.desc()).all(),
-    archived_bookings=Booking.query.filter_by(is_archived=True).order_by(Booking.created_at.desc()).all(),
-    now=ph_now(),
-    today=ph_now().date(),
-)
-@app.route('/admin/booking/<int:bid>/status', methods=['POST'])
-@login_required
-def update_booking_status(bid):
-    booking    = Booking.query.get_or_404(bid)
-    new_status = request.form['status']
-    booking.status = new_status
-    db.session.commit()
-
-    messages = {
-        'confirmed':   ('Booking Confirmed! ✅', f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been confirmed. Please arrive 15 minutes before your schedule or your booking will be automatically cancelled.'),
-        'inprogress':  ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
-        'in_progress': ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
-        'completed':   ('Service Completed! 🎉',  f'Your {booking.service} has been completed. Thank you!'),
-        'cancelled':   ('Booking Cancelled ❌',   f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} was cancelled by the admin.'),
-    }
-    if new_status in messages:
-        title, msg = messages[new_status]
-        send_notification(booking.user_id, title, msg, type='booking', status=new_status.replace('_', ''))
-
-    flash('Booking status updated!', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/order/<int:oid>/status', methods=['POST'])
-@login_required
-def update_order_status(oid):
-    order = Order.query.get_or_404(oid)
-    new_status = request.form['status']
-
-    # Restore stock when cancelling
-    if new_status == 'cancelled' and order.status != 'cancelled':
-        for item in OrderItem.query.filter_by(order_id=order.id).all():
-            product = Product.query.get(item.product_id)
-            if product:
-                product.stock += item.quantity
-                print(f'[STOCK RESTORED] Product {product.name}: +{item.quantity} → {product.stock}')
-
-    order.status = new_status
-    db.session.commit()
-
-    messages = {
-        'confirmed':  ('Order Confirmed!',        f'Your order ORD-{order.id:03d} is confirmed and being prepared.'),
-        'processing': ('Order Processing',        f'Your order ORD-{order.id:03d} is being processed.'),
-        'shipped':    ('Order Out for Delivery!', f'Your order ORD-{order.id:03d} is on its way!'),
-        'delivered':  ('Order Delivered!',        f'Your order ORD-{order.id:03d} has been delivered.'),
-        'cancelled':  ('Order Cancelled',         f'Your order ORD-{order.id:03d} has been cancelled.'),
-    }
-    if new_status in messages:
-        title, msg = messages[new_status]
-        send_notification(order.user_id, title, msg, type='order', status=new_status)
-
-    flash('Order status updated!', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/product/add', methods=['POST'])
-@login_required
-def add_product():
-    db.session.add(Product(
-        name=request.form['name'], category=request.form['category'],
-        description=request.form.get('description', ''),
-        price=float(request.form['price']), stock=int(request.form['stock'])
-    ))
-    db.session.commit()
-    flash('Product added successfully!', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/product/<int:pid>/edit', methods=['POST'])
-@login_required
-def edit_product(pid):
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    p             = Product.query.get_or_404(pid)
-    p.barcode     = request.form.get('barcode', '').strip() or None
-    p.name        = request.form['name']
-    p.category    = request.form['category']
-    p.price       = float(request.form['price'])
-    p.stock       = int(request.form['stock'])
-    p.description = request.form.get('description', '')
-    db.session.commit()
-    flash(f'Product "{p.name}" updated!', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/product/<int:pid>/delete', methods=['POST'])
-@login_required
-def delete_product(pid):
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    p = Product.query.get_or_404(pid)
-    db.session.delete(p)
-    db.session.commit()
-    flash(f'Product "{p.name}" deleted!', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/mechanic/add', methods=['POST'])
-@login_required
-def add_mechanic():
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    db.session.add(Mechanic(
-        name=request.form['name'],
-        specialization=request.form['specialization'],
-        status=request.form.get('status', 'available')
-    ))
-    db.session.commit()
-    flash('Mechanic added!', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/mechanic/<int:mid>/delete', methods=['POST'])
-@login_required
-def delete_mechanic(mid):
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    m = Mechanic.query.get_or_404(mid)
-    db.session.delete(m)
-    db.session.commit()
-    flash(f'Mechanic "{m.name}" deleted!', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/add-staff', methods=['POST'])
-@login_required
-def add_staff():
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    email = request.form['email']
-    if User.query.filter_by(email=email).first():
-        flash('Email already exists.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    staff = User(fullname=request.form['fullname'], email=email,
-                 phone=request.form['phone'], role='staff', email_verified=True)
-    staff.set_password(request.form['password'])
-    db.session.add(staff)
-    db.session.commit()
-    flash(f'Staff account for {staff.fullname} created!', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/user/<int:uid>/delete', methods=['POST'])
-@login_required
-def delete_user(uid):
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    user = User.query.get_or_404(uid)
-    if user.id == current_user.id:
-        flash('You cannot delete your own account.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    if user.role == 'admin':
-        flash('Admin accounts cannot be deleted.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    OTPRecord.query.filter_by(email=user.email).delete()
-    for order in user.orders:
-        OrderItem.query.filter_by(order_id=order.id).delete()
-    Order.query.filter_by(user_id=user.id).delete()
-    Booking.query.filter_by(user_id=user.id).delete()
-    Notification.query.filter_by(user_id=user.id).delete()
-    name = user.fullname
-    db.session.delete(user)
-    db.session.commit()
-    flash(f'User "{name}" deleted successfully.', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/import-products', methods=['POST'])
-@login_required
-def import_products():
-    if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    
-    data = request.get_json()
-    if not data or not data.get('products'):
-        return jsonify({'success': False, 'error': 'No data received'}), 400
-
-    try:
-        # Clear existing products (optional - remove these 3 lines if you want to keep existing)
-        OrderItem.query.delete()
-        Order.query.delete()
-        Product.query.delete()
-        db.session.flush()
-
-        imported = 0
-        for row in data['products'][:500]:  # Limit to 500
-            try:
-                name = str(row.get('name', '')).strip()
-                category = str(row.get('category', '')).strip()
-                if not name or not category:
-                    continue
-                
-                price_str = str(row.get('price', '0')).replace(',', '').strip()
-                price = float(price_str) if price_str else 0
-                
-                stock_str = str(row.get('stock', '0')).replace(',', '').strip()
-                stock = int(float(stock_str)) if stock_str else 0
-                
-                db.session.add(Product(
-                    barcode=str(row.get('barcode', '')).strip() or None,
-                    name=name,
-                    category=category,
-                    price=price,
-                    stock=stock,
-                    description=str(row.get('description', '')).strip() or None
-                ))
-                imported += 1
-            except:
-                continue
-
-        db.session.commit()
-        return jsonify({'success': True, 'count': imported})
-    
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-# ─── POS (Point of Sale) ─────────────────────────────────────────────────────
-
-@app.route('/admin/pos')
-@login_required
-def pos():
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('customer_dashboard'))
-    products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
-    customers = User.query.filter_by(role='customer').order_by(User.fullname).all()
-    return render_template('pos.html', products=products, customers=customers)
-
-
-@app.route('/admin/pos/products')
-@login_required
-def pos_products():
-    """Return fresh product data as JSON for POS refresh."""
-    if current_user.role not in ['admin', 'staff']:
-        return jsonify({'error': 'Unauthorized'}), 403
-    products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
-    return jsonify([{
-        'id': p.id,
-        'name': p.name,
-        'price': p.price,
-        'stock': p.stock,
-        'category': p.category
-    } for p in products])
-
-
-@app.route('/admin/pos/checkout', methods=['POST'])
-@login_required
-def pos_checkout():
-    if current_user.role not in ['admin', 'staff']:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-
-    data = request.get_json()
-    if not data:
-        return jsonify({'success': False, 'error': 'No data received'}), 400
-
-    cart        = data.get('cart', [])
-    services    = data.get('services', [])
-    customer_id = data.get('customer_id')
-    total       = float(data.get('total', 0))
-    payment_method = data.get('payment_method', 'cash')
-
-    if not cart and not services:
-        return jsonify({'success': False, 'error': 'Cart is empty'}), 400
-
-    # Validate stock for non-pending items (new products added at POS)
-    for item in cart:
-        if not item.get('source_order_id'):  # Only check stock for new items
-            product = Product.query.get(item['product_id'])
-            if not product:
-                return jsonify({'success': False, 'error': f'Product ID {item["product_id"]} not found'}), 400
-            if product.stock < item['quantity']:
-                return jsonify({'success': False, 'error': f'Insufficient stock for {product.name}'}), 400
-
-    order_id = None
-    completed_order_ids = set()
-    completed_booking_ids = set()
-
-    # ─── HANDLE PRODUCTS ────────────────────────────────────────────────────
-    
-    # Separate items: those from existing orders vs new POS items
-    new_cart_items = [item for item in cart if not item.get('source_order_id')]
-    pending_cart_items = [item for item in cart if item.get('source_order_id')]
-
-    # Mark source orders as completed
-    for item in pending_cart_items:
-        source_order_id = item.get('source_order_id')
-        if source_order_id and source_order_id not in completed_order_ids:
-            source_order = Order.query.get(source_order_id)
-            if source_order:
-                source_order.status = 'completed'
-                source_order.payment_method = payment_method
-                completed_order_ids.add(source_order_id)
-                
-                # Notify customer
-                if source_order.user_id:
-                    send_notification(
-                        source_order.user_id,
-                        'Order Completed!',
-                        f'Your order ORD-{source_order.id:03d} has been completed and paid.',
-                        type='order', status='completed'
-                    )
-
-    # Create new order for POS-added items (not from pending orders)
-    if new_cart_items:
-        uid = int(customer_id) if customer_id else current_user.id
-        new_total = sum(item['quantity'] * float(item['unit_price']) for item in new_cart_items)
-        order = Order(user_id=uid, total_amount=new_total, status='completed', payment_method=payment_method)
-        db.session.add(order)
-        db.session.flush()
-        order_id = order.id
-
-        for item in new_cart_items:
-            product = Product.query.get(item['product_id'])
-            db.session.add(OrderItem(
-                order_id=order.id,
-                product_id=product.id,
-                quantity=item['quantity'],
-                unit_price=float(item['unit_price'])
-            ))
-            product.stock -= item['quantity']
-
-        if customer_id:
-            send_notification(
-                int(customer_id),
-                'Order Completed (In-Store)',
-                f'Your in-store order ORD-{order.id:03d} worth ₱{new_total:,.2f} has been completed.',
-                type='order', status='completed'
-            )
-
-    # ─── HANDLE SERVICES ────────────────────────────────────────────────────
-    
-    booking_ids = []
-    service_revenue = 0
-    
-    for svc in services:
-        source_booking_id = svc.get('source_booking_id')
-        svc_price = float(svc.get('price', 0))
-        svc_qty = int(svc.get('qty', 1))
-        
-        if source_booking_id:
-            source_booking = Booking.query.get(source_booking_id)
-            if source_booking:
-                source_booking.status = 'completed'
-                source_booking.payment_method = payment_method
-                completed_booking_ids.add(source_booking_id)
-                booking_ids.append(source_booking_id)
-                service_revenue += svc_price * svc_qty
-                
-                if source_booking.user_id:
-                    send_notification(
-                        source_booking.user_id,
-                        'Service Completed!',
-                        f'Your {source_booking.service} service has been completed. Thank you!',
-                        type='booking', status='completed'
-                    )
-        else:
-            booking = Booking(
-                user_id=int(customer_id) if customer_id else current_user.id,
-                service=svc['name'],
-                date=date.today(),
-                time=datetime.now().time(),
-                motorcycle_model=svc.get('motorcycle_model', ''),
-                motorcycle_plate=svc.get('motorcycle_plate', ''),
-                notes='Walk-in POS service.',
-                status='completed',
-                payment_method=payment_method
-            )
-            db.session.add(booking)
-            db.session.flush()
-            booking_ids.append(booking.id)
-            service_revenue += svc_price * svc_qty
-
-            if customer_id:
-                send_notification(
-                    int(customer_id),
-                    'Service Completed (In-Store)',
-                    f'Your {svc["name"]} walk-in service has been recorded.',
-                    type='booking', status='completed'
-                )
-    
-    # Create an order for service revenue so it counts in total revenue
-    if service_revenue > 0:
-        uid = int(customer_id) if customer_id else current_user.id
-        svc_order = Order(
-            user_id=uid,
-            total_amount=service_revenue,
-            status='completed',
-            payment_method=payment_method,
-            delivery_method='pickup'
-        )
-        db.session.add(svc_order)
-        db.session.flush()
-        if not order_id:
-            order_id = svc_order.id
-
-    db.session.commit()
-
-    return jsonify({
-        'success': True,
-        'order_id': order_id,
-        'booking_ids': booking_ids,
-        'completed_orders': list(completed_order_ids),
-        'completed_bookings': list(completed_booking_ids),
-        'message': 'Transaction completed successfully.'
-    })
-
-
-@app.route('/admin/pos/transactions')
-@login_required
-def pos_transactions():
-    """Recent POS transactions (completed orders + walk-in bookings today)."""
-    if current_user.role != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-
-    today = date.today()
-    orders = (Order.query
-              .filter(Order.status == 'completed', func.date(Order.created_at) == today)
-              .order_by(Order.created_at.desc()).limit(20).all())
-
-    result = []
-    for o in orders:
-        customer = db.session.get(User, o.user_id)
-        result.append({
-            'type': 'order',
-            'id': f'ORD-{o.id:03d}',
-            'customer': customer.fullname if customer else 'Walk-in',
-            'total': o.total_amount,
-            'time': o.created_at.strftime('%I:%M %p'),
-            'items': [f'{i.product.name} x{i.quantity}' for i in o.items]
-        })
-
-    return jsonify(result)
-
-
-@app.route('/admin/pos/customer/<int:cid>/items')
-@login_required
-def pos_customer_items(cid: int):
-    if current_user.role not in ['admin', 'staff']:
-        return jsonify({'error': 'Unauthorized'}), 403
-
-    customer = User.query.get_or_404(cid)
-
-    pending_orders = Order.query.filter(
-    Order.user_id == cid,
-    Order.status.in_(['pending', 'processing', 'awaiting_payment']),
-    Order.payment_method != 'gcash',
-    Order.delivery_method == 'pickup'
-).order_by(Order.created_at.desc()).all()
-
-    orders_data = []
-    for order in pending_orders:
-        items = []
-        for oi in order.items:
-            product = db.session.get(Product, oi.product_id)
-            items.append({
-                'product_id':   oi.product_id,
-                'product_name': product.name if product else 'Unknown Product',
-                'quantity':     oi.quantity,
-                'unit_price':   oi.unit_price,
-            })
-        orders_data.append({
-            'order_id':   order.id,
-            'status':     order.status,
-            'total':      order.total_amount,
-            'created_at': order.created_at.isoformat(),
-            'items':      items,
-        })
-
-    pending_bookings = Booking.query.filter(
-        Booking.user_id == cid,
-        Booking.status.in_(['in_progress'])
-    ).order_by(Booking.created_at.desc()).all()
-
-    bookings_data = []
-    for b in pending_bookings:
-        bookings_data.append({
-            'booking_id': b.id,
-            'service':    b.service,
-            'price':      b.price if hasattr(b, 'price') and b.price else 0,
-            'date':       b.date.strftime('%Y-%m-%d'),
-            'time':       b.time.strftime('%H:%M'),
-            'status':     b.status,
-            'created_at': b.created_at.isoformat(),
-        })
-
-    return jsonify({
-        'customer_id':   cid,
-        'customer_name': customer.fullname,
-        'orders':        orders_data,
-        'bookings':      bookings_data,
-    })
-
 # ─── PAYMONGO PAYMENTS ───────────────────────────────────────────────────────
 
 @app.route('/pay/order/<int:oid>')
 @login_required
 def pay_order(oid):
-    """Generate GCash payment link for an order."""
     order = Order.query.get_or_404(oid)
-    
-    # Verify ownership
     if order.user_id != current_user.id:
         flash('Unauthorized.', 'danger')
         return redirect(url_for('customer_dashboard'))
-    
-    # Check if already paid
     if order.status not in ['pending']:
         flash('This order cannot be paid online.', 'warning')
         return redirect(url_for('customer_dashboard'))
-    
-    # Get order items for description
     items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
     description = f"MotoTyre Order #{order.id:03d}: {items_desc[:100]}"
-    
-    result = create_gcash_payment(
-        amount=order.total_amount,
-        description=description,
-        order_id=order.id
-    )
-    
+    result = create_gcash_payment(amount=order.total_amount, description=description, order_id=order.id)
     if result["success"]:
-        # Store payment reference
         order.payment_method = 'gcash'
-        order.notes = f"PayMongo: {result['reference']}"
         db.session.commit()
         return redirect(result["checkout_url"])
     else:
@@ -1408,58 +888,30 @@ def pay_order(oid):
 @app.route('/pay/booking/<int:bid>')
 @login_required
 def pay_booking(bid):
-    """Generate GCash payment link for a booking."""
     booking = Booking.query.get_or_404(bid)
-    
-    # Verify ownership
     if booking.user_id != current_user.id:
         flash('Unauthorized.', 'danger')
         return redirect(url_for('customer_dashboard'))
-    
-    # Check if can be paid
     if booking.status not in ['pending', 'confirmed']:
         flash('This booking cannot be paid online.', 'warning')
         return redirect(url_for('customer_dashboard'))
-    
-    # Get service price (you may need to adjust this based on your pricing)
     SERVICE_PRICES = {
-        'Oil Change': 350,
-        'Tire Change – Front': 150,
-        'Tire Change – Rear': 150,
-        'Tire Change – Both': 250,
-        'Brake Inspection': 100,
-        'Brake Pad Replacement': 300,
-        'Chain Cleaning & Lube': 150,
-        'Chain Replacement': 400,
-        'Spark Plug Replacement': 200,
-        'Battery Check & Replacement': 250,
-        'General Checkup': 200,
-        'Full Tune-up': 800,
-        'CVT Cleaning': 500,
-        'FI Cleaning': 600,
-        'ECU Remapping': 1500,
-        'Full Overhaul': 3000,
-        'Overhaul': 2500,
+        'Oil Change': 350, 'Tire Change – Front': 150, 'Tire Change – Rear': 150,
+        'Tire Change – Both': 250, 'Brake Inspection': 100, 'Brake Pad Replacement': 300,
+        'Chain Cleaning & Lube': 150, 'Chain Replacement': 400, 'Spark Plug Replacement': 200,
+        'Battery Check & Replacement': 250, 'General Checkup': 200, 'Full Tune-up': 800,
+        'CVT Cleaning': 500, 'FI Cleaning': 600, 'ECU Remapping': 1500,
+        'Full Overhaul': 3000, 'Overhaul': 2500,
     }
-    
-    # Find matching price (case-insensitive partial match)
-    amount = 500  # Default service fee
+    amount = 500
     for service_name, price in SERVICE_PRICES.items():
         if service_name.lower() in booking.service.lower():
             amount = price
             break
-    
     description = f"MotoTyre Booking #{booking.id}: {booking.service}"
-    
-    result = create_gcash_payment(
-        amount=amount,
-        description=description,
-        booking_id=booking.id
-    )
-    
+    result = create_gcash_payment(amount=amount, description=description, booking_id=booking.id)
     if result["success"]:
         booking.payment_method = 'gcash'
-        booking.notes = (booking.notes or '') + f" | PayMongo: {result['reference']}"
         db.session.commit()
         return redirect(result["checkout_url"])
     else:
@@ -1469,28 +921,22 @@ def pay_booking(bid):
 
 @app.route('/payment/success')
 def payment_success():
-    """Handle successful payment redirect."""
     order_id = request.args.get('order_id')
     booking_id = request.args.get('booking_id')
-    
     if order_id:
         try:
             order = Order.query.get(int(order_id))
             if order and order.status == 'awaiting_payment':
                 order.status = 'confirmed'
                 db.session.commit()
-                
-                # NOW send the notification — payment is confirmed
                 items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
                 send_notification(
-                    order.user_id,
-                    'Order Confirmed! ✅',
+                    order.user_id, 'Order Confirmed! ✅',
                     f'Your payment for Order ORD-{order.id:03d} ({items_desc}) worth ₱{order.total_amount:.2f} has been confirmed.',
                     type='order', status='confirmed'
                 )
         except:
             pass
-    
     if booking_id:
         try:
             booking = Booking.query.get(int(booking_id))
@@ -1499,396 +945,31 @@ def payment_success():
                 db.session.commit()
         except:
             pass
-    
     return redirect('http://127.0.0.1:5000/customer/dashboard')
 
 
-@app.route('/webhook/paymongo', methods=['POST'])
-def paymongo_webhook():
-    """Handle PayMongo webhook for payment status updates."""
-    data = request.get_json()
-    
-    if not data:
-        return jsonify({'error': 'No data'}), 400
-    
-    event_type = data.get('data', {}).get('attributes', {}).get('type')
-    resource = data.get('data', {}).get('attributes', {}).get('data', {})
-    
-    if event_type == 'link.payment.paid':
-        metadata = resource.get('attributes', {}).get('metadata', {})
-        
-        # Update order if this was an order payment
-        order_id = metadata.get('order_id')
-        if order_id:
-            order = Order.query.get(int(order_id))
-            if order and order.status in ['pending', 'awaiting_payment']:
-                order.status = 'confirmed'
-                order.payment_method = 'gcash'
-                db.session.commit()
-                send_notification(
-                    order.user_id,
-                    'Payment Received!',
-                    f'Your payment for Order #{order.id:03d} has been confirmed.',
-                    type='order', status='confirmed'
-                )
-        
-        # Update booking if this was a booking payment
-        booking_id = metadata.get('booking_id')
-        if booking_id:
-            booking = Booking.query.get(int(booking_id))
-            if booking and booking.status == 'pending':
-                booking.status = 'confirmed'
-                booking.payment_method = 'gcash'
-                db.session.commit()
-                send_notification(
-                    booking.user_id,
-                    'Booking Payment Received!',
-                    f'Your payment for {booking.service} on {booking.date.strftime("%b %d")} has been confirmed.',
-                    type='booking', status='confirmed'
-                )
-    
-    return jsonify({'success': True})
-
-@app.route('/test-paymongo')
-@login_required
-def test_paymongo():
-    """Test PayMongo connection."""
-    result = create_gcash_payment(
-        amount=100,
-        description="Test Payment",
-        order_id=9999
-    )
-    return jsonify(result)
-
-@app.route('/admin/report/generate', methods=['POST'])
-@login_required
-def generate_report():
-    if current_user.role not in ['admin', 'staff']:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-
-    date_from = request.form.get('date_from')
-    date_to   = request.form.get('date_to')
-
-    try:
-        d_from = datetime.strptime(date_from, '%Y-%m-%d').date()
-        d_to   = datetime.strptime(date_to,   '%Y-%m-%d').date()
-    except:
-        flash('Invalid date range.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-
-    # ── Fetch data ──
-    orders = Order.query.filter(
-        func.date(Order.created_at) >= d_from,
-        func.date(Order.created_at) <= d_to
-    ).order_by(Order.created_at.desc()).all()
-
-    bookings = Booking.query.filter(
-        Booking.date >= d_from,
-        Booking.date <= d_to
-    ).order_by(Booking.date.desc()).all()
-
-    total_revenue = sum(o.total_amount for o in orders if o.status not in ['cancelled', 'awaiting_payment'])
-    total_orders    = len(orders)
-    total_bookings  = len(bookings)
-    cancelled_orders   = sum(1 for o in orders if o.status == 'cancelled')
-    completed_orders   = sum(1 for o in orders if o.status == 'completed')
-    completed_bookings = sum(1 for b in bookings if b.status == 'completed')
-    cancelled_bookings = sum(1 for b in bookings if b.status == 'cancelled')
-
-    # ── Build PDF ──
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-                            rightMargin=40, leftMargin=40,
-                            topMargin=40, bottomMargin=40)
-    story = []
-    W = A4[0] - 80
-
-    # Colors
-    RED    = colors.HexColor('#e8401c')
-    DARK   = colors.HexColor('#1a1d23')
-    LIGHT  = colors.HexColor('#f3f4f6')
-    MUTED  = colors.HexColor('#6b7280')
-    GREEN  = colors.HexColor('#16a34a')
-    YELLOW = colors.HexColor('#d97706')
-
-    styles = getSampleStyleSheet()
-
-    def style(name, **kwargs):
-        return ParagraphStyle(name, **kwargs)
-
-    title_style    = style('T', fontSize=24, fontName='Helvetica-Bold', textColor=RED, spaceAfter=2)
-    sub_style      = style('S', fontSize=10, fontName='Helvetica',      textColor=MUTED, spaceAfter=4)
-    heading_style  = style('H', fontSize=12, fontName='Helvetica-Bold', textColor=DARK, spaceBefore=14, spaceAfter=6)
-    normal_style   = style('N', fontSize=9,  fontName='Helvetica',      textColor=DARK)
-    small_style    = style('SM', fontSize=8, fontName='Helvetica',      textColor=MUTED)
-
-    # Header
-    story.append(Paragraph('MOTOTYRE MOTO SHOP', title_style))
-    story.append(Paragraph('Sales & Operations Report', style('ST', fontSize=13, fontName='Helvetica-Bold', textColor=DARK, spaceAfter=2)))
-    story.append(Paragraph(f'Period: {d_from.strftime("%b %d, %Y")} — {d_to.strftime("%b %d, %Y")}', sub_style))
-    story.append(Paragraph(f'Generated: {ph_now().strftime("%b %d, %Y at %I:%M %p")}', sub_style))
-    story.append(HRFlowable(width=W, thickness=2, color=RED, spaceAfter=12))
-
-    # Summary cards
-    story.append(Paragraph('SUMMARY', heading_style))
-    summary_data = [
-        ['Total Revenue', 'Total Orders', 'Total Bookings', 'Completed Orders'],
-        [f'P{total_revenue:,.2f}', str(total_orders), str(total_bookings), str(completed_orders)],
-    ]
-    summary_table = Table(summary_data, colWidths=[W/4]*4)
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), DARK),
-        ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
-        ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE',   (0,0), (-1,0), 9),
-        ('BACKGROUND', (0,1), (-1,1), LIGHT),
-        ('FONTNAME',   (0,1), (-1,1), 'Helvetica-Bold'),
-        ('FONTSIZE',   (0,1), (-1,1), 14),
-        ('TEXTCOLOR',  (0,1), (0,1),  RED),
-        ('ALIGN',      (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN',     (0,0), (-1,-1), 'MIDDLE'),
-        ('ROWBACKGROUNDS', (0,0), (-1,-1), [DARK, LIGHT]),
-        ('ROWHEIGHT',  (0,0), (-1,-1), 28),
-        ('GRID',       (0,0), (-1,-1), 0.5, colors.white),
-        ('ROUNDEDCORNERS', [4,4,4,4]),
-    ]))
-    story.append(summary_table)
-    story.append(Spacer(1, 8))
-
-    # Orders breakdown
-    story.append(Paragraph('ORDERS BREAKDOWN', heading_style))
-    status_counts = {}
-    for o in orders:
-        status_counts[o.status] = status_counts.get(o.status, 0) + 1
-
-    breakdown_data = [['Status', 'Count', 'Amount']]
-    for status, count in sorted(status_counts.items()):
-        amount = sum(o.total_amount for o in orders if o.status == status)
-        breakdown_data.append([status.replace('_',' ').title(), str(count), f'P{amount:,.2f}'])
-
-    if len(breakdown_data) > 1:
-        bt = Table(breakdown_data, colWidths=[W*0.4, W*0.2, W*0.4])
-        bt.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), DARK),
-            ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
-            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE',   (0,0), (-1,-1), 9),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT]),
-            ('ALIGN',      (1,0), (-1,-1), 'CENTER'),
-            ('GRID',       (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
-            ('ROWHEIGHT',  (0,0), (-1,-1), 22),
-        ]))
-        story.append(bt)
-    story.append(Spacer(1, 8))
-
-    # Recent orders table
-    story.append(Paragraph('ORDERS LOG', heading_style))
-    order_data = [['Order #', 'Customer', 'Amount', 'Status', 'Date']]
-    for o in orders[:20]:
-        customer = db.session.get(User, o.user_id)
-        order_data.append([
-            f'ORD-{o.id:03d}',
-            customer.fullname if customer else '—',
-            f'P{o.total_amount:,.2f}',
-            o.status.replace('_',' ').title(),
-            o.created_at.strftime('%b %d, %Y'),
-        ])
-
-    if len(order_data) > 1:
-        ot = Table(order_data, colWidths=[W*0.12, W*0.28, W*0.18, W*0.18, W*0.24])
-        ot.setStyle(TableStyle([
-            ('BACKGROUND',  (0,0), (-1,0), DARK),
-            ('TEXTCOLOR',   (0,0), (-1,0), colors.white),
-            ('FONTNAME',    (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE',    (0,0), (-1,-1), 8),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT]),
-            ('GRID',        (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
-            ('ROWHEIGHT',   (0,0), (-1,-1), 20),
-            ('ALIGN',       (2,0), (3,-1), 'CENTER'),
-        ]))
-        story.append(ot)
-    story.append(Spacer(1, 8))
-
-    # Bookings breakdown
-    story.append(Paragraph('BOOKINGS BREAKDOWN', heading_style))
-    booking_status_counts = {}
-    for b in bookings:
-        booking_status_counts[b.status] = booking_status_counts.get(b.status, 0) + 1
-
-    bbd = [['Status', 'Count']]
-    for status, count in sorted(booking_status_counts.items()):
-        bbd.append([status.replace('_',' ').title(), str(count)])
-
-    if len(bbd) > 1:
-        bbt = Table(bbd, colWidths=[W*0.6, W*0.4])
-        bbt.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), DARK),
-            ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
-            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE',   (0,0), (-1,-1), 9),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT]),
-            ('ALIGN',      (1,0), (1,-1), 'CENTER'),
-            ('GRID',       (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
-            ('ROWHEIGHT',  (0,0), (-1,-1), 22),
-        ]))
-        story.append(bbt)
-    story.append(Spacer(1, 8))
-
-    # Bookings log
-    story.append(Paragraph('BOOKINGS LOG', heading_style))
-    booking_data = [['Customer', 'Service', 'Date', 'Time', 'Status']]
-    for b in bookings[:20]:
-        customer = db.session.get(User, b.user_id)
-        booking_data.append([
-            customer.fullname if customer else '—',
-            b.service[:25],
-            b.date.strftime('%b %d, %Y'),
-            b.time.strftime('%I:%M %p'),
-            b.status.replace('_',' ').title(),
-        ])
-
-    if len(booking_data) > 1:
-        blt = Table(booking_data, colWidths=[W*0.22, W*0.28, W*0.18, W*0.14, W*0.18])
-        blt.setStyle(TableStyle([
-            ('BACKGROUND',  (0,0), (-1,0), DARK),
-            ('TEXTCOLOR',   (0,0), (-1,0), colors.white),
-            ('FONTNAME',    (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE',    (0,0), (-1,-1), 8),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT]),
-            ('GRID',        (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
-            ('ROWHEIGHT',   (0,0), (-1,-1), 20),
-        ]))
-        story.append(blt)
-
-    # Footer
-    story.append(Spacer(1, 16))
-    story.append(HRFlowable(width=W, thickness=1, color=MUTED, spaceAfter=6))
-    story.append(Paragraph('This report was automatically generated by MotoTyre Admin Dashboard.', small_style))
-
-    doc.build(story)
-    buffer.seek(0)
-
-    filename = f'mototyre_report_{d_from}_{d_to}.pdf'
-    response = make_response(buffer.read())
-    response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
-    return response
-
-@app.route('/admin/order/<int:oid>/archive', methods=['POST'])
-@login_required
-def archive_order(oid):
-    if current_user.role not in ['admin', 'staff']:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    order = Order.query.get_or_404(oid)
-    
-    if order.status == 'completed':
-        min_days = 30
-    elif order.status == 'cancelled':
-        min_days = 7
-
-    age = (ph_now() - order.created_at).days
-    if age < min_days:
-        flash(f'Order ORD-{order.id:03d} must be at least {min_days} days old to archive. ({age} days old)', 'warning')
-        return redirect(url_for('admin_dashboard'))
-    
-    order.is_archived = True
-    db.session.commit()
-    flash(f'Order ORD-{order.id:03d} archived.', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/booking/<int:bid>/archive', methods=['POST'])
-@login_required
-def archive_booking(bid):
-    if current_user.role not in ['admin', 'staff']:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    booking = Booking.query.get_or_404(bid)
-    
-    if booking.status == 'completed':
-        min_days = 30
-    elif booking.status == 'cancelled':
-        min_days = 7
-
-    age = (ph_now().date() - booking.date).days
-    if age < min_days:
-        flash(f'Booking #{booking.id} must be at least {min_days} days old to archive. ({age} days old)', 'warning')
-        return redirect(url_for('admin_dashboard'))
-    
-    booking.is_archived = True
-    db.session.commit()
-    flash(f'Booking #{booking.id} archived.', 'success')
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/archive-all', methods=['POST'])
-@login_required
-def archive_all_old():
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-
-    completed_cutoff = ph_now() - timedelta(days=30)
-    cancelled_cutoff = ph_now() - timedelta(days=7)
-
-    old_orders = Order.query.filter(
-        db.or_(
-            db.and_(Order.status == 'completed', Order.created_at < completed_cutoff),
-            db.and_(Order.status == 'cancelled', Order.created_at < cancelled_cutoff)
-        ),
-        Order.is_archived == False
-    ).all()
-
-    old_bookings = Booking.query.filter(
-        db.or_(
-            db.and_(Booking.status == 'completed', Booking.date < completed_cutoff.date()),
-            db.and_(Booking.status == 'cancelled', Booking.date < cancelled_cutoff.date())
-        ),
-        Booking.is_archived == False
-    ).all()
-
-    for o in old_orders:
-        o.is_archived = True
-    for b in old_bookings:
-        b.is_archived = True
-
-    db.session.commit()
-
-    flash(f'Archived {len(old_orders)} orders and {len(old_bookings)} bookings.', 'success')
-    return redirect(url_for('admin_dashboard'))
-
 @app.route('/payment/failed')
 def payment_failed():
-    """Handle cancelled/failed payment - remove the order and its notifications."""
     order_id = request.args.get('order_id')
     booking_id = request.args.get('booking_id')
-    
     if order_id:
         try:
             order = Order.query.get(int(order_id))
             if order and order.status == 'awaiting_payment':
-                # Delete the "Order Placed" notification that was sent
                 Notification.query.filter(
                     Notification.user_id == order.user_id,
                     Notification.type == 'order',
                     Notification.created_at >= order.created_at
                 ).delete(synchronize_session=False)
-                
-                # Restore stock
                 for item in order.items:
                     product = Product.query.get(item.product_id)
                     if product:
                         product.stock += item.quantity
-                
-                # Delete order items and order
                 OrderItem.query.filter_by(order_id=order.id).delete()
                 db.session.delete(order)
                 db.session.commit()
         except:
             db.session.rollback()
-    
     if booking_id:
         try:
             booking = Booking.query.get(int(booking_id))
@@ -1898,13 +979,43 @@ def payment_failed():
                     Notification.type == 'booking',
                     Notification.created_at >= booking.created_at
                 ).delete(synchronize_session=False)
-                
                 db.session.delete(booking)
                 db.session.commit()
         except:
             db.session.rollback()
-    
     return redirect('http://127.0.0.1:5000/customer/dashboard')
+
+
+@app.route('/webhook/paymongo', methods=['POST'])
+def paymongo_webhook():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data'}), 400
+    event_type = data.get('data', {}).get('attributes', {}).get('type')
+    resource = data.get('data', {}).get('attributes', {}).get('data', {})
+    if event_type == 'link.payment.paid':
+        metadata = resource.get('attributes', {}).get('metadata', {})
+        order_id = metadata.get('order_id')
+        if order_id:
+            order = Order.query.get(int(order_id))
+            if order and order.status in ['pending', 'awaiting_payment']:
+                order.status = 'confirmed'
+                order.payment_method = 'gcash'
+                db.session.commit()
+                send_notification(order.user_id, 'Payment Received!',
+                    f'Your payment for Order #{order.id:03d} has been confirmed.', type='order', status='confirmed')
+        booking_id = metadata.get('booking_id')
+        if booking_id:
+            booking = Booking.query.get(int(booking_id))
+            if booking and booking.status == 'pending':
+                booking.status = 'confirmed'
+                booking.payment_method = 'gcash'
+                db.session.commit()
+                send_notification(booking.user_id, 'Booking Payment Received!',
+                    f'Your payment for {booking.service} on {booking.date.strftime("%b %d")} has been confirmed.',
+                    type='booking', status='confirmed')
+    return jsonify({'success': True})
+
 
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
@@ -1922,4 +1033,5 @@ print('[SCHEDULER] Booking reminder service started — checking every 1 minute'
 atexit.register(lambda: scheduler.shutdown())
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    # USER PORTAL — runs on port 5000
+    app.run(debug=True, port=5000, use_reloader=False)

@@ -505,29 +505,18 @@
               </div>
               <input type="hidden" name="time" id="selected-time-value" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="position:relative;">
               <label>Service Type</label>
-              <select name="service" required>
-                <option value="">-- Select Service --</option>
-                <option>FI Cleaning</option>
-                <option>Throttle Body Cleaning</option>
-                <option>Tune-Up</option>
-                <option>Ball Race Installation</option>
-                <option>General Rewiring</option>
-                <option>CVT Upgrade</option>
-                <option>CVT Cleaning</option>
-                <option>Diagnostic (API Tech / MST)</option>
-                <option>Suspension Tuning</option>
-                <option>Overhaul</option>
-                <option>Top Overhaul</option>
-                <option>Brake Cleaning</option>
-                <option>Remap</option>
-                <option>Change Oil</option>
-                <option>Horn Installation</option>
-                <option>Rubber Link Stopper</option>
-                <option>Change Brake Pad</option>
-                <option>Full Maintenance Package</option>
-              </select>
+              <input type="text" id="service-search" placeholder="Search service..." autocomplete="off"
+                style="margin-bottom:0.4rem;"
+                oninput="filterServices(this.value)"
+                onfocus="document.getElementById('service-dropdown').style.display='block'"
+              >
+              <div id="service-dropdown" style="display:none;position:absolute;z-index:200;left:0;right:0;
+                background:#1a1d23;border:1px solid rgba(255,255,255,0.12);border-radius:8px;
+                max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+              </div>
+              <input type="hidden" name="service" id="service-value" required>
             </div>
             <div class="form-group">
               <label>Motorcycle Model</label>
@@ -621,8 +610,12 @@
 
   <!-- ── SHOP ── -->
   <section id="sec-shop" class="c-section">
-    <div class="section-head">
+    <div class="section-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
       <div><div class="section-title">ORDER <span>PARTS</span></div><div class="section-sub">Browse available motorcycle parts and accessories.</div></div>
+      <button onclick="openCart()" style="position:relative;display:flex;align-items:center;gap:0.5rem;background:var(--red);border:none;color:#fff;padding:0.55rem 1.1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#c73418'" onmouseout="this.style.background='var(--red)'">
+        🛒 Cart
+        <span id="cart-badge" style="display:none;position:absolute;top:-7px;right:-7px;background:#fff;color:var(--red);font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:800;border-radius:50%;width:18px;height:18px;align-items:center;justify-content:center;border:2px solid var(--red);">0</span>
+      </button>
     </div>
 
    <!-- Category Filter Tabs -->
@@ -640,14 +633,21 @@
     {% if products %}
     <div class="product-grid" id="product-grid">
       {% for p in products %}
-      <div class="product-card" data-category="{{ p.category }}">
+      <div class="product-card" style="cursor:pointer;"
+        data-category="{{ p.category }}"
+        data-id="{{ p.id }}"
+        data-name="{{ p.name|e }}"
+        data-price="{{ p.price }}"
+        data-stock="{{ p.stock }}"
+        data-description="{{ (p.description or '')|e }}"
+        onclick="openProductInfo(this)">
         <div class="product-icon">🔧</div>
         <div class="product-name">{{ p.name }}</div>
         <div class="product-cat">{{ p.category }}</div>
         <div class="product-price">₱{{ '%.2f'|format(p.price) }}</div>
         <div class="product-stock">{{ p.stock }} in stock</div>
-        {% if p.description %}<div style="font-size:0.78rem;color:var(--muted);">{{ p.description }}</div>{% endif %}
-        <button class="btn-order" data-id="{{ p.id }}" data-name="{{ p.name }}" data-price="{{ p.price }}" data-stock="{{ p.stock }}" onclick="openOrderModal(this)">Order Now</button>
+        {% if p.description %}<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem;">{{ p.description }}</div>{% endif %}
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:auto;padding-top:0.5rem;">Tap to view details</div>
       </div>
       {% endfor %}
     </div>
@@ -942,23 +942,7 @@
     <!-- STEP 1: CART -->
     <div id="step-cart">
       <h5>🛒 Order Summary</h5>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-          <div>
-            <div id="cart-product-name" style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;"></div>
-            <div id="cart-product-cat" style="font-size:0.75rem;color:var(--muted);margin-top:2px;"></div>
-          </div>
-          <div id="cart-product-price" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--red);"></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
-          <label style="font-size:0.78rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Qty</label>
-          <div style="display:flex;align-items:center;gap:0.5rem;">
-            <button type="button" onclick="changeQty(-1)" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
-            <input type="number" id="modal-quantity" min="1" value="1" style="width:52px;text-align:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:0.35rem;color:#fff;font-size:0.9rem;" oninput="updateCartTotal()">
-            <button type="button" onclick="changeQty(1)" style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
-          </div>
-        </div>
-      </div>
+      <div id="cart-items-list" style="max-height:300px;overflow-y:auto;margin-bottom:0.75rem;"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-top:1px solid var(--border);">
         <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:var(--muted);">TOTAL</span>
         <span id="cart-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;"></span>
@@ -1075,7 +1059,7 @@
 
   <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Order Summary</div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;"><span id="pay-product-name" style="color:var(--text);"></span><span id="pay-product-subtotal" style="color:var(--text);"></span></div>
+    <div id="pay-items-list" style="margin-bottom:0.5rem;"></div>
     <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Delivery</span><span id="pay-delivery-method"></span></div>
     <div id="pay-shipping-row" style="display:none;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Shipping Fee</span><span>To be calculated</span></div>
     <div style="border-top:1px solid var(--border);padding-top:0.75rem;margin-top:0.5rem;display:flex;justify-content:space-between;">
@@ -1094,10 +1078,7 @@
       <h5>✅ Confirm Order</h5>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Items</div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">
-          <span id="conf-product" style="color:var(--text);"></span>
-          <span id="conf-subtotal" style="color:var(--text);"></span>
-        </div>
+        <div id="conf-items-list" style="margin-bottom:0.5rem;"></div>
         <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Delivery Method</div>
         <div id="conf-delivery-info" style="color:var(--text);line-height:1.6;margin-bottom:0.75rem;"></div>
@@ -1112,25 +1093,49 @@
           <span id="conf-total" style="color:var(--red);font-family:'Bebas Neue',sans-serif;font-size:1.3rem;"></span>
         </div>
       </div>
-      <form method="POST" action="{{ url_for('place_order') }}" id="final-order-form">
-        <input type="hidden" name="product_id" id="final-product-id">
-        <input type="hidden" name="quantity" id="final-quantity">
-        <input type="hidden" id="modal-product-id">
-        <input type="hidden" name="delivery_method" id="final-delivery-method">
-        <input type="hidden" name="ship_name" id="final-ship-name">
-        <input type="hidden" name="ship_mobile" id="final-ship-mobile">
-        <input type="hidden" name="ship_street" id="final-ship-street">
-        <input type="hidden" name="ship_city" id="final-ship-city">
-        <input type="hidden" name="ship_province" id="final-ship-province">
-        <input type="hidden" name="ship_zip" id="final-ship-zip">
-        <input type="hidden" name="payment_method" id="final-payment-method" value="cash">
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel Order</button>
-          <button type="submit" class="btn-submit" style="width:auto;background:#15803d;">✅ Confirm and Pay</button>
-        </div>
-      </form>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel Order</button>
+        <button type="button" id="confirm-pay-btn" class="btn-submit" style="width:auto;background:#15803d;" onclick="submitCartOrder()">✅ Confirm and Pay</button>
+      </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ═══ PRODUCT INFO MODAL ═══ -->
+<div class="modal-overlay" id="modal-product-info">
+  <div class="modal-box" style="width:460px;max-width:95vw;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="font-size:3rem;line-height:1;" id="pi-icon">🔧</div>
+      <button onclick="closeModal('modal-product-info')" style="background:transparent;border:none;color:#6b7280;font-size:1.3rem;cursor:pointer;padding:0.25rem;">✕</button>
+    </div>
+    <div style="margin-bottom:1.25rem;">
+      <div id="pi-name" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:#fff;margin-bottom:0.4rem;"></div>
+      <div id="pi-cat" style="display:inline-block;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:99px;padding:0.2rem 0.75rem;font-size:0.72rem;color:#9ca3af;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;"></div>
+      <div id="pi-description" style="font-size:0.85rem;color:#9ca3af;line-height:1.6;"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1rem;margin-bottom:1rem;">
+      <div>
+        <div style="font-size:0.7rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Price</div>
+        <div id="pi-price" style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--red);line-height:1.1;"></div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:0.7rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Stock</div>
+        <div id="pi-stock" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:#4ade80;"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+      <span style="font-size:0.78rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Qty</span>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <button type="button" onclick="changeInfoQty(-1)" style="width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1.1rem;cursor:pointer;">−</button>
+        <input type="number" id="pi-qty" min="1" value="1" style="width:52px;text-align:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:0.35rem;color:#fff;font-size:0.9rem;" oninput="clampInfoQty()">
+        <button type="button" onclick="changeInfoQty(1)" style="width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1.1rem;cursor:pointer;">+</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-product-info')">Cancel</button>
+      <button type="button" class="btn-submit" style="width:auto;" onclick="addToCartFromInfo()">🛒 Add to Cart</button>
+    </div>
   </div>
 </div>
 
@@ -1156,31 +1161,139 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  let cartPrice = 0;
+  let cart = [];
   let deliveryMethod = 'pickup';
 
-function openOrderModal(btn) {
-  cartPrice = parseFloat(btn.dataset.price);
-  deliveryMethod = 'pickup'; 
-  document.getElementById('modal-product-id').value = btn.dataset.id;
-  document.getElementById('cart-product-name').textContent = btn.dataset.name;
-  document.getElementById('cart-product-cat').textContent = btn.dataset.category || '';
-  document.getElementById('cart-product-price').textContent = '₱' + cartPrice.toFixed(2);
-  document.getElementById('modal-quantity').max = btn.dataset.stock;
-  document.getElementById('modal-quantity').value = 1;
-  updateCartTotal();
-  
-  // Reset delivery selection
-  selectDelivery('pickup');
-  
-  // Clear shipping form
-  ['ship-name','ship-mobile','ship-street','ship-city','ship-province','ship-zip'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  
-  goToStep('step-cart');
-  document.getElementById('modal-order').classList.add('open');
-}
+  // ── CART SYSTEM ──
+  function addToCart(btn) {
+    const id = parseInt(btn.dataset.id);
+    const name = btn.dataset.name;
+    const price = parseFloat(btn.dataset.price);
+    const stock = parseInt(btn.dataset.stock);
+    const category = btn.dataset.category || '';
+    const existing = cart.find(i => i.id === id);
+    if (existing) {
+      if (existing.qty < stock) { existing.qty++; }
+      else { showCartToast(name + ': max stock reached'); return; }
+    } else {
+      cart.push({ id, name, price, stock, qty: 1, category });
+    }
+    updateCartBadge();
+    showCartToast('🛒 ' + name + ' added to cart!');
+  }
+
+  function updateCartBadge() {
+    const badge = document.getElementById('cart-badge');
+    const total = cart.reduce((s, i) => s + i.qty, 0);
+    badge.textContent = total;
+    badge.style.display = total > 0 ? 'flex' : 'none';
+  }
+
+  function openCart() {
+    if (cart.length === 0) { showCartToast('Your cart is empty'); return; }
+    deliveryMethod = 'pickup';
+    selectDelivery('pickup');
+    ['ship-name','ship-mobile','ship-street','ship-city','ship-province','ship-zip'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    renderCartStep();
+    goToStep('step-cart');
+    document.getElementById('modal-order').classList.add('open');
+  }
+
+  function renderCartStep() {
+    const list = document.getElementById('cart-items-list');
+    if (!cart.length) {
+      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Your cart is empty</div>';
+      document.getElementById('cart-total').textContent = '₱0.00';
+      return;
+    }
+    list.innerHTML = cart.map(item => `
+      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:0.5rem;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+          <div style="font-size:0.72rem;color:var(--muted);">${item.category} · ₱${item.price.toFixed(2)} each</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
+          <button type="button" onclick="updateCartItemQty(${item.id},-1)" style="width:24px;height:24px;border-radius:5px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;cursor:pointer;font-size:0.9rem;">−</button>
+          <span style="min-width:22px;text-align:center;color:#fff;font-size:0.88rem;">${item.qty}</span>
+          <button type="button" onclick="updateCartItemQty(${item.id},1)" style="width:24px;height:24px;border-radius:5px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;cursor:pointer;font-size:0.9rem;">+</button>
+        </div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--red);min-width:58px;text-align:right;flex-shrink:0;">₱${(item.price*item.qty).toFixed(2)}</div>
+        <button type="button" onclick="removeFromCart(${item.id})" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-size:1rem;padding:0 0.2rem;flex-shrink:0;" title="Remove">✕</button>
+      </div>`).join('');
+    document.getElementById('cart-total').textContent = '₱' + getCartTotal().toFixed(2);
+  }
+
+  function updateCartItemQty(id, delta) {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+    item.qty = Math.max(1, Math.min(item.stock, item.qty + delta));
+    renderCartStep();
+  }
+
+  function removeFromCart(id) {
+    cart = cart.filter(i => i.id !== id);
+    updateCartBadge();
+    renderCartStep();
+    if (!cart.length) closeModal('modal-order');
+  }
+
+  function getCartTotal() {
+    return cart.reduce((s, i) => s + i.price * i.qty, 0);
+  }
+
+  function showCartToast(msg) {
+    let t = document.getElementById('cart-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'cart-toast';
+      t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#1a1d23;border:1px solid rgba(255,255,255,0.1);color:#fff;padding:0.65rem 1.1rem;border-radius:10px;font-size:0.85rem;font-family:\'DM Sans\',sans-serif;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.4);transition:opacity 0.3s;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timeout);
+    t._timeout = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+  }
+
+  async function submitCartOrder() {
+    const btn = document.getElementById('confirm-pay-btn');
+    btn.disabled = true;
+    btn.textContent = 'Processing…';
+    const shipAddr = deliveryMethod === 'ship'
+      ? [document.getElementById('ship-name').value, document.getElementById('ship-mobile').value,
+         document.getElementById('ship-street').value + ', ' + document.getElementById('ship-city').value + ', ' +
+         document.getElementById('ship-province').value + ' ' + document.getElementById('ship-zip').value].join('\n')
+      : '';
+    try {
+      const res = await fetch('/customer/cart/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
+          delivery_method: deliveryMethod,
+          payment_method: selectedPayment,
+          ship_address: shipAddr
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        cart = [];
+        updateCartBadge();
+        if (data.gcash) { window.location.href = data.checkout_url; }
+        else { window.location.reload(); }
+      } else {
+        alert(data.error || 'Order failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = '✅ Confirm and Pay';
+      }
+    } catch(e) {
+      alert('Network error. Please try again.');
+      btn.disabled = false;
+      btn.textContent = '✅ Confirm and Pay';
+    }
+  }
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
@@ -1191,13 +1304,6 @@ function goToStep(stepId) {
   ['step-cart','step-shipping','step-payment','step-confirm'].forEach(s => {
     document.getElementById(s).style.display = s === stepId ? 'block' : 'none';
   });
-}
-
-function changeQty(dir) {
-  const input = document.getElementById('modal-quantity');
-  const newVal = Math.max(1, Math.min(parseInt(input.max) || 99, parseInt(input.value || 1) + dir));
-  input.value = newVal;
-  updateCartTotal();
 }
 
 function selectDelivery(method) {
@@ -1246,16 +1352,10 @@ function selectDelivery(method) {
 }
 
 function updateCartTotal() {
-  const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
-  const total = cartPrice * qty;
-
-  document.getElementById('final-product-id').value = document.getElementById('modal-product-id').value;
-  document.getElementById('conf-product').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
-  document.getElementById('cart-total').textContent = '₱' + total.toFixed(2);
+  document.getElementById('cart-total').textContent = '₱' + getCartTotal().toFixed(2);
 }
 
 function goToShipping() {
-  // If shipping, validate address fields
   if (deliveryMethod === 'ship') {
     const fields = ['ship-name','ship-mobile','ship-street','ship-city','ship-province','ship-zip'];
     for (const f of fields) {
@@ -1267,15 +1367,15 @@ function goToShipping() {
       document.getElementById(f).style.borderColor = '';
     }
   }
-  
-  const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
-  const total = cartPrice * qty;
-  
-  document.getElementById('pay-product-name').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
-  document.getElementById('pay-product-subtotal').textContent = '₱' + total.toFixed(2);
+  const total = getCartTotal();
+  // Render items list in payment step
+  document.getElementById('pay-items-list').innerHTML = cart.map(i =>
+    `<div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
+      <span style="color:var(--text);">${i.name} ×${i.qty}</span>
+      <span style="color:var(--text);">₱${(i.price*i.qty).toFixed(2)}</span>
+    </div>`
+  ).join('');
   document.getElementById('pay-total').textContent = '₱' + total.toFixed(2);
-  
-  // Show delivery method
   if (deliveryMethod === 'pickup') {
     document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#86efac;">🏪 Shop Pickup (FREE)</span>';
     document.getElementById('pay-shipping-row').style.display = 'none';
@@ -1283,71 +1383,26 @@ function goToShipping() {
     document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#93c5fd;">🚚 Ship to Address</span>';
     document.getElementById('pay-shipping-row').style.display = 'flex';
   }
-  
   goToStep('step-payment');
 }
 
 function goToConfirm() {
-  const qty = parseInt(document.getElementById('modal-quantity').value) || 1;
-  const total = cartPrice * qty;
-
-  
-  document.getElementById('conf-product').textContent = document.getElementById('cart-product-name').textContent + ' x' + qty;
-  document.getElementById('conf-subtotal').textContent = '₱' + total.toFixed(2);
+  const total = getCartTotal();
+  document.getElementById('conf-items-list').innerHTML = cart.map(i =>
+    `<div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;">
+      <span style="color:var(--text);">${i.name} ×${i.qty}</span>
+      <span style="color:var(--text);">₱${(i.price*i.qty).toFixed(2)}</span>
+    </div>`
+  ).join('');
   document.getElementById('conf-total').textContent = '₱' + total.toFixed(2);
-  document.getElementById('final-payment-method').value = selectedPayment;
-
   const paymentLabels = { cash: '💵 Cash', gcash: '📱 GCash' };
   document.getElementById('conf-payment-display').innerHTML = paymentLabels[selectedPayment] || '💵 Cash';
-  
-  
-  
-  // Delivery info
   const deliveryInfo = document.getElementById('conf-delivery-info');
   if (deliveryMethod === 'pickup') {
-    deliveryInfo.innerHTML = `
-      <div style="display:flex;align-items:center;gap:0.5rem;color:#86efac;margin-bottom:0.25rem;">
-        <span>🏪</span>
-        <span style="font-family:'Syne',sans-serif;font-weight:700;">Shop Pickup</span>
-      </div>
-      <div style="font-size:0.8rem;color:var(--muted);">MotoTyre North Caloocan<br>Saranay Rd, Brgy. 171 Bagumbong, Caloocan City</div>
-    `;
+    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#86efac;margin-bottom:0.25rem;"><span>🏪</span><span style="font-family:'Syne',sans-serif;font-weight:700;">Shop Pickup</span></div><div style="font-size:0.8rem;color:var(--muted);">MotoTyre North Caloocan<br>Saranay Rd, Brgy. 171 Bagumbong, Caloocan City</div>`;
   } else {
-    deliveryInfo.innerHTML = `
-      <div style="display:flex;align-items:center;gap:0.5rem;color:#93c5fd;margin-bottom:0.25rem;">
-        <span>🚚</span>
-        <span style="font-family:'Syne',sans-serif;font-weight:700;">Ship to Address</span>
-      </div>
-      <div style="font-size:0.8rem;color:var(--muted);">
-        ${document.getElementById('ship-name').value}<br>
-        ${document.getElementById('ship-mobile').value}<br>
-        ${document.getElementById('ship-street').value}, ${document.getElementById('ship-city').value},<br>
-        ${document.getElementById('ship-province').value} ${document.getElementById('ship-zip').value}
-      </div>
-    `;
+    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#93c5fd;margin-bottom:0.25rem;"><span>🚚</span><span style="font-family:'Syne',sans-serif;font-weight:700;">Ship to Address</span></div><div style="font-size:0.8rem;color:var(--muted);">${document.getElementById('ship-name').value}<br>${document.getElementById('ship-mobile').value}<br>${document.getElementById('ship-street').value}, ${document.getElementById('ship-city').value},<br>${document.getElementById('ship-province').value} ${document.getElementById('ship-zip').value}</div>`;
   }
-  
-  // Set ALL hidden form values
-  document.getElementById('final-product-id').value = document.getElementById('modal-product-id').value;
-  document.getElementById('final-quantity').value = qty;
-  document.getElementById('final-delivery-method').value = deliveryMethod;
-  
-  if (deliveryMethod === 'ship') {
-    document.getElementById('final-ship-name').value = document.getElementById('ship-name').value;
-    document.getElementById('final-ship-mobile').value = document.getElementById('ship-mobile').value;
-    document.getElementById('final-ship-street').value = document.getElementById('ship-street').value;
-    document.getElementById('final-ship-city').value = document.getElementById('ship-city').value;
-    document.getElementById('final-ship-province').value = document.getElementById('ship-province').value;
-    document.getElementById('final-ship-zip').value = document.getElementById('ship-zip').value;
-  } else {
-    document.getElementById('final-ship-name').value = '';
-    document.getElementById('final-ship-mobile').value = '';
-    document.getElementById('final-ship-street').value = '';
-    document.getElementById('final-ship-city').value = '';
-    document.getElementById('final-ship-province').value = '';
-    document.getElementById('final-ship-zip').value = '';
-  }
-  
   goToStep('step-confirm');
 }
 
@@ -1782,6 +1837,61 @@ document.addEventListener('click', function(e) {
 });
 
 
+// ── SERVICE SEARCH DROPDOWN ──
+const SERVICE_LIST = [
+  'Ball Race Installation','Brake Cleaning','Change Brake Pad','Change Oil',
+  'CVT Cleaning','CVT Upgrade','Diagnostic (API Tech / MST)','FI Cleaning',
+  'Full Maintenance Package','General Rewiring','Horn Installation','Overhaul',
+  'Remap','Rubber Link Stopper','Suspension Tuning','Throttle Body Cleaning',
+  'Top Overhaul','Tune-Up'
+];
+
+function renderServiceDropdown(items) {
+  const dd = document.getElementById('service-dropdown');
+  if (!items.length) {
+    dd.innerHTML = '<div style="padding:0.6rem 1rem;color:#6b7280;font-size:0.85rem;">No services found</div>';
+    return;
+  }
+  dd.innerHTML = items.map(s =>
+    `<div onclick="selectService('${s}')"
+      style="padding:0.6rem 1rem;cursor:pointer;font-size:0.88rem;color:#e5e7eb;
+             transition:background 0.15s;"
+      onmouseover="this.style.background='rgba(255,15,15,0.12)'"
+      onmouseout="this.style.background=''">${s}</div>`
+  ).join('');
+}
+
+function filterServices(q) {
+  const dd = document.getElementById('service-dropdown');
+  dd.style.display = 'block';
+  const filtered = SERVICE_LIST.filter(s => s.toLowerCase().includes(q.toLowerCase()));
+  renderServiceDropdown(filtered);
+}
+
+function selectService(name) {
+  document.getElementById('service-search').value = name;
+  document.getElementById('service-value').value  = name;
+  document.getElementById('service-dropdown').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('service-search')?.closest('.form-group');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('service-dropdown').style.display = 'none';
+  }
+});
+
+// Show full list on focus
+document.addEventListener('DOMContentLoaded', function() {
+  const input = document.getElementById('service-search');
+  if (input) {
+    input.addEventListener('focus', () => {
+      renderServiceDropdown(SERVICE_LIST);
+      document.getElementById('service-dropdown').style.display = 'block';
+    });
+  }
+});
+
 function validateBookingForm() {
   let valid = true;
 
@@ -2042,6 +2152,73 @@ function openOrderDetails(orderId) {
   }
 
   document.getElementById('modal-order-details').classList.add('open');
+}
+
+// ── PRODUCT INFO MODAL ──
+let currentProductInfo = null;
+
+function openProductInfo(card) {
+  currentProductInfo = {
+    id:          parseInt(card.dataset.id),
+    name:        card.dataset.name,
+    price:       parseFloat(card.dataset.price),
+    stock:       parseInt(card.dataset.stock),
+    category:    card.dataset.category,
+    description: card.dataset.description || ''
+  };
+
+  document.getElementById('pi-name').textContent        = currentProductInfo.name;
+  document.getElementById('pi-cat').textContent         = currentProductInfo.category;
+  document.getElementById('pi-price').textContent       = '₱' + currentProductInfo.price.toFixed(2);
+  document.getElementById('pi-stock').textContent       = currentProductInfo.stock + ' in stock';
+  document.getElementById('pi-description').textContent = currentProductInfo.description || 'No description available.';
+  document.getElementById('pi-qty').value               = 1;
+  document.getElementById('pi-qty').max                 = currentProductInfo.stock;
+
+  document.getElementById('modal-product-info').classList.add('open');
+}
+
+function changeInfoQty(delta) {
+  const input = document.getElementById('pi-qty');
+  let val = parseInt(input.value) + delta;
+  const max = currentProductInfo ? currentProductInfo.stock : 99;
+  val = Math.max(1, Math.min(max, val));
+  input.value = val;
+}
+
+function clampInfoQty() {
+  const input = document.getElementById('pi-qty');
+  const max   = currentProductInfo ? currentProductInfo.stock : 99;
+  let val     = parseInt(input.value) || 1;
+  input.value = Math.max(1, Math.min(max, val));
+}
+
+function addToCartFromInfo() {
+  if (!currentProductInfo) return;
+  const qty = parseInt(document.getElementById('pi-qty').value) || 1;
+
+  const existing = cart.find(i => i.id === currentProductInfo.id);
+  if (existing) {
+    const newQty = existing.qty + qty;
+    if (newQty > currentProductInfo.stock) {
+      showCartToast('⚠️ Not enough stock for ' + currentProductInfo.name);
+      return;
+    }
+    existing.qty = newQty;
+  } else {
+    cart.push({
+      id:       currentProductInfo.id,
+      name:     currentProductInfo.name,
+      price:    currentProductInfo.price,
+      stock:    currentProductInfo.stock,
+      category: currentProductInfo.category,
+      qty:      qty
+    });
+  }
+
+  updateCartBadge();
+  showCartToast('🛒 ' + currentProductInfo.name + ' added to cart!');
+  closeModal('modal-product-info');
 }
 
 </script>

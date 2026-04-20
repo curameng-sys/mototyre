@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Portal – Mototyre</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+    :root {
+      --red:    #e8401c;
+      --red-dim: rgba(232,64,28,0.15);
+      --accent: #ff6b35;
+      --text:   #1a1d23;
+      --muted:  #6b7280;
+      --border: rgba(0,0,0,0.08);
+      --card:   #ffffff;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      background: #0f1117;
+    }
+
+    /* ── ANIMATED GRADIENT BACKGROUND ── */
+    .bg-gradient {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background: linear-gradient(
+        135deg,
+        #1a1060 0%,
+        #2d1b8e 20%,
+        #6b21a8 40%,
+        #c026d3 60%,
+        #e8401c 80%,
+        #f97316 100%
+      );
+      background-size: 300% 300%;
+      animation: gradientShift 12s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Geometric shapes overlay */
+    .geo-shapes {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .geo-shapes span {
+      position: absolute;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 4px;
+    }
+    .geo-shapes span:nth-child(1) { width: 340px; height: 340px; top: -80px; left: -80px; transform: rotate(25deg); }
+    .geo-shapes span:nth-child(2) { width: 220px; height: 220px; bottom: 60px; right: -60px; transform: rotate(-15deg); }
+    .geo-shapes span:nth-child(3) { width: 160px; height: 160px; top: 40%; right: 12%; transform: rotate(40deg); }
+    .geo-shapes span:nth-child(4) { width: 100px; height: 100px; bottom: 20%; left: 8%; transform: rotate(10deg); }
+    .geo-shapes span:nth-child(5) { width: 500px; height: 500px; bottom: -180px; right: -150px; transform: rotate(30deg); border-radius: 8px; }
+
+    /* ── CARD ── */
+    .login-card {
+      position: relative;
+      z-index: 10;
+      background: var(--card);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 440px;
+      padding: 3rem 2.75rem 2.5rem;
+      box-shadow:
+        0 32px 80px rgba(0,0,0,0.35),
+        0 0 0 1px rgba(255,255,255,0.1);
+      animation: cardIn 0.6s cubic-bezier(0.22,1,0.36,1) both;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(28px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── PANEL SYSTEM ── */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeUp 0.35s ease both; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── LOGO ── */
+    .logo-area {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+    .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: var(--red);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-icon svg { color: #fff; }
+    .logo-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.08em;
+      color: var(--text);
+    }
+    .logo-name span { color: var(--red); }
+    .logo-subtitle {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ── TITLE ── */
+    .card-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 0.3rem;
+      text-align: center;
+    }
+    .card-sub {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    /* ── FLASH MESSAGES ── */
+    .flash {
+      padding: 0.65rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .flash-danger  { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+    .flash-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
+    .flash-info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb; }
+    .flash-warning { background: #fffbeb; border: 1px solid #fde68a; color: #d97706; }
+
+    /* ── FIELDS ── */
+    .field { margin-bottom: 1rem; }
+    .field label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.02em;
+    }
+    .input-wrap { position: relative; }
+    .input-icon {
+      position: absolute;
+      left: 0.9rem; top: 50%;
+      transform: translateY(-50%);
+      color: #c4c9d4;
+      pointer-events: none;
+      display: flex;
+    }
+    .field input {
+      width: 100%;
+      background: #f8f9fb;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 0.75rem 1rem 0.75rem 2.6rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .field input::placeholder { color: #c4c9d4; }
+    .field input:focus {
+      border-color: var(--red);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(232,64,28,0.1);
+    }
+
+    .pass-wrap input { padding-right: 3.5rem; }
+    .pass-toggle {
+      position: absolute; right: 1rem; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      color: var(--muted); font-size: 0.7rem;
+      font-weight: 600; cursor: pointer;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.05em;
+      transition: color 0.15s;
+    }
+    .pass-toggle:hover { color: var(--text); }
+
+    /* ── FORGOT LINK ── */
+    .forgot-row {
+      text-align: right;
+      margin-bottom: 0.25rem;
+      margin-top: -0.25rem;
+    }
+    .text-link {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-decoration: none;
+      font-family: 'DM Mono', monospace;
+      transition: color 0.15s;
+    }
+    .text-link:hover { color: var(--red); }
+
+    /* ── SUBMIT BUTTON ── */
+    .btn-submit {
+      width: 100%;
+      padding: 0.875rem;
+      border: none;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.2s;
+      background: linear-gradient(135deg, #1a1060 0%, #6b21a8 40%, #c026d3 70%, #e8401c 100%);
+      background-size: 200% 200%;
+      color: #fff;
+      animation: btnGrad 6s ease infinite;
+    }
+
+    @keyframes btnGrad {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(192,38,211,0.4);
+    }
+    .btn-submit:active { transform: translateY(0); }
+    .btn-submit svg { transition: transform 0.2s; }
+    .btn-submit:hover svg { transform: translateX(3px); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+      color: #d1d5db;
+      font-size: 0.75rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    /* ── REDIRECT NOTICE ── */
+    .redirect-notice {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #f8f9fb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 1.25rem;
+    }
+    .redirect-notice svg { flex-shrink: 0; color: #c4c9d4; }
+    .redirect-notice a { color: var(--red); font-weight: 600; text-decoration: none; }
+    .redirect-notice a:hover { text-decoration: underline; }
+
+    /* ── OTP ── */
+    .otp-email-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 20px;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.76rem;
+      color: #dc2626;
+      font-family: 'DM Mono', monospace;
+      margin-bottom: 1.5rem;
+    }
+
+    .otp-grid {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .otp-cell {
+      flex: 1;
+      aspect-ratio: 1;
+      max-width: 58px;
+      background: #f8f9fb;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .otp-cell::placeholder { color: #e5e7eb; }
+    .otp-cell:focus {
+      border-color: #6b21a8;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(107,33,168,0.1);
+    }
+    .otp-cell.filled { border-color: #c026d3; background: #fdf4ff; }
+
+    .otp-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+    .otp-timer { display: flex; align-items: center; gap: 0.4rem; }
+    .otp-timer-count { color: #6b21a8; min-width: 3ch; }
+    .otp-timer-count.expired { color: var(--muted); }
+    .otp-resend {
+      background: none; border: none;
+      color: var(--red); font-weight: 600;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem; cursor: pointer;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+      padding: 0;
+    }
+    .otp-resend.active { opacity: 1; pointer-events: auto; }
+
+    .back-btn {
+      display: inline-flex; align-items: center;
+      gap: 0.35rem; background: none; border: none;
+      color: var(--muted); font-size: 0.82rem;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; padding: 0; margin-top: 1rem;
+      transition: color 0.15s;
+    }
+    .back-btn:hover { color: var(--text); }
+
+    /* ── FOOTER ── */
+    .card-footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      margin-top: 1.75rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      color: #d1d5db;
+    }
+    .footer-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--red); opacity: 0.5; }
+  </style>
+</head>
+<body>
+
+<!-- Gradient background -->
+<div class="bg-gradient"></div>
+
+<!-- Geometric overlay shapes -->
+<div class="geo-shapes">
+  <span></span><span></span><span></span><span></span><span></span>
+</div>
+
+<!-- ── CARD ── -->
+<div class="login-card">
+
+  <!-- Logo -->
+  <div class="logo-area">
+    <div class="logo-mark">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+        </svg>
+      </div>
+      <div class="logo-name">MOTO<span>TYRE</span></div>
+    </div>
+    <div class="logo-subtitle">Admin Portal</div>
+  </div>
+
+  <!-- PANEL 1: Login -->
+  <div class="panel active" id="panel-login">
+    <h2 class="card-title">Sign In</h2>
+    <p class="card-sub">Admin &amp; staff access only</p>
+
+    <div id="login-flash">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_login') }}" id="login-form">
+      <div class="field">
+        <label>Email Address</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </span>
+          <input type="email" name="email" id="login-email" placeholder="admin@mototyre.com" required autocomplete="email">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="input-wrap pass-wrap">
+          <span class="input-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </span>
+          <input type="password" name="password" id="loginPass" placeholder="••••••••" required autocomplete="current-password">
+          <button type="button" class="pass-toggle" onclick="togglePass('loginPass', this)">SHOW</button>
+        </div>
+      </div>
+
+      <div class="forgot-row">
+        <a href="{{ url_for('admin_forgot_password') }}" class="text-link">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="btn-submit">
+        Login
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12,5 19,12 12,19"/>
+        </svg>
+      </button>
+    </form>
+
+    <div class="redirect-notice">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>Customer? Use the <a href="http://127.0.0.1:5000/login">User Portal on port 5000</a>.</span>
+    </div>
+  </div>
+
+  <!-- PANEL 2: OTP -->
+  <div class="panel" id="panel-otp">
+    <h2 class="card-title">Verify Identity</h2>
+    <p class="card-sub">Enter the 6-digit code sent to</p>
+    <div class="otp-email-tag">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+      </svg>
+      <span id="otp-email-display">—</span>
+    </div>
+
+    <div id="otp-flash"></div>
+
+    <form method="POST" action="{{ url_for('admin_verify_otp') }}" id="otp-form">
+      <input type="hidden" name="otp" id="otp-hidden">
+      <div class="otp-grid" id="otp-grid">
+        <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+        <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+        <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+        <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+        <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+        <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+      </div>
+
+      <button type="submit" class="btn-submit" id="otp-submit" disabled>
+        Verify &amp; Enter
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20,6 9,17 4,12"/>
+        </svg>
+      </button>
+    </form>
+
+    <div class="otp-footer">
+      <div class="otp-timer">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+        </svg>
+        Expires in <span class="otp-timer-count" id="timer">10:00</span>
+      </div>
+      <button class="otp-resend" id="resend-btn" onclick="resendOtp()">Resend code</button>
+    </div>
+
+    <button class="back-btn" onclick="switchPanel('login')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15,18 9,12 15,6"/>
+      </svg>
+      Back to login
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div class="card-footer-row">
+    <div class="footer-dot"></div>
+    MOTOTYRE ADMIN © 2025
+    <div class="footer-dot"></div>
+    SECURED
+  </div>
+
+</div>
+
+<script>
+  // ── Panel switching ──────────────────────────────────
+  function switchPanel(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    if (name === 'otp') { startTimer(); setTimeout(() => cells[0].focus(), 100); }
+    if (name === 'login') clearInterval(timerInterval);
+  }
+
+  // Auto-show OTP panel if session has pending email
+  {% if session.get('admin_pending_login_email') %}
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('otp-email-display').textContent = '{{ session.get("admin_pending_login_email") }}';
+    switchPanel('otp');
+  });
+  {% endif %}
+
+  document.getElementById('login-form').addEventListener('submit', function() {
+    const email = document.getElementById('login-email').value;
+    document.getElementById('otp-email-display').textContent = email;
+  });
+
+  // ── OTP Cells ────────────────────────────────────────
+  const cells     = document.querySelectorAll('.otp-cell');
+  const otpHidden = document.getElementById('otp-hidden');
+  const otpSubmit = document.getElementById('otp-submit');
+
+  cells.forEach((cell, i) => {
+    cell.addEventListener('input', (e) => {
+      cell.value = e.target.value.replace(/\D/g, '');
+      cell.classList.toggle('filled', cell.value !== '');
+      if (cell.value && i < cells.length - 1) cells[i + 1].focus();
+      syncOtp();
+    });
+    cell.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !cell.value && i > 0) {
+        cells[i - 1].value = '';
+        cells[i - 1].classList.remove('filled');
+        cells[i - 1].focus();
+        syncOtp();
+      }
+    });
+    cell.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData)
+        .getData('text').replace(/\D/g, '').slice(0, 6);
+      pasted.split('').forEach((ch, j) => {
+        if (cells[j]) { cells[j].value = ch; cells[j].classList.add('filled'); }
+      });
+      cells[Math.min(pasted.length, cells.length - 1)].focus();
+      syncOtp();
+    });
+  });
+
+  function syncOtp() {
+    otpHidden.value = [...cells].map(c => c.value).join('');
+    otpSubmit.disabled = otpHidden.value.length < 6;
+  }
+
+  // ── Timer ────────────────────────────────────────────
+  let timerInterval, seconds = 600;
+  const timerEl  = document.getElementById('timer');
+  const resendEl = document.getElementById('resend-btn');
+
+  function startTimer() {
+    seconds = 600;
+    timerEl.classList.remove('expired');
+    resendEl.classList.remove('active');
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      seconds--;
+      if (seconds <= 0) {
+        clearInterval(timerInterval);
+        timerEl.textContent = '0:00';
+        timerEl.classList.add('expired');
+        resendEl.classList.add('active');
+        otpSubmit.disabled = true;
+        return;
+      }
+      const m = Math.floor(seconds / 60);
+      const s = String(seconds % 60).padStart(2, '0');
+      timerEl.textContent = `${m}:${s}`;
+      if (seconds <= 120) resendEl.classList.add('active');
+    }, 1000);
+  }
+
+  function resendOtp() {
+    fetch("{{ url_for('admin_resend_otp') }}")
+      .then(() => {
+        startTimer();
+        cells.forEach(c => { c.value = ''; c.classList.remove('filled'); });
+        syncOtp();
+        const flash = document.getElementById('otp-flash');
+        flash.innerHTML = '<div class="flash flash-info"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>A new code has been sent.</div>';
+        setTimeout(() => flash.innerHTML = '', 4000);
+        cells[0].focus();
+      });
+  }
+
+  // ── Password toggle ──────────────────────────────────
+  function togglePass(id, btn) {
+    const el = document.getElementById(id);
+    el.type = el.type === 'password' ? 'text' : 'password';
+    btn.textContent = el.type === 'password' ? 'SHOW' : 'HIDE';
+  }
+</script>
+</body>
+</html>
