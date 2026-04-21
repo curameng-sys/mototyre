@@ -415,6 +415,65 @@
       to   { opacity: 1; transform: translateX(0); }
     }
 
+    /* ── MOBILE TAB BAR ── */
+    .mobile-tab-bar {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--panel); border-top: 1px solid var(--border);
+      height: 58px; z-index: 50; align-items: stretch;
+    }
+    .mobile-tab-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; color: var(--muted); background: none; border: none;
+      font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      cursor: pointer; transition: color 0.15s; position: relative;
+    }
+    .mobile-tab-btn i { font-size: 1.15rem; }
+    .mobile-tab-btn.active { color: var(--red); }
+    .mob-cart-badge {
+      display: none; position: absolute; top: 7px; right: calc(50% - 20px);
+      background: var(--red); color: #fff;
+      font-size: 0.55rem; font-family: 'Syne', sans-serif; font-weight: 700;
+      border-radius: 10px; padding: 0.1rem 0.38rem;
+      border: 2px solid var(--panel);
+    }
+    .mob-cart-badge.show { display: block; }
+
+    @media (max-width: 768px) {
+      .topbar { padding: 0 1rem; height: 52px; }
+      .topbar-clock { display: none; }
+
+      .pos-wrap {
+        grid-template-columns: 1fr;
+        height: calc(100vh - 52px - 58px);
+      }
+
+      .catalog { display: none; border-right: none; }
+      .catalog.mob-active { display: flex; }
+      .cart-panel { display: none; border-left: none; }
+      .cart-panel.mob-active { display: flex; }
+
+      .mobile-tab-bar { display: flex; }
+
+      .catalog-header { padding: 0.75rem 1rem 0.6rem; }
+      .product-grid { padding: 0.4rem 1rem; }
+      .services-panel { padding: 0.75rem 1rem; }
+      .cart-header { padding: 0.75rem 1rem; }
+      .cart-items { padding: 0.5rem 1rem; }
+      .cart-footer { padding: 0.75rem 1rem; }
+
+      .tab-bar { flex-wrap: wrap; }
+      .custom-svc-row { flex-wrap: wrap; }
+      .receipt-box { width: 96vw !important; }
+    }
+
+    @media (max-width: 480px) {
+      .topbar-brand { font-size: 1.1rem; }
+      .btn-back { padding: 0.35rem 0.65rem; font-size: 0.7rem; }
+      .pos-badge { font-size: 0.55rem; }
+      .cart-footer { padding: 0.6rem 0.85rem; }
+    }
+
     @media print {
       body > *:not(.modal-overlay) { display: none !important; }
       .modal-overlay { position: static; background: white; color: black; display: block !important; }
@@ -602,6 +661,19 @@
       </button>
     </div>
   </div>
+</div>
+
+<!-- MOBILE BOTTOM TAB BAR -->
+<div class="mobile-tab-bar">
+  <button class="mobile-tab-btn active" id="mob-tab-catalog" onclick="switchMobilePanel('catalog')">
+    <i class="fas fa-box-open"></i>
+    Catalog
+  </button>
+  <button class="mobile-tab-btn" id="mob-tab-cart" onclick="switchMobilePanel('cart')">
+    <i class="fas fa-receipt"></i>
+    Cart
+    <span class="mob-cart-badge" id="mob-cart-badge">0</span>
+  </button>
 </div>
 
 <!-- CONFIRM PAYMENT MODAL -->
@@ -966,9 +1038,33 @@ function renderCart() {
       </div>`;
     wrap.appendChild(div);
   });
-  document.getElementById('cart-count').textContent = cart.reduce((s, c) => s + c.qty, 0);
+  const total = cart.reduce((s, c) => s + c.qty, 0);
+  document.getElementById('cart-count').textContent = total;
+  const mobBadge = document.getElementById('mob-cart-badge');
+  if (mobBadge) { mobBadge.textContent = total; mobBadge.classList.toggle('show', total > 0); }
   updateTotals();
 }
+
+function switchMobilePanel(panel) {
+  const catalog   = document.querySelector('.catalog');
+  const cartPanel = document.querySelector('.cart-panel');
+  const tabCat    = document.getElementById('mob-tab-catalog');
+  const tabCart   = document.getElementById('mob-tab-cart');
+  if (panel === 'catalog') {
+    catalog.classList.add('mob-active');    cartPanel.classList.remove('mob-active');
+    tabCat.classList.add('active');         tabCart.classList.remove('active');
+  } else {
+    cartPanel.classList.add('mob-active');  catalog.classList.remove('mob-active');
+    tabCart.classList.add('active');        tabCat.classList.remove('active');
+  }
+}
+
+// Init mobile state on load
+(function() {
+  if (window.innerWidth <= 768) {
+    document.querySelector('.catalog').classList.add('mob-active');
+  }
+})();
 
 function updateTotals() {
   const t = cart.reduce((s, c) => s + c.price * c.qty, 0);

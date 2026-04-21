@@ -120,7 +120,7 @@
     .bar-shipped { background: #06b6d4; }
     .bar-green { background: #16a34a; }
 
-    .pending-box { display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem; }
+    .pending-box { display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem; color: var(--text); font-size: 0.875rem; }
     .pending-box:last-child { margin-bottom: 0; }
     .pending-num { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; }
 
@@ -150,9 +150,82 @@
     @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    /* ── MOBILE TOPBAR ── */
+    .mobile-topbar {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 300;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.25rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .mobile-topbar-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: #fff; }
+    .mobile-topbar-logo span { color: var(--red); }
+    .hamburger {
+      width: 38px; height: 38px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 5px; cursor: pointer; transition: background 0.15s;
+    }
+    .hamburger:hover { background: rgba(255,255,255,0.12); }
+    .hamburger span { display: block; width: 18px; height: 2px; background: #fff; border-radius: 2px; transition: all 0.3s; }
+
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6); z-index: 250;
+    }
+    .sidebar-overlay.open { display: block; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .mobile-topbar { display: flex; }
+      .admin-wrap { grid-template-columns: 1fr; }
+      .sidebar {
+        position: fixed;
+        left: -260px; top: 0; bottom: 0;
+        width: 260px; z-index: 280;
+        transition: left 0.3s ease;
+      }
+      .sidebar.open { left: 0; }
+      .main { padding: 5rem 1rem 2rem; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .settings-grid { grid-template-columns: 1fr; }
+      .filter-bar { flex-direction: column; }
+      .filter-bar input { min-width: unset; width: 100%; }
+      .filter-bar select { width: 100%; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .modal-box { width: 95vw; padding: 1.5rem; }
+      .modal-actions { flex-direction: column-reverse; }
+      .modal-actions button, .modal-actions .btn-primary-custom { width: 100%; text-align: center; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .main { padding: 4.5rem 0.75rem 2rem; }
+      .card-body { padding: 1rem; }
+      .card-head { padding: 0.875rem 1rem; flex-wrap: wrap; gap: 0.5rem; }
+      .page-title { font-size: 1.5rem; }
+      .filter-bar input, .filter-bar select { font-size: 0.85rem; }
+    }
   </style>
 </head>
 <body>
+
+<!-- MOBILE TOPBAR -->
+<div class="mobile-topbar">
+  <div class="mobile-topbar-logo">MOTO<span>TYRE</span></div>
+  <div class="hamburger" onclick="toggleAdminSidebar()">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeAdminSidebar()"></div>
 
 <div class="admin-wrap">
 
@@ -1453,6 +1526,19 @@ document.addEventListener('click', function(e) {
 
 fetchAdminNotifications();
 setInterval(fetchAdminNotifications, 15000);
+
+// ── Mobile sidebar ──
+function toggleAdminSidebar() {
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeAdminSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+document.querySelectorAll('.sidebar a').forEach(a => {
+  a.addEventListener('click', closeAdminSidebar);
+});
 </script>
 
 </body>

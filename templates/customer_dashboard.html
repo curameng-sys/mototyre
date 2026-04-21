@@ -260,12 +260,66 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 
+    /* ── HAMBURGER ── */
+    .nav-hamburger {
+      display: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 5px; width: 40px; height: 40px; cursor: pointer;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+      transition: background 0.15s; flex-shrink: 0;
+    }
+    .nav-hamburger:hover { background: rgba(255,255,255,0.12); }
+    .nav-hamburger span { display: block; width: 18px; height: 2px; background: #fff; border-radius: 2px; transition: all 0.3s; }
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .mobile-nav-menu {
+      display: none; position: fixed;
+      top: 72px; left: 0; right: 0;
+      background: rgba(17,18,21,0.98);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      flex-direction: column; gap: 0.4rem;
+      z-index: 99; backdrop-filter: blur(12px);
+    }
+    .mobile-nav-menu.open { display: flex; }
+    .mobile-nav-menu a {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.75rem 1rem; border-radius: 10px;
+      color: var(--muted); text-decoration: none;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem;
+      transition: all 0.15s;
+    }
+    .mobile-nav-menu a:hover, .mobile-nav-menu a.active {
+      color: #fff; background: rgba(232,64,28,0.15);
+    }
+
     @media (max-width: 768px) {
       .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+      .nav-username { display: none; }
+      .nav-logout-btn { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
       .stat-row { grid-template-columns: 1fr 1fr; }
       .quick-actions, .two-col, .book-grid, .settings-grid { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr; }
       .hero-bike { display: none; }
+      .modal-box { width: 95vw; max-width: 95vw; padding: 1.5rem; }
+      .page-wrap { padding: 1.5rem 1rem 4rem; }
+    }
+
+    @media (max-width: 480px) {
+      .stat-row { grid-template-columns: 1fr; }
+      .top-nav { height: 60px; }
+      .mobile-nav-menu { top: 60px; }
+      .nav-logo { font-size: 1.4rem; }
+      .page-wrap { padding: 1.25rem 0.75rem 4rem; }
+      .hero-banner { padding: 1.5rem; }
+      .modal-box { padding: 1.25rem; }
+      .modal-actions { flex-direction: column-reverse; gap: 0.5rem; }
+      .modal-actions button { width: 100%; }
+      .quick-actions { grid-template-columns: 1fr 1fr; }
     }
 
     /* ── CATEGORY TABS ── */
@@ -295,6 +349,10 @@
     <a href="#" onclick="showSection('orders', this)">📦 My Orders</a>
   </div>
 
+  <div class="nav-hamburger" id="nav-hamburger" onclick="toggleCustomerNav()">
+    <span></span><span></span><span></span>
+  </div>
+
   <div class="nav-right">
   <div style="position:relative;cursor:pointer;" onclick="toggleNotifications()" title="Notifications">
     <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">🔔</div>
@@ -312,6 +370,15 @@
     <button class="nav-logout-btn" onclick="document.getElementById('modal-logout').style.display='flex'">Logout</button>
   </div>
 </nav>
+
+<!-- ═══ MOBILE NAV MENU ═══ -->
+<div class="mobile-nav-menu" id="mobile-nav-menu">
+  <a href="#" class="active" onclick="showSection('overview', this)">🏠 Home</a>
+  <a href="#" onclick="showSection('book', this)">📅 Book</a>
+  <a href="#" onclick="showSection('bookings', this)">📋 My Bookings</a>
+  <a href="#" onclick="showSection('shop', this)">🛒 Shop</a>
+  <a href="#" onclick="showSection('orders', this)">📦 My Orders</a>
+</div>
 
 <!-- ═══ NOTIFICATION PANEL ═══ --> 
 <div id="notif-panel" style="display:none;position:fixed;top:76px;right:1.25rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,0.1);border-radius:16px;z-index:999;box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;">
@@ -1155,11 +1222,41 @@
 <script>
   function showSection(name, el) {
     document.querySelectorAll('.c-section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+    document.querySelectorAll('.nav-links a, .mobile-nav-menu a').forEach(a => a.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
-    if (el) el.classList.add('active');
+    if (el) {
+      el.classList.add('active');
+      // sync the mirror link in the other nav
+      const href = el.getAttribute('onclick');
+      document.querySelectorAll('.nav-links a, .mobile-nav-menu a').forEach(a => {
+        if (a !== el && a.getAttribute('onclick') === href) a.classList.add('active');
+      });
+    }
+    // close mobile menu
+    const mobileMenu = document.getElementById('mobile-nav-menu');
+    const hamburger  = document.getElementById('nav-hamburger');
+    if (mobileMenu) mobileMenu.classList.remove('open');
+    if (hamburger)  hamburger.classList.remove('open');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  function toggleCustomerNav() {
+    const menu = document.getElementById('mobile-nav-menu');
+    const btn  = document.getElementById('nav-hamburger');
+    menu.classList.toggle('open');
+    btn.classList.toggle('open');
+  }
+
+  // close mobile menu when clicking outside
+  document.addEventListener('click', function(e) {
+    const menu = document.getElementById('mobile-nav-menu');
+    const btn  = document.getElementById('nav-hamburger');
+    if (menu && menu.classList.contains('open') &&
+        !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove('open');
+      btn.classList.remove('open');
+    }
+  });
 
   let cart = [];
   let deliveryMethod = 'pickup';

@@ -496,7 +496,13 @@
       <h3>Sign In</h3>
       <p class="sub">Enter your credentials to access your account</p>
 
-      <div id="login-flash"></div>
+      <div id="login-flash">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endwith %}
+      </div>
 
       <form method="POST" action="{{ url_for('login') }}" id="login-form">
         <div class="field-group">
@@ -575,7 +581,13 @@
       <h3>Forgot Password</h3>
       <p class="sub">Enter your registered email and we'll send you a reset code.</p>
 
-      <div id="forgot-flash"></div>
+      <div id="forgot-flash">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endwith %}
+      </div>
 
       <form method="POST" action="{{ url_for('forgot_password') }}" id="forgot-form">
         <div class="field-group">

@@ -431,6 +431,7 @@
       <span></span>
     </button>
     <div class="nav-links" id="navLinks">
+      <a href="/#about">About</a>
       <a href="/products" class="active">Products</a>
       <a href="/#services">Services</a>
       <a href="/#how">How It Works</a>
@@ -556,9 +557,9 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    <div class="footer-logo">MOTO<span>TYRE</span> MOTO SHOP</div>
-    <div class="footer-copy">© 2025 Mototyre Moto Shop. All rights reserved.</div>
+    <div class="footer-copy">© <span id="footer-year"></span> Mototyre Moto Shop. All rights reserved.</div>
     <div class="footer-links">
+      <a href="/#about">About</a>
       <a href="/products">Products</a>
       <a href="/#services">Services</a>
       <a href="/#how">How It Works</a>
@@ -660,6 +661,8 @@
       el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
       observer.observe(el);
     });
+
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
   </script>
 
 </body>

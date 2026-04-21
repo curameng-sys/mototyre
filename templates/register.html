@@ -207,6 +207,42 @@
         gap: 0.75rem;
       }
 
+      .field-row-name {
+        display: grid;
+        grid-template-columns: 1fr 1fr 0.45fr;
+        gap: 0.75rem;
+      }
+
+      .field-group select {
+        width: 100%;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        color: #fff;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.95rem;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.85rem center;
+        background-size: 14px;
+        padding-right: 2.25rem;
+      }
+
+      .field-group select option {
+        background: #1a1d23;
+        color: #fff;
+      }
+
+      .field-group select:focus {
+        border-color: var(--red);
+        background-color: rgba(232,64,28,0.05);
+      }
+
       .pass-wrap { position: relative; }
       .pass-wrap input { padding-right: 3.5rem; }
       .pass-toggle {
@@ -475,12 +511,28 @@
 
         <div class="section-label">Personal Info</div>
 
-        <div class="field-group">
-          <label>Full Name</label>
-          <input type="text" name="fullname" placeholder="Juan dela Cruz" required
-            pattern="[A-Za-z\s]+"
-            title="Full name must contain letters only"
-            oninput="this.value = this.value.replace(/[^A-Za-z\s]/g, '')">
+        <div class="field-row-name">
+          <div class="field-group">
+            <label>First Name</label>
+            <input type="text" name="firstname" placeholder="Juan" required
+              oninput="this.value = this.value.replace(/[^A-Za-z\s]/g, '')">
+          </div>
+          <div class="field-group">
+            <label>Last Name</label>
+            <input type="text" name="lastname" placeholder="dela Cruz" required
+              oninput="this.value = this.value.replace(/[^A-Za-z\s]/g, '')">
+          </div>
+          <div class="field-group">
+            <label>Suffix</label>
+            <select name="suffix">
+              <option value="">None</option>
+              <option value="Jr.">Jr.</option>
+              <option value="Sr.">Sr.</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+              <option value="IV">IV</option>
+            </select>
+          </div>
         </div>
 
         <div class="field-row">

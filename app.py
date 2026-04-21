@@ -139,6 +139,136 @@ def send_otp_email(email, otp, purpose="verify"):
     _send_gmail(email, subject, html)
 
 
+def send_order_receipt_email(order):
+    try:
+        if order.receipt_sent:
+            return  # already sent, skip
+        user = User.query.get(order.user_id)
+        if not user or not user.email:
+            return
+        items_rows = ""
+        for item in order.items:
+            product_name = item.product.name if item.product else "Product"
+            subtotal = item.unit_price * item.quantity
+            items_rows += f"""
+            <tr>
+              <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;">{product_name}</td>
+              <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:14px;text-align:center;">{item.quantity}</td>
+              <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:14px;text-align:right;">&#8369;{item.unit_price:.2f}</td>
+              <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;text-align:right;font-weight:600;">&#8369;{subtotal:.2f}</td>
+            </tr>"""
+
+        delivery_label = "Shop Pickup — MotoTyre North Caloocan" if order.delivery_method == 'pickup' else "Ship to Address"
+        delivery_detail = ""
+        if order.delivery_method == 'ship' and order.ship_address:
+            addr = order.ship_address.replace('\n', '<br>')
+            delivery_detail = f'<p style="margin:4px 0 0;color:#6b7280;font-size:13px;">{addr}</p>'
+
+        order_date = order.created_at.strftime("%B %d, %Y at %I:%M %p") if order.created_at else "—"
+        order_num  = f"ORD-{order.id:03d}"
+
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <!-- Header -->
+          <div style="background:#0c0d0f;padding:28px 32px;text-align:center;">
+            <div style="font-family:Georgia,serif;font-size:26px;font-weight:900;letter-spacing:4px;color:#ffffff;">MOTO<span style="color:#ff0f0f;">TYRE</span></div>
+            <div style="color:#6b7280;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:4px;">Order Receipt</div>
+          </div>
+
+          <!-- Success banner -->
+          <div style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;padding:16px 32px;display:flex;align-items:center;gap:12px;">
+            <div style="width:36px;height:36px;background:#16a34a;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="color:#fff;font-size:18px;line-height:1;">&#10003;</span>
+            </div>
+            <div>
+              <div style="font-weight:700;color:#15803d;font-size:15px;">Payment Confirmed!</div>
+              <div style="color:#4b5563;font-size:13px;margin-top:2px;">Your GCash payment was received successfully.</div>
+            </div>
+          </div>
+
+          <!-- Order info -->
+          <div style="padding:24px 32px 0;">
+            <table style="width:100%;border-collapse:collapse;">
+              <tr>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Order Number</td>
+                <td style="padding:6px 0;color:#111827;font-size:13px;font-weight:700;text-align:right;">{order_num}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Date</td>
+                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{order_date}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Customer</td>
+                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{user.fullname}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Payment</td>
+                <td style="padding:6px 0;text-align:right;"><span style="background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #bfdbfe;">&#128241; GCash</span></td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Delivery</td>
+                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">
+                  {delivery_label}
+                  {delivery_detail}
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Items table -->
+          <div style="padding:20px 32px 0;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Items Ordered</div>
+            <table style="width:100%;border-collapse:collapse;border:1px solid #f3f4f6;border-radius:8px;overflow:hidden;">
+              <thead>
+                <tr style="background:#f9fafb;">
+                  <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:1px;text-transform:uppercase;">Product</th>
+                  <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:1px;text-transform:uppercase;">Qty</th>
+                  <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:1px;text-transform:uppercase;">Price</th>
+                  <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:1px;text-transform:uppercase;">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>{items_rows}</tbody>
+            </table>
+          </div>
+
+          <!-- Total -->
+          <div style="padding:16px 32px;">
+            <table style="width:100%;border-collapse:collapse;">
+              <tr>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Subtotal</td>
+                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">&#8369;{order.total_amount:.2f}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Shipping</td>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;text-align:right;">To be arranged</td>
+              </tr>
+              <tr style="border-top:2px solid #111827;">
+                <td style="padding:12px 0 6px;color:#111827;font-size:16px;font-weight:900;letter-spacing:1px;">TOTAL</td>
+                <td style="padding:12px 0 6px;color:#ff0f0f;font-size:22px;font-weight:900;text-align:right;">&#8369;{order.total_amount:.2f}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Footer -->
+          <div style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 32px;text-align:center;">
+            <div style="color:#6b7280;font-size:12px;line-height:1.7;">
+              <strong style="color:#111827;">MotoTyre North Caloocan</strong><br>
+              Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>
+              &#128222; 0915 269 8366 &nbsp;|&nbsp; Mon–Sat 8:00 AM – 7:00 PM
+            </div>
+            <div style="margin-top:12px;color:#9ca3af;font-size:11px;">Thank you for choosing MotoTyre! &#127947;</div>
+          </div>
+        </div>"""
+
+        _send_gmail(user.email, f"Your MotoTyre Receipt — {order_num}", html)
+        order.receipt_sent = True
+        db.session.commit()
+        print(f"[receipt email] sent to {user.email} for {order_num}")
+    except Exception as e:
+        print(f"[receipt email] failed for order {order.id}: {e}")
+        db.session.rollback()
+
+
 # ─── MODELS ─────────────────────────────────────────────────────────────────
 
 class User(db.Model, UserMixin):
@@ -216,9 +346,10 @@ class Order(db.Model):
     payment_method  = db.Column(db.String(20), default='cash')
     delivery_method = db.Column(db.String(20), default='pickup')
     ship_address    = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=ph_now)
+    created_at      = db.Column(db.DateTime, default=ph_now)
     items           = db.relationship('OrderItem', backref='order', lazy=True)
-    is_archived = db.Column(db.Boolean, default=False)
+    is_archived     = db.Column(db.Boolean, default=False)
+    receipt_sent    = db.Column(db.Boolean, default=False)
 
 
 class OrderItem(db.Model):
@@ -374,7 +505,7 @@ def login():
 
         # Block admin/staff from logging in through the user portal
         if user and user.role in ['admin', 'staff']:
-            flash('Admin and staff accounts must use the Admin Portal at port 5001.', 'danger')
+            flash('Admin and staff accounts must use the Admin Portal.', 'danger')
             return redirect(url_for('login'))
 
         if user and user.check_password(password):
@@ -406,6 +537,9 @@ def verify_login_otp():
         if result['valid']:
             session.pop('pending_login_email', None)
             user = User.query.filter_by(email=email).first()
+            if user and user.role in ['admin', 'staff']:
+                flash('Admin and staff accounts must use the Admin Portal.', 'danger')
+                return redirect(url_for('login'))
             login_user(user, remember=True)
             next_page = request.args.get('next') or session.pop('next', None)
             if next_page and next_page.startswith('/'):
@@ -446,8 +580,13 @@ def register():
             flash('Invalid phone number.', 'danger')
             return redirect(url_for('register'))
 
+        firstname = request.form.get('firstname', '').strip()
+        lastname  = request.form.get('lastname', '').strip()
+        suffix    = request.form.get('suffix', '').strip()
+        fullname  = f"{firstname} {lastname}" + (f" {suffix}" if suffix else "")
+
         user = User(
-            fullname=request.form['fullname'], email=email, phone=phone,
+            fullname=fullname, email=email, phone=phone,
             motorcycle_plate=request.form.get('plate'),
             motorcycle_model=request.form.get('model'),
             email_verified=False
@@ -935,8 +1074,11 @@ def payment_success():
                     f'Your payment for Order ORD-{order.id:03d} ({items_desc}) worth ₱{order.total_amount:.2f} has been confirmed.',
                     type='order', status='confirmed'
                 )
-        except:
-            pass
+            # send receipt regardless — receipt_sent flag prevents duplicates
+            if order and order.status == 'confirmed':
+                send_order_receipt_email(order)
+        except Exception as e:
+            print(f"[payment/success] order error: {e}")
     if booking_id:
         try:
             booking = Booking.query.get(int(booking_id))
@@ -1004,6 +1146,7 @@ def paymongo_webhook():
                 db.session.commit()
                 send_notification(order.user_id, 'Payment Received!',
                     f'Your payment for Order #{order.id:03d} has been confirmed.', type='order', status='confirmed')
+                send_order_receipt_email(order)
         booking_id = metadata.get('booking_id')
         if booking_id:
             booking = Booking.query.get(int(booking_id))
@@ -1031,6 +1174,15 @@ scheduler.add_job(
 scheduler.start()
 print('[SCHEDULER] Booking reminder service started — checking every 1 minute')
 atexit.register(lambda: scheduler.shutdown())
+
+with app.app_context():
+    try:
+        from sqlalchemy import text as _text
+        db.session.execute(_text("ALTER TABLE `order` ADD COLUMN receipt_sent TINYINT(1) NOT NULL DEFAULT 0"))
+        db.session.commit()
+        print('[MIGRATION] Added receipt_sent column to order table')
+    except Exception:
+        db.session.rollback()  # column already exists, safe to ignore
 
 if __name__ == '__main__':
     # USER PORTAL — runs on port 5000

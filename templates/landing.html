@@ -79,6 +79,14 @@
       transform: scaleX(1);
       transform-origin: left;
     }
+    .nav-links a:not(.nav-cta).active {
+      color: #fff;
+    }
+    .nav-links a:not(.nav-cta).active::after {
+      transform: scaleX(1);
+      transform-origin: left;
+      transition: none;
+    }
 
     .nav-cta {
       background: var(--red);
@@ -275,37 +283,41 @@
 
     .hero-visual {
       position: absolute;
-      right: 4rem;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 2;
-      animation: fadeUp 0.8s 0.4s ease both;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
     }
 
-    .hero-badge-group {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+    .hero-img-wrap {
+      position: relative;
+      width: 100%;
+      height: 100%;
     }
 
-    .stat-badge {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      backdrop-filter: blur(8px);
-      border-radius: 12px;
-      padding: 1.25rem 1.75rem;
-      min-width: 180px;
-      transition: transform 0.2s;
+    .hero-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 35%;
+      opacity: 0.45;
+      display: block;
     }
-    .stat-badge:hover { transform: translateX(-4px); }
-    .stat-badge .num {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.5rem;
-      color: #fff;
-      line-height: 1;
+
+    .hero-img-wrap::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, rgba(12,13,15,0.95) 0%, rgba(12,13,15,0.85) 35%, rgba(12,13,15,0.35) 65%, rgba(12,13,15,0.2) 100%);
+      z-index: 1;
     }
-    .stat-badge .num span { color: var(--red); }
-    .stat-badge .lbl { font-size: 0.78rem; color: #6b7280; margin-top: 0.25rem; }
+
+    .hero-img-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(12,13,15,0.8) 0%, transparent 35%);
+      z-index: 1;
+    }
 
     .scroll-hint {
       position: absolute;
@@ -702,6 +714,133 @@
       position: relative;
     }
 
+    /* ── ABOUT US ── */
+    .about {
+      padding: 6rem 4rem;
+      background: #111215;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .about-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+
+    .about-text .section-tag { margin-bottom: 0.75rem; }
+
+    .about-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.5rem, 4vw, 3.8rem);
+      line-height: 0.95;
+      letter-spacing: 0.02em;
+      margin-bottom: 1.5rem;
+    }
+
+    .about-title span { color: var(--red); }
+
+    .about-desc {
+      color: #9ca3af;
+      font-size: 1rem;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+
+    .about-divider {
+      width: 48px;
+      height: 3px;
+      background: var(--red);
+      margin: 1.75rem 0;
+      border-radius: 2px;
+    }
+
+    .about-stats {
+      display: flex;
+      gap: 2.5rem;
+      flex-wrap: wrap;
+    }
+
+    .about-stat .num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.8rem;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .about-stat .num span { color: var(--red); }
+    .about-stat .lbl {
+      font-size: 0.75rem;
+      color: #6b7280;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 0.2rem;
+    }
+
+    .about-visual {
+      position: relative;
+    }
+
+    .about-img-wrap {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+    }
+
+    .about-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 20%;
+      display: block;
+      opacity: 0.85;
+    }
+
+    .about-img-wrap::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .about-badge {
+      position: absolute;
+      bottom: -1.25rem;
+      left: -1.25rem;
+      background: var(--red);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      z-index: 2;
+      box-shadow: 0 8px 24px rgba(255,15,15,0.3);
+    }
+
+    .about-badge .b-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .about-badge .b-lbl {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.8);
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 900px) {
+      .about { padding: 4rem 2rem; }
+      .about-inner { grid-template-columns: 1fr; gap: 3rem; }
+      .about-visual { display: none; }
+    }
+
     /* ── FOOTER ── */
     .footer {
       background: #080909;
@@ -986,6 +1125,7 @@
       <span></span>
     </button>
     <div class="nav-links" id="navLinks">
+      <a href="#about">About</a>
       <a href="#products">Products</a>
       <a href="#services">Services</a>
       <a href="#how">How It Works</a>
@@ -1023,11 +1163,58 @@
       </div>
     </div>
 
-
+    <div class="hero-visual">
+      <div class="hero-img-wrap">
+        <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="Mototyre Shop" class="hero-img">
+      </div>
+    </div>
 
     <div class="scroll-hint">
       <span>Scroll</span>
       <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ABOUT US -->
+  <section class="about" id="about">
+    <div class="about-inner">
+
+      <div class="about-text">
+        <div class="section-tag">Who We Are</div>
+        <h2 class="about-title">ABOUT <span>US</span></h2>
+        <p class="about-desc">
+          MotoTyres North Caloocan is your trusted shop for high-quality motorcycle tires, parts, and fast, reliable service.
+        </p>
+        <p class="about-desc">
+          Located in Caloocan City, we proudly serve riders by providing durable products and expert installation to keep you safe on the road.
+        </p>
+        <div class="about-divider"></div>
+        <div class="about-stats">
+          <div class="about-stat">
+            <div class="num">500<span>+</span></div>
+            <div class="lbl">Riders Served</div>
+          </div>
+          <div class="about-stat">
+            <div class="num">18<span>+</span></div>
+            <div class="lbl">Services Offered</div>
+          </div>
+          <div class="about-stat">
+            <div class="num">100<span>%</span></div>
+            <div class="lbl">Trusted Quality</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-visual">
+        <div class="about-img-wrap">
+          <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="Mototyre Shop">
+        </div>
+        <div class="about-badge">
+          <div class="b-num">North</div>
+          <div class="b-lbl">Caloocan</div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -1312,9 +1499,9 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    <div class="footer-logo">MOTO<span>TYRE</span> MOTO SHOP</div>
-    <div class="footer-copy">© 2025 Mototyre Moto Shop. All rights reserved.</div>
+    <div class="footer-copy">© <span id="footer-year"></span> Mototyre Moto Shop. All rights reserved.</div>
     <div class="footer-links">
+      <a href="#about">About</a>
       <a href="/products">Products</a>
       <a href="#services">Services</a>
       <a href="#how">How It Works</a>
@@ -1332,18 +1519,18 @@
 
     // Mobile menu toggle
     const navToggle = document.getElementById('navToggle');
-    const navLinks = document.getElementById('navLinks');
+    const navMenu = document.getElementById('navLinks');
     const navOverlay = document.getElementById('navOverlay');
 
     function closeMenu() {
       navToggle.classList.remove('active');
-      navLinks.classList.remove('active');
+      navMenu.classList.remove('active');
       navOverlay.classList.remove('active');
       document.body.style.overflow = '';
     }
 
     function toggleMenu() {
-      const isActive = navLinks.classList.toggle('active');
+      const isActive = navMenu.classList.toggle('active');
       navToggle.classList.toggle('active');
       navOverlay.classList.toggle('active');
       document.body.style.overflow = isActive ? 'hidden' : '';
@@ -1353,7 +1540,7 @@
     navOverlay.addEventListener('click', closeMenu);
 
     // Close menu when a link is tapped
-    navLinks.querySelectorAll('a').forEach(link => {
+    navMenu.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', closeMenu);
     });
 
@@ -1379,6 +1566,8 @@
       serviceCards.forEach((card, idx) => {
         if (idx >= start && idx < end) {
           card.classList.remove('hidden');
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
         } else {
           card.classList.add('hidden');
         }
@@ -1412,11 +1601,19 @@
     // Initialize without scrolling
     showPage(1, false);
 
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
+    // ── Smooth scroll + active nav highlight ──────────────
+    const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+
+    navLinks.forEach(a => {
       a.addEventListener('click', e => {
         e.preventDefault();
-        const target = document.querySelector(a.getAttribute('href'));
-        if (target) target.scrollIntoView({ behavior: 'smooth' });
+        const href = a.getAttribute('href');
+        const target = document.querySelector(href);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          navLinks.forEach(link => link.classList.remove('active'));
+          a.classList.add('active');
+        }
       });
     });
 
@@ -1442,6 +1639,8 @@
       el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
       observer.observe(el);
     });
+
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
   </script>
 
 </body>
