@@ -28,6 +28,7 @@ import base64
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY='mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4',
+    SESSION_COOKIE_NAME='mototyre_customer_session',
     SQLALCHEMY_DATABASE_URI=(
         "mysql+pymysql://avnadmin:AVNS_1RNbCP5RORVJ7VaVhRD@"
         "mysql-1d9dceb5-mackycastanales05-1369.f.aivencloud.com:12422/defaultdb"
@@ -316,6 +317,7 @@ class Booking(db.Model):
     mechanic_specialization = db.Column(db.String(100))
     contact_name  = db.Column(db.String(100))
     contact_mobile = db.Column(db.String(20))
+    odometer = db.Column(db.Integer)
     is_archived = db.Column(db.Boolean, default=False)
 
 class Mechanic(db.Model):
@@ -358,6 +360,15 @@ class OrderItem(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity   = db.Column(db.Integer, nullable=False)
     unit_price = db.Column(db.Float, nullable=False)
+
+
+class Service(db.Model):
+    id          = db.Column(db.Integer, primary_key=True)
+    name        = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.String(200), default='')
+    price       = db.Column(db.Float, default=0.0)
+    is_active   = db.Column(db.Boolean, default=True)
+    created_at  = db.Column(db.DateTime, default=ph_now)
 
 
 class Notification(db.Model):
@@ -719,8 +730,9 @@ def customer_dashboard():
     bookings   = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
     orders     = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
     products   = Product.query.filter(Product.stock > 0).all()
+    services   = Service.query.filter_by(is_active=True).order_by(Service.name).all()
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders,
-                           products=products)
+                           products=products, services=services)
 
 
 @app.route('/customer/book', methods=['POST'])
@@ -735,6 +747,7 @@ def book_service():
         flash('Cannot book a past or current time slot. Please choose a future time.', 'danger')
         return redirect(url_for('customer_dashboard'))
     
+    odo_raw = request.form.get('odometer', '').strip()
     booking = Booking(
     user_id=current_user.id,
     service=service,
@@ -745,6 +758,7 @@ def book_service():
     notes=request.form.get('notes', ''),
     contact_name=request.form.get('contact_name', ''),
     contact_mobile=request.form.get('contact_mobile', ''),
+    odometer=int(odo_raw) if odo_raw.isdigit() else None,
     )
     mechanic_id = request.form.get('mechanic_id', '')
     if mechanic_id:
@@ -1000,6 +1014,32 @@ def delete_notification(nid):
     return jsonify({'success': True})
 
 
+# ─── CUSTOMER CONFIRM RECEIVED ───────────────────────────────────────────────
+
+@app.route('/customer/order/<int:oid>/confirm-received', methods=['POST'])
+@login_required
+def confirm_order_received(oid):
+    order = Order.query.get_or_404(oid)
+    if order.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
+    if order.status != 'shipped':
+        return jsonify({'success': False, 'message': 'Order is not in shipped status.'}), 400
+    order.status = 'delivered'
+    db.session.commit()
+    send_notification(
+        current_user.id, 'Order Received!',
+        f'You confirmed receipt of your order ORD-{order.id:03d}. Thank you!',
+        type='order', status='delivered'
+    )
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(
+            admin.id, 'Order Delivered ✅',
+            f'{current_user.fullname} confirmed receipt of ORD-{order.id:03d}.',
+            type='order', status='delivered'
+        )
+    return jsonify({'success': True})
+
+
 # ─── PAYMONGO PAYMENTS ───────────────────────────────────────────────────────
 
 @app.route('/pay/order/<int:oid>')
@@ -1160,6 +1200,15 @@ def paymongo_webhook():
     return jsonify({'success': True})
 
 
+@app.route('/api/services')
+def api_services():
+    try:
+        svcs = Service.query.filter_by(is_active=True).order_by(Service.name).all()
+        return jsonify([{'name': s.name, 'price': s.price} for s in svcs])
+    except Exception as e:
+        return jsonify([])
+
+
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 
@@ -1182,7 +1231,71 @@ with app.app_context():
         db.session.commit()
         print('[MIGRATION] Added receipt_sent column to order table')
     except Exception:
-        db.session.rollback()  # column already exists, safe to ignore
+        db.session.rollback()
+
+with app.app_context():
+    try:
+        from sqlalchemy import text as _text2
+        db.session.execute(_text2("ALTER TABLE service ADD COLUMN description VARCHAR(200) NOT NULL DEFAULT ''"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        from sqlalchemy import text as _text2
+        db.session.execute(_text2("ALTER TABLE service ADD COLUMN price FLOAT NOT NULL DEFAULT 0"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        from sqlalchemy import text as _text3
+        db.session.execute(_text3("UPDATE service SET is_active=1 WHERE is_active IS NULL"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        from sqlalchemy import text as _text4
+        db.session.execute(_text4("ALTER TABLE booking ADD COLUMN odometer INT DEFAULT NULL"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+with app.app_context():
+    try:
+        db.create_all()
+        _default_services = [
+            ('Ball Race Installation',      'Steering ball race replacement',         350),
+            ('Brake Cleaning',              'Brake system cleaning',                  200),
+            ('Change Brake Pad',            'Brake pad replacement',                  300),
+            ('Change Oil',                  'Engine oil replacement',                 350),
+            ('CVT Cleaning',                'CVT belt & pulley cleaning',             500),
+            ('CVT Upgrade',                 'CVT performance upgrade',                700),
+            ('Diagnostic (API Tech / MST)', 'Electronic diagnostic scan',             300),
+            ('FI Cleaning',                 'Fuel injection system cleaning',         600),
+            ('Full Maintenance Package',    'Complete maintenance service',          1200),
+            ('General Rewiring',            'Full electrical rewiring',               500),
+            ('Horn Installation',           'Horn install & wiring',                  150),
+            ('Overhaul',                    'Full engine overhaul',                  2500),
+            ('Remap',                       'ECU remapping & tuning',                1500),
+            ('Rubber Link Stopper',         'Rubber link stopper replacement',        100),
+            ('Suspension Tuning',           'Front & rear suspension setup',          400),
+            ('Throttle Body Cleaning',      'Clean throttle body assembly',           400),
+            ('Top Overhaul',               'Top-end engine rebuild',                 1500),
+            ('Tune-Up',                     'Spark plug, filters & adjustment',       800),
+        ]
+        for name, desc, price in _default_services:
+            svc = Service.query.filter_by(name=name).first()
+            if not svc:
+                db.session.add(Service(name=name, description=desc, price=price))
+            else:
+                if not svc.description:
+                    svc.description = desc
+                if not svc.price:
+                    svc.price = price
+        db.session.commit()
+        print('[MIGRATION] Service table ready')
+    except Exception as e:
+        db.session.rollback()
+        print('[MIGRATION] Service table error:', e)
 
 if __name__ == '__main__':
     # USER PORTAL — runs on port 5000

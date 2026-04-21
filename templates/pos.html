@@ -568,39 +568,8 @@
           <button class="btn-add-svc" onclick="addCustomService()">+ Add</button>
         </div>
       </div>
-      <div class="service-list">
-        {% set preset_services = [
-          ('FI Cleaning', 'Fuel injection system cleaning', 600),
-          ('Throttle Body Cleaning', 'Clean throttle body assembly', 400),
-          ('Tune-Up', 'Spark plug, filters & adjustment', 800),
-          ('Ball Race Installation', 'Steering ball race replacement', 350),
-          ('General Rewiring', 'Full electrical rewiring', 500),
-          ('CVT Upgrade', 'CVT performance upgrade', 700),
-          ('CVT Cleaning', 'CVT belt & pulley cleaning', 500),
-          ('Diagnostic (API Tech / MST)', 'Electronic diagnostic scan', 300),
-          ('Suspension Tuning', 'Front & rear suspension setup', 400),
-          ('Overhaul', 'Full engine overhaul', 2500),
-          ('Top Overhaul', 'Top-end engine rebuild', 1500),
-          ('Brake Cleaning', 'Brake system cleaning', 200),
-          ('Remap', 'ECU remapping & tuning', 1500),
-          ('Change Oil', 'Engine oil replacement', 350),
-          ('Horn Installation', 'Horn install & wiring', 150),
-          ('Rubber Link Stopper', 'Rubber link stopper replacement', 100),
-          ('Change Brake Pad', 'Brake pad replacement', 300),
-          ('Full Maintenance Package', 'Complete maintenance service', 1200),
-        ] %}
-        {% for name, desc, price in preset_services %}
-        <div class="service-item" onclick="addService('{{ name }}', {{ price }}, this)">
-          <div>
-            <div class="svc-name">{{ name }}</div>
-            <div class="svc-desc">{{ desc }}</div>
-          </div>
-          <div class="svc-right">
-            <span class="svc-price">&#8369;{{ price }}</span>
-            <div class="svc-add-icon"><i class="fas fa-plus"></i></div>
-          </div>
-        </div>
-        {% endfor %}
+      <div class="service-list" id="service-list-container">
+        <div style="padding:1rem;color:#6b7280;font-size:0.85rem;">Loading services...</div>
       </div>
     </div>
   </div>
@@ -746,6 +715,37 @@ const cart = [];
 let activeCat = 'all';
 let paymentMethod = 'cash';
 let pendingData = null;
+let _svcPrices = {};
+
+function _loadPosServices() {
+  fetch('/api/services')
+    .then(r => r.json())
+    .then(data => {
+      _svcPrices = {};
+      data.forEach(s => { _svcPrices[s.name] = s.price; });
+      const container = document.getElementById('service-list-container');
+      if (!container) return;
+      if (!data.length) {
+        container.innerHTML = '<div style="padding:1rem;color:#6b7280;font-size:0.85rem;">No services available. Add one in the Services section.</div>';
+        return;
+      }
+      container.innerHTML = data.map(s => `
+        <div class="service-item" onclick="addService('${s.name.replace(/'/g,"\\'")}', ${s.price}, this)">
+          <div>
+            <div class="svc-name">${s.name}</div>
+          </div>
+          <div class="svc-right">
+            <span class="svc-price">&#8369;${Math.round(s.price)}</span>
+            <div class="svc-add-icon"><i class="fas fa-plus"></i></div>
+          </div>
+        </div>`).join('');
+    })
+    .catch(() => {
+      const container = document.getElementById('service-list-container');
+      if (container) container.innerHTML = '<div style="padding:1rem;color:#6b7280;font-size:0.85rem;">Failed to load services.</div>';
+    });
+}
+_loadPosServices();
 
 function tick() {
   document.getElementById('clock').textContent =
@@ -819,7 +819,7 @@ async function onCustomerChange() {
   document.getElementById('btn-load-items').style.display = 'none';
 
   try {
-    const res = await fetch(`/admin/pos/customer/${customerId}/items`);
+    const res = await fetch(`/pos/customer/${customerId}/items`);
     const data = await res.json();
 
     if (!res.ok) {
@@ -882,26 +882,7 @@ function loadPendingItems() {
     }
   }
 
-  const SVC_PRICES = {
-    'FI Cleaning': 600,
-    'Throttle Body Cleaning': 400,
-    'Tune-Up': 800,
-    'Ball Race Installation': 350,
-    'General Rewiring': 500,
-    'CVT Upgrade': 700,
-    'CVT Cleaning': 500,
-    'Diagnostic (API Tech / MST)': 300,
-    'Suspension Tuning': 400,
-    'Overhaul': 2500,
-    'Top Overhaul': 1500,
-    'Brake Cleaning': 200,
-    'Remap': 1500,
-    'Change Oil': 350,
-    'Horn Installation': 150,
-    'Rubber Link Stopper': 100,
-    'Change Brake Pad': 300,
-    'Full Maintenance Package': 1200,
-  };
+  const SVC_PRICES = _svcPrices;
 
   for (const booking of pendingData.bookings) {
     const existing = cart.find(c => c.type === 'service' && c.name === booking.service && c.pending);
@@ -1133,7 +1114,7 @@ async function confirmCheckout() {
   const customer_id = document.getElementById('customer-select').value || null;
 
   try {
-    const res = await fetch('/admin/pos/checkout', {
+    const res = await fetch('/pos/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cart: products, services, customer_id, total, payment_method: paymentMethod })
@@ -1240,7 +1221,7 @@ function toast(msg, isError = false, type = null) {
 
 async function refreshProducts() {
   try {
-    const res = await fetch('/admin/pos/products');
+    const res = await fetch('/pos/products');
     const products = await res.json();
     const grid = document.getElementById('products-panel');
     

@@ -32,7 +32,8 @@ import atexit
 
 admin_app = Flask(__name__, template_folder='templates', static_folder='static')
 admin_app.config.update(
-    SECRET_KEY='mototyre-admin-secret-key-aP5nQ9vX2kR8mT6yW1',  # Different secret from user app
+    SECRET_KEY='mototyre-admin-secret-key-aP5nQ9vX2kR8mT6yW1',
+    SESSION_COOKIE_NAME='mototyre_admin_session',
     SQLALCHEMY_DATABASE_URI=(
         "mysql+pymysql://avnadmin:AVNS_1RNbCP5RORVJ7VaVhRD@"
         "mysql-1d9dceb5-mackycastanales05-1369.f.aivencloud.com:12422/defaultdb"
@@ -168,6 +169,7 @@ class Booking(db.Model):
     mechanic_specialization = db.Column(db.String(100))
     contact_name    = db.Column(db.String(100))
     contact_mobile  = db.Column(db.String(20))
+    odometer        = db.Column(db.Integer)
     is_archived     = db.Column(db.Boolean, default=False)
 
 
@@ -210,6 +212,15 @@ class OrderItem(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity   = db.Column(db.Integer, nullable=False)
     unit_price = db.Column(db.Float, nullable=False)
+
+
+class Service(db.Model):
+    id          = db.Column(db.Integer, primary_key=True)
+    name        = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.String(200), default='')
+    price       = db.Column(db.Float, default=0.0)
+    is_active   = db.Column(db.Boolean, default=True)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Notification(db.Model):
@@ -469,6 +480,7 @@ def admin_dashboard():
         all_products=Product.query.all(),
         all_users=User.query.all(),
         all_mechanics=Mechanic.query.order_by(Mechanic.name).all(),
+        all_services=Service.query.order_by(Service.name).all(),
         archived_orders=Order.query.filter_by(is_archived=True).order_by(Order.created_at.desc()).all(),
         archived_bookings=Booking.query.filter_by(is_archived=True).order_by(Booking.created_at.desc()).all(),
         now=ph_now(),
@@ -485,7 +497,7 @@ def update_booking_status(bid):
     booking.status = new_status
     db.session.commit()
     messages = {
-        'confirmed':   ('Booking Confirmed! ✅', f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been confirmed.'),
+        'confirmed':   ('Booking Confirmed! ✅', f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been confirmed. Please arrive 15 minutes before your scheduled time.'),
         'inprogress':  ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
         'in_progress': ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
         'completed':   ('Service Completed! 🎉',  f'Your {booking.service} has been completed. Thank you!'),
@@ -516,6 +528,7 @@ def update_order_status(oid):
         'processing': ('Order Processing',        f'Your order ORD-{order.id:03d} is being processed.'),
         'shipped':    ('Order Out for Delivery!', f'Your order ORD-{order.id:03d} is on its way!'),
         'delivered':  ('Order Delivered!',        f'Your order ORD-{order.id:03d} has been delivered.'),
+        'completed':  ('Order Completed!',        f'Your order ORD-{order.id:03d} has been completed. Thank you!'),
         'cancelled':  ('Order Cancelled',         f'Your order ORD-{order.id:03d} has been cancelled.'),
     }
     if new_status in messages:
@@ -524,6 +537,85 @@ def update_order_status(oid):
     flash('Order status updated!', 'success')
     return redirect(url_for('admin_dashboard'))
 
+
+# ─── SERVICE MANAGEMENT ──────────────────────────────────────────────────────
+
+@admin_app.route('/service/add', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def add_service():
+    name  = request.form.get('name', '').strip()
+    desc  = request.form.get('description', '').strip()
+    price = float(request.form.get('price', 0) or 0)
+    if not name:
+        flash('Service name is required.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    if Service.query.filter_by(name=name).first():
+        flash(f'Service "{name}" already exists.', 'warning')
+        return redirect(url_for('admin_dashboard'))
+    db.session.add(Service(name=name, description=desc, price=price))
+    db.session.commit()
+    flash(f'Service "{name}" added.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@admin_app.route('/service/<int:sid>/toggle', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def toggle_service(sid):
+    svc = Service.query.get_or_404(sid)
+    svc.is_active = not svc.is_active
+    db.session.commit()
+    status = 'activated' if svc.is_active else 'deactivated'
+    flash(f'Service "{svc.name}" {status}.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@admin_app.route('/service/<int:sid>/edit', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def edit_service(sid):
+    svc   = Service.query.get_or_404(sid)
+    name  = request.form.get('name', '').strip()
+    desc  = request.form.get('description', '').strip()
+    price = float(request.form.get('price', 0) or 0)
+    if not name:
+        flash('Service name is required.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    existing = Service.query.filter_by(name=name).first()
+    if existing and existing.id != sid:
+        flash(f'Service "{name}" already exists.', 'warning')
+        return redirect(url_for('admin_dashboard'))
+    svc.name = name
+    svc.description = desc
+    svc.price = price
+    db.session.commit()
+    flash(f'Service updated to "{name}".', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@admin_app.route('/service/<int:sid>/delete', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def delete_service(sid):
+    svc = Service.query.get_or_404(sid)
+    db.session.delete(svc)
+    db.session.commit()
+    flash(f'Service "{svc.name}" deleted.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@admin_app.route('/api/services')
+@login_required
+def admin_api_services():
+    try:
+        svcs = Service.query.filter_by(is_active=True).order_by(Service.name).all()
+        return jsonify([{'id': s.id, 'name': s.name, 'price': s.price} for s in svcs])
+    except Exception:
+        return jsonify([])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 @admin_app.route('/product/add', methods=['POST'])
 @login_required
@@ -772,7 +864,8 @@ def pos():
         return redirect(url_for('admin_dashboard'))
     products  = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
     customers = User.query.filter_by(role='customer').order_by(User.fullname).all()
-    return render_template('pos.html', products=products, customers=customers)
+    services  = Service.query.filter_by(is_active=True).order_by(Service.name).all()
+    return render_template('pos.html', products=products, customers=customers, services=services)
 
 
 @admin_app.route('/pos/products')
@@ -920,9 +1013,8 @@ def pos_customer_items(cid: int):
     customer = User.query.get_or_404(cid)
     pending_orders = Order.query.filter(
         Order.user_id == cid,
-        Order.status.in_(['pending', 'processing', 'awaiting_payment']),
-        Order.payment_method != 'gcash',
-        Order.delivery_method == 'pickup'
+        Order.status.in_(['pending', 'confirmed', 'processing', 'awaiting_payment']),
+        Order.payment_method != 'gcash'
     ).order_by(Order.created_at.desc()).all()
     orders_data = []
     for order in pending_orders:
@@ -934,13 +1026,17 @@ def pos_customer_items(cid: int):
         orders_data.append({'order_id': order.id, 'status': order.status, 'total': order.total_amount,
                             'created_at': order.created_at.isoformat(), 'items': items})
     pending_bookings = Booking.query.filter(
-        Booking.user_id == cid, Booking.status.in_(['in_progress'])
+        Booking.user_id == cid, Booking.status.in_(['in_progress', 'inprogress'])
     ).order_by(Booking.created_at.desc()).all()
-    bookings_data = [{
-        'booking_id': b.id, 'service': b.service, 'price': 0,
-        'date': b.date.strftime('%Y-%m-%d'), 'time': b.time.strftime('%H:%M'),
-        'status': b.status, 'created_at': b.created_at.isoformat()
-    } for b in pending_bookings]
+    bookings_data = []
+    for b in pending_bookings:
+        svc = Service.query.filter_by(name=b.service, is_active=True).first()
+        bookings_data.append({
+            'booking_id': b.id, 'service': b.service,
+            'price': svc.price if svc else 0,
+            'date': b.date.strftime('%Y-%m-%d'), 'time': b.time.strftime('%H:%M'),
+            'status': b.status, 'created_at': b.created_at.isoformat()
+        })
     return jsonify({'customer_id': cid, 'customer_name': customer.fullname,
                     'orders': orders_data, 'bookings': bookings_data})
 
@@ -1099,6 +1195,70 @@ def staff_dashboard():
         order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all())
     )
 
+
+with admin_app.app_context():
+    try:
+        from sqlalchemy import text as _text2
+        db.session.execute(_text2("ALTER TABLE service ADD COLUMN description VARCHAR(200) NOT NULL DEFAULT ''"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        from sqlalchemy import text as _text2
+        db.session.execute(_text2("ALTER TABLE service ADD COLUMN price FLOAT NOT NULL DEFAULT 0"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        from sqlalchemy import text as _text3
+        db.session.execute(_text3("UPDATE service SET is_active=1 WHERE is_active IS NULL"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        from sqlalchemy import text as _text4
+        db.session.execute(_text4("ALTER TABLE booking ADD COLUMN odometer INT DEFAULT NULL"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+with admin_app.app_context():
+    try:
+        db.create_all()
+        _default_services = [
+            ('Ball Race Installation',      'Steering ball race replacement',         350),
+            ('Brake Cleaning',              'Brake system cleaning',                  200),
+            ('Change Brake Pad',            'Brake pad replacement',                  300),
+            ('Change Oil',                  'Engine oil replacement',                 350),
+            ('CVT Cleaning',               'CVT belt & pulley cleaning',             500),
+            ('CVT Upgrade',                 'CVT performance upgrade',                700),
+            ('Diagnostic (API Tech / MST)', 'Electronic diagnostic scan',             300),
+            ('FI Cleaning',                 'Fuel injection system cleaning',         600),
+            ('Full Maintenance Package',    'Complete maintenance service',          1200),
+            ('General Rewiring',            'Full electrical rewiring',               500),
+            ('Horn Installation',           'Horn install & wiring',                  150),
+            ('Overhaul',                    'Full engine overhaul',                  2500),
+            ('Remap',                       'ECU remapping & tuning',                1500),
+            ('Rubber Link Stopper',         'Rubber link stopper replacement',        100),
+            ('Suspension Tuning',           'Front & rear suspension setup',          400),
+            ('Throttle Body Cleaning',      'Clean throttle body assembly',           400),
+            ('Top Overhaul',               'Top-end engine rebuild',                 1500),
+            ('Tune-Up',                     'Spark plug, filters & adjustment',       800),
+        ]
+        for name, desc, price in _default_services:
+            svc = Service.query.filter_by(name=name).first()
+            if not svc:
+                db.session.add(Service(name=name, description=desc, price=price))
+            else:
+                if not svc.description:
+                    svc.description = desc
+                if not svc.price:
+                    svc.price = price
+        db.session.commit()
+        print('[MIGRATION] Service table ready')
+    except Exception as e:
+        db.session.rollback()
+        print('[MIGRATION] Service table error:', e)
 
 if __name__ == '__main__':
     # ADMIN PORTAL — runs on port 5001

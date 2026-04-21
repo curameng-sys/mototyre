@@ -257,6 +257,7 @@
     <a href="#" onclick="showSection('products', this)">🔧 Products</a>
     <a href="#" onclick="showSection('users', this)">👥 Users</a>
     <a href="#" onclick="showSection('mechanics', this)">🔧 Mechanics</a>
+    <a href="#" onclick="showSection('services', this)">🛠️ Services</a>
     <a href="{{ url_for('pos') }}">🖥️ Quotation</a>
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
@@ -365,28 +366,34 @@
                 <th>Date & Time</th>
                 <th>Status</th>
                 <th>Payment</th>
-                <th>Notes</th>
-                <th>Mechanic</th>
                 <th>Update</th>
                 <th>Archive</th>
               </tr>
             </thead>
             <tbody>
               {% for b in all_bookings %}
-              <tr>
+              <tr style="cursor:pointer;"
+                  onclick="openBookingDetails(this)"
+                  data-id="{{ b.id }}"
+                  data-customer="{{ b.customer.fullname|e }}"
+                  data-email="{{ b.customer.email|e }}"
+                  data-phone="{{ b.customer.phone|e }}"
+                  data-contact-name="{{ (b.contact_name or '')|e }}"
+                  data-contact-mobile="{{ (b.contact_mobile or '')|e }}"
+                  data-moto-model="{{ (b.motorcycle_model or '')|e }}"
+                  data-moto-plate="{{ (b.motorcycle_plate or '')|e }}"
+                  data-odometer="{{ b.odometer if b.odometer else '' }}"
+                  data-service="{{ b.service|e }}"
+                  data-date="{{ b.date.strftime('%b %d, %Y') }}"
+                  data-time="{{ b.time.strftime('%I:%M %p') }}"
+                  data-status="{{ b.status }}"
+                  data-payment="{{ b.payment_method or 'cash' }}"
+                  data-mechanic="{{ (b.mechanic_name or '')|e }}"
+                  data-mechanic-spec="{{ (b.mechanic_specialization or '')|e }}"
+                  data-notes="{{ (b.notes or '')|e }}"
+                  data-created="{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}">
                 <td>{{ b.id }}</td>
-                <td>
-                <div style="font-weight:600;color:#fff;">{{ b.customer.fullname }}</div>
-                {% if b.contact_name %}
-                <div style="font-size:0.72rem;color:var(--muted);">👤 {{ b.contact_name }}</div>
-                {% endif %}
-                {% if b.contact_mobile %}
-                <div style="font-size:0.72rem;color:var(--muted);">📞 {{ b.contact_mobile }}</div>
-                {% endif %}
-                {% if b.motorcycle_model %}
-                <div style="font-size:0.72rem;color:var(--muted);">🏍️ {{ b.motorcycle_model }}</div>
-                {% endif %}
-              </td>
+                <td><div style="font-weight:600;color:#fff;">{{ b.customer.fullname }}</div></td>
                 <td>{{ b.service }}</td>
                 <td>
                   <div>{{ b.date.strftime('%b %d, %Y') }}</div>
@@ -400,25 +407,7 @@
                     <span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>
                   {% endif %}
                 </td>
-                <td>
-                  {% if b.notes %}
-                    <button onclick="showNote('{{ b.notes | replace("'", "\\'") }}')"
-                      style="background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);color:#fde047;padding:0.3rem 0.7rem;border-radius:6px;font-size:0.72rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">
-                      💬 View
-                    </button>
-                  {% else %}
-                    <span style="color:var(--muted);">—</span>
-                  {% endif %}
-                </td>
-                <td>
-                {% if b.mechanic_name %}
-                  <div style="font-weight:600;color:#fff;font-size:0.82rem;">{{ b.mechanic_name }}</div>
-                  <div style="font-size:0.72rem;color:var(--muted);">{{ b.mechanic_specialization or '—' }}</div>
-                {% else %}
-                  <span style="color:var(--muted);">—</span>
-                {% endif %}
-              </td>
-                <td>
+                <td onclick="event.stopPropagation()">
                   <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
                     <select name="status">
                       <option value="pending"      {% if b.status=='pending' %}selected{% endif %}>Pending</option>
@@ -430,8 +419,7 @@
                     <button type="submit">Save</button>
                   </form>
                 </td>
-                <td>
-                <td>
+                <td onclick="event.stopPropagation()">
                 {% set age = (today - b.date).days %}
                 {% set min_days = 30 if b.status == 'completed' else 7 %}
                 {% if b.status in ['completed', 'cancelled'] and age >= min_days %}
@@ -443,7 +431,7 @@
                 {% else %}
                   <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">{{ min_days - age }}d left</span>
                 {% endif %}
-              </td>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -575,7 +563,7 @@
       <div class="page-title">MANAGE <span class="accent">PRODUCTS</span></div>
       <div class="page-sub">Add and manage spare parts and accessories inventory.</div>
       <div class="filter-bar">
-        <input type="text" placeholder="🔍 Search product..." oninput="filterTable('products-table', this.value)">
+        <input type="text" placeholder="🔍 Search product..." oninput="filterProducts(this.value)" id="products-search-input">
         <button class="btn-primary-custom" onclick="openModal('modal-add-product')">+ Add Product</button>
         <button class="btn-primary-custom" onclick="openModal('modal-import-csv')">📂 Import CSV</button>
       </div>
@@ -608,6 +596,7 @@
         <div class="empty-state"><div class="ei">🔧</div><p>No products yet.</p></div>
         {% endif %}
       </div>
+      <div id="products-pagination" style="display:flex;align-items:center;justify-content:center;gap:0.4rem;flex-wrap:wrap;margin-top:1rem;"></div>
     </section>
 
     <!-- USERS -->
@@ -687,6 +676,56 @@
     </div>
     {% else %}
     <div class="empty-state"><div class="ei">🔧</div><p>No mechanics yet. Add one!</p></div>
+    {% endif %}
+  </div>
+</section>
+
+    <!-- SERVICES -->
+<section id="sec-services" class="page-section">
+  <div class="page-title">MANAGE <span class="accent">SERVICES</span></div>
+  <div class="page-sub">Add, edit, or deactivate services available for customer booking.</div>
+  <div class="filter-bar">
+    <button class="btn-primary-custom" onclick="openModal('modal-add-service')">+ Add Service</button>
+  </div>
+  <div class="card">
+    {% if all_services %}
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead><tr><th>#</th><th>Service Name</th><th>Status</th><th>Edit</th><th>Toggle</th><th>Delete</th></tr></thead>
+        <tbody>
+          {% for s in all_services %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td style="font-weight:600;color:#fff;">{{ s.name }}</td>
+            <td>
+              {% if s.is_active %}
+                <span class="badge badge-completed">Active</span>
+              {% else %}
+                <span class="badge badge-cancelled">Inactive</span>
+              {% endif %}
+            </td>
+            <td>
+              <button onclick="openEditService({{ s.id }}, '{{ s.name|e }}', '{{ (s.description or '')|e }}', {{ s.price or 0 }})" style="background:rgba(29,78,216,0.15);border:1px solid rgba(29,78,216,0.3);color:#93c5fd;padding:0.25rem 0.7rem;border-radius:6px;font-size:0.75rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">✏️ Edit</button>
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('toggle_service', sid=s.id) }}">
+                <button type="submit" style="background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);color:#fde047;padding:0.25rem 0.7rem;border-radius:6px;font-size:0.75rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">
+                  {{ '🔴 Deactivate' if s.is_active else '🟢 Activate' }}
+                </button>
+              </form>
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('delete_service', sid=s.id) }}" onsubmit="return confirm('Delete service {{ s.name|e }}? This cannot be undone.')">
+                <button type="submit" class="btn-action-delete">🗑️ Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="ei">🛠️</div><p>No services yet. Add one!</p></div>
     {% endif %}
   </div>
 </section>
@@ -882,9 +921,9 @@
         <div class="card">
           <div class="card-head"><h5>Account Information</h5></div>
           <div class="card-body">
-            <form method="POST" action="{{ url_for('update_admin_profile') }}">
-              <div class="form-group"><label>Full Name</label><input type="text" name="fullname" value="{{ current_user.fullname }}" required></div>
-              <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" value="{{ current_user.phone }}" required></div>
+            <form method="POST" action="{{ url_for('update_admin_profile') }}" onsubmit="return validateAdminProfileForm(this)">
+              <div class="form-group"><label>Full Name</label><input type="text" name="fullname" value="{{ current_user.fullname }}" required oninput="this.value=this.value.replace(/[0-9]/g,'')"></div>
+              <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" value="{{ current_user.phone }}" required maxlength="11" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)"></div>
               <div class="form-group"><label>Email (cannot change)</label><input type="email" value="{{ current_user.email }}" disabled></div>
               <button type="submit" class="btn-primary-custom">💾 Save Changes</button>
             </form>
@@ -896,14 +935,117 @@
   </main>
 </div>
 
+<!-- BOOKING DETAILS MODAL -->
+<div class="modal-overlay" id="modal-booking-details">
+  <div class="modal-box" style="width:520px;max-width:95vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h5 style="margin:0;">📅 Booking Details</h5>
+      <button onclick="closeModal('modal-booking-details')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;">✕</button>
+    </div>
+
+    <!-- Header row: ID + status -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--accent,#e8401c);letter-spacing:0.04em;" id="bd-id"></div>
+      <div id="bd-status"></div>
+    </div>
+
+    <!-- Contact Person -->
+    <div style="margin-bottom:0.75rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Contact Person</div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;display:flex;flex-direction:column;gap:0.35rem;">
+        <div style="font-weight:700;color:#fff;font-size:0.9rem;" id="bd-contact-name"></div>
+        <div style="font-size:0.8rem;color:var(--muted);" id="bd-contact-mobile"></div>
+      </div>
+    </div>
+
+    <!-- Appointment -->
+    <div style="margin-bottom:0.75rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Appointment</div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+        <div><div style="font-size:0.7rem;color:var(--muted);">Service</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-service"></div></div>
+        <div><div style="font-size:0.7rem;color:var(--muted);">Date & Time</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-datetime"></div></div>
+        <div><div style="font-size:0.7rem;color:var(--muted);">Motorcycle</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-moto"></div></div>
+        <div><div style="font-size:0.7rem;color:var(--muted);">Mechanic</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-mechanic"></div></div>
+        <div id="bd-odo-wrap"><div style="font-size:0.7rem;color:var(--muted);">Odometer</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-odometer"></div></div>
+      </div>
+    </div>
+
+    <!-- Payment -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;margin-bottom:0.75rem;">
+      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#4ade80;">💳 Payment Method</span>
+      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;" id="bd-payment"></span>
+    </div>
+
+    <!-- Notes -->
+    <div id="bd-notes-wrap" style="margin-bottom:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Notes</div>
+      <div style="background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.2);border-radius:10px;padding:0.85rem 1rem;font-size:0.85rem;color:#fde047;line-height:1.6;" id="bd-notes"></div>
+    </div>
+
+    <div style="text-align:right;">
+      <button onclick="closeModal('modal-booking-details')" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#9ca3af;padding:0.55rem 1.25rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD SERVICE MODAL -->
+<div class="modal-overlay" id="modal-add-service">
+  <div class="modal-box">
+    <h5>🛠️ Add New Service</h5>
+    <form method="POST" action="{{ url_for('add_service') }}">
+      <div class="form-group">
+        <label>Service Name</label>
+        <input type="text" name="name" placeholder="e.g. Carburetor Cleaning" required>
+      </div>
+      <div class="form-group">
+        <label>Description <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+        <input type="text" name="description" placeholder="e.g. Full carburetor disassembly and cleaning">
+      </div>
+      <div class="form-group">
+        <label>Price (₱)</label>
+        <input type="number" name="price" placeholder="0.00" min="0" step="0.01" value="0">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeModal('modal-add-service')">Cancel</button>
+        <button type="submit" class="btn-primary-custom">Add Service</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT SERVICE MODAL -->
+<div class="modal-overlay" id="modal-edit-service">
+  <div class="modal-box">
+    <h5>✏️ Edit Service</h5>
+    <form method="POST" id="edit-service-form" action="">
+      <div class="form-group">
+        <label>Service Name</label>
+        <input type="text" name="name" id="edit-service-name" required>
+      </div>
+      <div class="form-group">
+        <label>Description <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+        <input type="text" name="description" id="edit-service-description" placeholder="Short description">
+      </div>
+      <div class="form-group">
+        <label>Price (₱)</label>
+        <input type="number" name="price" id="edit-service-price" min="0" step="0.01" value="0">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-service')">Cancel</button>
+        <button type="submit" class="btn-primary-custom">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ADD STAFF MODAL -->
 <div class="modal-overlay" id="modal-add-staff">
   <div class="modal-box">
     <h5>👤 Add Staff Account</h5>
-    <form method="POST" action="{{ url_for('add_staff') }}">
-      <div class="form-group"><label>Full Name</label><input type="text" name="fullname" placeholder="e.g. Juan dela Cruz" required></div>
+    <form method="POST" action="{{ url_for('add_staff') }}" onsubmit="return validateAdminProfileForm(this)">
+      <div class="form-group"><label>Full Name</label><input type="text" name="fullname" placeholder="e.g. Juan dela Cruz" required oninput="this.value=this.value.replace(/[0-9]/g,'')"></div>
       <div class="form-group"><label>Email Address</label><input type="email" name="email" placeholder="staff@mototyre.com" required></div>
-      <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" placeholder="09xx xxx xxxx" required></div>
+      <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" placeholder="09xx xxx xxxx" required maxlength="11" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)"></div>
       <div class="form-group"><label>Temporary Password</label><input type="password" name="password" placeholder="Min. 8 characters" required minlength="8"></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-add-staff')">Cancel</button>
@@ -1129,6 +1271,76 @@
     if (el) el.classList.add('active');
   }
 
+  function openBookingDetails(row) {
+    const d = row.dataset;
+    const statusColors = {
+      pending:     { bg:'rgba(180,83,9,0.2)',   color:'#fbbf24', border:'rgba(180,83,9,0.3)' },
+      confirmed:   { bg:'rgba(29,78,216,0.2)',  color:'#93c5fd', border:'rgba(29,78,216,0.3)' },
+      in_progress: { bg:'rgba(234,179,8,0.2)',  color:'#fde047', border:'rgba(234,179,8,0.4)' },
+      inprogress:  { bg:'rgba(234,179,8,0.2)',  color:'#fde047', border:'rgba(234,179,8,0.4)' },
+      completed:   { bg:'rgba(21,128,61,0.2)',  color:'#86efac', border:'rgba(21,128,61,0.3)' },
+      cancelled:   { bg:'rgba(220,38,38,0.15)', color:'#fca5a5', border:'rgba(220,38,38,0.2)' },
+    };
+    const sc = statusColors[d.status.replace('-','_')] || statusColors.pending;
+
+    document.getElementById('bd-id').textContent = 'BKG-' + String(d.id).padStart(3, '0');
+    document.getElementById('bd-status').innerHTML = `<span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.35em 0.85em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${d.status.replace('_',' ')}</span>`;
+
+    document.getElementById('bd-contact-name').textContent   = '👤 ' + (d.contactName   || d.customer);
+    document.getElementById('bd-contact-mobile').textContent = '📞 ' + (d.contactMobile || d.phone);
+
+    document.getElementById('bd-service').textContent = d.service;
+    document.getElementById('bd-datetime').textContent = d.date + ' · ' + d.time;
+    const moto = [d.motoModel, d.motoPlate].filter(Boolean).join(' — ');
+    document.getElementById('bd-moto').textContent = moto || '—';
+    const mech = d.mechanic ? (d.mechanic + (d.mechanicSpec ? ' · ' + d.mechanicSpec : '')) : '—';
+    document.getElementById('bd-mechanic').textContent = mech;
+
+    const odoWrap = document.getElementById('bd-odo-wrap');
+    if (d.odometer) {
+      document.getElementById('bd-odometer').textContent = parseInt(d.odometer).toLocaleString() + ' km';
+      odoWrap.style.display = 'block';
+    } else {
+      odoWrap.style.display = 'none';
+    }
+
+    document.getElementById('bd-payment').textContent = d.payment === 'gcash' ? '📱 GCash' : '💵 Cash';
+
+    const notesWrap = document.getElementById('bd-notes-wrap');
+    if (d.notes) {
+      document.getElementById('bd-notes').textContent = d.notes;
+      notesWrap.style.display = 'block';
+    } else {
+      notesWrap.style.display = 'none';
+    }
+
+    openModal('modal-booking-details');
+  }
+
+  function openEditService(id, name, description, price) {
+    document.getElementById('edit-service-name').value        = name;
+    document.getElementById('edit-service-description').value = description || '';
+    document.getElementById('edit-service-price').value       = price || 0;
+    document.getElementById('edit-service-form').action       = '/service/' + id + '/edit';
+    openModal('modal-edit-service');
+  }
+
+  function validateAdminProfileForm(form) {
+    const nameInput  = form.querySelector('input[name="fullname"]');
+    const phoneInput = form.querySelector('input[name="phone"]');
+    if (/\d/.test(nameInput.value)) {
+      alert('Full name must not contain numbers.');
+      nameInput.focus();
+      return false;
+    }
+    if (!/^\d{1,11}$/.test(phoneInput.value)) {
+      alert('Phone number must be digits only, up to 11 numbers.');
+      phoneInput.focus();
+      return false;
+    }
+    return true;
+  }
+
   function openModal(id) {
     if (id === 'modal-import-csv') {
       document.getElementById('csv-step-upload').style.display  = 'block';
@@ -1158,6 +1370,91 @@
     document.getElementById('modal-note-text').textContent = text;
     openModal('modal-note');
   }
+
+  // ── PRODUCTS PAGINATION ──────────────────────────────────────────────────
+  const PRODUCTS_PER_PAGE = 50;
+  let currentProductPage = 1;
+  let productSearchQuery = '';
+
+  function filterProducts(query) {
+    productSearchQuery = query.toLowerCase();
+    currentProductPage = 1;
+    renderProductPage();
+  }
+
+  function getProductRows() {
+    return Array.from(document.querySelectorAll('#products-table tbody tr'));
+  }
+
+  function getVisibleProductRows() {
+    return getProductRows().filter(row =>
+      row.textContent.toLowerCase().includes(productSearchQuery)
+    );
+  }
+
+  function renderProductPage() {
+    const allRows    = getProductRows();
+    const filtered   = getVisibleProductRows();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCTS_PER_PAGE));
+    currentProductPage = Math.min(currentProductPage, totalPages);
+    const start = (currentProductPage - 1) * PRODUCTS_PER_PAGE;
+    const pageRows = new Set(filtered.slice(start, start + PRODUCTS_PER_PAGE));
+    allRows.forEach(row => {
+      const matchesSearch = row.textContent.toLowerCase().includes(productSearchQuery);
+      row.style.display = (matchesSearch && pageRows.has(row)) ? '' : 'none';
+    });
+    renderProductPagination(filtered.length, totalPages);
+  }
+
+  function renderProductPagination(totalFiltered, totalPages) {
+    const container = document.getElementById('products-pagination');
+    if (!container) return;
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const btnStyle = (active) =>
+      `display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 0.5rem;border-radius:6px;border:1px solid ${active ? 'var(--accent,#e8401c)' : 'rgba(255,255,255,0.12)'};background:${active ? 'var(--accent,#e8401c)' : 'rgba(255,255,255,0.05)'};color:${active ? '#fff' : '#9ca3af'};font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:${active ? 'default' : 'pointer'};transition:all 0.15s;`;
+
+    const makeBtn = (label, page, isActive) => {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.style.cssText = btnStyle(isActive);
+      if (!isActive) {
+        btn.onmouseover = () => { btn.style.background = 'rgba(255,255,255,0.1)'; btn.style.color = '#fff'; };
+        btn.onmouseout  = () => { btn.style.background = 'rgba(255,255,255,0.05)'; btn.style.color = '#9ca3af'; };
+        btn.onclick = () => { currentProductPage = page; renderProductPage(); };
+      }
+      return btn;
+    };
+
+    // Prev
+    const prev = makeBtn('‹', currentProductPage - 1, false);
+    if (currentProductPage === 1) { prev.disabled = true; prev.style.opacity = '0.35'; prev.style.cursor = 'default'; }
+    container.appendChild(prev);
+
+    // Page numbers — show up to 7 around current page
+    let start = Math.max(1, currentProductPage - 3);
+    let end   = Math.min(totalPages, start + 6);
+    start     = Math.max(1, end - 6);
+    if (start > 1) { container.appendChild(makeBtn('1', 1, false)); if (start > 2) container.insertAdjacentHTML('beforeend', '<span style="color:#6b7280;padding:0 0.2rem;">…</span>'); }
+    for (let p = start; p <= end; p++) container.appendChild(makeBtn(String(p), p, p === currentProductPage));
+    if (end < totalPages) { if (end < totalPages - 1) container.insertAdjacentHTML('beforeend', '<span style="color:#6b7280;padding:0 0.2rem;">…</span>'); container.appendChild(makeBtn(String(totalPages), totalPages, false)); }
+
+    // Next
+    const next = makeBtn('›', currentProductPage + 1, false);
+    if (currentProductPage === totalPages) { next.disabled = true; next.style.opacity = '0.35'; next.style.cursor = 'default'; }
+    container.appendChild(next);
+
+    // Info
+    const info = document.createElement('span');
+    info.style.cssText = 'font-size:0.72rem;color:#6b7280;margin-left:0.5rem;font-family:"Syne",sans-serif;';
+    info.textContent = `${totalFiltered} product${totalFiltered !== 1 ? 's' : ''}`;
+    container.appendChild(info);
+  }
+
+  // Init on load
+  document.addEventListener('DOMContentLoaded', () => renderProductPage());
+  // ─────────────────────────────────────────────────────────────────────────
 
   function filterTable(tableId, query) {
     const q = query.toLowerCase();

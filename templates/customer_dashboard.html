@@ -187,7 +187,8 @@
     .badge-completed { background: rgba(21,128,61,0.2);  color: #86efac; border: 1px solid rgba(21,128,61,0.3); }
     .badge-cancelled { background: rgba(220,38,38,0.15); color: #fca5a5; border: 1px solid rgba(220,38,38,0.2); }
     .badge-processing{ background: rgba(124,58,237,0.2); color: #c4b5fd; border: 1px solid rgba(124,58,237,0.3); }
-    .badge-shipped   { background: rgba(6,182,212,0.2);  color: #67e8f9; border: 1px solid rgba(6,182,212,0.3); }
+    .badge-shipped    { background: rgba(6,182,212,0.2);  color: #67e8f9; border: 1px solid rgba(6,182,212,0.3); }
+    .badge-delivered  { background: rgba(21,128,61,0.2);  color: #86efac; border: 1px solid rgba(21,128,61,0.3); }
 
     /* ── FORMS ── */
     .form-group { margin-bottom: 1.1rem; }
@@ -195,6 +196,7 @@
     .form-group input, .form-group select, .form-group textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.65rem 0.9rem; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.15s; outline: none; }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--red); }
     .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .profile-field-hint { font-size: 0.72rem; color: #6b7280; margin-top: 0.3rem; }
     .form-group select option { background: #1a1d23; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
     .btn-submit { background: var(--red); color: #fff; border: none; padding: 0.7rem 1.75rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.5rem; }
@@ -594,6 +596,11 @@
               <input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
             </div>
             <div class="form-group">
+              <label>Odometer Reading <span style="color:var(--muted);font-size:0.75rem;">(km)</span></label>
+              <input type="number" name="odometer" id="odometer" placeholder="e.g. 12500" min="0" max="999999"
+                style="appearance:textfield;">
+            </div>
+            <div class="form-group">
             <label>Preferred Mechanic</label>
             <select name="mechanic_id" id="mechanic-select">
               <option value="">-- No preference --</option>
@@ -613,14 +620,14 @@
             <div class="form-group">
               <label>Full Name</label>
               <input type="text" name="contact_name" id="contact-name" placeholder="Juan Dela Cruz"
-                oninput="this.value=this.value.replace(/[^a-zA-Z\s]/g,'')"
+                oninput="this.value=this.value.replace(/[^a-zA-Z\s]/g,''); checkBookingReady()"
                 required>
               <div id="name-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Name must contain letters only.</div>
             </div>
             <div class="form-group">
               <label>Mobile Number</label>
               <input type="tel" name="contact_mobile" id="contact-mobile" placeholder="09XX XXX XXXX"
-                oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)"
+                oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11); checkBookingReady()"
                 maxlength="11"
                 required>
               <div id="mobile-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Must start with 0 and be exactly 11 digits.</div>
@@ -634,7 +641,7 @@
   </section>
 
   <!-- ── MY BOOKINGS ── -->
-<section id="sec-bookings" class="c-section">
+<section id="sec-bookings" class="c-section" style="padding: 2.5rem 1.75rem 4rem;">
   <div class="section-head">
     <div><div class="section-title">MY <span>BOOKINGS</span></div><div class="section-sub">Track all your service appointments.</div></div>
     <a class="section-link" href="#" onclick="showSection('book', null)">+ New Booking</a>
@@ -676,7 +683,7 @@
 </section>
 
   <!-- ── SHOP ── -->
-  <section id="sec-shop" class="c-section">
+  <section id="sec-shop" class="c-section" style="padding-left: 0.5rem; padding-right: 0.5rem;">
     <div class="section-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
       <div><div class="section-title">ORDER <span>PARTS</span></div><div class="section-sub">Browse available motorcycle parts and accessories.</div></div>
       <button onclick="openCart()" style="position:relative;display:flex;align-items:center;gap:0.5rem;background:var(--red);border:none;color:#fff;padding:0.55rem 1.1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#c73418'" onmouseout="this.style.background='var(--red)'">
@@ -725,7 +732,7 @@
   </section>
 
   <!-- ── MY ORDERS ── -->
-<section id="sec-orders" class="c-section">
+<section id="sec-orders" class="c-section" style="padding: 2.5rem 1.75rem 4rem;">
   <div class="section-head">
     <div><div class="section-title">MY <span>ORDERS</span></div><div class="section-sub">Track your parts and accessories orders.</div></div>
     <a class="section-link" href="#" onclick="showSection('shop', null)">+ Order Parts</a>
@@ -795,9 +802,19 @@
       <div class="card">
         <div class="card-head"><h5>Account Information</h5></div>
         <div class="card-body">
-          <form method="POST" action="{{ url_for('customer_profile') }}">
-            <div class="form-group"><label>Full Name</label><input type="text" name="fullname" value="{{ current_user.fullname }}" required></div>
-            <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" value="{{ current_user.phone }}" required></div>
+          <form method="POST" action="{{ url_for('customer_profile') }}" onsubmit="return validateProfileForm(this)">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" name="fullname" value="{{ current_user.fullname }}" required
+                     oninput="this.value=this.value.replace(/[0-9]/g,'')">
+              <div class="profile-field-hint">Letters only — no numbers allowed.</div>
+            </div>
+            <div class="form-group">
+              <label>Phone Number</label>
+              <input type="tel" name="phone" value="{{ current_user.phone }}" required
+                     maxlength="11" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+              <div class="profile-field-hint">Numbers only, up to 11 digits.</div>
+            </div>
             <div class="form-group"><label>Motorcycle Model</label><input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i"></div>
             <div class="form-group"><label>Plate Number</label><input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234"></div>
             <div class="form-group"><label>Email (cannot change)</label><input type="email" value="{{ current_user.email }}" disabled></div>
@@ -852,6 +869,10 @@
         <div>
           <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Plate Number</div>
           <div id="bd-plate" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+        </div>
+        <div id="bd-odo-wrap">
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Odometer</div>
+          <div id="bd-odometer" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
         </div>
       </div>
     </div>
@@ -938,7 +959,13 @@
     <!-- Status Timeline -->
     <div id="od-timeline" style="margin-top:1.25rem;"></div>
 
-    <div class="modal-actions" style="margin-top:1.5rem;">
+    <div id="od-confirm-received-wrap" style="display:none;margin-top:1rem;">
+      <button id="od-confirm-received-btn" onclick="confirmOrderReceived()" style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.15);border:1px solid rgba(21,128,61,0.35);border-radius:10px;color:#86efac;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:0.04em;transition:all 0.2s;" onmouseover="this.style.background='rgba(21,128,61,0.25)'" onmouseout="this.style.background='rgba(21,128,61,0.15)'">
+        📦 I Already Received My Order
+      </button>
+    </div>
+
+    <div class="modal-actions" style="margin-top:1rem;">
       <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order-details')">Close</button>
     </div>
   </div>
@@ -1224,13 +1251,13 @@
     document.querySelectorAll('.c-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-links a, .mobile-nav-menu a').forEach(a => a.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
+    // highlight matching nav links whether called from nav or from a quick-action
+    document.querySelectorAll('.nav-links a, .mobile-nav-menu a').forEach(a => {
+      const onclick = a.getAttribute('onclick') || '';
+      if (onclick.includes("'" + name + "'")) a.classList.add('active');
+    });
     if (el) {
       el.classList.add('active');
-      // sync the mirror link in the other nav
-      const href = el.getAttribute('onclick');
-      document.querySelectorAll('.nav-links a, .mobile-nav-menu a').forEach(a => {
-        if (a !== el && a.getAttribute('onclick') === href) a.classList.add('active');
-      });
     }
     // close mobile menu
     const mobileMenu = document.getElementById('mobile-nav-menu');
@@ -1645,10 +1672,19 @@ else {
     });
   }
 
+  function checkBookingReady() {
+    const name   = document.getElementById('contact-name').value.trim();
+    const mobile = document.getElementById('contact-mobile').value.trim();
+    const hasTime = !!document.getElementById('selected-time-value').value;
+    const nameOk   = /^[a-zA-Z\s]+$/.test(name) && name !== '';
+    const mobileOk = /^0\d{10}$/.test(mobile);
+    document.getElementById('btn-book').disabled = !(hasTime && nameOk && mobileOk);
+  }
+
   function selectTime(slot, btn) {
     selectedTime = slot; document.getElementById('selected-time-value').value = slot;
     document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected-slot'));
-    btn.classList.add('selected-slot'); document.getElementById('btn-book').disabled = false;
+    btn.classList.add('selected-slot'); checkBookingReady();
   }
 
   async function changeMonth(dir) {
@@ -1666,6 +1702,22 @@ else {
   }
 
   renderCalendar();
+
+  function validateProfileForm(form) {
+    const nameInput  = form.querySelector('input[name="fullname"]');
+    const phoneInput = form.querySelector('input[name="phone"]');
+    if (/\d/.test(nameInput.value)) {
+      alert('Full name must not contain numbers.');
+      nameInput.focus();
+      return false;
+    }
+    if (!/^\d{1,11}$/.test(phoneInput.value)) {
+      alert('Phone number must be digits only, up to 11 numbers.');
+      phoneInput.focus();
+      return false;
+    }
+    return true;
+  }
 
   function previewPic(input) {
     if (input.files && input.files[0]) {
@@ -1824,14 +1876,16 @@ function renderNotifications() {
   };
 
   const colorMap = {
-    pending:    { bg: 'rgba(180,83,9,0.15)',   color: '#fbbf24' },
-    confirmed:  { bg: 'rgba(29,78,216,0.15)',  color: '#93c5fd' },
-    completed:  { bg: 'rgba(21,128,61,0.15)',  color: '#86efac' },
-    cancelled:  { bg: 'rgba(220,38,38,0.15)',  color: '#fca5a5' },
-    inprogress:  { bg: 'rgba(234,179,8,0.2)',   color: '#fde047' },
-    in_progress: { bg: 'rgba(234,179,8,0.2)',   color: '#fde047' }, 
-    delivered:  { bg: 'rgba(6,182,212,0.15)',  color: '#67e8f9' },
-    default:    { bg: 'rgba(255,255,255,0.05)',color: '#e5e7eb' },
+    pending:     { bg: 'rgba(180,83,9,0.15)',    color: '#fbbf24' },
+    confirmed:   { bg: 'rgba(29,78,216,0.15)',   color: '#93c5fd' },
+    processing:  { bg: 'rgba(124,58,237,0.2)',   color: '#c4b5fd' },
+    shipped:     { bg: 'rgba(6,182,212,0.2)',    color: '#67e8f9' },
+    delivered:   { bg: 'rgba(6,182,212,0.15)',   color: '#67e8f9' },
+    completed:   { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
+    cancelled:   { bg: 'rgba(220,38,38,0.15)',   color: '#fca5a5' },
+    inprogress:  { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
+    in_progress: { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
+    default:     { bg: 'rgba(255,255,255,0.05)', color: '#e5e7eb' },
   };
 
   // Remove old items
@@ -1935,13 +1989,14 @@ document.addEventListener('click', function(e) {
 
 
 // ── SERVICE SEARCH DROPDOWN ──
-const SERVICE_LIST = [
-  'Ball Race Installation','Brake Cleaning','Change Brake Pad','Change Oil',
-  'CVT Cleaning','CVT Upgrade','Diagnostic (API Tech / MST)','FI Cleaning',
-  'Full Maintenance Package','General Rewiring','Horn Installation','Overhaul',
-  'Remap','Rubber Link Stopper','Suspension Tuning','Throttle Body Cleaning',
-  'Top Overhaul','Tune-Up'
-];
+let SERVICE_LIST = [];
+
+fetch('/api/services')
+  .then(r => r.json())
+  .then(data => {
+    SERVICE_LIST = data.map(s => s.name);
+  })
+  .catch(() => {});
 
 function renderServiceDropdown(items) {
   const dd = document.getElementById('service-dropdown');
@@ -2033,6 +2088,7 @@ const bookingsData = {
     time: '{{ b.time.strftime("%I:%M %p") }}',
     motorcycle_model: '{{ b.motorcycle_model|e if b.motorcycle_model else "" }}',
     motorcycle_plate: '{{ b.motorcycle_plate|e if b.motorcycle_plate else "" }}',
+    odometer: {{ b.odometer if b.odometer else 'null' }},
     notes: '{{ b.notes|e if b.notes else "" }}',
     mechanic_name: '{{ b.mechanic_name|e if b.mechanic_name else "" }}',
     mechanic_spec: '{{ b.mechanic_specialization|e if b.mechanic_specialization else "" }}',
@@ -2075,6 +2131,17 @@ function openBookingDetails(bookingId) {
   // Motorcycle info
   document.getElementById('bd-model').textContent = booking.motorcycle_model || '—';
   document.getElementById('bd-plate').textContent = booking.motorcycle_plate || '—';
+
+  // Odometer
+  const odoEl = document.getElementById('bd-odo-wrap');
+  if (odoEl) {
+    if (booking.odometer) {
+      document.getElementById('bd-odometer').textContent = parseInt(booking.odometer).toLocaleString() + ' km';
+      odoEl.style.display = 'block';
+    } else {
+      odoEl.style.display = 'none';
+    }
+  }
 
   // Mechanic info
   const mechanicWrap = document.getElementById('bd-mechanic-wrap');
@@ -2248,7 +2315,65 @@ function openOrderDetails(orderId) {
       </div>`;
   }
 
+  // Mark as received button — only for shipped orders
+  const receivedWrap = document.getElementById('od-confirm-received-wrap');
+  if (order.status === 'shipped') {
+    _confirmOrderId = order.id;
+    receivedWrap.style.display = 'block';
+  } else {
+    _confirmOrderId = null;
+    receivedWrap.style.display = 'none';
+  }
+
   document.getElementById('modal-order-details').classList.add('open');
+}
+
+let _confirmOrderId = null;
+
+async function confirmOrderReceived() {
+  const btn = document.getElementById('od-confirm-received-btn');
+  const orderId = _confirmOrderId;
+  if (!confirm('Confirm that you have received your order? This cannot be undone.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  let res;
+  try {
+    res = await fetch(`/customer/order/${orderId}/confirm-received`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+  } catch (e) {
+    alert('Could not reach the server. Please check your connection and try again.');
+    btn.disabled = false;
+    btn.textContent = '📦 I Already Received My Order';
+    return;
+  }
+  if (!res.ok && res.status !== 400 && res.status !== 403) {
+    alert('Server error (' + res.status + '). Please restart the app and try again.');
+    btn.disabled = false;
+    btn.textContent = '📦 I Already Received My Order';
+    return;
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    alert('Unexpected server response. Please restart the app and try again.');
+    btn.disabled = false;
+    btn.textContent = '📦 I Already Received My Order';
+    return;
+  }
+  if (data.success) {
+    ordersData[orderId].status = 'delivered';
+    _confirmOrderId = null;
+    closeModal('modal-order-details');
+    openOrderDetails(parseInt(orderId));
+  } else {
+    alert(data.message || 'Something went wrong.');
+    btn.disabled = false;
+    btn.textContent = '📦 I Already Received My Order';
+  }
 }
 
 // ── PRODUCT INFO MODAL ──
