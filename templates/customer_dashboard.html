@@ -21,7 +21,7 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--ink); color: var(--text); }
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--ink); color: var(--text); overflow-anchor: none; }
 
     /* ── TOP NAVBAR ── */
     .top-nav {
@@ -73,7 +73,8 @@
     .nav-logout-btn:hover { background: var(--red); color: #fff; }
 
     /* ── PAGE WRAP ── */
-    .page-wrap { width: 100%; padding: 2.5rem 1.25rem 4rem; }
+    .page-wrap { width: 100%; padding: 0 1.25rem 4rem; overflow-anchor: none; }
+    .c-section.active { padding-top: 0.5rem; }
 
     .c-section { display: none; }
     .c-section.active { display: block; }
@@ -132,7 +133,7 @@
     .stat-card.green::after { background: var(--green); }
 
     /* ── SECTION HEADER ── */
-    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
     .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; color: #fff; line-height: 1; }
     .section-title span { color: var(--red); }
     .section-sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
@@ -308,7 +309,7 @@
       .form-grid { grid-template-columns: 1fr; }
       .hero-bike { display: none; }
       .modal-box { width: 95vw; max-width: 95vw; padding: 1.5rem; }
-      .page-wrap { padding: 1.5rem 1rem 4rem; }
+      .page-wrap { padding: 0 1rem 4rem; }
     }
 
     @media (max-width: 480px) {
@@ -316,7 +317,7 @@
       .top-nav { height: 60px; }
       .mobile-nav-menu { top: 60px; }
       .nav-logo { font-size: 1.4rem; }
-      .page-wrap { padding: 1.25rem 0.75rem 4rem; }
+      .page-wrap { padding: 0 0.75rem 4rem; }
       .hero-banner { padding: 1.5rem; }
       .modal-box { padding: 1.25rem; }
       .modal-actions { flex-direction: column-reverse; gap: 0.5rem; }
@@ -334,6 +335,7 @@
 }
 .cat-tab:hover { color: #fff; background: rgba(255,255,255,0.1); }
 .cat-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
+
 
   </style>
 </head>
@@ -641,7 +643,7 @@
   </section>
 
   <!-- ── MY BOOKINGS ── -->
-<section id="sec-bookings" class="c-section" style="padding: 2.5rem 1.75rem 4rem;">
+<section id="sec-bookings" class="c-section" style="padding: 0 1.25rem 4rem;">
   <div class="section-head">
     <div><div class="section-title">MY <span>BOOKINGS</span></div><div class="section-sub">Track all your service appointments.</div></div>
     <a class="section-link" href="#" onclick="showSection('book', null)">+ New Booking</a>
@@ -732,7 +734,7 @@
   </section>
 
   <!-- ── MY ORDERS ── -->
-<section id="sec-orders" class="c-section" style="padding: 2.5rem 1.75rem 4rem;">
+<section id="sec-orders" class="c-section" style="padding: 0 1.25rem 4rem;">
   <div class="section-head">
     <div><div class="section-title">MY <span>ORDERS</span></div><div class="section-sub">Track your parts and accessories orders.</div></div>
     <a class="section-link" href="#" onclick="showSection('shop', null)">+ Order Parts</a>
@@ -806,7 +808,7 @@
             <div class="form-group">
               <label>Full Name</label>
               <input type="text" name="fullname" value="{{ current_user.fullname }}" required
-                     oninput="this.value=this.value.replace(/[0-9]/g,'')">
+                     oninput="this.value=this.value.replace(/[^A-Za-zÑñ\s]/g,'')">
               <div class="profile-field-hint">Letters only — no numbers allowed.</div>
             </div>
             <div class="form-group">
@@ -1091,11 +1093,13 @@
       <div id="shipping-form" style="display:none;">
         <div class="form-group">
           <label>Full Name</label>
-          <input type="text" id="ship-name" placeholder="Juan Dela Cruz">
+          <input type="text" id="ship-name" placeholder="Juan Dela Cruz"
+            oninput="this.value=this.value.replace(/[^A-Za-zÑñ\s]/g,'')">
         </div>
         <div class="form-group">
           <label>Mobile Number</label>
-          <input type="tel" id="ship-mobile" placeholder="09XX XXX XXXX">
+          <input type="tel" id="ship-mobile" placeholder="09XX XXX XXXX"
+            oninput="this.value=this.value.replace(/\D/g,'').slice(0,12)" maxlength="12">
         </div>
         <div class="form-group">
           <label>Street Address</label>
@@ -1264,7 +1268,10 @@
     const hamburger  = document.getElementById('nav-hamburger');
     if (mobileMenu) mobileMenu.classList.remove('open');
     if (hamburger)  hamburger.classList.remove('open');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    requestAnimationFrame(() => {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
   }
 
   function toggleCustomerNav() {
@@ -1706,8 +1713,8 @@ else {
   function validateProfileForm(form) {
     const nameInput  = form.querySelector('input[name="fullname"]');
     const phoneInput = form.querySelector('input[name="phone"]');
-    if (/\d/.test(nameInput.value)) {
-      alert('Full name must not contain numbers.');
+    if (/[^A-Za-zÑñ\s]/.test(nameInput.value) || nameInput.value.trim() === '') {
+      alert('Full name must contain letters only.');
       nameInput.focus();
       return false;
     }

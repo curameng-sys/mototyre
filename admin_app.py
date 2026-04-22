@@ -18,6 +18,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from io import BytesIO
 from security import clean_str, clean_float, is_valid_email, validate_booking_status, validate_order_status
+import json
 import os, uuid, random, string, base64, requests
 
 # App setup
@@ -82,7 +83,7 @@ def _get_gmail_service():
         creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_FILE, GMAIL_SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            creds.refresh(Request(timeout=15))
         else:
             flow  = InstalledAppFlow.from_client_secrets_file(GMAIL_CREDS_FILE, GMAIL_SCOPES)
             creds = flow.run_local_server(port=0)
@@ -475,6 +476,12 @@ def require_admin_or_staff(f):
 @require_admin_or_staff
 def admin_dashboard():
     cleanup_abandoned_gcash_orders()
+    all_orders      = Order.query.filter_by(is_archived=False).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
+    archived_orders = Order.query.filter_by(is_archived=True).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
+    order_ship_json = json.dumps({
+        str(o.id): {'delivery': str(o.delivery_method or 'pickup'), 'address': str(o.ship_address or '')}
+        for o in all_orders + archived_orders
+    })
     return render_template('admin_dashboard.html',
         total_bookings=Booking.query.count(),
         total_orders=Order.query.count(),
@@ -486,13 +493,14 @@ def admin_dashboard():
         new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
         recent_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).limit(5).all(),
         all_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all(),
-        all_orders=Order.query.filter_by(is_archived=False).filter(Order.items.any()).order_by(Order.created_at.desc()).all(),
+        all_orders=all_orders,
         all_products=Product.query.all(),
         all_users=User.query.all(),
         all_mechanics=Mechanic.query.order_by(Mechanic.name).all(),
         all_services=Service.query.order_by(Service.name).all(),
-        archived_orders=Order.query.filter_by(is_archived=True).filter(Order.items.any()).order_by(Order.created_at.desc()).all(),
+        archived_orders=archived_orders,
         archived_bookings=Booking.query.filter_by(is_archived=True).order_by(Booking.created_at.desc()).all(),
+        order_ship_json=order_ship_json,
         now=ph_now(),
         today=ph_now().date(),
     )

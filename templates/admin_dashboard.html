@@ -1208,6 +1208,10 @@
         <div style="color:#fff;font-size:0.8rem;margin-top:0.4rem;" id="od-date"></div>
       </div>
     </div>
+    <div id="od-ship-wrap" style="display:none;margin-bottom:1.25rem;">
+      <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.4rem;">Ship To Address</div>
+      <div id="od-ship-address" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:0.75rem;color:#fff;font-size:0.82rem;white-space:pre-line;"></div>
+    </div>
     <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.5rem;">Order Items</div>
     <div id="od-items" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1rem;"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem;background:rgba(255,15,15,0.06);border:1px solid rgba(255,15,15,0.2);border-radius:8px;">
@@ -1271,6 +1275,10 @@
     </div>
   </div>
 </div>
+
+<script type="application/json" id="order-ship-data">
+{{ order_ship_json|safe }}
+</script>
 
 <script>
   function showSection(name, el) {
@@ -1677,6 +1685,8 @@
     {% endfor %}
   };
 
+  const orderShipData = JSON.parse(document.getElementById('order-ship-data').textContent);
+
   function viewOrder(id, customer, email, phone, motoModel, motoPlate, total, status, payment, dateStr, itemCount) {
     document.getElementById('od-title').textContent = 'Order ORD-' + String(id).padStart(3, '0');
     document.getElementById('od-customer').textContent = customer;
@@ -1699,6 +1709,15 @@
       document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:rgba(0,125,255,0.15);color:#93c5fd;border:1px solid rgba(0,125,255,0.3);">💳 GCash</span>';
     } else {
       document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>';
+    }
+
+    const shipData = orderShipData[id] || {};
+    const shipWrap = document.getElementById('od-ship-wrap');
+    if (shipData.delivery === 'ship' && shipData.address) {
+      document.getElementById('od-ship-address').textContent = shipData.address;
+      shipWrap.style.display = 'block';
+    } else {
+      shipWrap.style.display = 'none';
     }
 
     const items = orderItemsData[id] || [];

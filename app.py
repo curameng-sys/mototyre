@@ -99,7 +99,7 @@ def _get_gmail_service():
         creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_FILE, GMAIL_SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            creds.refresh(Request(timeout=15))
         else:
             flow  = InstalledAppFlow.from_client_secrets_file(GMAIL_CREDS_FILE, GMAIL_SCOPES)
             creds = flow.run_local_server(port=0)
@@ -581,7 +581,7 @@ def resend_otp(purpose):
 def register():
     if request.method == 'POST':
         email = clean_str(request.form.get('email', ''), max_len=254).lower()
-        phone = clean_str(request.form.get('phone', ''), max_len=13)
+        phone = clean_str(request.form.get('phone', ''), max_len=11)
 
         if not is_valid_email(email):
             flash('Invalid email address.', 'danger')
@@ -923,7 +923,7 @@ def place_order():
 @login_required
 def customer_profile():
     if request.method == 'POST':
-        phone = clean_str(request.form.get('phone', ''), max_len=13)
+        phone = clean_str(request.form.get('phone', ''), max_len=11)
         if not is_valid_phone(phone):
             flash('Invalid phone number.', 'danger')
             return redirect(url_for('customer_dashboard'))

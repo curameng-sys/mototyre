@@ -60,8 +60,8 @@ def is_valid_email(email):
 
 
 def is_valid_phone(phone):
-    """Return True for 10–13 digit phone numbers."""
-    return isinstance(phone, str) and phone.isdigit() and 10 <= len(phone) <= 13
+    """Return True for 10–11 digit phone numbers."""
+    return isinstance(phone, str) and phone.isdigit() and 10 <= len(phone) <= 11
 
 
 def validate_booking_status(status):
