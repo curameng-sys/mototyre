@@ -1192,6 +1192,27 @@ def archive_all_old():
     flash(f'Archived {len(old_orders)} orders and {len(old_bookings)} bookings.', 'success')
     return redirect(url_for('admin_dashboard'))
 
+@admin_app.route('/order/<int:oid>/unarchive', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def unarchive_order(oid):
+    order = Order.query.get_or_404(oid)
+    order.is_archived = False
+    db.session.commit()
+    flash(f'Order ORD-{order.id:03d} restored.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@admin_app.route('/booking/<int:bid>/unarchive', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def unarchive_booking(bid):
+    booking = Booking.query.get_or_404(bid)
+    booking.is_archived = False
+    db.session.commit()
+    flash(f'Booking #{booking.id} restored.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
 
 @admin_app.route('/staff/dashboard')
 @login_required

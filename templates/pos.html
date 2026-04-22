@@ -1200,7 +1200,15 @@ function newTransaction() {
   const btn = document.getElementById('checkout-btn');
   btn.disabled = false;
   btn.innerHTML = '<i class="fas fa-bolt"></i> Process Payment';
-  refreshProducts();
+ refreshProducts();
+
+// Auto-refresh products kapag bumalik sa tab na ito
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) refreshProducts();
+});
+
+// Refresh every 15 seconds para laging updated
+setInterval(refreshProducts, 15000); 
 }
 
 document.getElementById('receipt-modal').addEventListener('click', function(e) {

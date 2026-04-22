@@ -1511,8 +1511,8 @@
     document.getElementById('edit-product-price').value   = price;
     document.getElementById('edit-product-stock').value   = stock;
     document.getElementById('edit-product-desc').value    = description;
-    document.getElementById('edit-product-form').action   = '/admin/product/' + id + '/edit';
-    document.getElementById('delete-product-form').action = '/admin/product/' + id + '/delete';
+    document.getElementById('edit-product-form').action   = 'http://127.0.0.1:5001/product/' + id + '/edit';
+    document.getElementById('delete-product-form').action = 'http://127.0.0.1:5001/product/' + id + '/delete';
     const sel = document.getElementById('edit-product-category');
     for (let opt of sel.options) { opt.selected = opt.value === category; }
     openModal('modal-edit-product');
