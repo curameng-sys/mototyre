@@ -1,0 +1,124 @@
+================================================================
+              MOTOTYRE - TECHNOLOGIES USED
+================================================================
+
+----------------------------------------------------------------
+ BACKEND (Python)
+----------------------------------------------------------------
+
+Flask
+  - Main web framework. Siya ang nagpapatakbo ng buong app,
+    nag-hahandle ng routes, requests, at responses.
+
+Flask-Login
+  - Nag-manage ng user sessions. Siya ang nagche-check kung
+    naka-login ka at nagpo-protect ng mga pages na kailangan
+    ng authentication.
+
+Flask-SQLAlchemy
+  - ORM (Object Relational Mapper). Para makapag-query sa
+    database gamit Python objects, hindi raw SQL.
+
+SQLAlchemy
+  - Ang core ng ORM na ginagamit ng Flask-SQLAlchemy.
+
+Werkzeug
+  - Naka-built-in sa Flask. Ginagamit para sa password hashing
+    (generate_password_hash, check_password_hash) at file
+    uploads (secure_filename).
+
+PyMySQL / mysqlclient
+  - Connector para makakonekta ang Python sa MySQL database.
+
+Gunicorn
+  - Production web server. Siya ang nagpapatakbo ng Flask app
+    sa deployment (hindi yung built-in Flask dev server).
+
+Google OAuth2 / Gmail API
+  - Para makapagpadala ng OTP emails gamit ang Gmail.
+    Ginagamit sa 2FA ng admin login at forgot password.
+
+ReportLab
+  - Para sa PDF generation. Ginagamit para mag-export ng
+    reports (bookings, orders) sa admin dashboard.
+
+PayMongo API
+  - Payment gateway. Para sa GCash payments ng customers
+    sa orders at bookings.
+
+python-dotenv
+  - Para ma-load ang environment variables mula sa .env file
+    (API keys, secrets).
+
+requests
+  - HTTP client library. Ginagamit para mag-call ng PayMongo
+    API at iba pang external APIs.
+
+ngrok
+  - Temporary public URL para ma-receive ang PayMongo webhooks
+    sa localhost during development.
+
+security.py (Custom Module)
+  - In-house na security utility module na ginawa para sa
+    MotoTyre. Naglalaman ng input sanitization, whitelist
+    validation, at server-side format checking para maprotektahan
+    ang system laban sa SQL Injection at bad input.
+
+----------------------------------------------------------------
+ DATABASE
+----------------------------------------------------------------
+
+MySQL (Aiven Cloud)
+  - Ang database ng buong system. Naka-host sa Aiven cloud
+    para accessible kahit saan. Nag-istore ng users, bookings,
+    orders, products, at notifications.
+
+----------------------------------------------------------------
+ FRONTEND
+----------------------------------------------------------------
+
+Bootstrap 5.3
+  - CSS framework. Para sa responsive layout at basic
+    components (grids, modals, buttons).
+
+Jinja2
+  - Template engine ng Flask. Para mag-render ng dynamic HTML
+    (loops, conditionals, variables mula sa backend).
+
+Vanilla JavaScript
+  - Para sa lahat ng interactivity. Notifications panel, OTP
+    input, real-time filtering, modal popups.
+
+Google Fonts
+  - Para sa custom fonts na ginamit sa UI:
+    * Bebas Neue       - headings
+    * Syne             - labels
+    * DM Sans          - body text
+    * DM Mono          - code/mono elements
+    * Barlow Condensed - admin logo
+
+CSS Grid
+  - Ginamit sa OTP input cells para garantisadong pantay-pantay
+    ang lahat ng 6 cells kahit anong laki ng screen.
+
+----------------------------------------------------------------
+ ARCHITECTURE / CONCEPTS
+----------------------------------------------------------------
+
+Dual App Setup (Port 5000 + Port 5001)
+  - Hiwalay na app ang customer at admin para mas secure.
+    Hindi pwedeng makapasok ang customer sa admin routes
+    kahit mag-tamper.
+
+OTP 2FA (Two-Factor Authentication)
+  - Extra layer ng security sa admin at customer login.
+    Kahit malaman ang password, kailangan pa rin ng email code.
+
+Session Cookies
+  - Para manatiling naka-login ang user habang nagbrobrowse.
+
+SQL Injection Protection
+  - Layered na depensa: SQLAlchemy ORM (parameterized queries)
+    + security.py (input sanitization + whitelist validation).
+
+================================================================

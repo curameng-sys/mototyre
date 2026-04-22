@@ -1,13 +1,10 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
 from sqlalchemy import func
-def ph_now():
-    """Current Philippine time (UTC+8)."""
-    return datetime.utcnow() + timedelta(hours=8)
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -20,10 +17,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from io import BytesIO
-from flask import make_response
+from security import clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_otp_purpose
 import os, uuid, random, string, base64, requests
-import requests
-import base64
 
 app = Flask(__name__)
 app.config.update(
@@ -42,15 +37,15 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# ─── GMAIL CONFIG ───────────────────────────────────────────────────────────
+# Gmail config
 
 GMAIL_SCOPES     = ["https://www.googleapis.com/auth/gmail.send"]
 GMAIL_TOKEN_FILE = "gmail_token.json"
 GMAIL_CREDS_FILE = "credentials.json"
 GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mackycastanales05@gmail.com")
-OTP_EXPIRY_MINS  = 10
+OTP_EXPIRY_MINS  = 2
 
-# ─── PAYMONGO CONFIG ────────────────────────────────────────────────────────
+# PayMongo config
 
 PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
@@ -270,7 +265,13 @@ def send_order_receipt_email(order):
         db.session.rollback()
 
 
-# ─── MODELS ─────────────────────────────────────────────────────────────────
+# Helpers
+
+def ph_now():
+    return datetime.utcnow() + timedelta(hours=8)
+
+
+# Models
 
 class User(db.Model, UserMixin):
     id               = db.Column(db.Integer, primary_key=True)
@@ -387,12 +388,6 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-# ─── HELPERS ────────────────────────────────────────────────────────────────
-
-def ph_now():
-    """Current time in Philippine timezone (UTC+8)."""
-    return datetime.utcnow() + timedelta(hours=8)
-
 def send_notification(user_id, title, message, type='update', status=None):
     db.session.add(Notification(user_id=user_id, title=title, message=message, type=type, status=status))
     db.session.commit()
@@ -489,7 +484,7 @@ def cleanup_abandoned_gcash_orders():
     return len(abandoned)
 
 
-# ─── AUTH (CUSTOMER ONLY) ────────────────────────────────────────────────────
+# Auth routes
 
 @app.route('/')
 def home():
@@ -511,7 +506,11 @@ def login():
         return redirect(url_for('customer_dashboard'))
 
     if request.method == 'POST':
-        email, password = request.form['email'], request.form['password']
+        email    = clean_str(request.form.get('email', ''), max_len=254).lower()
+        password = request.form.get('password', '')
+        if not is_valid_email(email):
+            flash('Invalid email address.', 'danger')
+            return redirect(url_for('login'))
         user = User.query.filter_by(email=email).first()
 
         # Block admin/staff from logging in through the user portal
@@ -530,7 +529,6 @@ def login():
                 flash(f'Could not send OTP: {e}', 'danger')
                 return redirect(url_for('login'))
             session['pending_login_email'] = email
-            flash('A login code has been sent to your email.', 'info')
             return redirect(url_for('verify_login_otp'))
 
         flash('Invalid email or password.', 'danger')
@@ -563,6 +561,7 @@ def verify_login_otp():
 
 @app.route('/resend-otp/<purpose>')
 def resend_otp(purpose):
+    validate_otp_purpose(purpose)
     key_map      = {'login': 'pending_login_email', 'verify': 'pending_verify_email', 'reset': 'pending_reset_email'}
     redirect_map = {'login': 'verify_login_otp', 'reset': 'forgot_password_verify', 'verify': 'verify_email_otp'}
     email = session.get(key_map.get(purpose))
@@ -581,19 +580,22 @@ def resend_otp(purpose):
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        email = request.form['email']
-        phone = request.form['phone']
+        email = clean_str(request.form.get('email', ''), max_len=254).lower()
+        phone = clean_str(request.form.get('phone', ''), max_len=13)
 
+        if not is_valid_email(email):
+            flash('Invalid email address.', 'danger')
+            return redirect(url_for('register'))
         if User.query.filter_by(email=email).first():
             flash('Email already registered.', 'danger')
             return redirect(url_for('register'))
-        if not phone.isdigit() or not (10 <= len(phone) <= 13):
+        if not is_valid_phone(phone):
             flash('Invalid phone number.', 'danger')
             return redirect(url_for('register'))
 
-        firstname = request.form.get('firstname', '').strip()
-        lastname  = request.form.get('lastname', '').strip()
-        suffix    = request.form.get('suffix', '').strip()
+        firstname = clean_str(request.form.get('firstname', ''), max_len=50)
+        lastname  = clean_str(request.form.get('lastname', ''), max_len=50)
+        suffix    = clean_str(request.form.get('suffix', ''), max_len=10)
         fullname  = f"{firstname} {lastname}" + (f" {suffix}" if suffix else "")
 
         user = User(
@@ -641,7 +643,7 @@ def verify_email_otp():
     return render_template('verify_otp.html', purpose='verify', email=email)
 
 
-# ─── FORGOT PASSWORD ─────────────────────────────────────────────────────────
+# Forgot password routes
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -712,7 +714,7 @@ def logout():
     return redirect(url_for('login'))
 
 
-# ─── CUSTOMER ────────────────────────────────────────────────────────────────
+# Customer routes
 
 @app.route('/customer/dashboard')
 @login_required
@@ -738,26 +740,30 @@ def customer_dashboard():
 @app.route('/customer/book', methods=['POST'])
 @login_required
 def book_service():
-    service = request.form['service']
-    booking_date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
-    booking_time = datetime.strptime(request.form['time'], '%H:%M').time()
-    
+    service = clean_str(request.form.get('service', ''), max_len=100)
+    try:
+        booking_date = datetime.strptime(clean_str(request.form.get('date', ''), max_len=10), '%Y-%m-%d').date()
+        booking_time = datetime.strptime(clean_str(request.form.get('time', ''), max_len=5), '%H:%M').time()
+    except ValueError:
+        flash('Invalid date or time format.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+
     booking_datetime = datetime.combine(booking_date, booking_time)
     if booking_datetime <= ph_now():
         flash('Cannot book a past or current time slot. Please choose a future time.', 'danger')
         return redirect(url_for('customer_dashboard'))
-    
-    odo_raw = request.form.get('odometer', '').strip()
+
+    odo_raw = clean_str(request.form.get('odometer', ''), max_len=10)
     booking = Booking(
     user_id=current_user.id,
     service=service,
     date=booking_date,
     time=booking_time,
-    motorcycle_model=request.form.get('motorcycle_model', current_user.motorcycle_model),
-    motorcycle_plate=request.form.get('motorcycle_plate', current_user.motorcycle_plate),
-    notes=request.form.get('notes', ''),
-    contact_name=request.form.get('contact_name', ''),
-    contact_mobile=request.form.get('contact_mobile', ''),
+    motorcycle_model=clean_str(request.form.get('motorcycle_model', current_user.motorcycle_model or ''), max_len=100),
+    motorcycle_plate=clean_str(request.form.get('motorcycle_plate', current_user.motorcycle_plate or ''), max_len=20),
+    notes=clean_str(request.form.get('notes', ''), max_len=500),
+    contact_name=clean_str(request.form.get('contact_name', ''), max_len=100),
+    contact_mobile=clean_str(request.form.get('contact_mobile', ''), max_len=13),
     odometer=int(odo_raw) if odo_raw.isdigit() else None,
     )
     mechanic_id = request.form.get('mechanic_id', '')
@@ -846,25 +852,25 @@ def cart_checkout():
 @app.route('/customer/order', methods=['POST'])
 @login_required
 def place_order():
-    product  = Product.query.get_or_404(request.form['product_id'])
-    quantity = int(request.form['quantity'])
+    product  = Product.query.get_or_404(clean_int(request.form.get('product_id', 0), default=0))
+    quantity = clean_int(request.form.get('quantity', 1), default=1, min_val=1, max_val=9999)
     if product.stock < quantity:
         flash('Not enough stock available.', 'danger')
         return redirect(url_for('customer_dashboard'))
-    
+
     total = product.price * quantity
-    payment_method = request.form.get('payment_method', 'cash')
-    delivery_method = request.form.get('delivery_method', 'pickup')
-    
+    payment_method  = clean_str(request.form.get('payment_method', 'cash'), max_len=20)
+    delivery_method = clean_str(request.form.get('delivery_method', 'pickup'), max_len=20)
+
     ship_address = ''
     if delivery_method == 'ship':
-        ship_name = request.form.get('ship_name', '')
-        ship_mobile = request.form.get('ship_mobile', '')
-        ship_street = request.form.get('ship_street', '')
-        ship_city = request.form.get('ship_city', '')
-        ship_province = request.form.get('ship_province', '')
-        ship_zip = request.form.get('ship_zip', '')
-        ship_address = f"{ship_name}\n{ship_mobile}\n{ship_street}, {ship_city}, {ship_province} {ship_zip}"
+        ship_name     = clean_str(request.form.get('ship_name', ''), max_len=100)
+        ship_mobile   = clean_str(request.form.get('ship_mobile', ''), max_len=13)
+        ship_street   = clean_str(request.form.get('ship_street', ''), max_len=200)
+        ship_city     = clean_str(request.form.get('ship_city', ''), max_len=100)
+        ship_province = clean_str(request.form.get('ship_province', ''), max_len=100)
+        ship_zip      = clean_str(request.form.get('ship_zip', ''), max_len=10)
+        ship_address  = f"{ship_name}\n{ship_mobile}\n{ship_street}, {ship_city}, {ship_province} {ship_zip}"
         
     if payment_method.lower() == 'gcash':
         order_status = 'awaiting_payment'
@@ -917,10 +923,14 @@ def place_order():
 @login_required
 def customer_profile():
     if request.method == 'POST':
-        current_user.fullname         = request.form['fullname']
-        current_user.phone            = request.form['phone']
-        current_user.motorcycle_model = request.form.get('motorcycle_model')
-        current_user.motorcycle_plate = request.form.get('motorcycle_plate')
+        phone = clean_str(request.form.get('phone', ''), max_len=13)
+        if not is_valid_phone(phone):
+            flash('Invalid phone number.', 'danger')
+            return redirect(url_for('customer_dashboard'))
+        current_user.fullname         = clean_str(request.form.get('fullname', ''), max_len=100)
+        current_user.phone            = phone
+        current_user.motorcycle_model = clean_str(request.form.get('motorcycle_model', ''), max_len=100)
+        current_user.motorcycle_plate = clean_str(request.form.get('motorcycle_plate', ''), max_len=20)
         db.session.commit()
         flash('Profile updated successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
@@ -973,7 +983,7 @@ def get_mechanics():
     } for m in mechanics])
 
 
-# ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+# Notification routes
 
 @app.route('/api/notifications')
 @login_required
@@ -1014,7 +1024,7 @@ def delete_notification(nid):
     return jsonify({'success': True})
 
 
-# ─── CUSTOMER CONFIRM RECEIVED ───────────────────────────────────────────────
+# Order confirm received
 
 @app.route('/customer/order/<int:oid>/confirm-received', methods=['POST'])
 @login_required
@@ -1024,23 +1034,24 @@ def confirm_order_received(oid):
         return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
     if order.status != 'shipped':
         return jsonify({'success': False, 'message': 'Order is not in shipped status.'}), 400
-    order.status = 'delivered'
+    new_status = 'completed'
+    order.status = new_status
     db.session.commit()
     send_notification(
         current_user.id, 'Order Received!',
         f'You confirmed receipt of your order ORD-{order.id:03d}. Thank you!',
-        type='order', status='delivered'
+        type='order', status=new_status
     )
     for admin in User.query.filter_by(role='admin').all():
         send_notification(
-            admin.id, 'Order Delivered ✅',
+            admin.id, 'Order Received ✅',
             f'{current_user.fullname} confirmed receipt of ORD-{order.id:03d}.',
-            type='order', status='delivered'
+            type='order', status=new_status
         )
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'new_status': new_status})
 
 
-# ─── PAYMONGO PAYMENTS ───────────────────────────────────────────────────────
+# Payment routes
 
 @app.route('/pay/order/<int:oid>')
 @login_required

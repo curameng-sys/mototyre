@@ -715,6 +715,7 @@ const cart = [];
 let activeCat = 'all';
 let paymentMethod = 'cash';
 let pendingData = null;
+let _currentFetchCustomer = null;
 let _svcPrices = {};
 
 function _loadPosServices() {
@@ -803,6 +804,7 @@ async function onCustomerChange() {
   const customerId = document.getElementById('customer-select').value;
   const banner = document.getElementById('pending-banner');
   pendingData = null;
+  _currentFetchCustomer = customerId;
 
   for (let i = cart.length - 1; i >= 0; i--) {
     if (cart[i].pending) cart.splice(i, 1);
@@ -820,7 +822,10 @@ async function onCustomerChange() {
 
   try {
     const res = await fetch(`/pos/customer/${customerId}/items`);
+    if (_currentFetchCustomer !== customerId) return;
+
     const data = await res.json();
+    if (_currentFetchCustomer !== customerId) return;
 
     if (!res.ok) {
       banner.classList.remove('show');
@@ -835,7 +840,6 @@ async function onCustomerChange() {
     if (totalItems === 0) {
       document.getElementById('pending-text').textContent = 'No pending orders or bookings';
       document.getElementById('btn-load-items').style.display = 'none';
-      setTimeout(() => banner.classList.remove('show'), 2500);
       return;
     }
 
@@ -847,6 +851,7 @@ async function onCustomerChange() {
     document.getElementById('btn-load-items').style.display = '';
 
   } catch (e) {
+    if (_currentFetchCustomer !== customerId) return;
     banner.classList.remove('show');
     toast('Failed to fetch customer items', true);
   }

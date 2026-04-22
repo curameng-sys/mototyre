@@ -491,7 +491,7 @@
               <tr>
                 <td>{{ b.service }}</td>
                 <td>{{ b.date.strftime('%b %d') }}</td>
-                <td><span class="badge badge-{{ b.status }}">{{ b.status|title }}</span></td>
+                <td><span class="badge badge-{{ b.status }}">{{ b.status|replace('_', ' ')|title }}</span></td>
               </tr>
               {% endfor %}
             </tbody>
@@ -1880,7 +1880,7 @@ function renderNotifications() {
     confirmed:   { bg: 'rgba(29,78,216,0.15)',   color: '#93c5fd' },
     processing:  { bg: 'rgba(124,58,237,0.2)',   color: '#c4b5fd' },
     shipped:     { bg: 'rgba(6,182,212,0.2)',    color: '#67e8f9' },
-    delivered:   { bg: 'rgba(6,182,212,0.15)',   color: '#67e8f9' },
+    delivered:   { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
     completed:   { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
     cancelled:   { bg: 'rgba(220,38,38,0.15)',   color: '#fca5a5' },
     inprogress:  { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
@@ -1915,7 +1915,7 @@ function renderNotifications() {
           ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;flex-shrink:0;"></span>' : ''}
         </div>
         <div style="font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:0.3rem;">${n.message}</div>
-        ${n.status ? `<span style="font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.2em 0.55em;border-radius:5px;">${n.status.replace(/_/g,' ')}</span>` : ''}
+        ${n.status ? `<span style="font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.2em 0.55em;border-radius:5px;">${n.status.replace('inprogress','in progress').replace(/_/g,' ')}</span>` : ''}
         <div style="font-size:0.7rem;color:#4b5563;margin-top:0.3rem;">${time}</div>
       </div>
       <button onclick="deleteNotif(event, ${n.id})" style="background:none;border:none;color:#4b5563;font-size:0.9rem;cursor:pointer;padding:0.25rem;border-radius:6px;flex-shrink:0;align-self:flex-start;line-height:1;transition:all 0.15s;" onmouseover="this.style.color='#fca5a5';this.style.background='rgba(220,38,38,0.1)'" onmouseout="this.style.color='#4b5563';this.style.background='none'" title="Delete notification">✕</button>
@@ -2075,7 +2075,6 @@ function validateBookingForm() {
 }
 
 fetchNotifications();
-setInterval(fetchNotifications, 30000);
 
 /* ══ BOOKING DETAILS ══ */
 const bookingsData = {
@@ -2365,7 +2364,7 @@ async function confirmOrderReceived() {
     return;
   }
   if (data.success) {
-    ordersData[orderId].status = 'delivered';
+    ordersData[orderId].status = data.new_status || 'delivered';
     _confirmOrderId = null;
     closeModal('modal-order-details');
     openOrderDetails(parseInt(orderId));

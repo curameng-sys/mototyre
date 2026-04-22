@@ -1,11 +1,4 @@
-"""
-admin_app.py — MotoTyre ADMIN PORTAL
-Runs on http://127.0.0.1:5001
-Separate from the customer-facing app (port 5000).
-Only admin and staff roles can log in here.
-"""
-
-from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -24,11 +17,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from io import BytesIO
-from flask import make_response
+from security import clean_str, clean_float, is_valid_email, validate_booking_status, validate_order_status
 import os, uuid, random, string, base64, requests
-import atexit
 
-# ─── APP SETUP ───────────────────────────────────────────────────────────────
+# App setup
 
 admin_app = Flask(__name__, template_folder='templates', static_folder='static')
 admin_app.config.update(
@@ -47,15 +39,15 @@ db = SQLAlchemy(admin_app)
 login_manager = LoginManager(admin_app)
 login_manager.login_view = 'admin_login'
 
-# ─── GMAIL CONFIG ───────────────────────────────────────────────────────────
+# Gmail config
 
 GMAIL_SCOPES     = ["https://www.googleapis.com/auth/gmail.send"]
 GMAIL_TOKEN_FILE = "gmail_token.json"
 GMAIL_CREDS_FILE = "credentials.json"
 GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mackycastanales05@gmail.com")
-OTP_EXPIRY_MINS  = 10
+OTP_EXPIRY_MINS  = 2
 
-# ─── PAYMONGO CONFIG ────────────────────────────────────────────────────────
+# PayMongo config
 
 PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
@@ -82,7 +74,7 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
         return {"success": True, "checkout_url": data["data"]["attributes"]["checkout_url"], "checkout_id": data["data"]["id"]}
     return {"success": False, "error": response.json()}
 
-# ─── GMAIL ──────────────────────────────────────────────────────────────────
+# Gmail helpers
 
 def _get_gmail_service():
     creds = None
@@ -122,7 +114,7 @@ def send_otp_email(email, otp, purpose="login"):
     </div>"""
     _send_gmail(email, subject, html)
 
-# ─── MODELS ─────────────────────────────────────────────────────────────────
+# Models
 
 class User(db.Model, UserMixin):
     id               = db.Column(db.Integer, primary_key=True)
@@ -171,6 +163,7 @@ class Booking(db.Model):
     contact_mobile  = db.Column(db.String(20))
     odometer        = db.Column(db.Integer)
     is_archived     = db.Column(db.Boolean, default=False)
+    total_amount    = db.Column(db.Float, default=0)
 
 
 class Mechanic(db.Model):
@@ -238,7 +231,7 @@ class Notification(db.Model):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# ─── HELPERS ────────────────────────────────────────────────────────────────
+# Helpers
 
 def ph_now():
     return datetime.utcnow() + timedelta(hours=8)
@@ -303,7 +296,7 @@ def cleanup_abandoned_gcash_orders():
     return len(abandoned)
 
 
-# ─── ADMIN AUTH ──────────────────────────────────────────────────────────────
+# Auth routes
 
 @admin_app.route('/')
 def admin_home():
@@ -322,9 +315,12 @@ def admin_login():
         flash('This portal is for admin and staff only.', 'danger')
 
     if request.method == 'POST':
-        email    = request.form['email']
-        password = request.form['password']
-        user     = User.query.filter_by(email=email).first()
+        email    = clean_str(request.form.get('email', ''), max_len=254).lower()
+        password = request.form.get('password', '')
+        if not is_valid_email(email):
+            flash('Invalid email address.', 'danger')
+            return redirect(url_for('admin_login'))
+        user = User.query.filter_by(email=email).first()
 
         # Only allow admin/staff roles
         if user and user.role not in ['admin', 'staff']:
@@ -340,7 +336,6 @@ def admin_login():
                 flash(f'Could not send OTP: {e}', 'danger')
                 return redirect(url_for('admin_login'))
             session['admin_pending_login_email'] = email
-            flash('A login code has been sent to your email.', 'info')
             return redirect(url_for('admin_login'))
 
         flash('Invalid email or password.', 'danger')
@@ -359,7 +354,7 @@ def admin_verify_otp():
         if result['valid']:
             session.pop('admin_pending_login_email', None)
             user = User.query.filter_by(email=email).first()
-            login_user(user, remember=True)
+            login_user(user, remember=False)
             return redirect(url_for('admin_dashboard'))
         flash(result['message'], 'danger')
 
@@ -410,7 +405,22 @@ def admin_forgot_verify():
             session['admin_reset_otp_verified'] = True
             return redirect(url_for('admin_reset_password'))
         flash(result['message'], 'danger')
-    return redirect(url_for('admin_forgot_password'))
+        return redirect(url_for('admin_forgot_verify'))
+    return render_template('admin_forgot_verify.html', email=email)
+
+
+@admin_app.route('/forgot-password/resend-otp')
+def admin_forgot_resend_otp():
+    from flask import jsonify as _jsonify
+    email = session.get('admin_pending_reset_email')
+    if not email:
+        return _jsonify({'ok': False}), 400
+    otp = _save_otp(email, purpose="reset")
+    try:
+        send_otp_email(email, otp, purpose="reset")
+    except Exception:
+        return _jsonify({'ok': False}), 500
+    return _jsonify({'ok': True})
 
 
 @admin_app.route('/forgot-password/reset', methods=['GET', 'POST'])
@@ -446,7 +456,7 @@ def admin_logout():
     return redirect(url_for('admin_login'))
 
 
-# ─── ADMIN DASHBOARD & ROUTES ────────────────────────────────────────────────
+# Admin routes
 
 def require_admin_or_staff(f):
     """Decorator: ensure only admin/staff can access a route."""
@@ -469,19 +479,19 @@ def admin_dashboard():
         total_bookings=Booking.query.count(),
         total_orders=Order.query.count(),
         total_users=User.query.count(),
-        total_revenue=f'{db.session.query(func.sum(Order.total_amount)).filter(Order.status.notin_(["cancelled", "awaiting_payment"])).scalar() or 0:,.2f}',
+        total_revenue=f'{(db.session.query(func.sum(Order.total_amount)).filter(Order.status.notin_(["cancelled", "awaiting_payment"])).scalar() or 0) + (db.session.query(func.sum(Booking.total_amount)).filter(Booking.status == "completed").scalar() or 0):,.2f}',
         booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).group_by(Booking.status).all()),
         order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
         top_services=db.session.query(Booking.service, func.count(Booking.id).label('count')).group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all(),
         new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
         recent_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).limit(5).all(),
         all_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all(),
-        all_orders=Order.query.filter_by(is_archived=False).order_by(Order.created_at.desc()).all(),
+        all_orders=Order.query.filter_by(is_archived=False).filter(Order.items.any()).order_by(Order.created_at.desc()).all(),
         all_products=Product.query.all(),
         all_users=User.query.all(),
         all_mechanics=Mechanic.query.order_by(Mechanic.name).all(),
         all_services=Service.query.order_by(Service.name).all(),
-        archived_orders=Order.query.filter_by(is_archived=True).order_by(Order.created_at.desc()).all(),
+        archived_orders=Order.query.filter_by(is_archived=True).filter(Order.items.any()).order_by(Order.created_at.desc()).all(),
         archived_bookings=Booking.query.filter_by(is_archived=True).order_by(Booking.created_at.desc()).all(),
         now=ph_now(),
         today=ph_now().date(),
@@ -493,7 +503,7 @@ def admin_dashboard():
 @require_admin_or_staff
 def update_booking_status(bid):
     booking    = Booking.query.get_or_404(bid)
-    new_status = request.form['status']
+    new_status = validate_booking_status(clean_str(request.form.get('status', ''), max_len=20))
     booking.status = new_status
     db.session.commit()
     messages = {
@@ -515,7 +525,10 @@ def update_booking_status(bid):
 @require_admin_or_staff
 def update_order_status(oid):
     order = Order.query.get_or_404(oid)
-    new_status = request.form['status']
+    new_status = validate_order_status(clean_str(request.form.get('status', ''), max_len=20))
+    if new_status == 'completed' and order.payment_method == 'cash' and order.delivery_method == 'pickup':
+        flash('Cash pick-up orders can only be completed via the Quotation page.', 'danger')
+        return redirect(url_for('admin_dashboard'))
     if new_status == 'cancelled' and order.status != 'cancelled':
         for item in OrderItem.query.filter_by(order_id=order.id).all():
             product = Product.query.get(item.product_id)
@@ -538,15 +551,15 @@ def update_order_status(oid):
     return redirect(url_for('admin_dashboard'))
 
 
-# ─── SERVICE MANAGEMENT ──────────────────────────────────────────────────────
+# Service routes
 
 @admin_app.route('/service/add', methods=['POST'])
 @login_required
 @require_admin_or_staff
 def add_service():
-    name  = request.form.get('name', '').strip()
-    desc  = request.form.get('description', '').strip()
-    price = float(request.form.get('price', 0) or 0)
+    name  = clean_str(request.form.get('name', ''), max_len=100)
+    desc  = clean_str(request.form.get('description', ''), max_len=500)
+    price = clean_float(request.form.get('price', 0), default=0.0, min_val=0.0)
     if not name:
         flash('Service name is required.', 'danger')
         return redirect(url_for('admin_dashboard'))
@@ -576,9 +589,9 @@ def toggle_service(sid):
 @require_admin_or_staff
 def edit_service(sid):
     svc   = Service.query.get_or_404(sid)
-    name  = request.form.get('name', '').strip()
-    desc  = request.form.get('description', '').strip()
-    price = float(request.form.get('price', 0) or 0)
+    name  = clean_str(request.form.get('name', ''), max_len=100)
+    desc  = clean_str(request.form.get('description', ''), max_len=500)
+    price = clean_float(request.form.get('price', 0), default=0.0, min_val=0.0)
     if not name:
         flash('Service name is required.', 'danger')
         return redirect(url_for('admin_dashboard'))
@@ -615,7 +628,6 @@ def admin_api_services():
         return jsonify([])
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 
 @admin_app.route('/product/add', methods=['POST'])
 @login_required
@@ -809,7 +821,7 @@ def import_products():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-# ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+# Notification routes
 
 @admin_app.route('/api/notifications')
 @login_required
@@ -853,7 +865,7 @@ def delete_notification(nid):
     return jsonify({'success': True})
 
 
-# ─── POS ─────────────────────────────────────────────────────────────────────
+# POS routes
 
 @admin_app.route('/pos')
 @login_required
@@ -945,6 +957,7 @@ def pos_checkout():
             if source_booking:
                 source_booking.status = 'completed'
                 source_booking.payment_method = payment_method
+                source_booking.total_amount = svc_price * svc_qty
                 completed_booking_ids.add(source_booking_id)
                 booking_ids.append(source_booking_id)
                 service_revenue += svc_price * svc_qty
@@ -958,7 +971,8 @@ def pos_checkout():
                 service=svc['name'], date=date.today(), time=datetime.now().time(),
                 motorcycle_model=svc.get('motorcycle_model', ''),
                 motorcycle_plate=svc.get('motorcycle_plate', ''),
-                notes='Walk-in POS service.', status='completed', payment_method=payment_method
+                notes='Walk-in POS service.', status='completed', payment_method=payment_method,
+                total_amount=svc_price * svc_qty
             )
             db.session.add(booking)
             db.session.flush()
@@ -968,15 +982,6 @@ def pos_checkout():
                 send_notification(int(customer_id), 'Service Completed (In-Store)',
                     f'Your {svc["name"]} walk-in service has been recorded.',
                     type='booking', status='completed')
-
-    if service_revenue > 0:
-        uid = int(customer_id) if customer_id else current_user.id
-        svc_order = Order(user_id=uid, total_amount=service_revenue, status='completed',
-                          payment_method=payment_method, delivery_method='pickup')
-        db.session.add(svc_order)
-        db.session.flush()
-        if not order_id:
-            order_id = svc_order.id
 
     db.session.commit()
     return jsonify({
@@ -1013,8 +1018,9 @@ def pos_customer_items(cid: int):
     customer = User.query.get_or_404(cid)
     pending_orders = Order.query.filter(
         Order.user_id == cid,
-        Order.status.in_(['pending', 'confirmed', 'processing', 'awaiting_payment']),
-        Order.payment_method != 'gcash'
+        Order.status == 'processing',
+        Order.payment_method == 'cash',
+        Order.delivery_method == 'pickup'
     ).order_by(Order.created_at.desc()).all()
     orders_data = []
     for order in pending_orders:
@@ -1041,7 +1047,7 @@ def pos_customer_items(cid: int):
                     'orders': orders_data, 'bookings': bookings_data})
 
 
-# ─── REPORT ──────────────────────────────────────────────────────────────────
+# Report routes
 
 @admin_app.route('/report/generate', methods=['POST'])
 @login_required
@@ -1118,7 +1124,7 @@ def generate_report():
     return response
 
 
-# ─── ARCHIVING ───────────────────────────────────────────────────────────────
+# Archiving routes
 
 @admin_app.route('/order/<int:oid>/archive', methods=['POST'])
 @login_required
@@ -1218,6 +1224,22 @@ with admin_app.app_context():
     try:
         from sqlalchemy import text as _text4
         db.session.execute(_text4("ALTER TABLE booking ADD COLUMN odometer INT DEFAULT NULL"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        from sqlalchemy import text as _text5
+        db.session.execute(_text5("ALTER TABLE booking ADD COLUMN total_amount FLOAT DEFAULT 0"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        from sqlalchemy import text as _text6
+        db.session.execute(_text6("""
+            DELETE FROM "order" WHERE id NOT IN (
+                SELECT DISTINCT order_id FROM order_item
+            )
+        """))
         db.session.commit()
     except Exception:
         db.session.rollback()

@@ -168,16 +168,15 @@
 
       /* OTP INPUT ROW */
       .otp-row {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
         gap: 0.6rem;
         margin-bottom: 1.5rem;
-        justify-content: space-between;
       }
 
       .otp-box {
-        flex: 1;
-        aspect-ratio: 1;
-        max-width: 64px;
+        width: 100%;
+        height: 56px;
         background: rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.1);
         border-radius: 10px;
@@ -372,7 +371,7 @@
           <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
         </svg>
         <span>Expires in</span>
-        <span class="timer-count" id="timer">10:00</span>
+        <span class="timer-count" id="timer">2:00</span>
       </div>
       <a href="{{ url_for('resend_otp', purpose=purpose) }}" class="resend-link" id="resend-link">Resend code</a>
     </div>
@@ -452,7 +451,7 @@
   // ── Countdown Timer ────────────────────────────────────
   const timerEl   = document.getElementById('timer');
   const resendEl  = document.getElementById('resend-link');
-  let seconds     = 10 * 60;
+  let seconds     = 2 * 60;
 
   const tick = setInterval(() => {
     seconds--;

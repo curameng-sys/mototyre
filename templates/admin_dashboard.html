@@ -391,6 +391,7 @@
                   data-mechanic="{{ (b.mechanic_name or '')|e }}"
                   data-mechanic-spec="{{ (b.mechanic_specialization or '')|e }}"
                   data-notes="{{ (b.notes or '')|e }}"
+                  data-total-amount="{{ b.total_amount or 0 }}"
                   data-created="{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}">
                 <td>{{ b.id }}</td>
                 <td><div style="font-weight:600;color:#fff;">{{ b.customer.fullname }}</div></td>
@@ -526,7 +527,9 @@
                       <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
                       <option value="confirmed"  {% if o.status=='confirmed' %}selected{% endif %}>Confirmed</option>
                       <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
+                      {% if o.payment_method != 'cash' %}
                       <option value="completed"  {% if o.status=='completed' %}selected{% endif %}>Completed</option>
+                      {% endif %}
                       <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     {% endif %}
                   </select>
@@ -971,9 +974,15 @@
     </div>
 
     <!-- Payment -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;margin-bottom:0.75rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;margin-bottom:0.5rem;">
       <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#4ade80;">💳 Payment Method</span>
       <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;" id="bd-payment"></span>
+    </div>
+
+    <!-- Total Amount -->
+    <div id="bd-total-wrap" style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(232,64,28,0.08);border:1px solid rgba(232,64,28,0.2);border-radius:8px;margin-bottom:0.75rem;">
+      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fca5a5;">💵 Total Amount</span>
+      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;" id="bd-total"></span>
     </div>
 
     <!-- Notes -->
@@ -1305,6 +1314,15 @@
     }
 
     document.getElementById('bd-payment').textContent = d.payment === 'gcash' ? '📱 GCash' : '💵 Cash';
+
+    const totalAmount = parseFloat(d.totalAmount || 0);
+    const totalWrap = document.getElementById('bd-total-wrap');
+    if (totalAmount > 0) {
+      document.getElementById('bd-total').textContent = '₱' + totalAmount.toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+      totalWrap.style.display = 'flex';
+    } else {
+      totalWrap.style.display = 'none';
+    }
 
     const notesWrap = document.getElementById('bd-notes-wrap');
     if (d.notes) {
@@ -1822,7 +1840,6 @@ document.addEventListener('click', function(e) {
 });
 
 fetchAdminNotifications();
-setInterval(fetchAdminNotifications, 15000);
 
 // ── Mobile sidebar ──
 function toggleAdminSidebar() {

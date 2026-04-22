@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verify Reset Code – Mototyre Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+    :root { --ink: #0c0d0f; --red: #ff0f0f; --muted: #6b7280; --card: #111215; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--ink);
+      overflow: hidden;
+    }
+
+    .bg-layer {
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(255,15,15,0.07) 0%, transparent 65%), var(--ink);
+    }
+    .bg-layer::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    .login-card {
+      position: relative; z-index: 10;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      width: 100%; max-width: 440px;
+      padding: 3rem 2.75rem 2.5rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+      animation: cardIn 0.6s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(28px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .logo-area { text-align: center; margin-bottom: 1.75rem; }
+    .logo-mark { display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .logo-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--red); display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { color: #fff; }
+    .logo-name { font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 800; font-size: 1.75rem; letter-spacing: 0.04em; color: #fff; }
+    .logo-name span { color: var(--red); }
+
+    .card-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.1rem; letter-spacing: 0.04em; color: #fff; line-height: 1; margin-bottom: 0.35rem; text-align: center; }
+    .card-sub { font-size: 0.85rem; color: var(--muted); text-align: center; margin-bottom: 0.75rem; }
+
+    .flash { padding: 0.65rem 0.9rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 0.5rem; }
+    .flash-danger  { background: rgba(255,15,15,0.1);  border: 1px solid rgba(255,15,15,0.25);  color: #ff6b6b; }
+    .flash-success { background: rgba(22,163,74,0.1);  border: 1px solid rgba(22,163,74,0.25);  color: #4ade80; }
+    .flash-info    { background: rgba(37,99,235,0.1);  border: 1px solid rgba(37,99,235,0.25);  color: #60a5fa; }
+
+    .otp-email-tag { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(255,15,15,0.1); border: 1px solid rgba(255,15,15,0.25); border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.76rem; color: #ff6b6b; font-family: 'DM Mono', monospace; margin-bottom: 1.5rem; }
+
+    .otp-grid { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .otp-cell { flex: 1; aspect-ratio: 1; max-width: 58px; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; text-align: center; outline: none; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; }
+    .otp-cell::placeholder { color: #4b5563; }
+    .otp-cell:focus { border-color: var(--red); background: rgba(255,255,255,0.08); box-shadow: 0 0 0 3px rgba(255,15,15,0.12); }
+    .otp-cell.filled { border-color: rgba(255,15,15,0.45); background: rgba(255,15,15,0.07); }
+
+    .otp-footer { display: flex; align-items: center; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
+    .otp-timer { display: flex; align-items: center; gap: 0.4rem; }
+    .otp-timer-count { color: var(--red); min-width: 3ch; }
+    .otp-timer-count.expired { color: var(--muted); }
+
+    .otp-resend { background: none; border: none; color: var(--red); font-weight: 600; font-family: 'DM Mono', monospace; font-size: 0.75rem; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 0.3s; padding: 0; }
+    .otp-resend.active { opacity: 1; pointer-events: auto; }
+
+    .btn-submit { width: 100%; padding: 0.875rem; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 0.04em; cursor: pointer; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--red); color: #fff; transition: all 0.2s; }
+    .btn-submit:hover:not(:disabled) { background: #c73418; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,15,15,0.35); }
+    .btn-submit:active { transform: translateY(0); box-shadow: none; }
+    .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .back-btn { display: inline-flex; align-items: center; gap: 0.35rem; background: none; border: none; color: var(--muted); font-size: 0.82rem; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 0; margin-top: 1rem; transition: color 0.15s; text-decoration: none; }
+    .back-btn:hover { color: #fff; }
+
+    .card-footer-row { display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 1.75rem; font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.06em; color: #4b5563; }
+    .footer-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--red); opacity: 0.5; }
+
+    @media (max-width: 480px) { .login-card { padding: 2.25rem 1.5rem 2rem; margin: 1rem; } .otp-cell { max-width: 44px; font-size: 1.3rem; } }
+  </style>
+</head>
+<body>
+<div class="bg-layer"></div>
+
+<div class="login-card">
+  <div class="logo-area">
+    <div class="logo-mark">
+      <div class="logo-name">MOTO<span>TYRE</span></div>
+    </div>
+  </div>
+
+  <h2 class="card-title">Enter Reset Code</h2>
+  <p class="card-sub">A 6-digit code was sent to</p>
+  <div style="text-align:center;margin-bottom:1.5rem;">
+    <div class="otp-email-tag">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+      </svg>
+      {{ email }}
+    </div>
+  </div>
+
+  <div id="flash-area">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+
+  <form method="POST" action="{{ url_for('admin_forgot_verify') }}" id="otp-form">
+    <input type="hidden" name="otp" id="otp-hidden">
+    <div class="otp-grid" id="otp-grid">
+      <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+      <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+      <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+      <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+      <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+      <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+    </div>
+
+    <button type="submit" class="btn-submit" id="otp-submit" disabled>
+      Verify Code
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="20,6 9,17 4,12"/>
+      </svg>
+    </button>
+  </form>
+
+  <div class="otp-footer">
+    <div class="otp-timer">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+      </svg>
+      Expires in <span class="otp-timer-count" id="timer">2:00</span>
+    </div>
+    <button class="otp-resend" id="resend-btn" onclick="resendOtp()">Resend code</button>
+  </div>
+
+  <div style="text-align:center;">
+    <a href="{{ url_for('admin_forgot_password') }}" class="back-btn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15,18 9,12 15,6"/>
+      </svg>
+      Back
+    </a>
+  </div>
+
+  <div class="card-footer-row">
+    <div class="footer-dot"></div>
+    MOTOTYRE ADMIN © 2025
+    <div class="footer-dot"></div>
+    SECURED
+  </div>
+</div>
+
+<script>
+  const cells     = document.querySelectorAll('.otp-cell');
+  const otpHidden = document.getElementById('otp-hidden');
+  const otpSubmit = document.getElementById('otp-submit');
+  const timerEl   = document.getElementById('timer');
+  const resendEl  = document.getElementById('resend-btn');
+  let timerInterval, seconds = 120;
+
+  cells.forEach((cell, i) => {
+    cell.addEventListener('input', (e) => {
+      cell.value = e.target.value.replace(/\D/g, '');
+      cell.classList.toggle('filled', cell.value !== '');
+      if (cell.value && i < cells.length - 1) cells[i + 1].focus();
+      syncOtp();
+    });
+    cell.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !cell.value && i > 0) {
+        cells[i - 1].value = '';
+        cells[i - 1].classList.remove('filled');
+        cells[i - 1].focus();
+        syncOtp();
+      }
+    });
+    cell.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+      pasted.split('').forEach((ch, j) => {
+        if (cells[j]) { cells[j].value = ch; cells[j].classList.add('filled'); }
+      });
+      cells[Math.min(pasted.length, cells.length - 1)].focus();
+      syncOtp();
+    });
+  });
+
+  function syncOtp() {
+    otpHidden.value = [...cells].map(c => c.value).join('');
+    otpSubmit.disabled = otpHidden.value.length < 6;
+  }
+
+  function startTimer() {
+    seconds = 120;
+    timerEl.classList.remove('expired');
+    resendEl.classList.remove('active');
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      seconds--;
+      if (seconds <= 0) {
+        clearInterval(timerInterval);
+        timerEl.textContent = '0:00';
+        timerEl.classList.add('expired');
+        resendEl.classList.add('active');
+        otpSubmit.disabled = true;
+        return;
+      }
+      const m = Math.floor(seconds / 60);
+      const s = String(seconds % 60).padStart(2, '0');
+      timerEl.textContent = `${m}:${s}`;
+      if (seconds <= 120) resendEl.classList.add('active');
+    }, 1000);
+  }
+
+  function resendOtp() {
+    fetch("{{ url_for('admin_forgot_resend_otp') }}", {method: 'GET'})
+      .then(r => r.json())
+      .then(data => {
+        startTimer();
+        cells.forEach(c => { c.value = ''; c.classList.remove('filled'); });
+        syncOtp();
+        const flash = document.getElementById('flash-area');
+        flash.innerHTML = '<div class="flash flash-info"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>A new code has been sent.</div>';
+        setTimeout(() => flash.innerHTML = '', 4000);
+        cells[0].focus();
+      });
+  }
+
+  startTimer();
+  setTimeout(() => cells[0].focus(), 100);
+</script>
+</body>
+</html>

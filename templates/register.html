@@ -622,7 +622,7 @@
             <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
           </svg>
           <span>Expires in</span>
-          <span class="timer-count" id="timer">10:00</span>
+          <span class="timer-count" id="timer">2:00</span>
         </div>
         <button class="resend-btn" id="resend-btn" onclick="resendOtp()">Resend code</button>
       </div>
@@ -731,12 +731,12 @@
   }
 
   // ── Timer ──
-  let timerInterval, seconds = 600;
+  let timerInterval, seconds = 120;
   const timerEl  = document.getElementById('timer');
   const resendEl = document.getElementById('resend-btn');
 
   function startTimer() {
-    seconds = 600;
+    seconds = 120;
     timerEl.classList.remove('expired');
     resendEl.classList.remove('active');
     clearInterval(timerInterval);
