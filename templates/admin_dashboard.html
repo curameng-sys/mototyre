@@ -215,6 +215,7 @@
       .main { padding: 5rem 1rem 2rem; }
       .charts-grid { grid-template-columns: 1fr; }
       .settings-grid { grid-template-columns: 1fr; }
+      #sec-parts > div[style*="grid-template-columns:1fr 320px"] { grid-template-columns: 1fr; }
       .filter-bar { flex-direction: column; }
       .filter-bar input { min-width: unset; width: 100%; }
       .filter-bar select { width: 100%; }
@@ -280,6 +281,8 @@
     <a href="{{ url_for('job_orders') }}">🔩 Job Orders</a>
     <a href="{{ url_for('payments') }}">💳 Payments</a>
     <a href="{{ url_for('walk_in') }}">🏍️ Walk-In</a>
+    <a href="#" onclick="showSection('parts', this)">🛒 Parts Purchase</a>
+    <a href="#" onclick="showSection('transactions', this)">📋 Transactions</a>
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
     <a href="#" onclick="showSection('archive', this)">🗃️ Archive</a>
@@ -481,6 +484,15 @@
                     {% elif is_cancelled %}
                       <span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;color:#fca5a5;background:rgba(255,15,15,0.08);border:1px solid rgba(255,15,15,0.2);padding:0.25rem 0.6rem;border-radius:6px;">✖ Cancelled</span>
                     {% else %}
+                      {% if b.status == 'in_progress' %}
+                        <div style="font-size:0.7rem;color:#fbbf24;font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.3rem;">💳 Collect via Billing</div>
+                        <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
+                          <select name="status">
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                          <button type="submit">Save</button>
+                        </form>
+                      {% else %}
                       <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
                         <select name="status">
                           {% if b.status == 'pending' %}
@@ -490,13 +502,11 @@
                           {% elif b.status == 'confirmed' %}
                             <option value="in_progress">In Progress</option>
                             <option value="cancelled">Cancelled</option>
-                          {% elif b.status == 'in_progress' %}
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
                           {% endif %}
                         </select>
                         <button type="submit">Save</button>
                       </form>
+                      {% endif %}
                     {% endif %}
                   </td>
                   <td onclick="event.stopPropagation()">
@@ -593,6 +603,9 @@
                   {% endif %}
                 </td>
                 <td>
+                {% if o.delivery_method != 'ship' and o.status in ['completed', 'cancelled'] %}
+                  <span class="badge badge-{{ o.status }}">{{ o.status|title }}</span>
+                {% else %}
                 <form method="POST" action="{{ url_for('update_order_status', oid=o.id) }}" class="status-form">
                   <select name="status">
                     {% if o.delivery_method == 'ship' %}
@@ -604,16 +617,12 @@
                       <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     {% else %}
                       <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
-                      <option value="confirmed"  {% if o.status=='confirmed' %}selected{% endif %}>Confirmed</option>
-                      <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
-                      {% if o.payment_method != 'cash' %}
-                      <option value="completed"  {% if o.status=='completed' %}selected{% endif %}>Completed</option>
-                      {% endif %}
                       <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     {% endif %}
                   </select>
                   <button type="submit">Save</button>
                 </form>
+                {% endif %}
               </td>
               <td style="white-space:nowrap;text-align:left;vertical-align:middle;">
                 {% set age = (now - o.created_at).days %}
@@ -896,6 +905,157 @@
         {% else %}
         <div class="empty-state"><div class="ei">💳</div><p>No transactions yet.</p></div>
         {% endif %}
+      </div>
+    </section>
+
+    <!-- IN-STORE PARTS PURCHASE -->
+    <section id="sec-parts" class="page-section">
+      <div class="page-title">IN-STORE <span class="accent">PARTS PURCHASE</span></div>
+      <div class="page-sub">Process walk-in customer product purchases. Select items, set quantity, then process payment.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
+
+        <!-- LEFT: Product catalog -->
+        <div>
+          <!-- Search + category filter -->
+          <div style="display:flex;gap:0.65rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <input type="text" id="parts-search" placeholder="Search products..." oninput="filterPartsProducts()"
+              style="flex:1;min-width:160px;padding:0.5rem 0.85rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(255,255,255,0.05);color:#fff;font-size:0.85rem;outline:none;">
+            <select id="parts-cat" onchange="filterPartsProducts()"
+              style="padding:0.5rem 0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:var(--panel);color:#d1d5db;font-size:0.85rem;outline:none;">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+
+          <!-- Product grid -->
+          <div id="parts-product-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:0.75rem;">
+            <div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted);font-size:0.85rem;">Loading products…</div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Cart panel -->
+        <div style="position:sticky;top:1.5rem;">
+          <div class="card">
+            <div class="card-head">
+              <h5>Cart</h5>
+              <button onclick="clearPartsCart()" style="font-size:0.72rem;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;">Clear all</button>
+            </div>
+            <div class="card-body" style="padding:0.75rem 1rem;">
+
+              <!-- Cart items -->
+              <div id="parts-cart-items" style="margin-bottom:0.75rem;min-height:60px;">
+                <div id="parts-cart-empty" style="text-align:center;padding:1.25rem 0;color:var(--muted);font-size:0.82rem;">Cart is empty</div>
+              </div>
+
+              <!-- Total -->
+              <div style="border-top:1px solid var(--border);padding-top:0.65rem;margin-bottom:0.85rem;display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:0.82rem;color:var(--muted);">Total</span>
+                <span id="parts-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:#fff;">₱0.00</span>
+              </div>
+
+              <!-- Customer name -->
+              <div style="margin-bottom:0.65rem;">
+                <label style="font-size:0.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.3rem;">Customer Name</label>
+                <input type="text" id="parts-customer" placeholder="Walk-in (optional)"
+                  style="width:100%;padding:0.45rem 0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(255,255,255,0.05);color:#fff;font-size:0.82rem;outline:none;">
+              </div>
+
+              <!-- Payment method -->
+              <div style="margin-bottom:1rem;">
+                <label style="font-size:0.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.4rem;">Payment</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                  <button id="parts-btn-cash" onclick="setPartsPayment('cash')"
+                    style="padding:0.5rem;border-radius:8px;border:2px solid var(--red);background:var(--red);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;">
+                    💵 Cash
+                  </button>
+                  <button id="parts-btn-gcash" onclick="setPartsPayment('gcash')"
+                    style="padding:0.5rem;border-radius:8px;border:2px solid rgba(255,255,255,0.12);background:transparent;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;">
+                    📱 GCash
+                  </button>
+                </div>
+              </div>
+
+              <!-- Process button -->
+              <button onclick="processPartsTxn()" id="parts-process-btn"
+                style="width:100%;padding:0.7rem;border:none;border-radius:8px;background:var(--green);color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.92rem;cursor:pointer;letter-spacing:0.02em;">
+                ✅ Process Transaction
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Receipt modal -->
+      <div id="parts-receipt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:420px;padding:2rem;position:relative;">
+          <div style="text-align:center;margin-bottom:1.25rem;">
+            <div style="font-size:2rem;margin-bottom:0.4rem;">✅</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:#fff;letter-spacing:0.04em;">Transaction Complete</div>
+            <div id="receipt-order-ref" style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;"></div>
+          </div>
+          <div style="border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:0.75rem 0;margin-bottom:1rem;">
+            <div id="receipt-customer" style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem;"></div>
+            <div id="receipt-items" style="font-size:0.85rem;color:#d1d5db;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+            <span style="font-size:0.85rem;color:var(--muted);">Total Paid</span>
+            <span id="receipt-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--green);"></span>
+          </div>
+          <div id="receipt-payment" style="text-align:center;font-size:0.78rem;color:var(--muted);margin-bottom:1rem;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;">
+            <button onclick="document.getElementById('parts-receipt-modal').style.display='none'"
+              style="padding:0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#d1d5db;font-size:0.85rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:600;">
+              Close
+            </button>
+            <button onclick="newPartsTxn()"
+              style="padding:0.6rem;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:0.85rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;">
+              + New Transaction
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRANSACTIONS -->
+    <section id="sec-transactions" class="page-section">
+      <div class="page-title">TRANSACTION <span class="accent">HISTORY</span></div>
+      <div class="page-sub">All completed transactions — job orders, in-store sales, and online orders.</div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <select id="txn-type" onchange="filterTxns()">
+          <option value="">Type ▼</option>
+          <option value="Job Order">Job Order</option>
+          <option value="Sale">Sale</option>
+          <option value="Online">Online</option>
+        </select>
+        <select id="txn-payment" onchange="filterTxns()">
+          <option value="">Payment ▼</option>
+          <option value="CASH">Cash</option>
+          <option value="GCASH">GCash</option>
+        </select>
+        <select id="txn-date" onchange="filterTxns()">
+          <option value="">Date ▼</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+        <input type="text" id="txn-search" placeholder="Search customer, ID…" oninput="filterTxns()">
+        <button onclick="loadTxns()" style="padding:.55rem 1rem;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(255,255,255,.05);color:#fff;cursor:pointer;font-size:.875rem;font-family:'DM Sans',sans-serif;">↻ Refresh</button>
+      </div>
+
+      <!-- Summary -->
+      <div class="stats-grid" id="txn-stats" style="margin-bottom:1.5rem;"></div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="card-head">
+          <h5>📋 All Transactions</h5>
+          <span id="txn-count" style="font-size:.75rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;"></span>
+        </div>
+        <div id="txn-table-wrap">
+          <div class="empty-state"><div class="ei">📋</div><p>Loading transactions…</p></div>
+        </div>
       </div>
     </section>
 
@@ -1369,6 +1529,8 @@
     document.getElementById('sec-' + name).classList.add('active');
     if (el) el.classList.add('active');
     sessionStorage.setItem('adminSection', name);
+    if (name === 'parts') loadPartsProducts();
+    if (name === 'transactions') loadTxns();
   }
 
   function openGroupedBookingDetails(row) {
@@ -2060,6 +2222,293 @@ document.addEventListener('submit', function(e) {
     showToast('Error: ' + err.message, 'error');
   });
 });
+
+// ── In-Store Parts Purchase ──
+let _partsAll = [];           // all products from /pos/products
+let _partsCart = [];          // {id, name, price, stock, qty}
+let _partsPayment = 'cash';
+
+let _partsRefreshTimer = null;
+
+function loadPartsProducts() {
+  fetch('/pos/products')
+    .then(r => r.json())
+    .then(products => {
+      _partsAll = products;
+      _buildCatFilter(products);
+      _renderPartsGrid(products);
+    })
+    .catch(() => {
+      document.getElementById('parts-product-grid').innerHTML =
+        '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted);">Failed to load products.</div>';
+    });
+  if (_partsRefreshTimer) clearInterval(_partsRefreshTimer);
+  _partsRefreshTimer = setInterval(() => {
+    if (document.getElementById('sec-parts').classList.contains('active')) loadPartsProducts();
+    else { clearInterval(_partsRefreshTimer); _partsRefreshTimer = null; }
+  }, 60000);
+}
+
+function _buildCatFilter(products) {
+  const sel = document.getElementById('parts-cat');
+  const cats = [...new Set(products.map(p => p.category))].sort();
+  sel.innerHTML = '<option value="">All Categories</option>' +
+    cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function _renderPartsGrid(products) {
+  const grid = document.getElementById('parts-product-grid');
+  if (!products.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted);font-size:0.85rem;">No products in stock.</div>';
+    return;
+  }
+  grid.innerHTML = products.map(p => {
+    const stockColor = p.stock < 5 ? 'var(--warning)' : 'var(--green)';
+    const safeName = p.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.9rem;display:flex;flex-direction:column;gap:0.4rem;transition:border-color 0.15s;"
+        onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size:0.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">${p.category}</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#fff;line-height:1.3;flex:1;">${p.name}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--red);">₱${p.price.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+        <span style="font-size:0.7rem;color:${stockColor};">${p.stock} left</span>
+      </div>
+      <button onclick="addToPartsCart(${p.id},'${safeName}',${p.price},${p.stock})"
+        style="width:100%;padding:0.38rem;border:none;border-radius:6px;background:var(--red);color:#fff;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;">
+        + Add
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function filterPartsProducts() {
+  const q   = document.getElementById('parts-search').value.toLowerCase();
+  const cat = document.getElementById('parts-cat').value;
+  const filtered = _partsAll.filter(p =>
+    (!cat || p.category === cat) &&
+    (!q   || p.name.toLowerCase().includes(q))
+  );
+  _renderPartsGrid(filtered);
+}
+
+function addToPartsCart(id, name, price, stock) {
+  const existing = _partsCart.find(i => i.id === id);
+  if (existing) {
+    if (existing.qty >= stock) { showToast(`Max stock reached for ${name}`, 'error'); return; }
+    existing.qty++;
+  } else {
+    _partsCart.push({id, name, price, stock, qty: 1});
+  }
+  _renderPartsCart();
+}
+
+function updatePartsQty(id, delta) {
+  const item = _partsCart.find(i => i.id === id);
+  if (!item) return;
+  item.qty = Math.max(1, Math.min(item.stock, item.qty + delta));
+  _renderPartsCart();
+}
+
+function removeFromPartsCart(id) {
+  _partsCart = _partsCart.filter(i => i.id !== id);
+  _renderPartsCart();
+}
+
+function clearPartsCart() {
+  _partsCart = [];
+  _renderPartsCart();
+}
+
+function _renderPartsCart() {
+  const wrap  = document.getElementById('parts-cart-items');
+  const empty = document.getElementById('parts-cart-empty');
+  if (!_partsCart.length) {
+    wrap.innerHTML = '<div id="parts-cart-empty" style="text-align:center;padding:1.25rem 0;color:var(--muted);font-size:0.82rem;">Cart is empty</div>';
+    document.getElementById('parts-total').textContent = '₱0.00';
+    return;
+  }
+  wrap.innerHTML = _partsCart.map(item => {
+    const sub = (item.price * item.qty).toLocaleString('en-PH', {minimumFractionDigits:2});
+    return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.8rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+        <div style="font-size:0.72rem;color:var(--muted);">₱${item.price.toLocaleString('en-PH',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.3rem;">
+        <button onclick="updatePartsQty(${item.id},-1)" style="width:22px;height:22px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#fff;cursor:pointer;font-size:0.85rem;line-height:1;">−</button>
+        <span style="font-size:0.82rem;color:#fff;min-width:18px;text-align:center;">${item.qty}</span>
+        <button onclick="updatePartsQty(${item.id},1)" style="width:22px;height:22px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#fff;cursor:pointer;font-size:0.85rem;line-height:1;">+</button>
+      </div>
+      <div style="font-size:0.78rem;color:var(--red);min-width:60px;text-align:right;">₱${sub}</div>
+      <button onclick="removeFromPartsCart(${item.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;padding:0 0.1rem;">✕</button>
+    </div>`;
+  }).join('');
+  const total = _partsCart.reduce((s, i) => s + i.price * i.qty, 0);
+  document.getElementById('parts-total').textContent = '₱' + total.toLocaleString('en-PH', {minimumFractionDigits:2});
+}
+
+function setPartsPayment(method) {
+  _partsPayment = method;
+  const cash  = document.getElementById('parts-btn-cash');
+  const gcash = document.getElementById('parts-btn-gcash');
+  if (method === 'cash') {
+    cash.style.cssText  = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid var(--red);background:var(--red);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:\'Syne\',sans-serif;';
+    gcash.style.cssText = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid rgba(255,255,255,0.12);background:transparent;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:\'Syne\',sans-serif;';
+  } else {
+    gcash.style.cssText = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid var(--blue);background:var(--blue);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:\'Syne\',sans-serif;';
+    cash.style.cssText  = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid rgba(255,255,255,0.12);background:transparent;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:\'Syne\',sans-serif;';
+  }
+}
+
+function processPartsTxn() {
+  if (!_partsCart.length) { showToast('Cart is empty.', 'error'); return; }
+  const btn = document.getElementById('parts-process-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+  const cartSnapshot = [..._partsCart.map(i => ({...i}))];
+  const total = cartSnapshot.reduce((s, i) => s + i.price * i.qty, 0);
+  const payload = {
+    cart: cartSnapshot.map(i => ({product_id: i.id, quantity: i.qty, unit_price: i.price})),
+    services: [],
+    payment_method: _partsPayment,
+  };
+  fetch('/pos/checkout', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.textContent = '✅ Process Transaction';
+    if (!data.success) { showToast(data.error || 'Transaction failed.', 'error'); return; }
+    _showPartsReceipt(data.order_id, cartSnapshot, total);
+    clearPartsCart();
+    loadPartsProducts(); // refresh stock
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.textContent = '✅ Process Transaction';
+    showToast('Network error. Please try again.', 'error');
+  });
+}
+
+function _showPartsReceipt(orderId, items, total) {
+  const customerName = document.getElementById('parts-customer').value.trim() || 'Walk-in Customer';
+  document.getElementById('receipt-order-ref').textContent  = orderId ? `Order ORD-${String(orderId).padStart(3,'0')}` : 'In-Store Sale';
+  document.getElementById('receipt-customer').textContent   = '👤 ' + customerName;
+  document.getElementById('receipt-total').textContent      = '₱' + total.toLocaleString('en-PH', {minimumFractionDigits:2});
+  document.getElementById('receipt-payment').textContent    = _partsPayment === 'cash' ? '💵 Paid via Cash' : '📱 Paid via GCash';
+  document.getElementById('receipt-items').innerHTML = items.map(i =>
+    `<div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+      <span>${i.name} × ${i.qty}</span>
+      <span>₱${(i.price*i.qty).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+    </div>`
+  ).join('');
+  const modal = document.getElementById('parts-receipt-modal');
+  modal.style.display = 'flex';
+}
+
+function newPartsTxn() {
+  document.getElementById('parts-receipt-modal').style.display = 'none';
+  document.getElementById('parts-customer').value = '';
+  setPartsPayment('cash');
+}
+
+// ── Transaction History ──
+let _txnAll = [];
+
+async function loadTxns() {
+  try {
+    const res = await fetch('/api/transactions');
+    _txnAll = await res.json();
+    _renderTxnStats(_txnAll);
+    filterTxns();
+  } catch(e) {
+    document.getElementById('txn-table-wrap').innerHTML =
+      '<div class="empty-state"><div class="ei">⚠️</div><p>Could not load transactions.</p></div>';
+  }
+}
+
+function _renderTxnStats(data) {
+  const total   = data.reduce((s, t) => s + t.total, 0);
+  const byType  = {};
+  data.forEach(t => { byType[t.type] = (byType[t.type] || 0) + 1; });
+  const colors  = {'Job Order':'blue','Sale':'green','Online':'orange'};
+  const icons   = {'Job Order':'🔩','Sale':'🛒','Online':'📦'};
+  let html = `<div class="stat-card blue"><div class="stat-icon">💰</div><div class="stat-value">₱${total.toLocaleString('en-PH',{minimumFractionDigits:2})}</div><div class="stat-label">Total Revenue</div></div>`;
+  ['Job Order','Sale','Online'].forEach(type => {
+    html += `<div class="stat-card ${colors[type]}"><div class="stat-icon">${icons[type]}</div><div class="stat-value">${byType[type]||0}</div><div class="stat-label">${type} Transactions</div></div>`;
+  });
+  document.getElementById('txn-stats').innerHTML = html;
+}
+
+function filterTxns() {
+  const type    = document.getElementById('txn-type').value;
+  const payment = document.getElementById('txn-payment').value;
+  const dateF   = document.getElementById('txn-date').value;
+  const search  = document.getElementById('txn-search').value.toLowerCase().trim();
+
+  const now   = new Date();
+  const today = now.toLocaleDateString('en-PH',{month:'short',day:'2-digit',year:'numeric'});
+
+  const filtered = _txnAll.filter(t => {
+    if (type    && t.type    !== type)    return false;
+    if (payment && t.payment !== payment) return false;
+    if (search  && !(`${t.trx_id} ${t.ref} ${t.customer} ${t.type}`).toLowerCase().includes(search)) return false;
+    if (dateF) {
+      const d = new Date(t.date);
+      if (dateF === 'today') {
+        if (d.toDateString() !== now.toDateString()) return false;
+      } else if (dateF === 'week') {
+        const wk = new Date(now); wk.setDate(now.getDate() - 7);
+        if (d < wk) return false;
+      } else if (dateF === 'month') {
+        if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+      }
+    }
+    return true;
+  });
+
+  document.getElementById('txn-count').textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
+
+  const typeColors = {
+    'Job Order': 'background:rgba(37,99,235,.2);color:#93c5fd;border:1px solid rgba(37,99,235,.3)',
+    'Sale':      'background:rgba(22,163,74,.2);color:#86efac;border:1px solid rgba(22,163,74,.3)',
+    'Online':    'background:rgba(217,119,6,.2);color:#fbbf24;border:1px solid rgba(217,119,6,.3)',
+  };
+  const payColors = {
+    'CASH':  'background:rgba(22,163,74,.15);color:#86efac;border:1px solid rgba(22,163,74,.3)',
+    'GCASH': 'background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3)',
+  };
+
+  if (!filtered.length) {
+    document.getElementById('txn-table-wrap').innerHTML =
+      '<div class="empty-state"><div class="ei">📋</div><p>No transactions found.</p></div>';
+    return;
+  }
+
+  const rows = filtered.map(t => `
+    <tr>
+      <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:#fff;">${t.trx_id}</td>
+      <td style="font-size:.78rem;color:var(--muted);">${t.ref}</td>
+      <td><span style="display:inline-block;padding:.2rem .55rem;border-radius:99px;font-family:'Syne',sans-serif;font-size:.63rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;${typeColors[t.type]||''}">${t.type}</span></td>
+      <td style="font-weight:600;color:#fff;">${t.customer}</td>
+      <td><span style="display:inline-block;padding:.2rem .55rem;border-radius:99px;font-family:'Syne',sans-serif;font-size:.63rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;${payColors[t.payment]||''}">${t.payment}</span></td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.03em;color:#fff;">₱${t.total.toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      <td style="font-size:.78rem;color:var(--muted);">${t.date}</td>
+    </tr>`).join('');
+
+  document.getElementById('txn-table-wrap').innerHTML = `
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead><tr>
+          <th>TRX ID</th><th>Ref</th><th>Type</th><th>Customer</th><th>Payment</th><th>Total</th><th>Date</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
 
 // ── Mobile sidebar ──
 function toggleAdminSidebar() {

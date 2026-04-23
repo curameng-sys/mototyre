@@ -527,10 +527,14 @@
       </div>
       <div id="product-controls">
         <div class="search-row">
-          <div class="search-box">
+          <div class="search-box" style="flex:1;">
             <i class="fas fa-search"></i>
             <input type="text" id="product-search" placeholder="Search products..." oninput="filterProducts()">
           </div>
+          <button onclick="syncStock(true)" id="walkin-refresh-btn" title="Refresh stock"
+            style="padding:.4rem .65rem;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;font-size:.8rem;flex-shrink:0;white-space:nowrap;">
+            ↻
+          </button>
         </div>
         <div class="cat-row" id="cat-row">
           <div class="cat-chip active" data-cat="all" onclick="selectCat(this)">All</div>
@@ -558,7 +562,7 @@
         </div>
         <div style="text-align:right; flex-shrink:0;">
           <div style="font-family:'Bebas Neue',sans-serif; font-size:1.05rem; color:#fff;">&#8369;{{ '%.2f'|format(p.price) }}</div>
-          <div style="font-size:0.68rem; {% if p.stock == 0 %}color:#fca5a5;{% elif p.stock <= 5 %}color:#fbbf24;{% else %}color:var(--muted);{% endif %}">
+          <div class="stock-text" style="font-size:0.68rem; {% if p.stock == 0 %}color:#fca5a5;{% elif p.stock <= 5 %}color:#fbbf24;{% else %}color:var(--muted);{% endif %}">
             {% if p.stock == 0 %}Out of stock{% elif p.stock <= 5 %}{{ p.stock }} left{% else %}{{ p.stock }} in stock{% endif %}
           </div>
         </div>
@@ -1088,6 +1092,7 @@ async function processTransaction() {
     const data = await res.json();
     if (data.success) {
       toast(`${data.ref} created! Redirecting to Job Orders...`, false, 'info');
+      syncStock();
       setTimeout(() => { window.location.href = '/job-orders?new=' + data.job_order_id; }, 1200);
     } else {
       toast(data.error || 'Failed to create job order', true);
@@ -1145,6 +1150,48 @@ function toast(msg, isError = false, type = null) {
 
 document.getElementById('confirm-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeConfirm(); });
 document.getElementById('history-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('history-modal'); });
+
+// ── Stock sync ──
+function applyStockUpdate(stockMap) {
+  document.querySelectorAll('.product-card[data-id]').forEach(card => {
+    const stock = stockMap[card.dataset.id];
+    if (stock === undefined) return;
+    card.dataset.stock = stock;
+    const el = card.querySelector('.stock-text');
+    if (!el) return;
+    if (stock === 0) {
+      el.textContent = 'Out of stock'; el.style.color = '#fca5a5';
+      card.classList.add('out-of-stock');
+      card.style.opacity = '.4'; card.style.pointerEvents = 'none'; card.style.cursor = 'not-allowed';
+    } else if (stock <= 5) {
+      el.textContent = stock + ' left'; el.style.color = '#fbbf24';
+      card.classList.remove('out-of-stock');
+      card.style.opacity = ''; card.style.pointerEvents = ''; card.style.cursor = 'pointer';
+    } else {
+      el.textContent = stock + ' in stock'; el.style.color = 'var(--muted)';
+      card.classList.remove('out-of-stock');
+      card.style.opacity = ''; card.style.pointerEvents = ''; card.style.cursor = 'pointer';
+    }
+  });
+}
+
+async function syncStock(manual = false) {
+  const btn = document.getElementById('walkin-refresh-btn');
+  if (manual && btn) btn.textContent = '…';
+  try {
+    const res  = await fetch('/api/products');
+    const data = await res.json();
+    const map  = {};
+    data.forEach(p => { map[p.id] = p.stock; });
+    applyStockUpdate(map);
+    if (manual && btn) { btn.textContent = '✓'; setTimeout(() => btn.textContent = '↻', 1000); }
+  } catch(e) {
+    if (manual && btn) btn.textContent = '↻';
+  }
+}
+
+syncStock();
+setInterval(syncStock, 60000);
 </script>
 </body>
 </html>

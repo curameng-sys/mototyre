@@ -595,6 +595,9 @@ def admin_dashboard():
 def update_booking_status(bid):
     booking    = Booking.query.get_or_404(bid)
     new_status = validate_booking_status(clean_str(request.form.get('status', ''), max_len=20))
+    if new_status == 'completed':
+        flash('Bookings can only be completed via the Billing page.', 'danger')
+        return redirect(url_for('admin_dashboard'))
     booking.status = new_status
     db.session.commit()
     messages = {
@@ -1116,43 +1119,62 @@ def update_job_order_status(jid):
 @login_required
 @require_admin_or_staff
 def payments():
-    status_filter = request.args.get('status', 'unpaid')
-    
-    if status_filter == 'unpaid':
-        # Unpaid Job Orders (in_progress, no payment yet)
-        unpaid_jos = JobOrder.query.filter(
+    tab = request.args.get('tab', 'pending')
+
+    if tab == 'pending':
+        paid_jo_ids = [r[0] for r in db.session.query(Payment.job_order_id).filter(Payment.job_order_id != None).all()]
+        pending_jos = JobOrder.query.filter(
             JobOrder.status == 'in_progress',
-            ~JobOrder.id.in_(db.session.query(Payment.job_order_id))
+            ~JobOrder.id.in_(paid_jo_ids) if paid_jo_ids else True
         ).order_by(JobOrder.created_at.desc()).all()
-        
-        # Confirmed customer bookings not yet paid (cash, unpaid)
-        unpaid_bookings = Booking.query.filter(
+
+        pending_bookings = Booking.query.filter(
             Booking.status.in_(['confirmed', 'in_progress', 'inprogress']),
-            Booking.payment_method == 'cash',
+            Booking.payment_method.in_(['cash', None]),
             Booking.walkin_customer_id == None,
             Booking.is_archived == False
         ).order_by(Booking.created_at.desc()).all()
-        
-    elif status_filter == 'paid':
-        unpaid_jos = []
-        unpaid_bookings = []
-        paid_jos = (JobOrder.query
-                   .join(Payment, Payment.job_order_id == JobOrder.id)
-                   .order_by(Payment.paid_at.desc()).all())
+
+        pending_orders = Order.query.filter(
+            Order.payment_method == 'cash',
+            Order.delivery_method == 'pickup',
+            Order.status.in_(['pending', 'awaiting_payment']),
+            Order.walkin_customer_id == None,
+            Order.is_archived == False
+        ).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
+
+        history_jos      = []
+        history_bookings = []
+        history_orders   = []
     else:
-        unpaid_jos = []
-        unpaid_bookings = []
-        paid_jos = JobOrder.query.order_by(JobOrder.created_at.desc()).all()
+        pending_jos      = []
+        pending_bookings = []
+        pending_orders   = []
 
-    if status_filter != 'paid':
-        paid_jos = []
+        history_jos = (JobOrder.query
+                       .join(Payment, Payment.job_order_id == JobOrder.id)
+                       .order_by(Payment.paid_at.desc()).limit(50).all())
 
-    return render_template('payments.html', 
-        job_orders=unpaid_jos,
-        unpaid_bookings=unpaid_bookings,
-        paid_jos=paid_jos,
-        all_services=Service.query.filter_by(is_active=True).all(),
-        status_filter=status_filter)
+        history_bookings = (Booking.query
+                            .filter(Booking.status == 'completed', Booking.total_amount > 0,
+                                    Booking.is_archived == False, Booking.walkin_customer_id == None)
+                            .order_by(Booking.created_at.desc()).limit(50).all())
+
+        history_orders = (Order.query
+                          .filter(Order.payment_method == 'cash', Order.delivery_method == 'pickup',
+                                  Order.status == 'completed')
+                          .filter(Order.items.any())
+                          .order_by(Order.created_at.desc()).limit(50).all())
+
+    return render_template('payments.html',
+        tab=tab,
+        pending_jos=pending_jos,
+        pending_bookings=pending_bookings,
+        pending_orders=pending_orders,
+        history_jos=history_jos,
+        history_bookings=history_bookings,
+        history_orders=history_orders,
+        all_services=Service.query.filter_by(is_active=True).all())
 
 
 @admin_app.route('/payments/process/<int:joid>', methods=['GET'])
@@ -1262,6 +1284,94 @@ def booking_payment_submit(bid):
 def payment_receipt(pid):
     pmt = Payment.query.get_or_404(pid)
     return render_template('payment_receipt.html', pmt=pmt, jo=pmt.job_order)
+
+
+@admin_app.route('/billing/order/<int:oid>/complete', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def billing_order_complete(oid):
+    order = Order.query.get_or_404(oid)
+    if order.status == 'completed':
+        return jsonify({'success': False, 'error': 'Order already completed'}), 400
+    if order.payment_method != 'cash' or order.delivery_method != 'pickup':
+        return jsonify({'success': False, 'error': 'Only cash pick-up orders can be billed here'}), 400
+    order.status = 'completed'
+    db.session.commit()
+    send_notification(order.user_id, 'Order Completed!',
+        f'Your order ORD-{order.id:03d} has been picked up and payment collected. Thank you!',
+        type='order', status='completed')
+    return jsonify({'success': True, 'ref': f'ORD-{order.id:03d}', 'amount': order.total_amount})
+
+
+@admin_app.route('/api/transactions')
+@login_required
+@require_admin_or_staff
+def api_transactions():
+    txns = []
+
+    paid_jos = JobOrder.query.join(Payment, Payment.job_order_id == JobOrder.id).all()
+    for jo in paid_jos:
+        txns.append({
+            '_dt': jo.payment.paid_at,
+            'ref': f'JO-{jo.id:03d}',
+            'type': 'Job Order',
+            'customer': jo.customer_name or 'Unknown',
+            'payment': (jo.payment.payment_method or 'cash').upper(),
+            'status': 'Paid',
+            'total': jo.total_amount,
+        })
+
+    sale_orders = Order.query.filter(
+        Order.walkin_customer_id != None, Order.status == 'completed'
+    ).filter(Order.items.any()).all()
+    for o in sale_orders:
+        wc = WalkInCustomer.query.get(o.walkin_customer_id) if o.walkin_customer_id else None
+        txns.append({
+            '_dt': o.created_at,
+            'ref': f'ORD-{o.id:03d}',
+            'type': 'Sale',
+            'customer': wc.name if wc else 'Walk-in',
+            'payment': (o.payment_method or 'cash').upper(),
+            'status': 'Completed',
+            'total': o.total_amount,
+        })
+
+    online_orders = Order.query.filter(
+        Order.walkin_customer_id == None, Order.status == 'completed'
+    ).filter(Order.items.any()).all()
+    for o in online_orders:
+        txns.append({
+            '_dt': o.created_at,
+            'ref': f'ORD-{o.id:03d}',
+            'type': 'Online',
+            'customer': o.customer.fullname if o.customer else 'Unknown',
+            'payment': (o.payment_method or 'cash').upper(),
+            'status': 'Completed',
+            'total': o.total_amount,
+        })
+
+    txns.sort(key=lambda x: x['_dt'], reverse=True)
+    result = []
+    for i, t in enumerate(txns):
+        result.append({
+            'trx_id': f'TRX{i+1:03d}',
+            'ref': t['ref'],
+            'type': t['type'],
+            'customer': t['customer'],
+            'payment': t['payment'],
+            'status': t['status'],
+            'total': t['total'],
+            'date': t['_dt'].strftime('%b %d, %Y'),
+        })
+    return jsonify(result)
+
+
+@admin_app.route('/api/products')
+@login_required
+@require_admin_or_staff
+def api_products():
+    products = Product.query.order_by(Product.category, Product.name).all()
+    return jsonify([{'id': p.id, 'name': p.name, 'price': p.price, 'stock': p.stock, 'category': p.category} for p in products])
 
 
 @admin_app.route('/pos/products')

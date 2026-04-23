@@ -164,9 +164,15 @@
         <button class="tab-btn" onclick="switchTab('services',this)"><i class="fas fa-wrench"></i> Services</button>
       </div>
       <div id="product-controls">
-        <div class="search-box">
-          <i class="fas fa-search"></i>
-          <input type="text" id="product-search" placeholder="Search products..." oninput="filterProducts()">
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <div class="search-box" style="flex:1;">
+            <i class="fas fa-search"></i>
+            <input type="text" id="product-search" placeholder="Search products..." oninput="filterProducts()">
+          </div>
+          <button onclick="syncStock(true)" id="quot-refresh-btn" title="Refresh stock"
+            style="padding:.4rem .6rem;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;font-size:.75rem;white-space:nowrap;flex-shrink:0;">
+            ↻
+          </button>
         </div>
       </div>
     </div>
@@ -183,7 +189,7 @@
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#fff;">₱{{ '%.2f'|format(p.price) }}</div>
-          <div style="font-size:.68rem;color:{% if p.stock == 0 %}#fca5a5{% elif p.stock <= 5 %}#fbbf24{% else %}var(--muted){% endif %};">
+          <div class="stock-text" style="font-size:.68rem;color:{% if p.stock == 0 %}#fca5a5{% elif p.stock <= 5 %}#fbbf24{% else %}var(--muted){% endif %};">
             {% if p.stock == 0 %}Out of stock{% elif p.stock <= 5 %}{{ p.stock }} left{% else %}{{ p.stock }} in stock{% endif %}
           </div>
         </div>
@@ -453,6 +459,7 @@
         document.getElementById('modal-total').textContent    = `₱${total.toFixed(2)}`;
         document.getElementById('success-modal').classList.add('open');
         items = [];
+        syncStock();
       } else {
         toast(data.error || 'Failed to save quotation.', 'error');
         btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-invoice-dollar"></i> Save Quotation';
@@ -480,6 +487,45 @@
   }
 
   document.getElementById('cust-name').addEventListener('input', validateForm);
+
+  // ── Stock sync ──
+  function applyStockUpdate(stockMap) {
+    document.querySelectorAll('.product-card[data-id]').forEach(card => {
+      const stock = stockMap[card.dataset.id];
+      if (stock === undefined) return;
+      card.dataset.stock = stock;
+      const el = card.querySelector('.stock-text');
+      if (!el) return;
+      if (stock === 0) {
+        el.textContent = 'Out of stock'; el.style.color = '#fca5a5';
+        card.style.opacity = '.4'; card.style.cursor = 'not-allowed'; card.style.pointerEvents = 'none';
+      } else if (stock <= 5) {
+        el.textContent = stock + ' left'; el.style.color = '#fbbf24';
+        card.style.opacity = ''; card.style.cursor = 'pointer'; card.style.pointerEvents = '';
+      } else {
+        el.textContent = stock + ' in stock'; el.style.color = 'var(--muted)';
+        card.style.opacity = ''; card.style.cursor = 'pointer'; card.style.pointerEvents = '';
+      }
+    });
+  }
+
+  async function syncStock(manual = false) {
+    const btn = document.getElementById('quot-refresh-btn');
+    if (manual && btn) btn.textContent = '…';
+    try {
+      const res  = await fetch('/api/products');
+      const data = await res.json();
+      const map  = {};
+      data.forEach(p => { map[p.id] = p.stock; });
+      applyStockUpdate(map);
+      if (manual && btn) { btn.textContent = '✓'; setTimeout(() => btn.textContent = '↻', 1000); }
+    } catch(e) {
+      if (manual && btn) btn.textContent = '↻';
+    }
+  }
+
+  syncStock();
+  setInterval(syncStock, 60000);
 
   // Initial render
   renderItems();
