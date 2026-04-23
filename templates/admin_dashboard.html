@@ -1044,8 +1044,6 @@
         <button onclick="loadTxns()" style="padding:.55rem 1rem;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(255,255,255,.05);color:#fff;cursor:pointer;font-size:.875rem;font-family:'DM Sans',sans-serif;">↻ Refresh</button>
       </div>
 
-      <!-- Summary -->
-      <div class="stats-grid" id="txn-stats" style="margin-bottom:1.5rem;"></div>
 
       <!-- Table -->
       <div class="card">
@@ -2422,7 +2420,6 @@ async function loadTxns() {
   try {
     const res = await fetch('/api/transactions');
     _txnAll = await res.json();
-    _renderTxnStats(_txnAll);
     filterTxns();
   } catch(e) {
     document.getElementById('txn-table-wrap').innerHTML =

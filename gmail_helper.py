@@ -26,7 +26,7 @@ def _get_service():
         creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_FILE, GMAIL_SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request(timeout=15))
+            creds.refresh(Request())
         else:
             flow  = InstalledAppFlow.from_client_secrets_file(GMAIL_CREDS_FILE, GMAIL_SCOPES)
             creds = flow.run_local_server(port=0)

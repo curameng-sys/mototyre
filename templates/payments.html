@@ -350,8 +350,12 @@
           </td>
           <td><span class="amount">₱{{ '%.2f'|format(b.total_amount) }}</span></td>
           <td><span class="badge b-{{ b.payment_method }}">{{ b.payment_method|upper }}</span></td>
-          <td class="date-cell">{{ b.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ b.created_at.strftime('%I:%M %p') }}</span></td>
-          <td></td>
+         <td class="date-cell">{{ b.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ b.created_at.strftime('%I:%M %p') }}</span></td>
+          <td>
+            <button class="btn-receipt" onclick="printBkgReceipt('BKG-{{ '%03d'|format(b.id) }}', '{{ (b.contact_name or b.customer.fullname)|e }}', '{{ b.customer.phone }}', '{{ b.service }}', {{ b.total_amount }}, '{{ b.payment_method }}', '{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}')">
+              🖨️ Receipt
+            </button>
+          </td>
         </tr>
         {% endfor %}
         {% for o in history_orders %}
@@ -364,7 +368,11 @@
           <td><span class="amount">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
           <td><span class="badge b-cash">CASH</span></td>
           <td class="date-cell">{{ o.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o.created_at.strftime('%I:%M %p') }}</span></td>
-          <td></td>
+          <td>
+            <button class="btn-receipt" onclick="printOrdReceipt('ORD-{{ '%03d'|format(o.id) }}', '{{ o.customer.fullname|e }}', '{{ o.customer.phone }}', {{ o.total_amount }}, '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}])">
+              🖨️ Receipt
+            </button>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -575,6 +583,79 @@ function filterHistory() {
   document.querySelectorAll('.hist-row').forEach(r => {
     r.style.display = !q || r.dataset.s.includes(q) ? '' : 'none';
   });
+}
+
+function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
+  const w = window.open('', '_blank', 'width=400,height=600');
+  w.document.write(`<!DOCTYPE html><html><head><title>Receipt ${ref}</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:20px;max-width:320px;margin:0 auto;}
+    .logo{text-align:center;font-size:22px;font-weight:900;letter-spacing:3px;margin-bottom:4px;}
+    .logo span{color:#ff0f0f;}
+    .addr{text-align:center;font-size:10px;color:#666;margin-bottom:12px;}
+    .title{text-align:center;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;border-top:1px dashed #ccc;border-bottom:1px dashed #ccc;padding:6px 0;}
+    .row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
+    .row span:first-child{color:#666;}
+    .row span:last-child{font-weight:600;}
+    .divider{border:none;border-top:1px dashed #ccc;margin:10px 0;}
+    .total{display:flex;justify-content:space-between;font-size:14px;font-weight:900;margin-top:8px;}
+    .footer{text-align:center;font-size:10px;color:#666;margin-top:14px;}
+    @media print{button{display:none;}}
+  </style></head><body>
+  <div class="logo">MOTO<span>TYRE</span></div>
+  <div class="addr">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>0915 269 8366 · Mon–Sat 8AM–7PM</div>
+  <div class="title">Official Receipt — Service</div>
+  <div class="row"><span>Reference</span><span>${ref}</span></div>
+  <div class="row"><span>Date</span><span>${date}</span></div>
+  <div class="row"><span>Customer</span><span>${customer}</span></div>
+  <div class="row"><span>Phone</span><span>${phone}</span></div>
+  <div class="row"><span>Payment</span><span>${method.toUpperCase()}</span></div>
+  <hr class="divider">
+  <div class="row"><span>Service</span><span>${service}</span></div>
+  <hr class="divider">
+  <div class="total"><span>TOTAL</span><span>₱${parseFloat(amount).toFixed(2)}</span></div>
+  <div class="footer">Thank you for choosing MotoTyre! 🏍️</div>
+  <br><button onclick="window.print()" style="width:100%;padding:8px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;">🖨️ Print</button>
+  </body></html>`);
+  w.document.close();
+}
+
+function printOrdReceipt(ref, customer, phone, amount, method, date, items) {
+  const itemRows = items.map(i =>
+    `<div class="row"><span>${i.name} ×${i.qty}</span><span>₱${(i.price * i.qty).toFixed(2)}</span></div>`
+  ).join('');
+  const w = window.open('', '_blank', 'width=400,height=600');
+  w.document.write(`<!DOCTYPE html><html><head><title>Receipt ${ref}</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:20px;max-width:320px;margin:0 auto;}
+    .logo{text-align:center;font-size:22px;font-weight:900;letter-spacing:3px;margin-bottom:4px;}
+    .logo span{color:#ff0f0f;}
+    .addr{text-align:center;font-size:10px;color:#666;margin-bottom:12px;}
+    .title{text-align:center;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;border-top:1px dashed #ccc;border-bottom:1px dashed #ccc;padding:6px 0;}
+    .row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
+    .row span:first-child{color:#666;}
+    .row span:last-child{font-weight:600;}
+    .divider{border:none;border-top:1px dashed #ccc;margin:10px 0;}
+    .total{display:flex;justify-content:space-between;font-size:14px;font-weight:900;margin-top:8px;}
+    .footer{text-align:center;font-size:10px;color:#666;margin-top:14px;}
+    @media print{button{display:none;}}
+  </style></head><body>
+  <div class="logo">MOTO<span>TYRE</span></div>
+  <div class="addr">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>0915 269 8366 · Mon–Sat 8AM–7PM</div>
+  <div class="title">Official Receipt — Order</div>
+  <div class="row"><span>Reference</span><span>${ref}</span></div>
+  <div class="row"><span>Date</span><span>${date}</span></div>
+  <div class="row"><span>Customer</span><span>${customer}</span></div>
+  <div class="row"><span>Phone</span><span>${phone}</span></div>
+  <div class="row"><span>Payment</span><span>${method.toUpperCase()}</span></div>
+  <hr class="divider">
+  ${itemRows}
+  <hr class="divider">
+  <div class="total"><span>TOTAL</span><span>₱${parseFloat(amount).toFixed(2)}</span></div>
+  <div class="footer">Thank you for choosing MotoTyre! 🏍️</div>
+  <br><button onclick="window.print()" style="width:100%;padding:8px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;">🖨️ Print</button>
+  </body></html>`);
+  w.document.close();
 }
 </script>
 </body>

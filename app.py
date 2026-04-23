@@ -34,6 +34,11 @@ app = Flask(__name__)
 app.config.update(
     SECRET_KEY='mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4',
     SESSION_COOKIE_NAME='mototyre_customer_session',
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_DOMAIN=None,
+    REMEMBER_COOKIE_SAMESITE='None',
+    REMEMBER_COOKIE_SECURE=True,
     SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:@localhost:3306/mototyre",
     SQLALCHEMY_ENGINE_OPTIONS={},
     SQLALCHEMY_TRACK_MODIFICATIONS=False
@@ -1134,9 +1139,9 @@ def pay_booking(bid):
 
 @app.route('/payment/success')
 def payment_success():
-    order_id    = request.args.get('order_id')
-    booking_id  = request.args.get('booking_id')
-    checkout_id = request.args.get('checkout_id')
+    order_id    = request.args.get('order_id', '').strip()
+    booking_id  = request.args.get('booking_id', '').strip()
+    checkout_id = request.args.get('checkout_id', '').strip()
     gcash_email = None
 
     if checkout_id:
@@ -1149,7 +1154,7 @@ def payment_success():
         except Exception as e:
             print(f"[paymongo] could not fetch checkout session: {e}")
 
-    if order_id:
+    if order_id.isdigit():
         try:
             order = Order.query.get(int(order_id))
             if order and order.status == 'awaiting_payment':
@@ -1164,14 +1169,14 @@ def payment_success():
         except Exception as e:
             print(f"[payment/success] order error: {e}")
 
-    if booking_id:
+    if booking_id.isdigit():
         try:
             booking = Booking.query.get(int(booking_id))
             if booking and booking.status == 'pending':
                 booking.status = 'confirmed'
                 db.session.commit()
-        except:
-            pass
+        except Exception as e:
+            print(f"[payment/success] booking error: {e}")
 
     return redirect('http://127.0.0.1:5000/customer/dashboard')
 
@@ -1183,6 +1188,9 @@ def payment_failed():
     if order_id:
         try:
             order = Order.query.get(int(order_id))
+            if order and order.status == 'awaiting_payment':
+                order.status = 'confirmed'
+                db.session.commit()
             if order and order.status == 'awaiting_payment':
                 Notification.query.filter(
                     Notification.user_id == order.user_id,

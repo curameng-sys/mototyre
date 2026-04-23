@@ -1284,6 +1284,7 @@
 
 <script>
   function showSection(name, el) {
+    if (name === 'book') loadMechanics();
     document.querySelectorAll('.c-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-links a, .mobile-nav-menu a').forEach(a => a.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
@@ -2634,6 +2635,44 @@ function addToCartFromInfo() {
   showCartToast('🛒 ' + currentProductInfo.name + ' added to cart!');
   closeModal('modal-product-info');
 }
+
+// Sa pinakadulo ng <script>, pagkatapos ng renderCalendar();
+
+// ── MECHANICS LOADER ──
+async function loadMechanics() {
+  try {
+    const res = await fetch('/api/mechanics');
+    const mechanics = await res.json();
+    const sel = document.getElementById('mechanic-select');
+    sel.innerHTML = '<option value="">-- No preference --</option>';
+    mechanics.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name + ' — ' + m.specialization;
+      opt.dataset.spec = m.specialization;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    console.error('Failed to load mechanics', e);
+  }
+}
+
+// Show mechanic info when a mechanic is selected
+document.getElementById('mechanic-select').addEventListener('change', function() {
+  const infoDiv = document.getElementById('mechanic-info');
+  const specSpan = document.getElementById('mechanic-spec-display');
+  const sel = this;
+  if (sel.value && sel.selectedOptions[0]) {
+    const spec = sel.selectedOptions[0].dataset.spec || '—';
+    specSpan.textContent = spec;
+    infoDiv.style.display = 'block';
+  } else {
+    infoDiv.style.display = 'none';
+  }
+});
+
+// Load mechanics on page load
+loadMechanics();
 
 </script>
 
