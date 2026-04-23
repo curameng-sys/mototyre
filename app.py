@@ -69,7 +69,7 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
                     }
                 ],
                 "payment_method_types": ["gcash"],
-                "success_url": f"{BASE_URL}/payment/success?order_id={order_id or ''}&booking_id={booking_id or ''}",
+                "success_url": f"{BASE_URL}/payment/success?order_id={order_id or ''}&booking_id={booking_id or ''}&checkout_id={{CHECKOUT_SESSION_ID}}",
                 "cancel_url": f"{BASE_URL}/payment/failed?order_id={order_id or ''}&booking_id={booking_id or ''}"
             }
         }
@@ -135,13 +135,19 @@ def send_otp_email(email, otp, purpose="verify"):
     _send_gmail(email, subject, html)
 
 
-def send_order_receipt_email(order):
+def send_order_receipt_email(order, override_email=None):  # ADD override_email=None
     try:
         if order.receipt_sent:
-            return  # already sent, skip
-        user = User.query.get(order.user_id)
-        if not user or not user.email:
             return
+        user = User.query.get(order.user_id)
+        if not user:
+            return
+
+        # Use PayMongo email if provided, otherwise fall back to registered email
+        recipient_email = override_email or user.email
+        if not recipient_email:
+            return
+
         items_rows = ""
         for item in order.items:
             product_name = item.product.name if item.product else "Product"
@@ -256,7 +262,7 @@ def send_order_receipt_email(order):
           </div>
         </div>"""
 
-        _send_gmail(user.email, f"Your MotoTyre Receipt — {order_num}", html)
+        _send_gmail(recipient_email, f"Your MotoTyre Receipt — {order_num}", html)
         order.receipt_sent = True
         db.session.commit()
         print(f"[receipt email] sent to {user.email} for {order_num}")
@@ -1113,6 +1119,36 @@ def pay_booking(bid):
 def payment_success():
     order_id = request.args.get('order_id')
     booking_id = request.args.get('booking_id')
+    checkout_id = request.args.get('checkout_id')
+    gcash_email = None
+
+
+    if checkout_id:
+        try:
+            headers = {
+                "Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"
+            }
+            res = requests.get(
+                f"{PAYMONGO_API_URL}/checkout_sessions/{checkout_id}",
+                headers=headers
+            )
+            
+            if res.status_code == 200:
+                data = res.json()
+                attrs = data['data']['attributes']
+                print(f"[paymongo] full attributes keys: {list(attrs.keys())}")
+                print(f"[paymongo] billing: {attrs.get('billing')}")
+                print(f"[paymongo] email: {attrs.get('email')}")
+                gcash_email = (
+                    attrs.get('email') or
+                    (attrs.get('billing') or {}).get('email')
+                )
+                print(f"[paymongo] gcash_email resolved: {gcash_email}")
+            else:
+                print(f"[paymongo] fetch failed: {res.status_code} {res.text}")
+        except Exception as e:
+            print(f"[paymongo] could not fetch checkout session: {e}")
+    
     if order_id:
         try:
             order = Order.query.get(int(order_id))
@@ -1125,11 +1161,11 @@ def payment_success():
                     f'Your payment for Order ORD-{order.id:03d} ({items_desc}) worth ₱{order.total_amount:.2f} has been confirmed.',
                     type='order', status='confirmed'
                 )
-            # send receipt regardless — receipt_sent flag prevents duplicates
             if order and order.status == 'confirmed':
-                send_order_receipt_email(order)
+                send_order_receipt_email(order, override_email=gcash_email)  # PASS EMAIL
         except Exception as e:
             print(f"[payment/success] order error: {e}")
+            
     if booking_id:
         try:
             booking = Booking.query.get(int(booking_id))
