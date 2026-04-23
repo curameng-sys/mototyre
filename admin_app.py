@@ -84,7 +84,7 @@ def _get_gmail_service():
         creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_FILE, GMAIL_SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request(timeout=15))
+            creds.refresh(Request())
         else:
             flow  = InstalledAppFlow.from_client_secrets_file(GMAIL_CREDS_FILE, GMAIL_SCOPES)
             creds = flow.run_local_server(port=0)
@@ -574,10 +574,6 @@ def admin_dashboard():
         total_orders=Order.query.count(),
         total_users=User.query.count(),
         total_revenue=f'{_total_rev:,.2f}',
-        _order_rev   = db.session.query(func.sum(Order.total_amount)).filter(Order.status.notin_(["cancelled", "awaiting_payment"])).scalar() or 0
-        _booking_rev = db.session.query(func.sum(Booking.total_amount)).filter(Booking.status == "completed").scalar() or 0
-        _jo_rev      = db.session.query(func.sum(Payment.amount)).scalar() or 0
-        _total_rev   = _order_rev + _booking_rev + _jo_rev
         booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).group_by(Booking.status).all()),
         order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
         top_services=db.session.query(Booking.service, func.count(Booking.id).label('count')).group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all(),
