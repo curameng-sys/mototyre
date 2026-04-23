@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>E-Receipt – JO-{{ '%03d'|format(jo.id) }} – MotoTyre</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:#f3f4f6;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem;}
+
+    /* TOOLBAR — hidden on print */
+    .toolbar{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:480px;margin-bottom:1.25rem;}
+    .toolbar-title{font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;}
+    .toolbar-btns{display:flex;gap:.5rem;}
+    .btn-toolbar{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .85rem;border-radius:8px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:none;transition:all .15s;text-decoration:none;}
+    .btn-pdf{background:#16a34a;color:#fff;}
+    .btn-pdf:hover{background:#15803d;color:#fff;}
+    .btn-back{background:#e5e7eb;color:#374151;}
+    .btn-back:hover{background:#d1d5db;color:#111;}
+
+    /* RECEIPT CARD */
+    .receipt{background:#fff;width:100%;max-width:420px;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,.12);overflow:hidden;}
+
+    /* HEADER */
+    .rec-header{background:#0c0d0f;padding:1.75rem 1.5rem 1.5rem;text-align:center;}
+    .rec-logo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.06em;color:#fff;}
+    .rec-logo span{color:#ff0f0f;}
+    .rec-addr{font-size:.72rem;color:#9ca3af;margin-top:.35rem;line-height:1.5;}
+    .rec-tag{display:inline-block;margin-top:.75rem;background:rgba(22,163,74,.2);color:#86efac;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .65rem;border-radius:4px;border:1px solid rgba(22,163,74,.3);}
+
+    /* JO REF BAND */
+    .rec-ref-band{background:#16a34a;padding:.65rem 1.5rem;display:flex;align-items:center;justify-content:space-between;}
+    .rec-ref{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.06em;color:#fff;}
+    .rec-date{font-size:.72rem;color:rgba(255,255,255,.8);text-align:right;line-height:1.4;}
+
+    /* BODY */
+    .rec-body{padding:1.25rem 1.5rem;}
+    .rec-section{margin-bottom:1.1rem;}
+    .rec-section-label{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:.6rem;}
+    .rec-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem 1rem;}
+    .rec-info-item{}
+    .rec-info-key{font-size:.7rem;color:#9ca3af;margin-bottom:.1rem;}
+    .rec-info-val{font-size:.88rem;color:#111;font-weight:600;}
+
+    /* ITEMS */
+    .rec-items{}
+    .rec-item{display:flex;align-items:flex-start;justify-content:space-between;padding:.55rem 0;border-bottom:1px dashed #e5e7eb;gap:.75rem;}
+    .rec-item:last-child{border-bottom:none;}
+    .rec-item-left{flex:1;}
+    .rec-item-name{font-size:.85rem;color:#111;font-weight:500;}
+    .rec-item-type{font-size:.68rem;color:#9ca3af;margin-top:.1rem;}
+    .rec-item-right{text-align:right;flex-shrink:0;}
+    .rec-item-qty{font-size:.7rem;color:#9ca3af;}
+    .rec-item-price{font-size:.88rem;color:#111;font-weight:700;}
+
+    /* TOTAL */
+    .rec-total-band{background:#0c0d0f;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;}
+    .rec-total-label{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;}
+    .rec-total-amt{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;color:#fff;}
+
+    /* PAYMENT METHOD */
+    .rec-method{padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;background:#f9fafb;border-top:1px solid #e5e7eb;}
+    .rec-method-label{font-size:.75rem;color:#6b7280;}
+    .rec-method-val{display:inline-flex;align-items:center;gap:.35rem;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;}
+    .rec-method-val.cash{color:#16a34a;}
+    .rec-method-val.gcash{color:#2563eb;}
+    .rec-ref-no{font-size:.72rem;color:#6b7280;margin-top:.1rem;text-align:right;}
+
+    /* FOOTER */
+    .rec-footer{padding:1.1rem 1.5rem;text-align:center;border-top:1px solid #f3f4f6;}
+    .rec-footer-msg{font-size:.78rem;color:#6b7280;line-height:1.6;}
+    .rec-footer-thank{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:#111;margin-top:.5rem;}
+    .rec-footer-id{font-size:.65rem;color:#d1d5db;margin-top:.5rem;}
+
+    /* PRINT */
+    @media print {
+      body{background:#fff;padding:0;}
+      .toolbar{display:none !important;}
+      .receipt{box-shadow:none;border-radius:0;max-width:100%;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="toolbar-title">E-Receipt Preview</span>
+  <div class="toolbar-btns">
+    <button class="btn-toolbar btn-pdf" onclick="window.print()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Save as PDF
+    </button>
+    <a href="{{ url_for('payments') }}" class="btn-toolbar btn-back">← Back</a>
+  </div>
+</div>
+
+<div class="receipt">
+
+  <div class="rec-header">
+    <div class="rec-logo">MOTO<span>TYRE</span></div>
+    <div class="rec-addr">Saranay Rd, Brgy. 171 Bagumbong, North Caloocan City</div>
+    <span class="rec-tag">Official E-Receipt</span>
+  </div>
+
+  <div class="rec-ref-band">
+    <span class="rec-ref">JO-{{ '%03d'|format(jo.id) }}</span>
+    <div class="rec-date">
+      {{ pmt.paid_at.strftime('%B %d, %Y') }}<br>
+      {{ pmt.paid_at.strftime('%I:%M %p') }}
+    </div>
+  </div>
+
+  <div class="rec-body">
+
+    <!-- CUSTOMER INFO -->
+    <div class="rec-section">
+      <div class="rec-section-label">Customer Details</div>
+      <div class="rec-info-grid">
+        <div class="rec-info-item">
+          <div class="rec-info-key">Name</div>
+          <div class="rec-info-val">{{ jo.customer_name }}</div>
+        </div>
+        <div class="rec-info-item">
+          <div class="rec-info-key">Phone</div>
+          <div class="rec-info-val">{{ jo.customer_phone or '—' }}</div>
+        </div>
+        {% if jo.motorcycle_model or jo.motorcycle_plate %}
+        <div class="rec-info-item">
+          <div class="rec-info-key">Motorcycle</div>
+          <div class="rec-info-val">{{ jo.motorcycle_model or '—' }}</div>
+        </div>
+        <div class="rec-info-item">
+          <div class="rec-info-key">Plate No.</div>
+          <div class="rec-info-val">{{ jo.motorcycle_plate or '—' }}</div>
+        </div>
+        {% endif %}
+        {% if jo.mechanic_name %}
+        <div class="rec-info-item">
+          <div class="rec-info-key">Mechanic</div>
+          <div class="rec-info-val">{{ jo.mechanic_name }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="rec-section">
+      <div class="rec-section-label">Services & Parts</div>
+      <div class="rec-items">
+        {% for item in jo.items %}
+        <div class="rec-item">
+          <div class="rec-item-left">
+            <div class="rec-item-name">{{ item.name }}</div>
+            <div class="rec-item-type">{{ 'Product' if item.item_type == 'product' else 'Service' }}</div>
+          </div>
+          <div class="rec-item-right">
+            <div class="rec-item-qty">x{{ item.quantity }}</div>
+            <div class="rec-item-price">₱{{ '%.2f'|format(item.unit_price * item.quantity) }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <div class="rec-total-band">
+    <span class="rec-total-label">Total Paid</span>
+    <span class="rec-total-amt">₱{{ '%.2f'|format(pmt.amount) }}</span>
+  </div>
+
+  <div class="rec-method">
+    <span class="rec-method-label">Payment Method</span>
+    <div style="text-align:right;">
+      <div class="rec-method-val {{ pmt.payment_method }}">
+        {% if pmt.payment_method == 'cash' %}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+        Cash
+        {% else %}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        GCash
+        {% endif %}
+      </div>
+      {% if pmt.reference_no %}
+      <div class="rec-ref-no">Ref: {{ pmt.reference_no }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="rec-footer">
+    <div class="rec-footer-msg">
+      This is your official receipt from MotoTyre.<br>
+      Please keep this for your records.
+    </div>
+    <div class="rec-footer-thank">Thank you for trusting MotoTyre! 🏍️</div>
+    <div class="rec-footer-id">Receipt #{{ '%06d'|format(pmt.id) }} · JO-{{ '%03d'|format(jo.id) }}</div>
+  </div>
+
+</div>
+
+</body>
+</html>

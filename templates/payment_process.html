@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Collect Payment – MotoTyre Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+    :root{--ink:#0c0d0f;--panel:#111215;--card:#1a1d23;--red:#ff0f0f;--blue:#2563eb;--green:#16a34a;--gcash:#007dff;--muted:#6b7280;--border:rgba(255,255,255,0.07);--text:#e5e7eb;--orange:#f59e0b;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);}
+
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;height:56px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+    .topbar-brand{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.06em;color:#fff;display:flex;align-items:center;gap:.6rem;}
+    .topbar-brand span{color:var(--red);}
+    .btn-back{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem .9rem;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:all .15s;}
+    .btn-back:hover{border-color:var(--red);color:#fff;background:rgba(255,15,15,.08);}
+
+    .main{padding:2rem;max-width:800px;margin:0 auto;}
+
+    /* JO SUMMARY CARD */
+    .jo-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1.5rem;}
+    .jo-card-head{padding:1rem 1.25rem;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .jo-ref{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.04em;color:#fff;}
+    .jo-status{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);padding:.2rem .6rem;border-radius:99px;}
+    .jo-body{padding:1.1rem 1.25rem;}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem 1.5rem;margin-bottom:1rem;}
+    .info-item{}
+    .info-label{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.15rem;}
+    .info-value{font-size:.88rem;color:#fff;font-weight:500;}
+    .items-list{border-top:1px solid var(--border);padding-top:.85rem;}
+    .items-label{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
+    .item-row{display:flex;align-items:center;justify-content:space-between;padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.83rem;}
+    .item-row:last-child{border-bottom:none;}
+    .item-icon{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.6rem;flex-shrink:0;margin-right:.5rem;}
+    .item-icon.product{background:rgba(255,15,15,.12);color:var(--red);}
+    .item-icon.service{background:rgba(37,99,235,.12);color:#93c5fd;}
+    .item-name{flex:1;color:#e5e7eb;}
+    .item-qty{color:var(--muted);font-size:.75rem;margin:0 .5rem;}
+    .item-price{font-family:'Syne',sans-serif;font-weight:700;color:#fff;}
+    .total-row{display:flex;justify-content:space-between;align-items:center;padding-top:.85rem;border-top:1px dashed var(--border);margin-top:.5rem;}
+    .total-label{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+    .total-amount{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;color:var(--red);}
+
+    /* PAYMENT FORM */
+    .pay-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;}
+    .pay-card-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.04em;color:#fff;margin-bottom:1.1rem;display:flex;align-items:center;gap:.5rem;}
+
+    .method-toggle{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1.25rem;}
+    .method-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;padding:1rem;border-radius:10px;background:rgba(255,255,255,.04);border:2px solid var(--border);cursor:pointer;transition:all .15s;}
+    .method-btn i{font-size:1.4rem;color:var(--muted);}
+    .method-btn span{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+    .method-btn.active-cash{background:rgba(22,163,74,.1);border-color:rgba(22,163,74,.5);}
+    .method-btn.active-cash i,.method-btn.active-cash span{color:#86efac;}
+    .method-btn.active-gcash{background:rgba(0,125,255,.1);border-color:rgba(0,125,255,.5);}
+    .method-btn.active-gcash i,.method-btn.active-gcash span{color:#93c5fd;}
+    .method-btn:not(.active-cash):not(.active-gcash):hover{border-color:rgba(255,255,255,.2);}
+    .method-btn:not(.active-cash):not(.active-gcash):hover i,
+    .method-btn:not(.active-cash):not(.active-gcash):hover span{color:#fff;}
+
+    .field-wrap{margin-bottom:1rem;}
+    .field-label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.4rem;}
+    .field-inp{width:100%;padding:.55rem .8rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .15s;}
+    .field-inp:focus{border-color:#86efac;}
+    .field-inp::placeholder{color:#374151;}
+
+    .gcash-box{display:none;}
+    .gcash-box.show{display:block;}
+
+    .btn-pay{width:100%;padding:.9rem;background:var(--green);border:none;border-radius:10px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.06em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+    .btn-pay:hover{background:#15803d;transform:translateY(-1px);box-shadow:0 4px 18px rgba(22,163,74,.35);}
+    .btn-pay:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
+
+    /* SUCCESS MODAL */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;width:420px;max-width:95vw;animation:fadeUp .2s ease both;overflow:hidden;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    .modal-head{padding:1.25rem 1.5rem;display:flex;align-items:center;gap:.6rem;background:rgba(22,163,74,.1);border-bottom:1px solid var(--border);}
+    .modal-head h3{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.05em;color:#fff;margin:0;}
+    .modal-body{padding:1.25rem 1.5rem;}
+    .modal-foot{padding:.75rem 1.5rem 1.25rem;display:flex;gap:.5rem;}
+    .receipt-row{display:flex;justify-content:space-between;font-size:.83rem;color:#d1d5db;margin-bottom:.4rem;}
+    .receipt-row.bold{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;color:#fff;}
+    .receipt-divider{border:none;border-top:1px dashed var(--border);margin:.75rem 0;}
+    .btn-new{flex:1;padding:.6rem;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.4rem;transition:background .15s;}
+    .btn-new:hover{background:#15803d;color:#fff;}
+    .btn-close{flex:1;padding:.6rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+    .btn-close:hover{border-color:rgba(255,255,255,.2);}
+
+    /* PRINT RECEIPT — hidden on screen */
+    #print-receipt{display:none;}
+
+    @media print {
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      body > *:not(#print-receipt){display:none !important;}
+      #print-receipt{
+        display:block !important;
+        font-family:'DM Sans',Arial,sans-serif;
+        color:#000;background:#fff;
+        width:80mm;margin:0 auto;padding:6mm;
+        font-size:11pt;
+      }
+      .pr-shop{text-align:center;margin-bottom:4mm;}
+      .pr-shop-name{font-size:18pt;font-weight:900;letter-spacing:.04em;line-height:1.1;}
+      .pr-shop-addr{font-size:8pt;color:#555;margin-top:1mm;line-height:1.4;}
+      .pr-divider{border:none;border-top:1px dashed #aaa;margin:3mm 0;}
+      .pr-title{text-align:center;font-size:10pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3mm;}
+      .pr-row{display:flex;justify-content:space-between;font-size:10pt;margin-bottom:1.5mm;}
+      .pr-row span:first-child{color:#444;}
+      .pr-row span:last-child{font-weight:600;color:#000;text-align:right;}
+      .pr-items-label{font-size:8pt;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#888;margin:2mm 0 1mm;}
+      .pr-item{display:flex;justify-content:space-between;font-size:9.5pt;margin-bottom:1mm;padding-bottom:1mm;border-bottom:1px dotted #ddd;}
+      .pr-item:last-child{border-bottom:none;}
+      .pr-item-name{flex:1;padding-right:3mm;}
+      .pr-item-qty{color:#666;margin-right:3mm;}
+      .pr-total{display:flex;justify-content:space-between;font-size:13pt;font-weight:900;margin-top:2mm;padding-top:2mm;border-top:2px solid #000;}
+      .pr-footer{text-align:center;font-size:8.5pt;color:#555;margin-top:4mm;line-height:1.5;}
+      .pr-thank{font-size:10pt;font-weight:700;text-align:center;margin-top:3mm;}
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">MOTO<span>TYRE</span></div>
+  <a href="{{ url_for('payments') }}" class="btn-back"><i class="fas fa-arrow-left"></i> Back</a>
+</header>
+
+<div class="main">
+
+  <!-- JO SUMMARY -->
+  <div class="jo-card">
+    <div class="jo-card-head">
+      <span class="jo-ref">JO-{{ '%03d'|format(jo.id) }}</span>
+      <span class="jo-status"><i class="fas fa-wrench"></i> In Progress</span>
+    </div>
+    <div class="jo-body">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Customer</div>
+          <div class="info-value">{{ jo.customer_name }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Phone</div>
+          <div class="info-value">{{ jo.customer_phone or '—' }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Motorcycle</div>
+          <div class="info-value">{{ [jo.motorcycle_model, jo.motorcycle_plate]|select|join(' · ') or '—' }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Mechanic</div>
+          <div class="info-value">{{ jo.mechanic_name or '—' }}</div>
+        </div>
+      </div>
+
+      <div class="items-list">
+        <div class="items-label">Items</div>
+        {% for item in jo.items %}
+        <div class="item-row">
+          <div class="item-icon {{ item.item_type }}">
+            <i class="fas {{ 'fa-box' if item.item_type == 'product' else 'fa-wrench' }}"></i>
+          </div>
+          <span class="item-name">{{ item.name }}</span>
+          <span class="item-qty">x{{ item.quantity }}</span>
+          <span class="item-price">₱{{ '%.2f'|format(item.unit_price * item.quantity) }}</span>
+        </div>
+        {% endfor %}
+        <div class="total-row">
+          <span class="total-label">Total Amount Due</span>
+          <span class="total-amount">₱{{ '%.2f'|format(jo.total_amount) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYMENT FORM -->
+  <div class="pay-card">
+    <div class="pay-card-title"><i class="fas fa-credit-card" style="color:var(--green);font-size:1.1rem;"></i> Collect Payment</div>
+
+    <div class="method-toggle">
+      <div class="method-btn active-cash" id="btn-cash" onclick="setMethod('cash')">
+        <i class="fas fa-money-bill-wave"></i>
+        <span>Cash</span>
+      </div>
+      <div class="method-btn" id="btn-gcash" onclick="setMethod('gcash')">
+        <i class="fas fa-mobile-alt"></i>
+        <span>GCash</span>
+      </div>
+    </div>
+
+    <div class="gcash-box" id="gcash-box">
+      <div class="field-wrap">
+        <label class="field-label">GCash Reference Number *</label>
+        <input class="field-inp" id="ref-no" type="text" placeholder="e.g. 1234567890" maxlength="50">
+      </div>
+    </div>
+
+    <button class="btn-pay" id="btn-pay" onclick="submitPayment()">
+      <i class="fas fa-check-circle"></i> Confirm Payment — ₱{{ '%.2f'|format(jo.total_amount) }}
+    </button>
+  </div>
+</div>
+
+<!-- PRINT RECEIPT (hidden, shown only on print) -->
+<div id="print-receipt">
+  <div class="pr-shop">
+    <div class="pr-shop-name">MOTOTYRE</div>
+    <div class="pr-shop-addr">Saranay Rd, Brgy. 171 Bagumbong<br>North Caloocan City</div>
+  </div>
+  <hr class="pr-divider">
+  <div class="pr-title">Official Receipt</div>
+  <div class="pr-row"><span>JO #</span><span id="pr-ref">—</span></div>
+  <div class="pr-row"><span>Date</span><span id="pr-date">—</span></div>
+  <div class="pr-row"><span>Customer</span><span>{{ jo.customer_name }}</span></div>
+  {% if jo.customer_phone %}<div class="pr-row"><span>Phone</span><span>{{ jo.customer_phone }}</span></div>{% endif %}
+  {% if jo.motorcycle_model or jo.motorcycle_plate %}
+  <div class="pr-row"><span>Motorcycle</span><span>{{ [jo.motorcycle_model, jo.motorcycle_plate]|select|join(' · ') }}</span></div>
+  {% endif %}
+  {% if jo.mechanic_name %}<div class="pr-row"><span>Mechanic</span><span>{{ jo.mechanic_name }}</span></div>{% endif %}
+  <div class="pr-row"><span>Payment</span><span id="pr-method">—</span></div>
+  <div id="pr-ref-row" class="pr-row" style="display:none;"><span>GCash Ref</span><span id="pr-refno">—</span></div>
+  <hr class="pr-divider">
+  <div class="pr-items-label">Items</div>
+  {% for item in jo.items %}
+  <div class="pr-item">
+    <span class="pr-item-name">{{ item.name }}</span>
+    <span class="pr-item-qty">x{{ item.quantity }}</span>
+    <span>₱{{ '%.2f'|format(item.unit_price * item.quantity) }}</span>
+  </div>
+  {% endfor %}
+  <div class="pr-total"><span>TOTAL</span><span>₱{{ '%.2f'|format(jo.total_amount) }}</span></div>
+  <hr class="pr-divider">
+  <div class="pr-footer">This serves as your official receipt.<br>Thank you for trusting MotoTyre!</div>
+  <div class="pr-thank">★ See you next time! ★</div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <i class="fas fa-check-circle" style="color:#86efac;font-size:1.2rem;"></i>
+      <h3>Payment Received</h3>
+    </div>
+    <div class="modal-body">
+      <div class="receipt-row"><span>Job Order</span><span id="r-ref">—</span></div>
+      <div class="receipt-row"><span>Customer</span><span>{{ jo.customer_name }}</span></div>
+      {% if jo.motorcycle_model or jo.motorcycle_plate %}
+      <div class="receipt-row"><span>Motorcycle</span><span>{{ [jo.motorcycle_model, jo.motorcycle_plate]|select|join(' · ') }}</span></div>
+      {% endif %}
+      <div class="receipt-row"><span>Payment Method</span><span id="r-method">—</span></div>
+      <div id="r-ref-row" class="receipt-row" style="display:none;"><span>Reference #</span><span id="r-refno">—</span></div>
+      <hr class="receipt-divider">
+      <div class="receipt-row bold"><span>Amount Paid</span><span id="r-amount">—</span></div>
+      <div style="margin-top:.75rem;text-align:center;font-size:.72rem;color:var(--muted);">
+        MotoTyre North Caloocan · Saranay Rd, Brgy. 171 Bagumbong<br>
+        Job order marked as <strong style="color:#86efac;">Completed</strong>. Thank you!
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-close" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+      <a href="{{ url_for('payments') }}" class="btn-new"><i class="fas fa-credit-card"></i> Next Payment</a>
+    </div>
+  </div>
+</div>
+
+<script>
+let payMethod = 'cash';
+
+function setMethod(m) {
+  payMethod = m;
+  document.getElementById('btn-cash').className  = 'method-btn' + (m === 'cash'  ? ' active-cash'  : '');
+  document.getElementById('btn-gcash').className = 'method-btn' + (m === 'gcash' ? ' active-gcash' : '');
+  document.getElementById('gcash-box').classList.toggle('show', m === 'gcash');
+}
+
+async function submitPayment() {
+  const btn   = document.getElementById('btn-pay');
+  const refNo = document.getElementById('ref-no').value.trim();
+
+  if (payMethod === 'gcash' && !refNo) {
+    alert('Please enter the GCash reference number.');
+    document.getElementById('ref-no').focus();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
+
+  const fd = new FormData();
+  fd.append('payment_method', payMethod);
+  if (refNo) fd.append('reference_no', refNo);
+
+  try {
+    const res  = await fetch(window.location.href, { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.success) {
+      const methodLabel = payMethod === 'gcash' ? 'GCash' : 'Cash';
+      const now = new Date().toLocaleString('en-PH', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:true });
+
+      // Populate modal
+      document.getElementById('r-ref').textContent    = data.ref;
+      document.getElementById('r-method').textContent = methodLabel;
+      document.getElementById('r-amount').textContent = '₱' + parseFloat(data.amount).toFixed(2);
+      if (refNo) {
+        document.getElementById('r-refno').textContent = refNo;
+        document.getElementById('r-ref-row').style.display = '';
+      }
+
+      // Populate print receipt
+      document.getElementById('pr-ref').textContent    = data.ref;
+      document.getElementById('pr-date').textContent   = now;
+      document.getElementById('pr-method').textContent = methodLabel;
+      if (refNo) {
+        document.getElementById('pr-refno').textContent = refNo;
+        document.getElementById('pr-ref-row').style.display = '';
+      }
+
+      document.getElementById('success-modal').classList.add('open');
+    } else {
+      alert(data.error || 'Payment failed. Please try again.');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment — ₱{{ '%.2f'|format(jo.total_amount) }}';
+    }
+  } catch(e) {
+    alert('Network error. Please try again.');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment — ₱{{ '%.2f'|format(jo.total_amount) }}';
+  }
+}
+</script>
+</body>
+</html>

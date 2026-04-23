@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Collect Booking Payment – MotoTyre</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+    :root{--ink:#0c0d0f;--panel:#111215;--card:#1a1d23;--red:#ff0f0f;--green:#16a34a;--muted:#6b7280;--border:rgba(255,255,255,0.07);--text:#e5e7eb;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);}
+
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;height:56px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+    .topbar-brand{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.06em;color:#fff;}
+    .topbar-brand span{color:var(--red);}
+    .btn-back{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem .9rem;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:all .15s;}
+    .btn-back:hover{border-color:var(--red);color:#fff;}
+
+    .main{padding:2rem;max-width:700px;margin:0 auto;}
+
+    .bkg-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1.5rem;}
+    .bkg-card-head{padding:1rem 1.25rem;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .bkg-ref{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.04em;color:#c4b5fd;}
+    .bkg-status{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.3);padding:.2rem .6rem;border-radius:99px;}
+    .bkg-body{padding:1.1rem 1.25rem;}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem 1.5rem;margin-bottom:1rem;}
+    .info-label{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.15rem;}
+    .info-value{font-size:.88rem;color:#fff;font-weight:500;}
+
+    .service-band{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:rgba(124,58,237,.08);border-top:1px solid var(--border);}
+    .service-name{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:#fff;}
+    .service-price{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:#c4b5fd;letter-spacing:.04em;}
+
+    .pay-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;}
+    .pay-card-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.04em;color:#fff;margin-bottom:1.1rem;}
+
+    .amount-wrap{margin-bottom:1.25rem;}
+    .amount-label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.4rem;}
+    .amount-inp{width:100%;padding:.7rem 1rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.04em;outline:none;transition:border-color .15s;}
+    .amount-inp:focus{border-color:#c4b5fd;}
+
+    .method-toggle{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1.25rem;}
+    .method-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;padding:1rem;border-radius:10px;background:rgba(255,255,255,.04);border:2px solid var(--border);cursor:pointer;transition:all .15s;}
+    .method-btn i{font-size:1.4rem;color:var(--muted);}
+    .method-btn span{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+    .method-btn.active-cash{background:rgba(22,163,74,.1);border-color:rgba(22,163,74,.5);}
+    .method-btn.active-cash i,.method-btn.active-cash span{color:#86efac;}
+    .method-btn.active-gcash{background:rgba(0,125,255,.1);border-color:rgba(0,125,255,.5);}
+    .method-btn.active-gcash i,.method-btn.active-gcash span{color:#93c5fd;}
+
+    .field-wrap{margin-bottom:1rem;}
+    .field-label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.4rem;}
+    .field-inp{width:100%;padding:.55rem .8rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .15s;}
+    .field-inp:focus{border-color:#86efac;}
+    .field-inp::placeholder{color:#374151;}
+
+    .gcash-box{display:none;}
+    .gcash-box.show{display:block;}
+
+    .btn-pay{width:100%;padding:.9rem;background:var(--green);border:none;border-radius:10px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.06em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+    .btn-pay:hover{background:#15803d;transform:translateY(-1px);box-shadow:0 4px 18px rgba(22,163,74,.35);}
+    .btn-pay:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
+
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;width:420px;max-width:95vw;overflow:hidden;animation:fadeUp .2s ease both;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    .modal-head{padding:1.25rem 1.5rem;display:flex;align-items:center;gap:.6rem;background:rgba(22,163,74,.1);border-bottom:1px solid var(--border);}
+    .modal-head h3{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.05em;color:#fff;margin:0;}
+    .modal-body{padding:1.25rem 1.5rem;}
+    .modal-foot{padding:.75rem 1.5rem 1.25rem;display:flex;gap:.5rem;}
+    .receipt-row{display:flex;justify-content:space-between;font-size:.83rem;color:#d1d5db;margin-bottom:.4rem;}
+    .receipt-row.bold{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;color:#fff;}
+    .receipt-divider{border:none;border-top:1px dashed var(--border);margin:.75rem 0;}
+    .btn-done{flex:1;padding:.6rem;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.4rem;transition:background .15s;}
+    .btn-done:hover{background:#15803d;color:#fff;}
+    .btn-close{flex:1;padding:.6rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;text-transform:uppercase;cursor:pointer;text-align:center;transition:all .15s;text-decoration:none;}
+    .btn-close:hover{color:#fff;}
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">MOTO<span>TYRE</span></div>
+  <a href="{{ url_for('payments') }}" class="btn-back"><i class="fas fa-arrow-left"></i> Back</a>
+</header>
+
+<div class="main">
+
+  <!-- BOOKING SUMMARY -->
+  <div class="bkg-card">
+    <div class="bkg-card-head">
+      <span class="bkg-ref">BKG-{{ '%03d'|format(booking.id) }}</span>
+      <span class="bkg-status">{{ booking.status|replace('_',' ')|title }}</span>
+    </div>
+    <div class="bkg-body">
+      <div class="info-grid">
+        <div>
+          <div class="info-label">Customer</div>
+          <div class="info-value">{{ booking.contact_name or booking.customer.fullname }}</div>
+        </div>
+        <div>
+          <div class="info-label">Phone</div>
+          <div class="info-value">{{ booking.contact_mobile or booking.customer.phone or '—' }}</div>
+        </div>
+        <div>
+          <div class="info-label">Date & Time</div>
+          <div class="info-value">{{ booking.date.strftime('%b %d, %Y') }} · {{ booking.time.strftime('%I:%M %p') }}</div>
+        </div>
+        <div>
+          <div class="info-label">Motorcycle</div>
+          <div class="info-value">{{ booking.motorcycle_model or '—' }}{% if booking.motorcycle_plate %} · {{ booking.motorcycle_plate }}{% endif %}</div>
+        </div>
+        {% if booking.mechanic_name %}
+        <div>
+          <div class="info-label">Mechanic</div>
+          <div class="info-value">{{ booking.mechanic_name }}</div>
+        </div>
+        {% endif %}
+        {% if booking.notes %}
+        <div style="grid-column:1/-1;">
+          <div class="info-label">Notes</div>
+          <div class="info-value" style="color:var(--muted);font-size:.82rem;">{{ booking.notes }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="service-band">
+      <div class="service-name">{{ booking.service }}</div>
+      <div class="service-price">₱{{ '%.2f'|format(service_price) if service_price else '—' }}</div>
+    </div>
+  </div>
+
+  <!-- PAYMENT FORM -->
+  <div class="pay-card">
+    <div class="pay-card-title"><i class="fas fa-credit-card" style="color:var(--green);font-size:1.1rem;"></i> Collect Payment</div>
+
+    <!-- Amount field (editable — admin can override price) -->
+    <div class="amount-wrap">
+      <label class="amount-label">Amount to Collect (₱)</label>
+      <input class="amount-inp" id="amount-inp" type="number" min="0" step="0.01"
+        value="{{ '%.2f'|format(service_price) if service_price else '' }}"
+        placeholder="0.00">
+    </div>
+
+    <div class="method-toggle">
+      <div class="method-btn active-cash" id="btn-cash" onclick="setMethod('cash')">
+        <i class="fas fa-money-bill-wave"></i><span>Cash</span>
+      </div>
+      <div class="method-btn" id="btn-gcash" onclick="setMethod('gcash')">
+        <i class="fas fa-mobile-alt"></i><span>GCash</span>
+      </div>
+    </div>
+
+    <div class="gcash-box" id="gcash-box">
+      <div class="field-wrap">
+        <label class="field-label">GCash Reference Number *</label>
+        <input class="field-inp" id="ref-no" type="text" placeholder="e.g. 1234567890" maxlength="50">
+      </div>
+    </div>
+
+    <button class="btn-pay" id="btn-pay" onclick="submitPayment()">
+      <i class="fas fa-check-circle"></i> Confirm Payment
+    </button>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <i class="fas fa-check-circle" style="color:#86efac;font-size:1.2rem;"></i>
+      <h3>Payment Received</h3>
+    </div>
+    <div class="modal-body">
+      <div class="receipt-row"><span>Booking</span><span id="r-ref">—</span></div>
+      <div class="receipt-row"><span>Service</span><span>{{ booking.service }}</span></div>
+      <div class="receipt-row"><span>Customer</span><span>{{ booking.contact_name or booking.customer.fullname }}</span></div>
+      <div class="receipt-row"><span>Payment Method</span><span id="r-method">—</span></div>
+      <div id="r-ref-row" class="receipt-row" style="display:none;"><span>Reference #</span><span id="r-refno">—</span></div>
+      <hr class="receipt-divider">
+      <div class="receipt-row bold"><span>Amount Paid</span><span id="r-amount">—</span></div>
+      <div style="margin-top:.75rem;text-align:center;font-size:.72rem;color:var(--muted);">
+        Booking marked as <strong style="color:#86efac;">Completed</strong>. Thank you!
+      </div>
+    </div>
+    <div class="modal-foot">
+      <a href="{{ url_for('payments') }}" class="btn-done"><i class="fas fa-credit-card"></i> Next Payment</a>
+      <a href="{{ url_for('payments') }}" class="btn-close">Back to Payments</a>
+    </div>
+  </div>
+</div>
+
+<script>
+let payMethod = 'cash';
+
+function setMethod(m) {
+  payMethod = m;
+  document.getElementById('btn-cash').className  = 'method-btn' + (m === 'cash'  ? ' active-cash'  : '');
+  document.getElementById('btn-gcash').className = 'method-btn' + (m === 'gcash' ? ' active-gcash' : '');
+  document.getElementById('gcash-box').classList.toggle('show', m === 'gcash');
+}
+
+async function submitPayment() {
+  const btn    = document.getElementById('btn-pay');
+  const refNo  = document.getElementById('ref-no').value.trim();
+  const amount = document.getElementById('amount-inp').value.trim();
+
+  if (!amount || parseFloat(amount) <= 0) {
+    alert('Please enter a valid amount.');
+    document.getElementById('amount-inp').focus();
+    return;
+  }
+  if (payMethod === 'gcash' && !refNo) {
+    alert('Please enter the GCash reference number.');
+    document.getElementById('ref-no').focus();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
+
+  const fd = new FormData();
+  fd.append('payment_method', payMethod);
+  fd.append('amount', amount);
+  if (refNo) fd.append('reference_no', refNo);
+
+  try {
+    const res  = await fetch(window.location.href, { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.success) {
+      const methodLabel = payMethod === 'gcash' ? 'GCash' : 'Cash';
+      document.getElementById('r-ref').textContent    = 'BKG-' + String(data.booking_id).padStart(3, '0');
+      document.getElementById('r-method').textContent = methodLabel;
+      document.getElementById('r-amount').textContent = '₱' + parseFloat(data.amount).toFixed(2);
+      if (refNo) {
+        document.getElementById('r-refno').textContent = refNo;
+        document.getElementById('r-ref-row').style.display = '';
+      }
+      document.getElementById('success-modal').classList.add('open');
+    } else {
+      alert(data.error || 'Payment failed. Please try again.');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment';
+    }
+  } catch(e) {
+    alert('Network error. Please try again.');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment';
+  }
+}
+</script>
+</body>
+</html>

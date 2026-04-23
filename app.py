@@ -19,6 +19,18 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from io import BytesIO
 from security import clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_otp_purpose
 import os, uuid, random, string, base64, requests
+import pymysql
+import threading
+
+def _ensure_database():
+    conn = pymysql.connect(host='localhost', port=3306, user='root', password='')
+    try:
+        conn.cursor().execute("CREATE DATABASE IF NOT EXISTS mototyre CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+        conn.commit()
+    finally:
+        conn.close()
+
+_ensure_database()
 
 app = Flask(__name__)
 app.config.update(
@@ -89,7 +101,11 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
         return {"success": False, "error": response.json()}
 
 
+_gmail_service_lock = threading.Lock()
+_gmail_service_cache = None
+
 def _get_gmail_service():
+    global _gmail_service_cache
     creds = None
     if os.path.exists(GMAIL_TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_FILE, GMAIL_SCOPES)
@@ -101,7 +117,11 @@ def _get_gmail_service():
             creds = flow.run_local_server(port=0)
         with open(GMAIL_TOKEN_FILE, "w") as f:
             f.write(creds.to_json())
-    return build("gmail", "v1", credentials=creds)
+        _gmail_service_cache = None
+    with _gmail_service_lock:
+        if _gmail_service_cache is None:
+            _gmail_service_cache = build("gmail", "v1", credentials=creds)
+    return _gmail_service_cache
 
 
 def _send_gmail(to, subject, html_body):
@@ -109,7 +129,12 @@ def _send_gmail(to, subject, html_body):
     msg["to"], msg["from"], msg["subject"] = to, GMAIL_SENDER, subject
     msg.attach(MIMEText(html_body, "html"))
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-    _get_gmail_service().users().messages().send(userId="me", body={"raw": raw}).execute()
+    def _do_send():
+        try:
+            _get_gmail_service().users().messages().send(userId="me", body={"raw": raw}).execute()
+        except Exception as e:
+            print(f"[GMAIL] Send failed: {e}")
+    threading.Thread(target=_do_send, daemon=True).start()
 
 
 def send_otp_email(email, otp, purpose="verify"):
@@ -837,6 +862,82 @@ def book_service():
     flash('Appointment booked successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
 
+@app.route('/customer/book-multiple', methods=['POST'])
+@login_required
+def book_multiple_services():
+    import json as _json
+    data = request.get_json()
+    if not data or not data.get('bookings'):
+        return jsonify({'success': False, 'error': 'No bookings provided'}), 400
+
+    created = []
+    errors  = []
+
+    for idx, b in enumerate(data['bookings']):
+        try:
+            booking_date = datetime.strptime(b.get('date', ''), '%Y-%m-%d').date()
+            booking_time = datetime.strptime(b.get('time', ''), '%H:%M').time()
+        except ValueError:
+            errors.append(f'Booking {idx+1}: invalid date/time')
+            continue
+
+        booking_dt = datetime.combine(booking_date, booking_time)
+        if booking_dt <= ph_now():
+            errors.append(f'Booking {idx+1}: cannot book a past time slot')
+            continue
+
+        service = clean_str(b.get('service', ''), max_len=100)
+        if not service:
+            errors.append(f'Booking {idx+1}: service is required')
+            continue
+
+        odo_raw = clean_str(str(b.get('odometer', '')), max_len=10)
+        booking = Booking(
+            user_id=current_user.id,
+            service=service,
+            date=booking_date,
+            time=booking_time,
+            motorcycle_model=clean_str(b.get('motorcycle_model', current_user.motorcycle_model or ''), max_len=100),
+            motorcycle_plate=clean_str(b.get('motorcycle_plate', current_user.motorcycle_plate or ''), max_len=20),
+            notes=clean_str(b.get('notes', ''), max_len=500),
+            contact_name=clean_str(b.get('contact_name', ''), max_len=100),
+            contact_mobile=clean_str(b.get('contact_mobile', ''), max_len=13),
+            odometer=int(odo_raw) if odo_raw.isdigit() else None,
+        )
+        mechanic_id = b.get('mechanic_id', '')
+        if mechanic_id:
+            mechanic = Mechanic.query.get(int(mechanic_id))
+            if mechanic:
+                booking.mechanic_name = mechanic.name
+                booking.mechanic_specialization = mechanic.specialization
+
+        db.session.add(booking)
+        db.session.flush()
+        created.append(booking.id)
+
+        send_notification(
+            current_user.id, 'Booking Received!',
+            f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} '
+            f'at {booking.time.strftime("%I:%M %p")} is pending confirmation.',
+            type='booking', status='pending'
+        )
+
+    if created:
+        db.session.commit()
+        admins = User.query.filter_by(role='admin').all()
+        for admin in admins:
+            send_notification(
+                admin.id, f'{len(created)} New Booking(s) Received',
+                f'{current_user.fullname} booked {len(created)} service(s).',
+                type='booking', status='pending'
+            )
+
+    return jsonify({
+        'success': len(created) > 0,
+        'created': len(created),
+        'errors': errors
+    })
+
 
 @app.route('/customer/cart/checkout', methods=['POST'])
 @login_required
@@ -1284,6 +1385,13 @@ def paymongo_webhook():
                     type='booking', status='confirmed')
     return jsonify({'success': True})
 
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
 
 @app.route('/api/services')
 def api_services():

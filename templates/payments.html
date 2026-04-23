@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payments – MotoTyre Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+    :root{--ink:#0c0d0f;--panel:#111215;--card:#1a1d23;--red:#ff0f0f;--blue:#2563eb;--green:#16a34a;--gcash:#007dff;--muted:#6b7280;--border:rgba(255,255,255,0.07);--text:#e5e7eb;--orange:#f59e0b;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);}
+
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;height:56px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+    .topbar-brand{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.06em;color:#fff;display:flex;align-items:center;gap:.6rem;}
+    .topbar-brand span{color:var(--red);}
+    .badge-pill{background:rgba(22,163,74,.2);color:#86efac;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.15rem .5rem;border-radius:4px;border:1px solid rgba(22,163,74,.3);}
+    .topbar-right{display:flex;align-items:center;gap:.75rem;}
+    .btn-action{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem .9rem;border-radius:8px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;text-decoration:none;border:none;cursor:pointer;}
+    .btn-secondary{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);}
+    .btn-secondary:hover{border-color:var(--red);color:#fff;background:rgba(255,15,15,.08);}
+
+    .main{padding:1.5rem 2rem;max-width:1300px;margin:0 auto;}
+    .page-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;color:#fff;margin-bottom:.25rem;}
+    .page-sub{font-size:.85rem;color:var(--muted);margin-bottom:1.25rem;}
+
+    .filter-tabs{display:flex;gap:.4rem;margin-bottom:1.25rem;}
+    .ftab{padding:.4rem 1rem;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:all .15s;}
+    .ftab:hover{border-color:rgba(255,255,255,.2);color:#fff;}
+    .ftab.active{background:var(--green);border-color:var(--green);color:#fff;}
+
+    .section-label{font-family:'Syne',sans-serif;font-weight:700;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:1.5rem 0 .75rem;display:flex;align-items:center;gap:.5rem;}
+    .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+    .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1.5rem;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{padding:.8rem 1.1rem;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--panel);border-bottom:1px solid var(--border);white-space:nowrap;}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+    tbody tr:last-child{border-bottom:none;}
+    tbody tr:hover{background:rgba(255,255,255,.02);}
+    td{padding:.85rem 1.1rem;font-size:.85rem;color:var(--text);vertical-align:middle;}
+
+    .ref-code{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;color:#fff;}
+    .ref-booking{color:#c4b5fd;}
+    .cust-name{font-weight:600;color:#fff;}
+    .moto-info{font-size:.75rem;color:var(--muted);margin-top:.1rem;}
+    .amount{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.03em;color:#fff;}
+    .date-cell{font-size:.78rem;color:var(--muted);}
+
+    .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;border-radius:99px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
+    .badge-cash{background:rgba(22,163,74,.15);color:#86efac;border:1px solid rgba(22,163,74,.3);}
+    .badge-gcash{background:rgba(0,125,255,.15);color:#93c5fd;border:1px solid rgba(0,125,255,.3);}
+    .badge-unpaid{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);}
+    .badge-booking{background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.3);}
+
+    .pay-btn{padding:.35rem .9rem;border-radius:8px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:none;background:var(--green);color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;transition:all .15s;}
+    .pay-btn:hover{background:#15803d;color:#fff;}
+    .pay-btn-booking{background:rgba(124,58,237,.8);}
+    .pay-btn-booking:hover{background:rgba(124,58,237,1);}
+
+    .empty-state{text-align:center;padding:3rem 2rem;color:var(--muted);}
+    .empty-state i{font-size:2rem;opacity:.2;display:block;margin-bottom:.75rem;}
+
+    .flash-wrap{margin-bottom:1rem;}
+    .flash{padding:.75rem 1rem;border-radius:8px;font-size:.85rem;margin-bottom:.4rem;}
+    .flash-success{background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.3);color:#86efac;}
+    .flash-danger{background:rgba(255,15,15,.12);border:1px solid rgba(255,15,15,.25);color:#fca5a5;}
+
+    .search-bar{display:flex;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap;}
+    .search-box{position:relative;flex:1;min-width:200px;}
+    .search-box i{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;pointer-events:none;}
+    .search-box input{width:100%;padding:.5rem .75rem .5rem 2rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;outline:none;}
+    .search-box input:focus{border-color:var(--green);}
+    .search-box input::placeholder{color:#374151;}
+
+    @media(max-width:900px){.search-bar{flex-direction:column;}}
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">Payments</span></div>
+  <div class="topbar-right">
+    <a href="{{ url_for('job_orders') }}" class="btn-action btn-secondary"><i class="fas fa-tools"></i> Job Orders</a>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-action btn-secondary"><i class="fas fa-arrow-left"></i> Dashboard</a>
+  </div>
+</header>
+
+<div class="main">
+  <div class="page-title">Payments</div>
+  <div class="page-sub">Collect payment from Job Orders and customer bookings.</div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-wrap">
+    {% for cat, msg in messages %}
+    <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <div class="filter-tabs">
+    <a href="?status=unpaid" class="ftab {% if status_filter=='unpaid' %}active{% endif %}">For Payment</a>
+    <a href="?status=paid"   class="ftab {% if status_filter=='paid'   %}active{% endif %}">Transaction History</a>
+  </div>
+
+  {% if status_filter == 'unpaid' %}
+
+  <!-- ── CUSTOMER BOOKINGS FOR PAYMENT ── -->
+  <div class="section-label">📅 Customer Bookings</div>
+  <div class="table-wrap">
+    {% if unpaid_bookings %}
+    <table>
+      <thead>
+        <tr>
+          <th>Booking #</th>
+          <th>Customer</th>
+          <th>Service</th>
+          <th>Date & Time</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in unpaid_bookings %}
+        <tr>
+          <td><span class="ref-code ref-booking">BKG-{{ '%03d'|format(b.id) }}</span></td>
+          <td>
+            <div class="cust-name">{{ b.contact_name or b.customer.fullname }}</div>
+            <div class="moto-info">{{ b.customer.phone }}</div>
+            {% if b.motorcycle_model or b.motorcycle_plate %}
+            <div class="moto-info">{{ b.motorcycle_model or '' }}{% if b.motorcycle_plate %} · {{ b.motorcycle_plate }}{% endif %}</div>
+            {% endif %}
+          </td>
+          <td>
+            <div style="font-size:.88rem;color:#fff;font-weight:600;">{{ b.service }}</div>
+            {% set svc_price = namespace(val=0) %}
+            {% for s in all_services if s.name == b.service %}{% set svc_price.val = s.price %}{% endfor %}
+            {% if svc_price.val > 0 %}<div class="moto-info">₱{{ '%.2f'|format(svc_price.val) }}</div>{% endif %}
+          </td>
+          <td class="date-cell">
+            {{ b.date.strftime('%b %d, %Y') }}<br>
+            <span style="font-size:.72rem;">{{ b.time.strftime('%I:%M %p') }}</span>
+          </td>
+          <td>
+            <span class="badge badge-booking">{{ b.status|replace('_',' ')|title }}</span>
+          </td>
+          <td>
+            <a href="{{ url_for('booking_payment_process', bid=b.id) }}" class="pay-btn pay-btn-booking">
+              <i class="fas fa-credit-card"></i> Collect
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-calendar-check"></i>
+      <p>No customer bookings awaiting payment.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── JOB ORDERS FOR PAYMENT ── -->
+  <div class="section-label">🔩 Job Orders</div>
+  <div class="table-wrap">
+    {% if job_orders %}
+    <table>
+      <thead>
+        <tr>
+          <th>JO #</th>
+          <th>Customer</th>
+          <th>Mechanic</th>
+          <th>Items</th>
+          <th>Amount</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for jo in job_orders %}
+        <tr>
+          <td><span class="ref-code">JO-{{ '%03d'|format(jo.id) }}</span></td>
+          <td>
+            <div class="cust-name">{{ jo.customer_name }}</div>
+            {% if jo.motorcycle_model or jo.motorcycle_plate %}
+            <div class="moto-info">{{ jo.motorcycle_model or '' }}{% if jo.motorcycle_plate %} · {{ jo.motorcycle_plate }}{% endif %}</div>
+            {% endif %}
+            {% if jo.customer_phone %}<div class="moto-info">{{ jo.customer_phone }}</div>{% endif %}
+          </td>
+          <td>{{ jo.mechanic_name or '—' }}</td>
+          <td>
+            <span style="font-size:.82rem;">{{ jo.items|length }} item(s)</span>
+            <div class="moto-info">{% for item in jo.items[:2] %}{{ item.name }}{% if not loop.last %}, {% endif %}{% endfor %}{% if jo.items|length > 2 %} +{{ jo.items|length - 2 }} more{% endif %}</div>
+          </td>
+          <td><span class="amount">₱{{ '%.2f'|format(jo.total_amount) }}</span></td>
+          <td class="date-cell">{{ jo.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.72rem;">{{ jo.created_at.strftime('%I:%M %p') }}</span></td>
+          <td>
+            <a href="{{ url_for('payment_process', joid=jo.id) }}" class="pay-btn">
+              <i class="fas fa-credit-card"></i> Collect
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-tools"></i>
+      <p>No job orders awaiting payment.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <!-- ── TRANSACTION HISTORY ── -->
+  <div class="search-bar">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input type="text" id="search-inp" placeholder="Search customer, JO#, reference…" oninput="filterRows()">
+    </div>
+  </div>
+  <div class="table-wrap">
+    {% if paid_jos %}
+    <table id="pay-table">
+      <thead>
+        <tr><th>JO #</th><th>Customer</th><th>Amount</th><th>Method</th><th>Paid At</th><th>Receipt</th></tr>
+      </thead>
+      <tbody>
+        {% for jo in paid_jos %}
+        <tr class="pay-row" data-search="{{ jo.customer_name|lower }} jo-{{ '%03d'|format(jo.id) }} {{ jo.customer_phone or '' }}{% if jo.payment and jo.payment.reference_no %} {{ jo.payment.reference_no }}{% endif %}">
+          <td><span class="ref-code">JO-{{ '%03d'|format(jo.id) }}</span></td>
+          <td>
+            <div class="cust-name">{{ jo.customer_name }}</div>
+            {% if jo.customer_phone %}<div class="moto-info">{{ jo.customer_phone }}</div>{% endif %}
+          </td>
+          <td><span class="amount">₱{{ '%.2f'|format(jo.total_amount) }}</span></td>
+          <td>
+            {% if jo.payment %}
+            <span class="badge badge-{{ jo.payment.payment_method }}">{{ jo.payment.payment_method|upper }}</span>
+            {% if jo.payment.reference_no %}<div class="moto-info">Ref: {{ jo.payment.reference_no }}</div>{% endif %}
+            {% endif %}
+          </td>
+          <td class="date-cell">{% if jo.payment %}{{ jo.payment.paid_at.strftime('%b %d, %Y') }}<br><span style="font-size:.72rem;">{{ jo.payment.paid_at.strftime('%I:%M %p') }}</span>{% endif %}</td>
+          <td>{% if jo.payment %}<a href="{{ url_for('payment_receipt', pid=jo.payment.id) }}" class="pay-btn" style="background:rgba(255,255,255,.08);" target="_blank"><i class="fas fa-receipt"></i> Receipt</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-credit-card"></i><p>No payment transactions yet.</p></div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function filterRows() {
+  const q = (document.getElementById('search-inp')?.value || '').toLowerCase().trim();
+  document.querySelectorAll('.pay-row').forEach(row => {
+    row.style.display = !q || row.dataset.search.includes(q) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

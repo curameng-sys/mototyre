@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New Quotation – MotoTyre</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+    :root {
+      --ink:#0c0d0f; --panel:#111215; --surface:#16181d; --card:#1a1d23;
+      --red:#ff0f0f; --blue:#2563eb; --green:#16a34a; --muted:#6b7280;
+      --border:rgba(255,255,255,0.07); --text:#e5e7eb; --orange:#f59e0b;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100vh;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);}
+
+    /* TOPBAR */
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;height:56px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;}
+    .topbar-brand{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.06em;color:#fff;display:flex;align-items:center;gap:.6rem;}
+    .topbar-brand span{color:var(--red);}
+    .badge-pill{background:rgba(255,15,15,.2);color:var(--red);font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.15rem .5rem;border-radius:4px;border:1px solid rgba(255,15,15,.3);}
+    .topbar-right{display:flex;align-items:center;gap:.75rem;}
+    .btn-back{display:flex;align-items:center;gap:.5rem;padding:.4rem .9rem;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-decoration:none;text-transform:uppercase;transition:all .15s;}
+    .btn-back:hover{border-color:var(--red);color:#fff;background:rgba(255,15,15,.08);}
+    .btn-view-all{display:flex;align-items:center;gap:.5rem;padding:.4rem .9rem;border-radius:8px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.3);color:#93c5fd;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-decoration:none;text-transform:uppercase;transition:all .15s;}
+    .btn-view-all:hover{background:rgba(37,99,235,.2);color:#fff;}
+
+    /* LAYOUT */
+    .wrap{display:grid;grid-template-columns:1fr 380px;height:calc(100vh - 56px);overflow:hidden;}
+
+    /* LEFT */
+    .catalog{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);background:var(--ink);}
+    .catalog-header{padding:1rem 1.5rem .75rem;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;}
+    .tab-bar{display:flex;gap:.4rem;margin-bottom:.75rem;}
+    .tab-btn{display:flex;align-items:center;gap:.4rem;padding:.45rem 1rem;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+    .tab-btn.active{background:var(--red);border-color:var(--red);color:#fff;}
+    .search-box{position:relative;}
+    .search-box i{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.75rem;}
+    .search-box input{width:100%;padding:.5rem .75rem .5rem 2rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;outline:none;transition:border-color .15s;}
+    .search-box input:focus{border-color:var(--red);}
+    .search-box input::placeholder{color:#374151;}
+
+    .product-grid{flex:1;overflow-y:auto;padding:.5rem 1.5rem;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;}
+    .product-card{display:flex;align-items:center;justify-content:space-between;padding:.65rem .75rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;gap:.75rem;}
+    .product-card:hover{background:rgba(255,15,15,.06);}
+
+    .services-panel{flex:1;overflow-y:auto;padding:1rem 1.5rem;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;}
+    .custom-svc-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;}
+    .custom-svc-box label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.5rem;}
+    .custom-svc-row{display:flex;gap:.5rem;}
+    .svc-inp{flex:1;padding:.5rem .75rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;outline:none;transition:border-color .15s;}
+    .svc-inp:focus{border-color:var(--red);}
+    .svc-inp::placeholder{color:#374151;}
+    .btn-add-svc{padding:.5rem .9rem;border-radius:8px;background:var(--red);border:none;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .btn-add-svc:hover{background:#c73418;}
+    .service-item{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;cursor:pointer;transition:all .15s;margin-bottom:.5rem;}
+    .service-item:hover{border-color:rgba(37,99,235,.4);background:rgba(37,99,235,.06);}
+    .svc-name{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#fff;}
+    .svc-desc{font-size:.72rem;color:var(--muted);margin-top:.15rem;}
+    .svc-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.03em;color:#93c5fd;}
+
+    /* RIGHT */
+    .quote-panel{display:flex;flex-direction:column;background:var(--panel);overflow:hidden;}
+    .quote-header{padding:1rem 1.25rem;border-bottom:1px solid var(--border);flex-shrink:0;}
+    .quote-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.04em;color:#fff;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
+
+    /* Customer info fields */
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+    .field-label{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.3rem;}
+    .field-inp{width:100%;padding:.45rem .7rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.83rem;outline:none;transition:border-color .15s;}
+    .field-inp:focus{border-color:var(--red);}
+    .field-inp::placeholder{color:#374151;}
+    .field-full{grid-column:1/-1;}
+
+    /* Quote items */
+    .quote-items{flex:1;overflow-y:auto;padding:.75rem 1.25rem;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;}
+    .q-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;color:var(--muted);text-align:center;gap:.5rem;}
+    .q-empty i{font-size:2rem;opacity:.3;}
+    .q-empty p{font-size:.82rem;}
+    .q-item{display:flex;align-items:center;gap:.6rem;padding:.7rem 0;border-bottom:1px solid var(--border);animation:slideIn .18s ease;}
+    @keyframes slideIn{from{opacity:0;transform:translateX(8px);}to{opacity:1;transform:translateX(0);}}
+    .ci-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0;}
+    .ci-icon.product{background:rgba(255,15,15,.12);color:var(--red);border:1px solid rgba(255,15,15,.2);}
+    .ci-icon.service{background:rgba(37,99,235,.12);color:#93c5fd;border:1px solid rgba(37,99,235,.2);}
+    .ci-name{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .ci-unit{font-size:.7rem;color:var(--muted);margin-top:.1rem;}
+    .ci-info{flex:1;min-width:0;}
+    .ci-controls{display:flex;align-items:center;gap:.35rem;flex-shrink:0;}
+    .qty-btn{width:22px;height:22px;border-radius:5px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-size:.7rem;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;}
+    .qty-btn:hover{border-color:var(--red);color:var(--red);}
+    .qty-val{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;min-width:18px;text-align:center;}
+    .btn-del{width:22px;height:22px;border-radius:5px;background:transparent;border:1px solid transparent;color:var(--muted);font-size:.7rem;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;}
+    .btn-del:hover{border-color:rgba(255,15,15,.4);color:var(--red);}
+
+    /* Footer */
+    .quote-footer{padding:1rem 1.25rem;border-top:1px solid var(--border);flex-shrink:0;}
+    .total-row{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);margin-bottom:.35rem;}
+    .total-row.grand{margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--border);font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.04em;color:#fff;}
+    .total-row.grand span:last-child{color:var(--red);}
+
+    .notes-box{margin:.75rem 0;}
+    .notes-inp{width:100%;padding:.45rem .7rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;resize:none;height:54px;transition:border-color .15s;}
+    .notes-inp:focus{border-color:var(--red);}
+    .notes-inp::placeholder{color:#374151;}
+
+    .btn-save{width:100%;padding:.85rem;background:var(--red);border:none;border-radius:10px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.06em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+    .btn-save:hover{background:#c73418;transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,15,15,.3);}
+    .btn-save:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
+    .btn-clear{width:100%;padding:.55rem;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;margin-top:.5rem;transition:all .15s;}
+    .btn-clear:hover{border-color:rgba(255,15,15,.4);color:var(--red);}
+
+    /* Modal */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;width:400px;max-width:95vw;animation:fadeUp .2s ease both;overflow:hidden;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    .modal-head{background:var(--green);padding:1.5rem;text-align:center;}
+    .modal-head i{font-size:2rem;color:#fff;display:block;margin-bottom:.4rem;}
+    .modal-head h3{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.06em;color:#fff;margin:0;}
+    .modal-body{padding:1.5rem;}
+    .modal-ref{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:.06em;color:var(--red);text-align:center;margin-bottom:.5rem;}
+    .modal-sub{font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:1.25rem;}
+    .modal-info{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;}
+    .mi-row{display:flex;justify-content:space-between;font-size:.82rem;color:#d1d5db;margin-bottom:.3rem;}
+    .mi-row:last-child{margin-bottom:0;}
+    .modal-foot{padding:0 1.5rem 1.5rem;display:flex;gap:.5rem;}
+    .btn-modal-sec{flex:1;padding:.65rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .15s;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.4rem;}
+    .btn-modal-sec:hover{border-color:rgba(255,255,255,.2);color:#fff;}
+    .btn-modal-pri{flex:1;padding:.65rem;background:var(--red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .15s;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.4rem;}
+    .btn-modal-pri:hover{background:#c73418;color:#fff;}
+
+    /* Toast */
+    .toast-wrap{position:fixed;top:70px;right:1.25rem;z-index:2000;display:flex;flex-direction:column;gap:.4rem;}
+    .toast{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:8px;padding:.7rem 1rem;font-family:'DM Sans',sans-serif;font-size:.82rem;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:toastIn .25s ease;min-width:180px;}
+    .toast.error{border-left-color:var(--red);}
+    @keyframes toastIn{from{opacity:0;transform:translateX(12px);}to{opacity:1;transform:translateX(0);}}
+
+    @media(max-width:768px){
+      .wrap{grid-template-columns:1fr;}
+      .catalog{display:none;}
+      .quote-panel{height:calc(100vh - 56px);}
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">New Quotation</span></div>
+  <div class="topbar-right">
+    <a href="{{ url_for('quotations_list') }}" class="btn-view-all"><i class="fas fa-list"></i> All Quotations</a>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-back"><i class="fas fa-arrow-left"></i> Dashboard</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- LEFT: CATALOG -->
+  <div class="catalog">
+    <div class="catalog-header">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('products',this)"><i class="fas fa-box"></i> Products</button>
+        <button class="tab-btn" onclick="switchTab('services',this)"><i class="fas fa-wrench"></i> Services</button>
+      </div>
+      <div id="product-controls">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="product-search" placeholder="Search products..." oninput="filterProducts()">
+        </div>
+      </div>
+    </div>
+
+    <div class="product-grid" id="products-panel">
+      {% for p in products %}
+      <div class="product-card {% if p.stock == 0 %}out-of-stock{% endif %}"
+           data-id="{{ p.id }}" data-name="{{ p.name|e }}"
+           data-price="{{ p.price }}" data-stock="{{ p.stock }}"
+           onclick="addProduct(this)" style="{% if p.stock == 0 %}opacity:.4;cursor:not-allowed;pointer-events:none;{% endif %}">
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</div>
+          <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem;">{{ p.category }}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#fff;">₱{{ '%.2f'|format(p.price) }}</div>
+          <div style="font-size:.68rem;color:{% if p.stock == 0 %}#fca5a5{% elif p.stock <= 5 %}#fbbf24{% else %}var(--muted){% endif %};">
+            {% if p.stock == 0 %}Out of stock{% elif p.stock <= 5 %}{{ p.stock }} left{% else %}{{ p.stock }} in stock{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      {% if not products %}
+      <div style="text-align:center;padding:3rem;color:var(--muted);font-size:.85rem;">No products in inventory.</div>
+      {% endif %}
+    </div>
+
+    <div class="services-panel" id="services-panel" style="display:none;">
+      <div class="custom-svc-box">
+        <label>Custom Service / Labor</label>
+        <div class="custom-svc-row">
+          <input class="svc-inp" id="svc-name" placeholder="Service name">
+          <input class="svc-inp" id="svc-price" type="number" min="0" placeholder="Price" style="max-width:110px;">
+          <button class="btn-add-svc" onclick="addCustomService()">+ Add</button>
+        </div>
+      </div>
+      <div id="service-list-container">
+        {% for s in services %}
+        <div class="service-item" onclick="addService('{{ s.name|e }}', {{ s.price }})">
+          <div>
+            <div class="svc-name">{{ s.name }}</div>
+            {% if s.description %}<div class="svc-desc">{{ s.description }}</div>{% endif %}
+          </div>
+          <div style="display:flex;align-items:center;gap:.6rem;">
+            <span class="svc-price">₱{{ '%.0f'|format(s.price) }}</span>
+            <div style="width:26px;height:26px;border-radius:6px;background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.3);color:#93c5fd;font-size:.7rem;display:flex;align-items:center;justify-content:center;">
+              <i class="fas fa-plus"></i>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+        {% if not services %}
+        <div style="text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;">No services configured.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: QUOTE -->
+  <div class="quote-panel">
+    <div class="quote-header">
+      <div class="quote-title"><i class="fas fa-file-invoice" style="color:var(--red);font-size:.9rem;"></i> Quotation <span id="item-count" style="background:var(--red);color:#fff;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;padding:.15rem .5rem;border-radius:4px;">0</span></div>
+
+      <div class="info-grid">
+        <div>
+          <label class="field-label">Customer Name *</label>
+          <input class="field-inp" id="cust-name" placeholder="Juan dela Cruz" oninput="validateForm()">
+        </div>
+        <div>
+          <label class="field-label">Phone</label>
+          <input class="field-inp" id="cust-phone" placeholder="09XX XXX XXXX">
+        </div>
+        <div>
+          <label class="field-label">Motorcycle Model</label>
+          <input class="field-inp" id="moto-model" placeholder="Honda Click 150i">
+        </div>
+        <div>
+          <label class="field-label">Plate Number</label>
+          <input class="field-inp" id="moto-plate" placeholder="ABC 1234">
+        </div>
+      </div>
+    </div>
+
+    <div class="quote-items" id="quote-items">
+      <div class="q-empty" id="q-empty">
+        <i class="fas fa-file-invoice"></i>
+        <p>Quote is empty.<br>Add products or services from the left.</p>
+      </div>
+    </div>
+
+    <div class="quote-footer">
+      <div class="total-row"><span>Subtotal</span><span id="subtotal">₱0.00</span></div>
+      <div class="total-row grand"><span>Estimated Total</span><span id="grand-total">₱0.00</span></div>
+      <div class="notes-box">
+        <label class="field-label">Notes</label>
+        <textarea class="notes-inp" id="notes" placeholder="Additional notes or remarks..."></textarea>
+      </div>
+      <button class="btn-save" id="save-btn" onclick="saveQuotation()" disabled>
+        <i class="fas fa-file-invoice-dollar"></i> Save Quotation
+      </button>
+      <button class="btn-clear" onclick="clearAll()"><i class="fas fa-times"></i> Clear All</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <i class="fas fa-check-circle"></i>
+      <h3>Quotation Saved</h3>
+    </div>
+    <div class="modal-body">
+      <div class="modal-ref" id="modal-ref">QUO-000</div>
+      <div class="modal-sub">Quotation has been saved and is awaiting customer confirmation.</div>
+      <div class="modal-info">
+        <div class="mi-row"><span>Customer</span><span id="modal-customer">—</span></div>
+        <div class="mi-row"><span>Motorcycle</span><span id="modal-moto">—</span></div>
+        <div class="mi-row"><span>Items</span><span id="modal-items">—</span></div>
+        <div class="mi-row"><span>Total Estimate</span><span id="modal-total" style="color:var(--red);font-weight:700;">—</span></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-modal-sec" onclick="newQuotation()"><i class="fas fa-plus"></i> New Quote</button>
+      <a href="{{ url_for('quotations_list') }}" class="btn-modal-pri"><i class="fas fa-list"></i> View All</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+  let items = [];
+  let currentTab = 'products';
+  let allProducts = [...document.querySelectorAll('#products-panel .product-card')];
+
+  function switchTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('products-panel').style.display = tab === 'products' ? 'flex' : 'none';
+    document.getElementById('services-panel').style.display  = tab === 'services'  ? 'block' : 'none';
+    document.getElementById('product-controls').style.display = tab === 'products' ? 'block' : 'none';
+  }
+
+  function filterProducts() {
+    const q = document.getElementById('product-search').value.toLowerCase();
+    allProducts.forEach(c => c.style.display = c.dataset.name.toLowerCase().includes(q) ? '' : 'none');
+  }
+
+  function addProduct(el) {
+    addItem({
+      item_type: 'product',
+      name: el.dataset.name,
+      unit_price: parseFloat(el.dataset.price),
+      quantity: 1,
+      product_id: el.dataset.id
+    });
+  }
+
+  function addService(name, price) {
+    addItem({ item_type: 'service', name, unit_price: parseFloat(price), quantity: 1 });
+    const el = event.currentTarget;
+    el.style.borderColor = 'rgba(37,99,235,.7)';
+    el.style.background  = 'rgba(37,99,235,.12)';
+    setTimeout(() => { el.style.borderColor = ''; el.style.background = ''; }, 400);
+  }
+
+  function addCustomService() {
+    const name  = document.getElementById('svc-name').value.trim();
+    const price = parseFloat(document.getElementById('svc-price').value);
+    if (!name || isNaN(price) || price < 0) { toast('Enter a valid name and price.', 'error'); return; }
+    addItem({ item_type: 'service', name, unit_price: price, quantity: 1 });
+    document.getElementById('svc-name').value  = '';
+    document.getElementById('svc-price').value = '';
+  }
+
+  function addItem(item) {
+    const existing = items.find(i => i.name === item.name && i.item_type === item.item_type);
+    if (existing) { existing.quantity++; }
+    else { items.push({ ...item }); }
+    renderItems();
+    toast(`${item.name} added.`);
+  }
+
+  function renderItems() {
+    const container = document.getElementById('quote-items');
+    const empty     = document.getElementById('q-empty');
+    document.getElementById('item-count').textContent = items.reduce((s,i)=>s+i.quantity, 0);
+
+    if (items.length === 0) {
+      if (!container.contains(empty)) container.appendChild(empty);
+      empty.style.display = 'flex';
+      updateTotals(); validateForm(); return;
+    }
+    empty.style.display = 'none';
+
+    const existing = container.querySelectorAll('.q-item');
+    existing.forEach(e => e.remove());
+
+    items.forEach((item, idx) => {
+      const div = document.createElement('div');
+      div.className = 'q-item';
+      div.innerHTML = `
+        <div class="ci-icon ${item.item_type}">
+          <i class="fas ${item.item_type === 'product' ? 'fa-box' : 'fa-wrench'}"></i>
+        </div>
+        <div class="ci-info">
+          <div class="ci-name">${item.name}</div>
+          <div class="ci-unit">₱${item.unit_price.toFixed(2)} each</div>
+        </div>
+        <div class="ci-controls">
+          <div class="qty-btn" onclick="changeQty(${idx},-1)"><i class="fas fa-minus"></i></div>
+          <span class="qty-val">${item.quantity}</span>
+          <div class="qty-btn" onclick="changeQty(${idx},1)"><i class="fas fa-plus"></i></div>
+          <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#fff;min-width:60px;text-align:right;">
+            ₱${(item.unit_price * item.quantity).toFixed(2)}
+          </div>
+          <div class="btn-del" onclick="removeItem(${idx})"><i class="fas fa-times"></i></div>
+        </div>`;
+      container.appendChild(div);
+    });
+    updateTotals(); validateForm();
+  }
+
+  function changeQty(idx, delta) {
+    items[idx].quantity += delta;
+    if (items[idx].quantity <= 0) items.splice(idx, 1);
+    renderItems();
+  }
+
+  function removeItem(idx) { items.splice(idx, 1); renderItems(); }
+
+  function updateTotals() {
+    const total = items.reduce((s,i) => s + i.unit_price * i.quantity, 0);
+    document.getElementById('subtotal').textContent   = `₱${total.toFixed(2)}`;
+    document.getElementById('grand-total').textContent = `₱${total.toFixed(2)}`;
+  }
+
+  function validateForm() {
+    const hasName  = document.getElementById('cust-name').value.trim().length > 0;
+    const hasItems = items.length > 0;
+    document.getElementById('save-btn').disabled = !(hasName && hasItems);
+  }
+
+  function clearAll() {
+    if (items.length === 0 && !document.getElementById('cust-name').value) return;
+    if (!confirm('Clear all items and customer info?')) return;
+    items = [];
+    document.getElementById('cust-name').value  = '';
+    document.getElementById('cust-phone').value = '';
+    document.getElementById('moto-model').value = '';
+    document.getElementById('moto-plate').value = '';
+    document.getElementById('notes').value      = '';
+    renderItems();
+  }
+
+  async function saveQuotation() {
+    const name = document.getElementById('cust-name').value.trim();
+    if (!name) { toast('Customer name is required.', 'error'); return; }
+    if (items.length === 0) { toast('Add at least one item.', 'error'); return; }
+
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    const payload = {
+      customer_name:    name,
+      customer_phone:   document.getElementById('cust-phone').value.trim(),
+      motorcycle_model: document.getElementById('moto-model').value.trim(),
+      motorcycle_plate: document.getElementById('moto-plate').value.trim(),
+      notes:            document.getElementById('notes').value.trim(),
+      items:            items.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price }))
+    };
+
+    try {
+      const res  = await fetch('/api/quotation/save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.success) {
+        const total = items.reduce((s,i) => s + i.unit_price * i.quantity, 0);
+        document.getElementById('modal-ref').textContent      = data.ref;
+        document.getElementById('modal-customer').textContent = name;
+        document.getElementById('modal-moto').textContent     = (document.getElementById('moto-model').value.trim() || '—') + (document.getElementById('moto-plate').value.trim() ? ` · ${document.getElementById('moto-plate').value.trim()}` : '');
+        document.getElementById('modal-items').textContent    = items.reduce((s,i)=>s+i.quantity,0) + ' item(s)';
+        document.getElementById('modal-total').textContent    = `₱${total.toFixed(2)}`;
+        document.getElementById('success-modal').classList.add('open');
+        items = [];
+      } else {
+        toast(data.error || 'Failed to save quotation.', 'error');
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-invoice-dollar"></i> Save Quotation';
+      }
+    } catch(e) {
+      toast('Network error. Please try again.', 'error');
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-invoice-dollar"></i> Save Quotation';
+    }
+  }
+
+  function newQuotation() {
+    document.getElementById('success-modal').classList.remove('open');
+    clearAll();
+    renderItems();
+    document.getElementById('save-btn').innerHTML = '<i class="fas fa-file-invoice-dollar"></i> Save Quotation';
+  }
+
+  function toast(msg, type='success') {
+    const w = document.getElementById('toast-wrap');
+    const t = document.createElement('div');
+    t.className = `toast${type === 'error' ? ' error' : ''}`;
+    t.textContent = msg;
+    w.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  document.getElementById('cust-name').addEventListener('input', validateForm);
+
+  // Initial render
+  renderItems();
+</script>
+</body>
+</html>

@@ -530,117 +530,146 @@
   </section>
 
   <!-- ── BOOK ── -->
-  <section id="sec-book" class="c-section">
-    <div class="section-head">
-      <div><div class="section-title">BOOK AN <span>APPOINTMENT</span></div><div class="section-sub">Pick an available date then choose your time slot.</div></div>
+<section id="sec-book" class="c-section">
+  <div class="section-head">
+    <div>
+      <div class="section-title">BOOK AN <span>APPOINTMENT</span></div>
+      <div class="section-sub">Pick dates and services — add multiple bookings before submitting.</div>
     </div>
-    <div class="book-grid">
-      <div class="card">
-        <div class="card-head">
-          <h5 id="cal-month-label">Month Year</h5>
-          <div style="display:flex;gap:0.5rem;">
-            <button onclick="changeMonth(-1)" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:#fff;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">‹</button>
-            <button onclick="changeMonth(1)"  style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:#fff;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">›</button>
-          </div>
-        </div>
-        <div class="card-body" style="padding:1rem;">
-          <div class="cal-legend">
-            <span><span class="cal-legend-dot" style="background:rgba(21,128,61,0.4);border:1px solid rgba(21,128,61,0.5);"></span>Available</span>
-            <span><span class="cal-legend-dot" style="background:rgba(232,64,28,0.3);border:1px solid rgba(232,64,28,0.4);"></span>Fully Booked</span>
-            <span><span class="cal-legend-dot" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);"></span>Unavailable</span>
-            <span><span class="cal-legend-dot" style="background:var(--red);"></span>Selected</span>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
-            {% for d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}
-            <div style="text-align:center;font-size:0.65rem;font-weight:700;color:var(--muted);font-family:'Syne',sans-serif;padding:4px 0;">{{ d }}</div>
-            {% endfor %}
-          </div>
-          <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
-          <div id="cal-selected-info" style="margin-top:1rem;font-size:0.82rem;color:var(--muted);text-align:center;min-height:20px;"></div>
+  </div>
+
+  <div class="book-grid">
+    <!-- LEFT: Calendar -->
+    <div class="card">
+      <div class="card-head">
+        <h5 id="cal-month-label">Month Year</h5>
+        <div style="display:flex;gap:0.5rem;">
+          <button onclick="changeMonth(-1)" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:#fff;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">‹</button>
+          <button onclick="changeMonth(1)"  style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:#fff;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">›</button>
         </div>
       </div>
+      <div class="card-body" style="padding:1rem;">
+        <div class="cal-legend">
+          <span><span class="cal-legend-dot" style="background:rgba(21,128,61,0.4);border:1px solid rgba(21,128,61,0.5);"></span>Available</span>
+          <span><span class="cal-legend-dot" style="background:rgba(232,64,28,0.3);border:1px solid rgba(232,64,28,0.4);"></span>Fully Booked</span>
+          <span><span class="cal-legend-dot" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);"></span>Unavailable</span>
+          <span><span class="cal-legend-dot" style="background:var(--red);"></span>Selected</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
+          {% for d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}
+          <div style="text-align:center;font-size:0.65rem;font-weight:700;color:var(--muted);font-family:'Syne',sans-serif;padding:4px 0;">{{ d }}</div>
+          {% endfor %}
+        </div>
+        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+        <div id="cal-selected-info" style="margin-top:1rem;font-size:0.82rem;color:var(--muted);text-align:center;min-height:20px;"></div>
+      </div>
+    </div>
 
-      <div class="card">
-        <div class="card-head"><h5>Booking Details</h5></div>
-        <div class="card-body">
-          <form method="POST" action="{{ url_for('book_service') }}" id="booking-form" onsubmit="return validateBookingForm()">
-            <div class="form-group">
-              <label>Selected Date</label>
-              <input type="text" id="selected-date-display" placeholder="Click a date on the calendar" disabled>
-              <input type="hidden" name="date" id="selected-date-value" required>
+    <!-- RIGHT: Booking Form -->
+    <div class="card">
+      <div class="card-head">
+        <h5>Booking Details</h5>
+        <!-- Queue counter badge -->
+        <div id="queue-badge-wrap" style="display:none;background:rgba(232,64,28,0.15);border:1px solid rgba(232,64,28,0.3);border-radius:8px;padding:0.3rem 0.75rem;font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:var(--red);">
+          <span id="queue-count">0</span> in queue
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- Single booking form (NOT a real <form>, we handle via JS) -->
+        <div id="single-booking-form">
+          <div class="form-group">
+            <label>Selected Date</label>
+            <input type="text" id="selected-date-display" placeholder="Click a date on the calendar" disabled>
+            <input type="hidden" id="selected-date-value">
+          </div>
+          <div class="form-group">
+            <label>Available Time Slots</label>
+            <div id="time-slots-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;min-height:60px;">
+              <div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>
             </div>
-            <div class="form-group">
-              <label>Available Time Slots</label>
-              <div id="time-slots-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;min-height:60px;">
-                <div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>
-              </div>
-              <input type="hidden" name="time" id="selected-time-value" required>
+            <input type="hidden" id="selected-time-value">
+          </div>
+          <div class="form-group" style="position:relative;">
+            <label>Service Type</label>
+            <input type="text" id="service-search" placeholder="Search service..." autocomplete="off"
+              style="margin-bottom:0.4rem;"
+              oninput="filterServices(this.value)"
+              onfocus="document.getElementById('service-dropdown').style.display='block'">
+            <div id="service-dropdown" style="display:none;position:absolute;z-index:200;left:0;right:0;
+              background:#1a1d23;border:1px solid rgba(255,255,255,0.12);border-radius:8px;
+              max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
             </div>
-            <div class="form-group" style="position:relative;">
-              <label>Service Type</label>
-              <input type="text" id="service-search" placeholder="Search service..." autocomplete="off"
-                style="margin-bottom:0.4rem;"
-                oninput="filterServices(this.value)"
-                onfocus="document.getElementById('service-dropdown').style.display='block'"
-              >
-              <div id="service-dropdown" style="display:none;position:absolute;z-index:200;left:0;right:0;
-                background:#1a1d23;border:1px solid rgba(255,255,255,0.12);border-radius:8px;
-                max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-              </div>
-              <input type="hidden" name="service" id="service-value" required>
-            </div>
-            <div class="form-group">
-              <label>Motorcycle Model</label>
-              <input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i">
-            </div>
-            <div class="form-group">
-              <label>Plate Number</label>
-              <input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
-            </div>
-            <div class="form-group">
-              <label>Odometer Reading <span style="color:var(--muted);font-size:0.75rem;">(km)</span></label>
-              <input type="number" name="odometer" id="odometer" placeholder="e.g. 12500" min="0" max="999999"
-                style="appearance:textfield;">
-            </div>
-            <div class="form-group">
+            <input type="hidden" id="service-value">
+          </div>
+          <div class="form-group">
+            <label>Motorcycle Model</label>
+            <input type="text" id="moto-model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i">
+          </div>
+          <div class="form-group">
+            <label>Plate Number</label>
+            <input type="text" id="moto-plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
+          </div>
+          <div class="form-group">
+            <label>Odometer Reading <span style="color:var(--muted);font-size:0.75rem;">(km)</span></label>
+            <input type="number" id="odometer" placeholder="e.g. 12500" min="0" max="999999" style="appearance:textfield;">
+          </div>
+          <div class="form-group">
             <label>Preferred Mechanic</label>
-            <select name="mechanic_id" id="mechanic-select">
+            <select id="mechanic-select">
               <option value="">-- No preference --</option>
             </select>
             <div id="mechanic-info" style="display:none;margin-top:0.5rem;padding:0.6rem 0.85rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.78rem;color:var(--muted);">
               🔧 Specialization: <span id="mechanic-spec-display"></span>
             </div>
           </div>
-            <div class="form-group">
-              <label>Additional Notes</label>
-              <textarea name="notes" rows="2" placeholder="Describe your concern..."></textarea>
-            </div>
+          <div class="form-group">
+            <label>Additional Notes</label>
+            <textarea id="booking-notes" rows="2" placeholder="Describe your concern..."></textarea>
+          </div>
 
-            <div style="border-top:1px solid var(--border);margin:1.25rem 0 1rem;"></div>
-            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.9rem;">Contact Information</div>
+          <div style="border-top:1px solid var(--border);margin:1.25rem 0 1rem;"></div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.9rem;">Contact Information</div>
 
-            <div class="form-group">
-              <label>Full Name</label>
-              <input type="text" name="contact_name" id="contact-name" placeholder="Juan Dela Cruz"
-                oninput="this.value=this.value.replace(/[^a-zA-Z\s]/g,''); checkBookingReady()"
-                required>
-              <div id="name-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Name must contain letters only.</div>
-            </div>
-            <div class="form-group">
-              <label>Mobile Number</label>
-              <input type="tel" name="contact_mobile" id="contact-mobile" placeholder="09XX XXX XXXX"
-                oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11); checkBookingReady()"
-                maxlength="11"
-                required>
-              <div id="mobile-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Must start with 0 and be exactly 11 digits.</div>
-            </div>
-            </div>
-            <button type="submit" class="btn-submit" id="btn-book" disabled>📅 Confirm Booking</button>
-          </form>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="contact-name" placeholder="Juan Dela Cruz"
+              oninput="this.value=this.value.replace(/[^a-zA-Z\s]/g,''); checkBookingReady()" required>
+            <div id="name-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Name must contain letters only.</div>
+          </div>
+          <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="tel" id="contact-mobile" placeholder="09XX XXX XXXX"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11); checkBookingReady()"
+              maxlength="11" required>
+            <div id="mobile-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Must start with 0 and be exactly 11 digits.</div>
+          </div>
+
+          <!-- ADD TO QUEUE button -->
+          <button type="button" class="btn-submit" id="btn-add-queue" disabled onclick="addToBookingQueue()"
+            style="background:rgba(29,78,216,0.85);margin-bottom:0.5rem;">
+            ＋ Add to Queue
+          </button>
+          <!-- CONFIRM ALL button -->
+          <button type="button" class="btn-submit" id="btn-confirm-all" disabled onclick="submitAllBookings()"
+            style="display:none;background:var(--red);">
+            ✅ Confirm All Bookings (<span id="btn-queue-count">0</span>)
+          </button>
         </div>
+
+        <!-- Booking Queue Panel -->
+        <div id="booking-queue-panel" style="display:none;margin-top:1.5rem;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">📋 Booking Queue</div>
+          <div id="booking-queue-list" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+          <button type="button" onclick="submitAllBookings()" id="btn-confirm-all-bottom"
+            style="width:100%;margin-top:1rem;background:var(--red);color:#fff;border:none;padding:0.75rem 1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;cursor:pointer;transition:all 0.2s;display:none;">
+            ✅ Confirm All Bookings
+          </button>
+        </div>
+
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
   <!-- ── MY BOOKINGS ── -->
 <section id="sec-bookings" class="c-section" style="padding: 0 1.25rem 4rem;">
@@ -1575,237 +1604,292 @@ function selectPayment(method) {
 }
 
   /* ── CALENDAR ── */
-  const ALL_SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
-  const SLOT_LABELS = {'08:00':'8:00 AM','09:00':'9:00 AM','10:00':'10:00 AM','11:00':'11:00 AM','12:00':'12:00 PM','13:00':'1:00 PM','14:00':'2:00 PM','15:00':'3:00 PM','16:00':'4:00 PM','17:00':'5:00 PM','18:00':'6:00 PM','19:00':'7:00 PM'};
-  let currentYear, currentMonth, selectedDate = null, selectedTime = null, bookedData = {};
-  const today = new Date(); today.setHours(0,0,0,0);
-  currentYear = today.getFullYear(); currentMonth = today.getMonth();
+const ALL_SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
+const SLOT_LABELS = {'08:00':'8:00 AM','09:00':'9:00 AM','10:00':'10:00 AM','11:00':'11:00 AM','12:00':'12:00 PM','13:00':'1:00 PM','14:00':'2:00 PM','15:00':'3:00 PM','16:00':'4:00 PM','17:00':'5:00 PM','18:00':'6:00 PM','19:00':'7:00 PM'};
+let currentYear, currentMonth, selectedDate = null, selectedTime = null, bookedData = {};
+const today = new Date(); today.setHours(0,0,0,0);
+currentYear = today.getFullYear(); currentMonth = today.getMonth();
 
-  async function fetchBookedSlots(year, month) {
-    try { const res = await fetch(`/api/booked-slots?year=${year}&month=${month+1}`); bookedData = await res.json(); }
-    catch(e) { bookedData = {}; }
+// ── BOOKING QUEUE ──
+let bookingQueue = [];
+
+function addToBookingQueue() {
+  const nameVal   = document.getElementById('contact-name').value.trim();
+  const mobileVal = document.getElementById('contact-mobile').value.trim();
+  const service   = document.getElementById('service-value').value.trim();
+  const dateVal   = document.getElementById('selected-date-value').value;
+  const timeVal   = document.getElementById('selected-time-value').value;
+
+  if (!dateVal || !timeVal || !service) { showCartToast('⚠️ Please select a date, time and service.'); return; }
+  if (!/^[a-zA-Z\s]+$/.test(nameVal) || !nameVal) { document.getElementById('name-error').style.display='block'; return; }
+  if (!/^0\d{10}$/.test(mobileVal)) { document.getElementById('mobile-error').style.display='block'; return; }
+
+  const dupKey = dateVal + '_' + timeVal;
+  if (bookingQueue.some(b => b.date + '_' + b.time === dupKey)) {
+    showCartToast('⚠️ You already queued a booking for that date and time.'); return;
   }
-  function isFullyBooked(dateStr) { return (bookedData[dateStr] || []).length >= ALL_SLOTS.length; }
 
-  async function renderCalendar() {
-    await fetchBookedSlots(currentYear, currentMonth);
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    document.getElementById('cal-month-label').textContent = `${months[currentMonth]} ${currentYear}`;
-    const grid = document.getElementById('cal-grid'); grid.innerHTML = '';
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    for (let i = 0; i < firstDay; i++) { const e = document.createElement('div'); e.className = 'cal-day empty'; grid.appendChild(e); }
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateObj = new Date(currentYear, currentMonth, d); dateObj.setHours(0,0,0,0);
-      const mm = String(currentMonth+1).padStart(2,'0'); const dd = String(d).padStart(2,'0');
-      const dateStr = `${currentYear}-${mm}-${dd}`;
-      const cell = document.createElement('div'); cell.className = 'cal-day'; cell.textContent = d;
-      if (dateObj.getTime() === today.getTime()) cell.classList.add('today');
-      // Check if today is past closing time (last slot is 19:00 / 7 PM)
-const isToday = dateObj.getTime() === today.getTime();
-const now = new Date();
-const pastClosing = isToday && now.getHours() >= 19;
+  const mechSel  = document.getElementById('mechanic-select');
+  const mechId   = mechSel.value || '';
+  const mechName = mechId ? mechSel.options[mechSel.selectedIndex].text.split(' — ')[0] : '';
 
-if (dateObj < today || dateObj.getDay() === 0) { 
-  cell.classList.add('past'); 
-  cell.title = dateObj.getDay() === 0 ? 'Closed Sundays' : 'Past date'; 
+  const entry = {
+    date:             dateVal,
+    time:             timeVal,
+    service:          service,
+    motorcycle_model: document.getElementById('moto-model').value,
+    motorcycle_plate: document.getElementById('moto-plate').value,
+    odometer:         document.getElementById('odometer').value,
+    mechanic_id:      mechId,
+    mechanic_name:    mechName,
+    notes:            document.getElementById('booking-notes').value,
+    contact_name:     nameVal,
+    contact_mobile:   mobileVal,
+    _displayDate:     document.getElementById('selected-date-display').value,
+    _displayTime:     SLOT_LABELS[timeVal] || timeVal,
+  };
+
+  bookingQueue.push(entry);
+  renderBookingQueue();
+  resetBookingForm();
+  showCartToast('📅 ' + service + ' added to queue!');
 }
-else if (pastClosing) {
-  cell.classList.add('past');
-  cell.title = 'Shop closed for today';
+
+function renderBookingQueue() {
+  const panel  = document.getElementById('booking-queue-panel');
+  const list   = document.getElementById('booking-queue-list');
+  const badge  = document.getElementById('queue-badge-wrap');
+  const count  = document.getElementById('queue-count');
+  const btnTop = document.getElementById('btn-confirm-all');
+  const btnBot = document.getElementById('btn-confirm-all-bottom');
+  const btnCnt = document.getElementById('btn-queue-count');
+
+  if (!bookingQueue.length) {
+    panel.style.display  = 'none';
+    badge.style.display  = 'none';
+    btnTop.style.display = 'none';
+    btnBot.style.display = 'none';
+    return;
+  }
+
+  panel.style.display  = 'block';
+  badge.style.display  = 'block';
+  btnTop.style.display = 'block';
+  btnBot.style.display = 'block';
+  count.textContent    = bookingQueue.length;
+  if (btnCnt) btnCnt.textContent = bookingQueue.length;
+
+  list.innerHTML = bookingQueue.map((b, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      padding:0.75rem 1rem;background:rgba(29,78,216,0.08);
+      border:1px solid rgba(29,78,216,0.2);border-radius:10px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#fff;margin-bottom:0.2rem;">
+          ${b.service}
+        </div>
+        <div style="font-size:0.75rem;color:var(--muted);">
+          📆 ${b._displayDate} &nbsp;·&nbsp; 🕐 ${b._displayTime}
+        </div>
+        ${b.mechanic_name ? `<div style="font-size:0.72rem;color:#c4b5fd;margin-top:0.2rem;">🔧 ${b.mechanic_name}</div>` : ''}
+        ${b.notes ? `<div style="font-size:0.72rem;color:#9ca3af;margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">📝 ${b.notes}</div>` : ''}
+      </div>
+      <button onclick="removeFromQueue(${i})"
+        style="flex-shrink:0;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);
+          color:#fca5a5;border-radius:6px;padding:0.3rem 0.6rem;font-size:0.78rem;
+          cursor:pointer;margin-left:0.75rem;font-family:'Syne',sans-serif;font-weight:700;
+          transition:all 0.15s;" onmouseover="this.style.background='rgba(220,38,38,0.25)'"
+          onmouseout="this.style.background='rgba(220,38,38,0.1)'">✕ Remove</button>
+    </div>`).join('');
 }
-else if (isFullyBooked(dateStr)) { 
-  cell.classList.add('fully-booked'); 
-  cell.title = 'Fully booked'; 
-}
-else { 
-  cell.classList.add('available'); 
-  cell.onclick = () => selectDate(dateStr, d, cell); 
-}
-      if (selectedDate === dateStr) cell.classList.add('selected');
-      grid.appendChild(cell);
-    }
-  }
 
-  function selectDate(dateStr, day, cell) {
-    selectedDate = dateStr; selectedTime = null;
-    document.getElementById('selected-date-value').value = dateStr;
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const display = `${months[currentMonth]} ${day}, ${currentYear}`;
-    document.getElementById('selected-date-display').value = display;
-    document.getElementById('cal-selected-info').textContent = `Selected: ${display}`;
-    document.getElementById('selected-time-value').value = '';
-    document.getElementById('btn-book').disabled = true;
-    document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
-    cell.classList.add('selected'); renderTimeSlots(dateStr);
-  }
-
-  function renderTimeSlots(dateStr) {
-    const booked = bookedData[dateStr] || [];
-    const wrap = document.getElementById('time-slots-wrap'); 
-    wrap.innerHTML = '';
-    
-    // Check if selected date is today
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-    const isToday = dateStr === todayStr;
-    const currentHour = now.getHours();
-    const currentMinutes = now.getMinutes();
-    
-    ALL_SLOTS.forEach(slot => {
-      const btn = document.createElement('button'); 
-      btn.type = 'button'; 
-      btn.className = 'time-slot-btn'; 
-      btn.textContent = SLOT_LABELS[slot];
-      
-      // Parse slot hour (e.g. "09:00" → 9)
-      const slotHour = parseInt(slot.split(':')[0]);
-      
-      // Disable if slot is in the past (for today only)
-      const isPastSlot = isToday && (slotHour <= currentHour);
-      
-      if (booked.includes(slot)) { 
-        btn.classList.add('booked'); 
-        btn.disabled = true; 
-        btn.title = 'Already booked';
-      } else if (isPastSlot) {
-        btn.classList.add('booked');  // reuse same style
-        btn.disabled = true;
-        btn.title = 'This time has already passed';
-      } else { 
-        btn.onclick = () => selectTime(slot, btn); 
-      }
-      wrap.appendChild(btn);
-    });
-  }
-
-  function checkBookingReady() {
-    const name   = document.getElementById('contact-name').value.trim();
-    const mobile = document.getElementById('contact-mobile').value.trim();
-    const hasTime = !!document.getElementById('selected-time-value').value;
-    const nameOk   = /^[a-zA-Z\s]+$/.test(name) && name !== '';
-    const mobileOk = /^0\d{10}$/.test(mobile);
-    document.getElementById('btn-book').disabled = !(hasTime && nameOk && mobileOk);
-  }
-
-  function selectTime(slot, btn) {
-    selectedTime = slot; document.getElementById('selected-time-value').value = slot;
-    document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected-slot'));
-    btn.classList.add('selected-slot'); checkBookingReady();
-  }
-
-  async function changeMonth(dir) {
-    currentMonth += dir;
-    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-    if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
-    selectedDate = null; selectedTime = null;
-    document.getElementById('selected-date-display').value = '';
-    document.getElementById('selected-date-value').value = '';
-    document.getElementById('selected-time-value').value = '';
-    document.getElementById('time-slots-wrap').innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
-    document.getElementById('cal-selected-info').textContent = '';
-    document.getElementById('btn-book').disabled = true;
-    await renderCalendar();
-  }
-
+function removeFromQueue(idx) {
+  bookingQueue.splice(idx, 1);
+  renderBookingQueue();
   renderCalendar();
-
-  function validateProfileForm(form) {
-    const nameInput  = form.querySelector('input[name="fullname"]');
-    const phoneInput = form.querySelector('input[name="phone"]');
-    if (/[^A-Za-zÑñ\s]/.test(nameInput.value) || nameInput.value.trim() === '') {
-      alert('Full name must contain letters only.');
-      nameInput.focus();
-      return false;
-    }
-    if (!/^\d{1,11}$/.test(phoneInput.value)) {
-      alert('Phone number must be digits only, up to 11 numbers.');
-      phoneInput.focus();
-      return false;
-    }
-    return true;
-  }
-
-  function previewPic(input) {
-    if (input.files && input.files[0]) {
-      const reader = new FileReader();
-      reader.onload = e => { document.getElementById('picPreview').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; };
-      reader.readAsDataURL(input.files[0]);
-    }
-  }
-
-  const catKeywords = {
-  tire:      ['tire','tyre','tires'],
-  engineoil: ['engine oil','oil','lubricant'],
-  airfilter: ['air filter','airfilter','air fltr'],
-  brakeshoe: ['brake shoe','brakeshoe','brake pad','brake lining'],
-};
-
-function filterProducts(cat, btn) {
-  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  const cards = document.querySelectorAll('.product-card');
-  let visible = 0;
-  cards.forEach(card => {
-    let match = cat === 'all';
-    if (!match) {
-      const name = card.querySelector('.product-name').textContent.toLowerCase();
-      match = (catKeywords[cat] || []).some(kw => name.includes(kw));
-    }
-    card.style.display = match ? 'flex' : 'none';
-    if (match) visible++;
-  });
-  document.getElementById('no-products').style.display = visible === 0 ? 'block' : 'none';
-  document.getElementById('product-grid').style.display = visible === 0 ? 'none' : 'grid';
 }
 
-function searchProducts() {
-  const query = document.getElementById('shop-search').value.toLowerCase().trim();
-  const cards = document.querySelectorAll('.product-card');
-  let visible = 0;
-
-  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
-  document.querySelector('.cat-tab').classList.add('active');
-
-  cards.forEach(card => {
-    const name = card.querySelector('.product-name').textContent.toLowerCase();
-    const match = query === '' || name.includes(query);
-    card.style.display = match ? 'flex' : 'none';
-    if (match) visible++;
-  });
-
-  document.getElementById('no-products').style.display = visible === 0 ? 'block' : 'none';
-  document.getElementById('product-grid').style.display = visible === 0 ? 'none' : 'grid';
+function resetBookingForm() {
+  selectedDate = null; selectedTime = null;
+  document.getElementById('selected-date-display').value = '';
+  document.getElementById('selected-date-value').value   = '';
+  document.getElementById('selected-time-value').value   = '';
+  document.getElementById('service-search').value        = '';
+  document.getElementById('service-value').value         = '';
+  document.getElementById('booking-notes').value         = '';
+  document.getElementById('odometer').value              = '';
+  document.getElementById('mechanic-select').value       = '';
+  document.getElementById('mechanic-info').style.display = 'none';
+  document.getElementById('cal-selected-info').textContent = '';
+  document.getElementById('time-slots-wrap').innerHTML   =
+    '<div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
+  document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
+  document.getElementById('btn-add-queue').disabled = true;
+  document.getElementById('name-error').style.display   = 'none';
+  document.getElementById('mobile-error').style.display = 'none';
+  renderCalendar();
 }
 
-async function loadMechanics() {
+async function submitAllBookings() {
+  if (!bookingQueue.length) { showCartToast('⚠️ Queue is empty.'); return; }
+
+  const btnTop = document.getElementById('btn-confirm-all');
+  const btnBot = document.getElementById('btn-confirm-all-bottom');
+  btnTop.disabled = true; btnTop.textContent = 'Submitting…';
+  btnBot.disabled = true; btnBot.textContent = 'Submitting…';
+
   try {
-    const res = await fetch('/api/mechanics');
-    const mechanics = await res.json();
-    const sel = document.getElementById('mechanic-select');
-    mechanics.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      opt.textContent = m.name + ' — ' + m.specialization;
-      opt.dataset.spec = m.specialization;
-      sel.appendChild(opt);
+    const res = await fetch('/customer/book-multiple', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookings: bookingQueue })
     });
-  } catch(e) { console.error('Could not load mechanics', e); }
+    const data = await res.json();
+    if (data.success) {
+      const msg = data.created === 1 ? '✅ 1 booking confirmed!' : `✅ ${data.created} bookings confirmed!`;
+      showCartToast(msg);
+      bookingQueue = [];
+      renderBookingQueue();
+      resetBookingForm();
+      if (data.errors && data.errors.length) {
+        setTimeout(() => alert('Some bookings had issues:\n' + data.errors.join('\n')), 800);
+      }
+      setTimeout(() => window.location.reload(), 1200);
+    } else {
+      alert('Failed: ' + (data.error || (data.errors && data.errors.join('\n')) || 'Unknown error'));
+      btnTop.disabled = false; btnTop.textContent = '✅ Confirm All Bookings';
+      btnBot.disabled = false; btnBot.textContent = '✅ Confirm All Bookings';
+    }
+  } catch(e) {
+    alert('Network error. Please try again.');
+    btnTop.disabled = false; btnTop.textContent = '✅ Confirm All Bookings';
+    btnBot.disabled = false; btnBot.textContent = '✅ Confirm All Bookings';
+  }
 }
 
-document.getElementById('mechanic-select').addEventListener('change', function() {
-  const selected = this.options[this.selectedIndex];
-  const info = document.getElementById('mechanic-info');
-  const spec = document.getElementById('mechanic-spec-display');
-  if (this.value) {
-    info.style.display = 'block';
-    spec.textContent = selected.dataset.spec;
-  } else {
-    info.style.display = 'none';
-  }
-});
+async function fetchBookedSlots(year, month) {
+  try { const res = await fetch(`/api/booked-slots?year=${year}&month=${month+1}`); bookedData = await res.json(); }
+  catch(e) { bookedData = {}; }
+}
+function isFullyBooked(dateStr) { return (bookedData[dateStr] || []).length >= ALL_SLOTS.length; }
 
-loadMechanics();
+async function renderCalendar() {
+  await fetchBookedSlots(currentYear, currentMonth);
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent = `${months[currentMonth]} ${currentYear}`;
+  const grid = document.getElementById('cal-grid'); grid.innerHTML = '';
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) { const e = document.createElement('div'); e.className = 'cal-day empty'; grid.appendChild(e); }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(currentYear, currentMonth, d); dateObj.setHours(0,0,0,0);
+    const mm = String(currentMonth+1).padStart(2,'0'); const dd = String(d).padStart(2,'0');
+    const dateStr = `${currentYear}-${mm}-${dd}`;
+    const cell = document.createElement('div'); cell.className = 'cal-day'; cell.textContent = d;
+    if (dateObj.getTime() === today.getTime()) cell.classList.add('today');
+    const isToday = dateObj.getTime() === today.getTime();
+    const now = new Date();
+    const pastClosing = isToday && now.getHours() >= 19;
+    const isQueued = bookingQueue.some(b => b.date === dateStr);
+    if (dateObj < today || dateObj.getDay() === 0) {
+      cell.classList.add('past');
+      cell.title = dateObj.getDay() === 0 ? 'Closed Sundays' : 'Past date';
+    } else if (pastClosing) {
+      cell.classList.add('past'); cell.title = 'Shop closed for today';
+    } else if (isFullyBooked(dateStr)) {
+      cell.classList.add('fully-booked'); cell.title = 'Fully booked';
+    } else {
+      cell.classList.add('available');
+      cell.onclick = () => selectDate(dateStr, d, cell);
+    }
+    if (isQueued) {
+      cell.style.outline = '2px solid rgba(29,78,216,0.7)';
+      cell.style.outlineOffset = '-2px';
+    }
+    if (selectedDate === dateStr) cell.classList.add('selected');
+    grid.appendChild(cell);
+  }
+}
+
+function selectDate(dateStr, day, cell) {
+  selectedDate = dateStr; selectedTime = null;
+  document.getElementById('selected-date-value').value = dateStr;
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const display = `${months[currentMonth]} ${day}, ${currentYear}`;
+  document.getElementById('selected-date-display').value = display;
+  document.getElementById('cal-selected-info').textContent = `Selected: ${display}`;
+  document.getElementById('selected-time-value').value = '';
+  document.getElementById('btn-add-queue').disabled = true;
+  document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
+  cell.classList.add('selected');
+  renderTimeSlots(dateStr);
+}
+
+function renderTimeSlots(dateStr) {
+  const booked = bookedData[dateStr] || [];
+  const wrap = document.getElementById('time-slots-wrap');
+  wrap.innerHTML = '';
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const isToday = dateStr === todayStr;
+  const currentHour = now.getHours();
+  const queuedTimesForDate = bookingQueue.filter(b => b.date === dateStr).map(b => b.time);
+
+  ALL_SLOTS.forEach(slot => {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'time-slot-btn'; btn.textContent = SLOT_LABELS[slot];
+    const slotHour = parseInt(slot.split(':')[0]);
+    const isPastSlot = isToday && (slotHour <= currentHour);
+    const isQueuedSlot = queuedTimesForDate.includes(slot);
+    if (booked.includes(slot) || isPastSlot) {
+      btn.classList.add('booked'); btn.disabled = true;
+      btn.title = isPastSlot ? 'Time has passed' : 'Already booked';
+    } else if (isQueuedSlot) {
+      btn.classList.add('booked'); btn.disabled = true;
+      btn.title = 'Already in your queue';
+      btn.textContent = SLOT_LABELS[slot] + ' ✓';
+      btn.style.color = '#93c5fd';
+      btn.style.opacity = '0.7';
+    } else {
+      btn.onclick = () => selectTime(slot, btn);
+    }
+    wrap.appendChild(btn);
+  });
+}
+
+function checkBookingReady() {
+  const name      = document.getElementById('contact-name').value.trim();
+  const mobile    = document.getElementById('contact-mobile').value.trim();
+  const hasTime   = !!document.getElementById('selected-time-value').value;
+  const hasService = !!document.getElementById('service-value').value;
+  const nameOk    = /^[a-zA-Z\s]+$/.test(name) && name !== '';
+  const mobileOk  = /^0\d{10}$/.test(mobile);
+  document.getElementById('btn-add-queue').disabled = !(hasTime && hasService && nameOk && mobileOk);
+}
+
+function selectTime(slot, btn) {
+  selectedTime = slot;
+  document.getElementById('selected-time-value').value = slot;
+  document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected-slot'));
+  btn.classList.add('selected-slot');
+  checkBookingReady();
+}
+
+async function changeMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  selectedDate = null; selectedTime = null;
+  document.getElementById('selected-date-display').value = '';
+  document.getElementById('selected-date-value').value   = '';
+  document.getElementById('selected-time-value').value   = '';
+  document.getElementById('time-slots-wrap').innerHTML   =
+    '<div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
+  document.getElementById('cal-selected-info').textContent = '';
+  document.getElementById('btn-add-queue').disabled = true;
+  await renderCalendar();
+}
+
+renderCalendar();
 
 /* ══ NOTIFICATIONS ══ */
 let notifOpen = false;
@@ -2031,6 +2115,7 @@ function selectService(name) {
   document.getElementById('service-search').value = name;
   document.getElementById('service-value').value  = name;
   document.getElementById('service-dropdown').style.display = 'none';
+  checkBookingReady();
 }
 
 document.addEventListener('click', function(e) {

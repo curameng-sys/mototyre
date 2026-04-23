@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quotations – MotoTyre Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+    :root{--ink:#0c0d0f;--panel:#111215;--surface:#16181d;--card:#1a1d23;--red:#ff0f0f;--blue:#2563eb;--green:#16a34a;--muted:#6b7280;--border:rgba(255,255,255,0.07);--text:#e5e7eb;--orange:#f59e0b;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);}
+
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;height:56px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+    .topbar-brand{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.06em;color:#fff;display:flex;align-items:center;gap:.6rem;}
+    .topbar-brand span{color:var(--red);}
+    .badge-pill{background:rgba(255,15,15,.2);color:var(--red);font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.15rem .5rem;border-radius:4px;border:1px solid rgba(255,15,15,.3);}
+    .topbar-right{display:flex;align-items:center;gap:.75rem;}
+    .btn-action{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem .9rem;border-radius:8px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;text-decoration:none;border:none;cursor:pointer;}
+    .btn-primary{background:var(--red);color:#fff;}
+    .btn-primary:hover{background:#c73418;color:#fff;}
+    .btn-secondary{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);}
+    .btn-secondary:hover{border-color:var(--red);color:#fff;background:rgba(255,15,15,.08);}
+
+    .main{padding:1.5rem 2rem;max-width:1200px;margin:0 auto;}
+    .page-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;color:#fff;margin-bottom:.25rem;}
+    .page-sub{font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;}
+
+    /* FILTER TABS */
+    .filter-tabs{display:flex;gap:.4rem;margin-bottom:1.25rem;}
+    .ftab{padding:.4rem 1rem;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:all .15s;}
+    .ftab:hover{border-color:rgba(255,255,255,.2);color:#fff;}
+    .ftab.active{background:var(--red);border-color:var(--red);color:#fff;}
+
+    /* TABLE */
+    .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{padding:.8rem 1.1rem;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--panel);border-bottom:1px solid var(--border);white-space:nowrap;}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+    tbody tr:last-child{border-bottom:none;}
+    tbody tr:hover{background:rgba(255,255,255,.02);}
+    td{padding:.85rem 1.1rem;font-size:.85rem;color:var(--text);vertical-align:middle;}
+
+    .ref-code{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;color:#fff;}
+    .cust-name{font-weight:600;color:#fff;}
+    .moto-info{font-size:.75rem;color:var(--muted);margin-top:.1rem;}
+
+    /* STATUS BADGES */
+    .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;border-radius:99px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
+    .badge-pending{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);}
+    .badge-accepted{background:rgba(22,163,74,.15);color:#86efac;border:1px solid rgba(22,163,74,.3);}
+    .badge-rejected{background:rgba(107,114,128,.15);color:#9ca3af;border:1px solid rgba(107,114,128,.3);}
+
+    .amount{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.03em;color:#fff;}
+    .date-cell{font-size:.78rem;color:var(--muted);}
+
+    /* ACTIONS */
+    .action-btns{display:flex;gap:.4rem;flex-wrap:wrap;}
+    .act-btn{padding:.3rem .65rem;border-radius:6px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;}
+    .act-view{background:rgba(255,255,255,.04);border-color:var(--border);color:var(--muted);}
+    .act-view:hover{border-color:rgba(255,255,255,.2);color:#fff;}
+    .act-convert{background:rgba(22,163,74,.12);border-color:rgba(22,163,74,.3);color:#86efac;}
+    .act-convert:hover{background:rgba(22,163,74,.2);color:#fff;}
+    .act-reject{background:rgba(255,15,15,.08);border-color:rgba(255,15,15,.2);color:#fca5a5;}
+    .act-reject:hover{background:rgba(255,15,15,.18);color:#fff;}
+
+    /* EXPANDED ITEMS */
+    .items-row{display:none;}
+    .items-row.open{display:table-row;}
+    .items-inner{padding:1rem 1.1rem;background:rgba(255,255,255,.02);}
+    .item-line{display:flex;align-items:center;gap:.5rem;padding:.35rem 0;border-bottom:1px solid var(--border);font-size:.82rem;}
+    .item-line:last-child{border-bottom:none;}
+    .item-icon{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;}
+    .item-icon.product{background:rgba(255,15,15,.12);color:var(--red);}
+    .item-icon.service{background:rgba(37,99,235,.12);color:#93c5fd;}
+    .item-name{flex:1;color:#e5e7eb;}
+    .item-qty{color:var(--muted);font-size:.75rem;}
+    .item-price{font-family:'Syne',sans-serif;font-weight:700;color:#fff;}
+
+    /* EMPTY STATE */
+    .empty-state{text-align:center;padding:4rem 2rem;color:var(--muted);}
+    .empty-state i{font-size:3rem;opacity:.2;display:block;margin-bottom:1rem;}
+    .empty-state p{font-size:.9rem;}
+
+    /* FLASH MESSAGES */
+    .flash-wrap{margin-bottom:1rem;}
+    .flash{padding:.75rem 1rem;border-radius:8px;font-size:.85rem;margin-bottom:.4rem;}
+    .flash-success{background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.3);color:#86efac;}
+    .flash-danger{background:rgba(255,15,15,.12);border:1px solid rgba(255,15,15,.25);color:#fca5a5;}
+
+    /* TOAST */
+    .toast-wrap{position:fixed;top:70px;right:1.25rem;z-index:2000;display:flex;flex-direction:column;gap:.4rem;}
+    .toast{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:8px;padding:.7rem 1rem;font-family:'DM Sans',sans-serif;font-size:.82rem;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:toastIn .25s ease;min-width:180px;}
+    .toast.error{border-left-color:var(--red);}
+    @keyframes toastIn{from{opacity:0;transform:translateX(12px);}to{opacity:1;transform:translateX(0);}}
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">Quotations</span></div>
+  <div class="topbar-right">
+    <a href="{{ url_for('quotation_new') }}" class="btn-action btn-primary"><i class="fas fa-plus"></i> New Quotation</a>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-action btn-secondary"><i class="fas fa-arrow-left"></i> Dashboard</a>
+  </div>
+</header>
+
+<div class="main">
+  <div class="page-title">Quotations</div>
+  <div class="page-sub">Manage customer estimates. Convert to Job Order when customer confirms.</div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-wrap">
+    {% for cat, msg in messages %}
+    <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <div class="filter-tabs">
+    <a href="?status=all"      class="ftab {% if status_filter=='all'      %}active{% endif %}">All</a>
+    <a href="?status=pending"  class="ftab {% if status_filter=='pending'  %}active{% endif %}">Pending</a>
+    <a href="?status=accepted" class="ftab {% if status_filter=='accepted' %}active{% endif %}">Accepted</a>
+    <a href="?status=rejected" class="ftab {% if status_filter=='rejected' %}active{% endif %}">Rejected</a>
+  </div>
+
+  <div class="table-wrap">
+    {% if quotations %}
+    <table>
+      <thead>
+        <tr>
+          <th>Ref #</th>
+          <th>Customer</th>
+          <th>Items</th>
+          <th>Total</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in quotations %}
+        <tr>
+          <td><span class="ref-code">QUO-{{ '%03d'|format(q.id) }}</span></td>
+          <td>
+            <div class="cust-name">{{ q.customer_name }}</div>
+            {% if q.motorcycle_model or q.motorcycle_plate %}
+            <div class="moto-info">
+              {% if q.motorcycle_model %}{{ q.motorcycle_model }}{% endif %}
+              {% if q.motorcycle_plate %} · {{ q.motorcycle_plate }}{% endif %}
+            </div>
+            {% endif %}
+            {% if q.customer_phone %}<div class="moto-info">{{ q.customer_phone }}</div>{% endif %}
+          </td>
+          <td>
+            <button class="act-btn act-view" onclick="toggleItems({{ q.id }})">
+              {{ q.items|length }} item(s) <i class="fas fa-chevron-down" style="font-size:.6rem;"></i>
+            </button>
+          </td>
+          <td><span class="amount">₱{{ '%.2f'|format(q.total_amount) }}</span></td>
+          <td>
+            <span class="badge badge-{{ q.status }}">
+              {% if q.status == 'pending' %}<i class="fas fa-clock"></i>{% elif q.status == 'accepted' %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-times"></i>{% endif %}
+              {{ q.status|capitalize }}
+            </span>
+          </td>
+          <td class="date-cell">{{ q.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.72rem;">{{ q.created_at.strftime('%I:%M %p') }}</span></td>
+          <td>
+            <div class="action-btns">
+              {% if q.status == 'pending' %}
+              <form method="POST" action="{{ url_for('convert_quotation', qid=q.id) }}" onsubmit="return confirm('Convert QUO-{{ '%03d'|format(q.id) }} to a Job Order? Customer has confirmed.');">
+                <button type="submit" class="act-btn act-convert"><i class="fas fa-arrow-right"></i> Convert to JO</button>
+              </form>
+              <button class="act-btn act-reject" onclick="rejectQuote({{ q.id }}, this)"><i class="fas fa-times"></i> Reject</button>
+              {% else %}
+              <span style="font-size:.75rem;color:var(--muted);">—</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        <tr class="items-row" id="items-row-{{ q.id }}">
+          <td colspan="7">
+            <div class="items-inner">
+              {% if q.notes %}<div style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;padding:.5rem .75rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid var(--border);">{{ q.notes }}</div>{% endif %}
+              {% for item in q.items %}
+              <div class="item-line">
+                <div class="item-icon {{ item.item_type }}">
+                  <i class="fas {{ 'fa-box' if item.item_type == 'product' else 'fa-wrench' }}"></i>
+                </div>
+                <span class="item-name">{{ item.name }}</span>
+                <span class="item-qty">x{{ item.quantity }}</span>
+                <span class="item-price">₱{{ '%.2f'|format(item.unit_price * item.quantity) }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-file-invoice"></i>
+      <p>No quotations found.<br><a href="{{ url_for('quotation_new') }}" style="color:var(--red);">Create the first one</a>.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+  function toggleItems(id) {
+    const row = document.getElementById('items-row-' + id);
+    row.classList.toggle('open');
+  }
+
+  async function rejectQuote(id, btn) {
+    if (!confirm('Mark QUO-' + String(id).padStart(3,'0') + ' as rejected?')) return;
+    btn.disabled = true;
+    try {
+      const res  = await fetch(`/quotation/${id}/reject`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) { toast('Quotation rejected.'); setTimeout(() => location.reload(), 800); }
+      else { toast('Failed to reject.', 'error'); btn.disabled = false; }
+    } catch { toast('Network error.', 'error'); btn.disabled = false; }
+  }
+
+  function toast(msg, type='success') {
+    const w = document.getElementById('toast-wrap');
+    const t = document.createElement('div');
+    t.className = `toast${type === 'error' ? ' error' : ''}`;
+    t.textContent = msg;
+    w.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+</script>
+</body>
+</html>

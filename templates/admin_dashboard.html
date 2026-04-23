@@ -276,7 +276,9 @@
     <a href="#" onclick="showSection('users', this)">👥 Users</a>
     <a href="#" onclick="showSection('mechanics', this)">🔧 Mechanics</a>
     <a href="#" onclick="showSection('services', this)">🛠️ Services</a>
-    <a href="{{ url_for('pos') }}">🖥️ Quotation</a>
+    <a href="{{ url_for('quotations_list') }}">🖥️ Quotations</a>
+    <a href="{{ url_for('job_orders') }}">🔩 Job Orders</a>
+    <a href="{{ url_for('payments') }}">💳 Payments</a>
     <a href="{{ url_for('walk_in') }}">🏍️ Walk-In</a>
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
@@ -1706,7 +1708,7 @@
     const btn = document.getElementById('csv-import-btn');
     btn.textContent = '⏳ Importing ' + limitedRows.length + ' products...';
     btn.disabled = true;
-    fetch('/admin/import-products', {
+    fetch('/import-products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ products: limitedRows })

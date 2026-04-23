@@ -20,6 +20,7 @@ from io import BytesIO
 from security import clean_str, clean_float, is_valid_email, validate_booking_status, validate_order_status
 import json
 import os, uuid, random, string, base64, requests
+import threading
 
 # App setup
 
@@ -73,7 +74,11 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
 
 # Gmail helpers
 
+_gmail_service_lock = threading.Lock()
+_gmail_service_cache = None
+
 def _get_gmail_service():
+    global _gmail_service_cache
     creds = None
     if os.path.exists(GMAIL_TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_FILE, GMAIL_SCOPES)
@@ -85,14 +90,23 @@ def _get_gmail_service():
             creds = flow.run_local_server(port=0)
         with open(GMAIL_TOKEN_FILE, "w") as f:
             f.write(creds.to_json())
-    return build("gmail", "v1", credentials=creds)
+        _gmail_service_cache = None
+    with _gmail_service_lock:
+        if _gmail_service_cache is None:
+            _gmail_service_cache = build("gmail", "v1", credentials=creds)
+    return _gmail_service_cache
 
 def _send_gmail(to, subject, html_body):
     msg = MIMEMultipart("alternative")
     msg["to"], msg["from"], msg["subject"] = to, GMAIL_SENDER, subject
     msg.attach(MIMEText(html_body, "html"))
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-    _get_gmail_service().users().messages().send(userId="me", body={"raw": raw}).execute()
+    def _do_send():
+        try:
+            _get_gmail_service().users().messages().send(userId="me", body={"raw": raw}).execute()
+        except Exception as e:
+            print(f"[GMAIL ADMIN] Send failed: {e}")
+    threading.Thread(target=_do_send, daemon=True).start()
 
 def send_otp_email(email, otp, purpose="login"):
     configs = {
@@ -226,6 +240,71 @@ class WalkInCustomer(db.Model):
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
 
 
+class Quotation(db.Model):
+    __tablename__ = 'quotation'
+    id               = db.Column(db.Integer, primary_key=True)
+    customer_name    = db.Column(db.String(100), nullable=False)
+    customer_phone   = db.Column(db.String(20), nullable=False)
+    motorcycle_model = db.Column(db.String(100))
+    motorcycle_plate = db.Column(db.String(20))
+    notes            = db.Column(db.Text)
+    total_amount     = db.Column(db.Float, default=0)
+    status           = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    items            = db.relationship('QuotationItem', backref='quotation', lazy=True, cascade='all, delete-orphan')
+
+
+class QuotationItem(db.Model):
+    __tablename__ = 'quotation_item'
+    id           = db.Column(db.Integer, primary_key=True)
+    quotation_id = db.Column(db.Integer, db.ForeignKey('quotation.id'), nullable=False)
+    item_type    = db.Column(db.String(10), default='service')  # 'service' or 'product'
+    name         = db.Column(db.String(150), nullable=False)
+    quantity     = db.Column(db.Integer, default=1)
+    unit_price   = db.Column(db.Float, nullable=False)
+
+
+class JobOrder(db.Model):
+    __tablename__ = 'job_order'
+    id               = db.Column(db.Integer, primary_key=True)
+    quotation_id     = db.Column(db.Integer, db.ForeignKey('quotation.id'), nullable=True)
+    customer_name    = db.Column(db.String(100), nullable=False)
+    customer_phone   = db.Column(db.String(20), nullable=False)
+    motorcycle_model = db.Column(db.String(100))
+    motorcycle_plate = db.Column(db.String(20))
+    notes            = db.Column(db.Text)
+    total_amount     = db.Column(db.Float, default=0)
+    status           = db.Column(db.String(20), default='pending')  # pending, in_progress, completed, cancelled
+    mechanic_name    = db.Column(db.String(100))
+    created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    completed_at     = db.Column(db.DateTime, nullable=True)
+    items            = db.relationship('JobOrderItem', backref='job_order', lazy=True, cascade='all, delete-orphan')
+
+
+class JobOrderItem(db.Model):
+    __tablename__ = 'job_order_item'
+    id           = db.Column(db.Integer, primary_key=True)
+    job_order_id = db.Column(db.Integer, db.ForeignKey('job_order.id'), nullable=False)
+    item_type    = db.Column(db.String(10), default='service')
+    name         = db.Column(db.String(150), nullable=False)
+    quantity     = db.Column(db.Integer, default=1)
+    unit_price   = db.Column(db.Float, nullable=False)
+
+
+class Payment(db.Model):
+    __tablename__ = 'payment'
+    id             = db.Column(db.Integer, primary_key=True)
+    job_order_id   = db.Column(db.Integer, db.ForeignKey('job_order.id'), nullable=False)
+    amount         = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(20), nullable=False, default='cash')  # cash, gcash
+    reference_no   = db.Column(db.String(50), nullable=True)   # GCash ref number
+    paid_at        = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    created_by     = db.Column(db.Integer, db.ForeignKey('user.id'))
+    job_order      = db.relationship('JobOrder', backref=db.backref('payment', uselist=False))
+
+
 class Notification(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -338,13 +417,8 @@ def admin_login():
             return redirect(url_for('admin_login'))
 
         if user and user.check_password(password):
-            # Send OTP for 2FA
             otp = _save_otp(email, purpose="login")
-            try:
-                send_otp_email(email, otp, purpose="login")
-            except Exception as e:
-                flash(f'Could not send OTP: {e}', 'danger')
-                return redirect(url_for('admin_login'))
+            send_otp_email(email, otp, purpose="login")
             session['admin_pending_login_email'] = email
             return redirect(url_for('admin_login'))
 
@@ -886,19 +960,308 @@ def delete_notification(nid):
     return jsonify({'success': True})
 
 
-# POS routes
+# Quotation routes
 
 @admin_app.route('/pos')
 @login_required
-@require_admin_or_staff
 def pos():
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    products  = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
-    customers = User.query.filter_by(role='customer').order_by(User.fullname).all()
-    services  = Service.query.filter_by(is_active=True).order_by(Service.name).all()
-    return render_template('pos.html', products=products, customers=customers, services=services)
+    return redirect(url_for('quotation_new'))
+
+
+@admin_app.route('/quotation/new')
+@login_required
+@require_admin_or_staff
+def quotation_new():
+    products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
+    services = Service.query.filter_by(is_active=True).order_by(Service.name).all()
+    mechanics = Mechanic.query.order_by(Mechanic.name).all()
+    return render_template('quotation.html', products=products, services=services, mechanics=mechanics)
+
+
+@admin_app.route('/api/quotation/save', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def save_quotation():
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data'}), 400
+    items = data.get('items', [])
+    if not items:
+        return jsonify({'success': False, 'error': 'No items in quotation'}), 400
+    total = sum(float(i['unit_price']) * int(i['quantity']) for i in items)
+    q = Quotation(
+        customer_name    = data.get('customer_name', '').strip(),
+        customer_phone   = data.get('customer_phone', '').strip(),
+        motorcycle_model = data.get('motorcycle_model', '').strip(),
+        motorcycle_plate = data.get('motorcycle_plate', '').strip(),
+        notes            = data.get('notes', '').strip(),
+        total_amount     = total,
+        status           = 'pending',
+        created_by       = current_user.id,
+    )
+    db.session.add(q)
+    db.session.flush()
+    for i in items:
+        db.session.add(QuotationItem(
+            quotation_id = q.id,
+            item_type    = i.get('item_type', 'service'),
+            name         = i['name'],
+            quantity     = int(i['quantity']),
+            unit_price   = float(i['unit_price']),
+        ))
+    db.session.commit()
+    return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}'})
+
+
+@admin_app.route('/quotations')
+@login_required
+@require_admin_or_staff
+def quotations_list():
+    status_filter = request.args.get('status', 'all')
+    q = Quotation.query
+    if status_filter != 'all':
+        q = q.filter_by(status=status_filter)
+    quotations = q.order_by(Quotation.created_at.desc()).all()
+    return render_template('quotations_list.html', quotations=quotations, status_filter=status_filter)
+
+
+@admin_app.route('/quotation/<int:qid>/convert', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def convert_quotation(qid):
+    quot = Quotation.query.get_or_404(qid)
+    if quot.status != 'pending':
+        flash('Only pending quotations can be converted.', 'danger')
+        return redirect(url_for('quotations_list'))
+    jo = JobOrder(
+        quotation_id     = quot.id,
+        customer_name    = quot.customer_name,
+        customer_phone   = quot.customer_phone,
+        motorcycle_model = quot.motorcycle_model,
+        motorcycle_plate = quot.motorcycle_plate,
+        notes            = quot.notes,
+        total_amount     = quot.total_amount,
+        status           = 'pending',
+        created_by       = current_user.id,
+    )
+    db.session.add(jo)
+    db.session.flush()
+    for qi in quot.items:
+        db.session.add(JobOrderItem(
+            job_order_id = jo.id,
+            item_type    = qi.item_type,
+            name         = qi.name,
+            quantity     = qi.quantity,
+            unit_price   = qi.unit_price,
+        ))
+    quot.status = 'accepted'
+    db.session.commit()
+    flash(f'Quotation QUO-{quot.id:03d} converted to Job Order JO-{jo.id:03d}.', 'success')
+    return redirect(url_for('job_orders'))
+
+
+@admin_app.route('/quotation/<int:qid>/reject', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def reject_quotation(qid):
+    quot = Quotation.query.get_or_404(qid)
+    quot.status = 'rejected'
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+# Job Order routes
+
+@admin_app.route('/job-orders')
+@login_required
+@require_admin_or_staff
+def job_orders():
+    new_id = request.args.get('new', type=int)
+    status_filter = 'all' if new_id else request.args.get('status', 'all')
+    q = JobOrder.query
+    if status_filter != 'all':
+        q = q.filter_by(status=status_filter)
+    orders = q.order_by(JobOrder.created_at.desc()).all()
+    mechanics = Mechanic.query.order_by(Mechanic.name).all()
+    new_jo = JobOrder.query.get(new_id) if new_id else None
+    return render_template('job_orders.html', job_orders=orders, mechanics=mechanics,
+                           status_filter=status_filter, new_jo=new_jo)
+
+
+@admin_app.route('/job-order/<int:jid>/status', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def update_job_order_status(jid):
+    jo = JobOrder.query.get_or_404(jid)
+    new_status = request.form.get('status', '')
+    transitions = {
+        'pending':     ['in_progress', 'cancelled'],
+        'in_progress': ['cancelled'],
+    }
+    if jo.status in ['completed', 'cancelled']:
+        return jsonify({'success': False, 'error': 'Status is final and cannot be changed'}), 400
+    if new_status not in transitions.get(jo.status, []):
+        return jsonify({'success': False, 'error': 'Invalid status transition'}), 400
+    jo.status = new_status
+    if new_status == 'completed':
+        jo.completed_at = datetime.utcnow() + timedelta(hours=8)
+    mechanic_name = request.form.get('mechanic_name')
+    if mechanic_name is not None:
+        jo.mechanic_name = mechanic_name.strip() or None
+    db.session.commit()
+    return jsonify({'success': True, 'status': jo.status})
+
+
+@admin_app.route('/payments')
+@login_required
+@require_admin_or_staff
+def payments():
+    status_filter = request.args.get('status', 'unpaid')
+    
+    if status_filter == 'unpaid':
+        # Unpaid Job Orders (in_progress, no payment yet)
+        unpaid_jos = JobOrder.query.filter(
+            JobOrder.status == 'in_progress',
+            ~JobOrder.id.in_(db.session.query(Payment.job_order_id))
+        ).order_by(JobOrder.created_at.desc()).all()
+        
+        # Confirmed customer bookings not yet paid (cash, unpaid)
+        unpaid_bookings = Booking.query.filter(
+            Booking.status.in_(['confirmed', 'in_progress', 'inprogress']),
+            Booking.payment_method == 'cash',
+            Booking.walkin_customer_id == None,
+            Booking.is_archived == False
+        ).order_by(Booking.created_at.desc()).all()
+        
+    elif status_filter == 'paid':
+        unpaid_jos = []
+        unpaid_bookings = []
+        paid_jos = (JobOrder.query
+                   .join(Payment, Payment.job_order_id == JobOrder.id)
+                   .order_by(Payment.paid_at.desc()).all())
+    else:
+        unpaid_jos = []
+        unpaid_bookings = []
+        paid_jos = JobOrder.query.order_by(JobOrder.created_at.desc()).all()
+
+    if status_filter != 'paid':
+        paid_jos = []
+
+    return render_template('payments.html', 
+        job_orders=unpaid_jos,
+        unpaid_bookings=unpaid_bookings,
+        paid_jos=paid_jos,
+        all_services=Service.query.filter_by(is_active=True).all(),
+        status_filter=status_filter)
+
+
+@admin_app.route('/payments/process/<int:joid>', methods=['GET'])
+@login_required
+@require_admin_or_staff
+def payment_process(joid):
+    jo = JobOrder.query.get_or_404(joid)
+    if jo.payment:
+        flash('This job order has already been paid.', 'warning')
+        return redirect(url_for('payments'))
+    if jo.status not in ('pending', 'in_progress'):
+        flash('Only pending or in-progress job orders can be paid.', 'danger')
+        return redirect(url_for('payments'))
+    return render_template('payment_process.html', jo=jo)
+
+
+@admin_app.route('/payments/process/<int:joid>', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def payment_submit(joid):
+    jo = JobOrder.query.get_or_404(joid)
+    if jo.payment:
+        return jsonify({'success': False, 'error': 'Already paid'}), 400
+    method    = request.form.get('payment_method', 'cash')
+    ref_no    = request.form.get('reference_no', '').strip() or None
+    if method not in ('cash', 'gcash'):
+        return jsonify({'success': False, 'error': 'Invalid payment method'}), 400
+    if method == 'gcash' and not ref_no:
+        return jsonify({'success': False, 'error': 'GCash reference number is required'}), 400
+    try:
+        pmt = Payment(
+            job_order_id   = jo.id,
+            amount         = jo.total_amount,
+            payment_method = method,
+            reference_no   = ref_no,
+            created_by     = current_user.id,
+        )
+        db.session.add(pmt)
+        jo.status       = 'completed'
+        jo.completed_at = datetime.utcnow() + timedelta(hours=8)
+        db.session.commit()
+        return jsonify({'success': True, 'ref': f'JO-{jo.id:03d}', 'amount': jo.total_amount,
+                        'method': method, 'payment_id': pmt.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+@admin_app.route('/payments/booking/<int:bid>', methods=['GET'])
+@login_required
+@require_admin_or_staff
+def booking_payment_process(bid):
+    booking = Booking.query.get_or_404(bid)
+    # Get service price
+    svc = Service.query.filter_by(name=booking.service, is_active=True).first()
+    service_price = svc.price if svc else 0
+    return render_template('booking_payment_process.html', booking=booking, service_price=service_price)
+
+
+@admin_app.route('/payments/booking/<int:bid>', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def booking_payment_submit(bid):
+    booking = Booking.query.get_or_404(bid)
+    method  = request.form.get('payment_method', 'cash')
+    ref_no  = request.form.get('reference_no', '').strip() or None
+    amount  = request.form.get('amount', '0')
+
+    if method not in ('cash', 'gcash'):
+        return jsonify({'success': False, 'error': 'Invalid payment method'}), 400
+    if method == 'gcash' and not ref_no:
+        return jsonify({'success': False, 'error': 'GCash reference number is required'}), 400
+
+    try:
+        amount_f = float(amount)
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid amount'}), 400
+
+    try:
+        booking.status         = 'completed'
+        booking.payment_method = method
+        booking.total_amount   = amount_f
+        db.session.commit()
+
+        # Notify customer
+        send_notification(
+            booking.user_id,
+            'Service Completed! 🎉',
+            f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} has been completed and paid. Thank you!',
+            type='booking', status='completed'
+        )
+
+        return jsonify({
+            'success':   True,
+            'ref':       f'BKG-{booking.id:03d}',
+            'amount':    amount_f,
+            'method':    method,
+            'booking_id': booking.id
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_app.route('/payments/receipt/<int:pid>')
+@login_required
+@require_admin_or_staff
+def payment_receipt(pid):
+    pmt = Payment.query.get_or_404(pid)
+    return render_template('payment_receipt.html', pmt=pmt, jo=pmt.job_order)
 
 
 @admin_app.route('/pos/products')
@@ -1096,6 +1459,74 @@ def walkin_customer_history(cid):
         },
         'history': history[:20]
     })
+
+
+@admin_app.route('/walk-in/create-job-order', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def walkin_create_job_order():
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data received'}), 400
+
+    customer_name  = clean_str(data.get('customer_name', ''), max_len=100)
+    customer_phone = clean_str(data.get('customer_phone', ''), max_len=20)
+    moto_model     = clean_str(data.get('motorcycle_model', ''), max_len=100)
+    moto_plate     = clean_str(data.get('motorcycle_plate', ''), max_len=20)
+    notes          = clean_str(data.get('notes', ''), max_len=500)
+    mechanic_id    = data.get('mechanic_id')
+    services       = data.get('services', [])
+    cart           = data.get('cart', [])
+
+    if not customer_name:
+        return jsonify({'success': False, 'error': 'Customer name is required'}), 400
+    if not services and not cart:
+        return jsonify({'success': False, 'error': 'No services or products added'}), 400
+
+    mechanic_name = None
+    if mechanic_id:
+        mechanic = Mechanic.query.get(int(mechanic_id))
+        if mechanic:
+            mechanic_name = mechanic.name
+
+    items = []
+    for svc in services:
+        items.append({'item_type': 'service', 'name': svc['name'],
+                      'quantity': int(svc.get('qty', 1)), 'unit_price': float(svc.get('price', 0))})
+    for p in cart:
+        product = Product.query.get(p.get('product_id')) if p.get('product_id') else None
+        items.append({'item_type': 'product', 'name': product.name if product else p.get('name', ''),
+                      'quantity': int(p.get('quantity', 1)), 'unit_price': float(p.get('unit_price', 0))})
+
+    total = sum(i['unit_price'] * i['quantity'] for i in items)
+
+    try:
+        jo = JobOrder(
+            customer_name    = customer_name,
+            customer_phone   = customer_phone,
+            motorcycle_model = moto_model,
+            motorcycle_plate = moto_plate,
+            notes            = notes,
+            total_amount     = total,
+            status           = 'pending',
+            mechanic_name    = mechanic_name,
+            created_by       = current_user.id,
+        )
+        db.session.add(jo)
+        db.session.flush()
+        for i in items:
+            db.session.add(JobOrderItem(
+                job_order_id = jo.id,
+                item_type    = i['item_type'],
+                name         = i['name'],
+                quantity     = i['quantity'],
+                unit_price   = i['unit_price'],
+            ))
+        db.session.commit()
+        return jsonify({'success': True, 'job_order_id': jo.id, 'ref': f'JO-{jo.id:03d}'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @admin_app.route('/walk-in/checkout', methods=['POST'])

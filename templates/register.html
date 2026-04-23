@@ -29,7 +29,6 @@
         align-items: stretch;
       }
 
-      /* LEFT PANEL */
       .auth-left {
         flex: 1;
         background: var(--ink);
@@ -118,7 +117,6 @@
       .left-reg-text { transition: opacity 0.4s, transform 0.4s; }
       .left-otp-text { display: none; opacity: 0; transition: opacity 0.4s, transform 0.4s; }
 
-      /* RIGHT PANEL */
       .auth-right {
         width: 540px;
         flex-shrink: 0;
@@ -331,7 +329,39 @@
       }
       .auth-switch a:hover { text-decoration: underline; }
 
-      /* OTP PANEL */
+      .terms-check-wrap {
+        margin-top: 0.85rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        border-radius: 6px;
+        transition: outline 0.2s;
+      }
+      .terms-check-wrap input[type="checkbox"] {
+        margin-top: 3px;
+        accent-color: #ff0f0f;
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+      .terms-check-wrap label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        line-height: 1.5;
+        cursor: pointer;
+      }
+      .terms-check-wrap label a {
+        color: #ff0f0f;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .terms-check-wrap label a:hover { text-decoration: underline; }
+      .terms-check-wrap.error {
+        outline: 1px solid #ff0f0f;
+        padding: 0.4rem;
+      }
+
       .email-badge {
         display: inline-flex;
         align-items: center;
@@ -503,20 +533,19 @@
   <div class="auth-right">
 
     <!-- ── STEP 1: REGISTER FORM ── -->
-<div class="panel panel-reg" id="panel-reg">
-  <h3>Create Account</h3>
-  <p class="sub">Join Mototyre – Book & Order Easily</p>
+    <div class="panel panel-reg" id="panel-reg">
+      <h3>Create Account</h3>
+      <p class="sub">Join Mototyre – Book & Order Easily</p>
 
-  <!-- ADD THIS FLASH BLOCK -->
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="flash-msg flash-{{ category }}">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
 
-  <form method="POST" action="{{ url_for('register') }}" id="reg-form">
+      <form method="POST" action="{{ url_for('register') }}" id="reg-form">
         <div class="section-label">Personal Info</div>
 
         <div class="field-row-name">
@@ -546,7 +575,7 @@
         <div class="field-row">
           <div class="field-group">
             <label>Email Address</label>
-            <input type="email" name="email" id="reg-email" 
+            <input type="email" name="email" id="reg-email"
                   placeholder="you@email.com" required
                   oninput="validateEmailDomain(this)">
             <div id="email-domain-msg" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
@@ -561,24 +590,24 @@
 
         <div class="section-label">Motorcycle (Optional)</div>
 
-          <div class="field-row">
-            <div class="field-group">
-              <label>Plate Number</label>
-              <input type="text" name="plate" id="plate-input"
-                placeholder="e.g. ABC 1234 XX"
-                minlength="7" maxlength="7"
-                oninput="validatePlate(this)"
-                style="text-transform:uppercase;">
-              <div id="plate-msg" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
-            </div>
-            <div class="field-group">
-              <label>Model <span id="model-counter" style="font-weight:400;color:#4b5563;float:right;">0/50</span></label>
-              <input type="text" name="model" id="model-input"
-                placeholder="Honda Click 125i"
-                maxlength="50"
-                oninput="updateModelCounter(this)">
-            </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Plate Number</label>
+            <input type="text" name="plate" id="plate-input"
+              placeholder="e.g. ABC 1234 XX"
+              minlength="7" maxlength="7"
+              oninput="validatePlate(this)"
+              style="text-transform:uppercase;">
+            <div id="plate-msg" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
           </div>
+          <div class="field-group">
+            <label>Model <span id="model-counter" style="font-weight:400;color:#4b5563;float:right;">0/50</span></label>
+            <input type="text" name="model" id="model-input"
+              placeholder="Honda Click 125i"
+              maxlength="50"
+              oninput="updateModelCounter(this)">
+          </div>
+        </div>
 
         <div class="section-label">Security</div>
 
@@ -600,7 +629,6 @@
           </div>
         </div>
 
-        <!-- ADD THIS: Confirm Password -->
         <div class="field-group">
           <label>Confirm Password</label>
           <div class="pass-wrap">
@@ -620,7 +648,19 @@
       <div class="auth-switch">
         Already have an account? <a href="{{ url_for('login') }}">Sign in here</a>
       </div>
-    </div>
+
+      <div class="terms-check-wrap" id="terms-check-wrap">
+        <input type="checkbox" id="agree-terms">
+        <label for="agree-terms">
+          I have read and agree to the
+          <a href="{{ url_for('terms') }}" target="_blank">Terms &amp; Conditions</a>
+          and
+          <a href="{{ url_for('privacy') }}" target="_blank">Data Privacy Policy</a>
+          of MotoTyre.
+        </label>
+      </div>
+
+    </div><!-- end panel-reg -->
 
     <!-- ── STEP 2: OTP PANEL ── -->
     <div class="panel panel-otp slide-in-wait" id="panel-otp">
@@ -646,7 +686,7 @@
           <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
           <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
         </div>
-        <button type="submit" class="btn-auth" id="otp-submit-btn" disabled>Verify & Activate →</button>
+        <button type="submit" class="btn-auth" id="otp-submit-btn" disabled>Verify &amp; Activate →</button>
       </form>
 
       <div class="otp-footer">
@@ -666,10 +706,10 @@
         </svg>
         Back to Registration
       </button>
-    </div>
+    </div><!-- end panel-otp -->
 
-  </div>
-</div>
+  </div><!-- end auth-right -->
+</div><!-- end auth-wrap -->
 
 <script>
   const panelReg     = document.getElementById('panel-reg');
@@ -678,8 +718,20 @@
   const leftOtp      = document.querySelector('.left-otp-text');
   const emailDisplay = document.getElementById('otp-email-display');
 
+  // ── Single submit listener ──
   document.getElementById('reg-form').addEventListener('submit', function (e) {
-    // Block if passwords don't match
+
+    // 1. Check terms checkbox
+    if (!document.getElementById('agree-terms').checked) {
+      e.preventDefault();
+      const wrap = document.getElementById('terms-check-wrap');
+      wrap.classList.add('error');
+      wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => wrap.classList.remove('error'), 2000);
+      return;
+    }
+
+    // 2. Check passwords match
     const pw  = document.getElementById('password').value;
     const cpw = document.getElementById('confirm-password').value;
     if (pw !== cpw) {
@@ -689,7 +741,7 @@
       return;
     }
 
-    // Block if plate is filled but less than 7 chars
+    // 3. Check plate length
     const plate = document.getElementById('plate-input').value.trim();
     if (plate.length > 0 && plate.length < 7) {
       e.preventDefault();
@@ -701,13 +753,14 @@
       return;
     }
 
+    // All good — set email display for OTP panel
     emailDisplay.textContent = document.getElementById('reg-email').value;
   });
 
   // ── Confirm Password match check ──
   document.getElementById('confirm-password').addEventListener('input', function () {
-    const pw  = document.getElementById('password').value;
-    const cpw = this.value;
+    const pw   = document.getElementById('password').value;
+    const cpw  = this.value;
     const hint = document.getElementById('chk-match');
     if (cpw === '') {
       hint.classList.remove('show');
@@ -723,14 +776,13 @@
     }
   });
 
-  // Also re-check confirm when password changes
+  // Re-check confirm when password changes
   document.getElementById('password').addEventListener('input', function () {
     const cpwInput = document.getElementById('confirm-password');
     if (cpwInput.value !== '') {
       cpwInput.dispatchEvent(new Event('input'));
     }
   });
-
 
   // ── Model counter ──
   function updateModelCounter(input) {
@@ -779,7 +831,6 @@
   const boxes     = document.querySelectorAll('.otp-box');
   const hidden    = document.getElementById('otp-hidden');
   const submitBtn = document.getElementById('otp-submit-btn');
-  const otpRow    = document.getElementById('otp-row');
 
   boxes.forEach((box, i) => {
     box.addEventListener('input', (e) => {
@@ -853,7 +904,7 @@
       });
   }
 
-  // ── Password Toggle & Hints ──
+  // ── Password Toggle ──
   function togglePass() {
     const p = document.getElementById('password');
     const eye = document.getElementById('eyeIcon');

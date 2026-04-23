@@ -17,7 +17,6 @@
       --red:     #ff0f0f;
       --blue:    #2563eb;
       --green:   #16a34a;
-      --gcash:   #007dff;
       --warning: #d97706;
       --muted:   #6b7280;
       --border:  rgba(255,255,255,0.07);
@@ -272,18 +271,6 @@
     }
     .field-select:focus { border-color: #fbbf24; }
     .field-select option { background: #1a1d23; color: #fff; }
-    .mechanic-status-row { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
-    .status-btn {
-      flex: 1; padding: 0.35rem 0.4rem; border-radius: 7px;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-      color: var(--muted); font-family: 'Syne', sans-serif;
-      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-      cursor: pointer; transition: all 0.15s; text-align: center;
-    }
-    .status-btn.active-pending    { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: #fbbf24; }
-    .status-btn.active-inprogress { background: rgba(234,179,8,0.15);  border-color: rgba(234,179,8,0.4);  color: #fde047; }
-    .status-btn.active-completed  { background: rgba(22,163,74,0.15);  border-color: rgba(22,163,74,0.4);  color: #86efac; }
-    .status-btn:not([class*="active"]):hover { border-color: rgba(255,255,255,0.2); color: #fff; }
 
     /* CART ITEMS */
     .cart-section { padding: 0.6rem 1.1rem; border-bottom: 1px solid var(--border); }
@@ -355,29 +342,6 @@
       font-size: 1.3rem; letter-spacing: 0.04em; color: #fff;
     }
     .total-row.grand span:last-child { color: var(--red); }
-    .payment-toggle { display: flex; gap: 0.4rem; margin-bottom: 0.65rem; }
-    .pay-btn {
-      flex: 1; padding: 0.4rem 0.5rem; border-radius: 8px;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-      color: var(--muted); font-family: 'Syne', sans-serif;
-      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-      cursor: pointer; transition: all 0.15s;
-      display: flex; align-items: center; justify-content: center; gap: 0.3rem;
-    }
-    .pay-btn.active-cash  { background: rgba(22,163,74,0.15); border-color: rgba(22,163,74,0.4); color: #86efac; }
-    .pay-btn.active-gcash { background: rgba(0,125,255,0.15); border-color: rgba(0,125,255,0.4); color: #93c5fd; }
-    .pay-btn:not(.active-cash):not(.active-gcash):hover { border-color: rgba(255,255,255,0.2); color: #fff; }
-
-    .btn-complete {
-      width: 100%; padding: 0.8rem;
-      background: var(--red); border: none; border-radius: 10px;
-      color: #fff; font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.05rem; letter-spacing: 0.06em;
-      cursor: pointer; transition: all 0.2s; margin-bottom: 0.4rem;
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-    }
-    .btn-complete:hover { background: #c73418; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,15,15,0.3); }
-    .btn-complete:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn-save {
       width: 100%; padding: 0.55rem;
       background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
@@ -531,12 +495,6 @@
       .modal-box { width: 96vw !important; }
     }
 
-    @media print {
-      body > *:not(#receipt-modal) { display: none !important; }
-      #receipt-modal { position: static; background: white; color: black; display: block !important; }
-      .modal-box { border: none; width: 100%; }
-      .modal-foot { display: none !important; }
-    }
   </style>
 </head>
 <body>
@@ -691,14 +649,6 @@
             </select>
           </div>
         </div>
-        <div>
-          <label class="field-label" style="margin-bottom:0.35rem;">Work Status</label>
-          <div class="mechanic-status-row">
-            <button class="status-btn active-pending" id="status-pending"   onclick="setWorkStatus('pending')">Pending</button>
-            <button class="status-btn"                id="status-inprogress" onclick="setWorkStatus('in_progress')">In Progress</button>
-            <button class="status-btn"                id="status-completed"  onclick="setWorkStatus('completed')">Done</button>
-          </div>
-        </div>
       </div>
 
       <!-- CART ITEMS -->
@@ -724,19 +674,8 @@
         <div class="total-row"><span>Parts</span><span id="parts-total">&#8369;0.00</span></div>
         <div class="total-row grand"><span>Total</span><span id="grand-total">&#8369;0.00</span></div>
       </div>
-      <div class="payment-toggle">
-        <button class="pay-btn active-cash" id="pay-cash" onclick="setPayment('cash')">
-          <i class="fas fa-money-bill-wave"></i> Cash
-        </button>
-        <button class="pay-btn" id="pay-gcash" onclick="setPayment('gcash')">
-          <i class="fas fa-mobile-alt"></i> GCash
-        </button>
-      </div>
-      <button class="btn-complete" id="btn-complete" onclick="openConfirm('complete')">
-        <i class="fas fa-bolt"></i> Complete &amp; Pay
-      </button>
-      <button class="btn-save" id="btn-save" onclick="openConfirm('save')">
-        <i class="fas fa-clock"></i> Save &amp; Assign Mechanic
+      <button class="btn-save" id="btn-save" onclick="openConfirm()">
+        <i class="fas fa-tools"></i> Create Job Order
       </button>
       <button class="btn-clear-cart" onclick="clearCart()">
         <i class="fas fa-times"></i> Clear Cart
@@ -776,7 +715,6 @@
         <div class="r-row"><span>Motorcycle</span><span id="confirm-moto">—</span></div>
         <div class="r-row"><span>Mechanic</span><span id="confirm-mechanic">Not assigned</span></div>
         <div class="r-row"><span>Status</span><span id="confirm-status">—</span></div>
-        <div class="r-row"><span>Payment</span><span id="confirm-payment">Cash</span></div>
         <div class="r-row"><span>Items</span><span id="confirm-items">0</span></div>
       </div>
       <div id="confirm-services-box" style="display:none;background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.2);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
@@ -796,27 +734,6 @@
       <button class="btn-modal-ok" id="confirm-ok-btn" onclick="processTransaction()">
         <i class="fas fa-check"></i> Confirm
       </button>
-    </div>
-  </div>
-</div>
-
-<!-- RECEIPT MODAL -->
-<div class="modal-overlay" id="receipt-modal">
-  <div class="modal-box">
-    <div class="modal-head" style="background:rgba(22,163,74,0.1); border-bottom:1px solid var(--border);">
-      <i class="fas fa-check-circle" style="color:#86efac;font-size:1.2rem;"></i>
-      <h3 id="receipt-title">Transaction Complete</h3>
-    </div>
-    <div class="modal-body" id="receipt-body" style="padding-top:1rem;"></div>
-    <div class="modal-foot">
-      <button class="btn-modal-cancel" onclick="window.print()">
-        <i class="fas fa-print"></i> Print
-      </button>
-      <button class="btn-modal-cancel" onclick="downloadEReceipt()"
-              style="border-color:rgba(37,99,235,0.35);color:#93c5fd;background:rgba(37,99,235,0.08);">
-        <i class="fas fa-file-pdf"></i> E-Receipt
-      </button>
-      <button class="btn-modal-ok green" onclick="newTransaction()">New Walk-In</button>
     </div>
   </div>
 </div>
@@ -841,12 +758,8 @@
 <script>
 const cart = [];
 let activeCat  = 'all';
-let payMethod  = 'cash';
-let workStatus = 'pending';
 let walkinCustomerId = null;
-let _pendingAction  = null;
-let _receiptUrl     = null;
-let _svcPrices      = {};
+let _svcPrices       = {};
 let _phoneTimer     = null;
 
 // ── SERVICES ──────────────────────────────────────────────────────────────────
@@ -914,20 +827,6 @@ function filterProducts() {
     const matchText = card.dataset.name.toLowerCase().includes(q);
     card.style.display = (matchCat && matchText) ? '' : 'none';
   });
-}
-
-// ── PAYMENT / STATUS ──────────────────────────────────────────────────────────
-function setPayment(m) {
-  payMethod = m;
-  document.getElementById('pay-cash').className  = 'pay-btn' + (m === 'cash'  ? ' active-cash'  : '');
-  document.getElementById('pay-gcash').className = 'pay-btn' + (m === 'gcash' ? ' active-gcash' : '');
-}
-
-function setWorkStatus(s) {
-  workStatus = s;
-  document.getElementById('status-pending').className    = 'status-btn' + (s === 'pending'     ? ' active-pending'    : '');
-  document.getElementById('status-inprogress').className = 'status-btn' + (s === 'in_progress' ? ' active-inprogress' : '');
-  document.getElementById('status-completed').className  = 'status-btn' + (s === 'completed'   ? ' active-completed'  : '');
 }
 
 // ── CUSTOMER SEARCH ───────────────────────────────────────────────────────────
@@ -1115,29 +1014,26 @@ function updateTotals() {
 }
 
 // ── CONFIRM MODAL ─────────────────────────────────────────────────────────────
-function openConfirm(action) {
+function openConfirm() {
   const name  = document.getElementById('cust-name').value.trim();
   const phone = document.getElementById('cust-phone').value.trim();
   if (!name) { toast('Customer name is required', true); return; }
   if (!cart.length) { toast('Cart is empty', true); return; }
 
-  _pendingAction = action;
   const total    = cart.reduce((s, c) => s + c.price * c.qty, 0);
   const mechSel  = document.getElementById('mechanic-select');
   const mechName = mechSel.value ? mechSel.options[mechSel.selectedIndex].text.split('—')[0].trim() : 'Not assigned';
   const motoModel = document.getElementById('cust-moto-model').value.trim();
   const motoPlate = document.getElementById('cust-moto-plate').value.trim();
-  const statusLabels = { pending: 'Pending', in_progress: 'In Progress', completed: 'Completed' };
 
-  document.getElementById('confirm-title').textContent   = action === 'complete' ? 'Complete & Pay' : 'Save Walk-In';
-  document.getElementById('confirm-total').textContent   = `₱${total.toFixed(2)}`;
+  document.getElementById('confirm-title').textContent    = 'Create Job Order';
+  document.getElementById('confirm-total').textContent    = `₱${total.toFixed(2)}`;
   document.getElementById('confirm-customer').textContent = name;
-  document.getElementById('confirm-phone').textContent   = phone || '—';
-  document.getElementById('confirm-moto').textContent    = [motoModel, motoPlate].filter(Boolean).join(' · ') || '—';
+  document.getElementById('confirm-phone').textContent    = phone || '—';
+  document.getElementById('confirm-moto').textContent     = [motoModel, motoPlate].filter(Boolean).join(' · ') || '—';
   document.getElementById('confirm-mechanic').textContent = mechName;
-  document.getElementById('confirm-status').textContent  = statusLabels[workStatus] || workStatus;
-  document.getElementById('confirm-payment').textContent = action === 'complete' ? (payMethod === 'gcash' ? 'GCash' : 'Cash') : '— (pay later)';
-  document.getElementById('confirm-items').textContent   = cart.reduce((s,c)=>s+c.qty,0) + ' item(s)';
+  document.getElementById('confirm-status').textContent   = 'Pending';
+  document.getElementById('confirm-items').textContent    = cart.reduce((s,c)=>s+c.qty,0) + ' item(s)';
 
   const svcs = cart.filter(c => c.type === 'service');
   const prods = cart.filter(c => c.type === 'product');
@@ -1150,15 +1046,9 @@ function openConfirm(action) {
 
   const noteEl = document.getElementById('confirm-note');
   const okBtn  = document.getElementById('confirm-ok-btn');
-  if (action === 'complete') {
-    noteEl.innerHTML = '<i class="fas fa-check-circle" style="color:#86efac;"></i> This will mark the transaction as <strong style="color:#86efac;">Completed</strong> and process payment.';
-    okBtn.className  = 'btn-modal-ok';
-    okBtn.innerHTML  = '<i class="fas fa-bolt"></i> Confirm & Pay';
-  } else {
-    noteEl.innerHTML = '<i class="fas fa-clock" style="color:#fbbf24;"></i> Booking will be saved as <strong style="color:#fbbf24;">' + (statusLabels[workStatus]||workStatus) + '</strong>. Payment will be collected later.';
-    okBtn.className  = 'btn-modal-ok green';
-    okBtn.innerHTML  = '<i class="fas fa-save"></i> Save Walk-In';
-  }
+  noteEl.innerHTML = '<i class="fas fa-tools" style="color:#93c5fd;"></i> A <strong style="color:#93c5fd;">Job Order</strong> will be created for this walk-in. You can track it in the Job Orders page.';
+  okBtn.className  = 'btn-modal-ok green';
+  okBtn.innerHTML  = '<i class="fas fa-tools"></i> Create Job Order';
 
   document.getElementById('confirm-modal').classList.add('open');
 }
@@ -1170,23 +1060,17 @@ function closeConfirm() {
 // ── PROCESS ───────────────────────────────────────────────────────────────────
 async function processTransaction() {
   closeConfirm();
-  const action    = _pendingAction;
-  const btnC      = document.getElementById('btn-complete');
-  const btnS      = document.getElementById('btn-save');
-  btnC.disabled   = true;
-  btnS.disabled   = true;
-  btnC.innerHTML  = '<i class="fas fa-spinner fa-spin"></i> Processing…';
+  const btnS = document.getElementById('btn-save');
+  btnS.disabled = true;
+  btnS.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
 
   const payload = {
-    action,
-    customer_name:     document.getElementById('cust-name').value.trim(),
-    customer_phone:    document.getElementById('cust-phone').value.trim(),
-    motorcycle_model:  document.getElementById('cust-moto-model').value.trim(),
-    motorcycle_plate:  document.getElementById('cust-moto-plate').value.trim(),
+    customer_name:      document.getElementById('cust-name').value.trim(),
+    customer_phone:     document.getElementById('cust-phone').value.trim(),
+    motorcycle_model:   document.getElementById('cust-moto-model').value.trim(),
+    motorcycle_plate:   document.getElementById('cust-moto-plate').value.trim(),
     walkin_customer_id: walkinCustomerId || null,
-    mechanic_id:       document.getElementById('mechanic-select').value || null,
-    work_status:       workStatus,
-    payment_method:    payMethod,
+    mechanic_id:        document.getElementById('mechanic-select').value || null,
     cart: cart.filter(c => c.type === 'product').map(c => ({
       product_id: c.id, quantity: c.qty, unit_price: c.price
     })),
@@ -1196,108 +1080,29 @@ async function processTransaction() {
   };
 
   try {
-    const res  = await fetch('/walk-in/checkout', {
+    const res  = await fetch('/walk-in/create-job-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data.success) {
-      walkinCustomerId = data.walkin_customer_id;
-      if (action === 'complete') {
-        showReceipt(data);
-      } else {
-        toast(data.message || 'Walk-in saved!', false, 'info');
-        newTransaction();
-      }
+      toast(`${data.ref} created! Redirecting to Job Orders...`, false, 'info');
+      setTimeout(() => { window.location.href = '/job-orders?new=' + data.job_order_id; }, 1200);
     } else {
-      toast(data.error || 'Transaction failed', true);
-      btnC.disabled  = false;
-      btnS.disabled  = false;
-      btnC.innerHTML = '<i class="fas fa-bolt"></i> Complete &amp; Pay';
+      toast(data.error || 'Failed to create job order', true);
+      btnS.disabled = false;
+      btnS.innerHTML = '<i class="fas fa-tools"></i> Create Job Order';
     }
   } catch(e) {
     toast('Network error. Try again.', true);
-    btnC.disabled  = false;
-    btnS.disabled  = false;
-    btnC.innerHTML = '<i class="fas fa-bolt"></i> Complete &amp; Pay';
+    btnS.disabled = false;
+    btnS.innerHTML = '<i class="fas fa-tools"></i> Create Job Order';
   }
-}
-
-// ── E-RECEIPT URL ─────────────────────────────────────────────────────────────
-function buildReceiptUrl(data) {
-  const params = new URLSearchParams();
-  if (data.walkin_customer_id) params.set('walkin_id',   data.walkin_customer_id);
-  if (data.order_id)           params.set('order_id',    data.order_id);
-  if (data.booking_ids && data.booking_ids.length)
-                               params.set('booking_ids', data.booking_ids.join(','));
-  params.set('payment', payMethod);
-  return '/walk-in/receipt?' + params.toString();
-}
-
-function downloadEReceipt() {
-  if (_receiptUrl) window.open(_receiptUrl, '_blank');
-}
-
-// ── RECEIPT ───────────────────────────────────────────────────────────────────
-function showReceipt(data) {
-  _receiptUrl = buildReceiptUrl(data);
-  // Update stock in product grid
-  cart.forEach(item => {
-    if (item.type === 'product') {
-      const card = document.querySelector(`.product-card[data-id="${item.id}"]`);
-      if (card) {
-        const ns = Math.max(0, (+card.dataset.stock) - item.qty);
-        card.dataset.stock = ns;
-        const el = card.querySelector('div[style*="text-align:right"] > div:last-child');
-        if (el) {
-          el.textContent = ns === 0 ? 'Out of stock' : ns <= 5 ? ns + ' left' : ns + ' in stock';
-          el.style.color  = ns === 0 ? '#fca5a5' : ns <= 5 ? '#fbbf24' : 'var(--muted)';
-          if (ns === 0) card.classList.add('out-of-stock');
-        }
-      }
-    }
-  });
-
-  const custName  = document.getElementById('cust-name').value.trim() || 'Walk-in Customer';
-  const custPhone = document.getElementById('cust-phone').value.trim();
-  const motoModel = document.getElementById('cust-moto-model').value.trim();
-  const motoPlate = document.getElementById('cust-moto-plate').value.trim();
-  const mechSel   = document.getElementById('mechanic-select');
-  const mechName  = mechSel.value ? mechSel.options[mechSel.selectedIndex].text.split('—')[0].trim() : 'Not assigned';
-  const total     = cart.reduce((s, c) => s + c.price * c.qty, 0);
-  const now       = new Date();
-
-  let html = `
-    <div class="r-row"><span>Date</span><span>${now.toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'numeric'})}</span></div>
-    <div class="r-row"><span>Time</span><span>${now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',hour12:true})}</span></div>
-    <div class="r-row"><span>Customer</span><span>${custName}</span></div>
-    ${custPhone ? `<div class="r-row"><span>Phone</span><span>${custPhone}</span></div>` : ''}
-    ${motoModel || motoPlate ? `<div class="r-row"><span>Motorcycle</span><span>${[motoModel,motoPlate].filter(Boolean).join(' · ')}</span></div>` : ''}
-    <div class="r-row"><span>Mechanic</span><span>${mechName}</span></div>
-    <div class="r-row"><span>Payment</span><span>${payMethod === 'gcash' ? 'GCash' : 'Cash'}</span></div>
-    <hr class="r-divider">
-    <div class="r-section-label">Items</div>`;
-  cart.forEach(item => {
-    html += `<div class="r-item"><span>${item.name} x${item.qty}</span><span>₱${(item.price*item.qty).toFixed(2)}</span></div>`;
-  });
-  html += `
-    <hr class="r-divider">
-    <div class="r-row bold"><span>Total Paid</span><span>₱${total.toFixed(2)}</span></div>
-    ${data.order_id ? `<div class="r-row" style="font-size:0.72rem;color:var(--muted);"><span>Order #</span><span>ORD-${String(data.order_id).padStart(3,'0')}</span></div>` : ''}
-    <div style="margin-top:0.75rem;text-align:center;font-size:0.7rem;color:var(--muted);">
-      MotoTyre North Caloocan · Saranay Rd, Brgy. 171 Bagumbong<br>
-      Thank you for your visit!
-    </div>`;
-
-  document.getElementById('receipt-body').innerHTML = html;
-  document.getElementById('receipt-modal').classList.add('open');
 }
 
 // ── NEW TRANSACTION ───────────────────────────────────────────────────────────
 function newTransaction() {
-  closeModal('receipt-modal');
-  _receiptUrl = null;
   clearCart();
   document.getElementById('cust-phone').value      = '';
   document.getElementById('cust-name').value       = '';
@@ -1306,13 +1111,8 @@ function newTransaction() {
   document.getElementById('mechanic-select').value = '';
   document.getElementById('returning-badge').classList.remove('show');
   walkinCustomerId = null;
-  setWorkStatus('pending');
-  setPayment('cash');
-  const btnC      = document.getElementById('btn-complete');
-  const btnS      = document.getElementById('btn-save');
-  btnC.disabled   = false;
-  btnS.disabled   = false;
-  btnC.innerHTML  = '<i class="fas fa-bolt"></i> Complete &amp; Pay';
+  document.getElementById('btn-save').disabled = false;
+  document.getElementById('btn-save').innerHTML = '<i class="fas fa-tools"></i> Create Job Order';
 }
 
 // ── MOBILE ────────────────────────────────────────────────────────────────────
@@ -1343,7 +1143,6 @@ function toast(msg, isError = false, type = null) {
   setTimeout(() => t.remove(), 2800);
 }
 
-document.getElementById('receipt-modal').addEventListener('click', e => { if (e.target === e.currentTarget) newTransaction(); });
 document.getElementById('confirm-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeConfirm(); });
 document.getElementById('history-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('history-modal'); });
 </script>
