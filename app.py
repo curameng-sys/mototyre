@@ -24,12 +24,8 @@ app = Flask(__name__)
 app.config.update(
     SECRET_KEY='mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4',
     SESSION_COOKIE_NAME='mototyre_customer_session',
-    SQLALCHEMY_DATABASE_URI=(
-        "mysql+pymysql://avnadmin:AVNS_1RNbCP5RORVJ7VaVhRD@"
-        "mysql-1d9dceb5-mackycastanales05-1369.f.aivencloud.com:12422/defaultdb"
-        "?ssl_ca=ca.pem"
-    ),
-    SQLALCHEMY_ENGINE_OPTIONS={"connect_args": {"ssl_ca": "CA.pem"}},
+    SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:@localhost:3306/mototyre",
+    SQLALCHEMY_ENGINE_OPTIONS={},
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 )
 
@@ -42,7 +38,7 @@ login_manager.login_view = 'login'
 GMAIL_SCOPES     = ["https://www.googleapis.com/auth/gmail.send"]
 GMAIL_TOKEN_FILE = "gmail_token.json"
 GMAIL_CREDS_FILE = "credentials.json"
-GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mackycastanales05@gmail.com")
+GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mototyre0505@gmail.com")
 OTP_EXPIRY_MINS  = 2
 
 # PayMongo config
@@ -425,9 +421,34 @@ def check_upcoming_bookings():
                 db.session.commit()
                 print(f'[REMINDER] Sent for booking #{b.id} to user {b.user_id}')
 
+                
+
 
 def _generate_otp(length=6):
     return "".join(random.choices(string.digits, k=length))
+
+ALLOWED_EMAIL_DOMAINS = {
+    # Google
+    'gmail.com',
+    # Yahoo
+    'yahoo.com', 'yahoo.com.ph', 'ymail.com',
+    # Microsoft
+    'outlook.com', 'hotmail.com', 'live.com', 'msn.com',
+    # Apple
+    'icloud.com', 'me.com', 'mac.com',
+    # ProtonMail
+    'proton.me', 'protonmail.com',
+    # Others
+    'zoho.com', 'aol.com', 'mail.com',
+}
+
+def is_public_email(email: str) -> bool:
+    """Return True only if the email domain is in the allowed public providers list."""
+    try:
+        domain = email.strip().lower().split('@')[1]
+        return domain in ALLOWED_EMAIL_DOMAINS
+    except IndexError:
+        return False
 
 
 def _save_otp(email, purpose):
@@ -589,15 +610,33 @@ def register():
         email = clean_str(request.form.get('email', ''), max_len=254).lower()
         phone = clean_str(request.form.get('phone', ''), max_len=11)
 
+        # 1. Format check
         if not is_valid_email(email):
             flash('Invalid email address.', 'danger')
             return redirect(url_for('register'))
+
+        # 2. Domain whitelist check  ← THIS MUST BE HERE, NOT LATER
+        if not is_public_email(email):
+            flash('Please use a public email address (e.g. Gmail, Yahoo, Outlook, iCloud).', 'danger')
+            return redirect(url_for('register'))
+
+        # 3. Duplicate check
         if User.query.filter_by(email=email).first():
             flash('Email already registered.', 'danger')
             return redirect(url_for('register'))
+
+        # 4. Phone check
         if not is_valid_phone(phone):
             flash('Invalid phone number.', 'danger')
             return redirect(url_for('register'))
+        
+        password        = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        if password != confirm_password:
+            flash('Passwords do not match.', 'danger')
+            return redirect(url_for('register'))
+
+        # ... rest of register logic unchanged
 
         firstname = clean_str(request.form.get('firstname', ''), max_len=50)
         lastname  = clean_str(request.form.get('lastname', ''), max_len=50)
@@ -622,7 +661,6 @@ def register():
             return redirect(url_for('login'))
 
         session['pending_verify_email'] = email
-        flash('Account created! Check your email for a verification code.', 'success')
         return redirect(url_for('verify_email_otp'))
 
     return render_template('register.html')

@@ -27,12 +27,8 @@ admin_app = Flask(__name__, template_folder='templates', static_folder='static')
 admin_app.config.update(
     SECRET_KEY='mototyre-admin-secret-key-aP5nQ9vX2kR8mT6yW1',
     SESSION_COOKIE_NAME='mototyre_admin_session',
-    SQLALCHEMY_DATABASE_URI=(
-        "mysql+pymysql://avnadmin:AVNS_1RNbCP5RORVJ7VaVhRD@"
-        "mysql-1d9dceb5-mackycastanales05-1369.f.aivencloud.com:12422/defaultdb"
-        "?ssl_ca=ca.pem"
-    ),
-    SQLALCHEMY_ENGINE_OPTIONS={"connect_args": {"ssl_ca": "CA.pem"}},
+    SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:@localhost:3306/mototyre",
+    SQLALCHEMY_ENGINE_OPTIONS={},
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 )
 
@@ -45,7 +41,7 @@ login_manager.login_view = 'admin_login'
 GMAIL_SCOPES     = ["https://www.googleapis.com/auth/gmail.send"]
 GMAIL_TOKEN_FILE = "gmail_token.json"
 GMAIL_CREDS_FILE = "credentials.json"
-GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mackycastanales05@gmail.com")
+GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mototyre0505@gmail.com")
 OTP_EXPIRY_MINS  = 2
 
 # PayMongo config
@@ -165,6 +161,7 @@ class Booking(db.Model):
     odometer        = db.Column(db.Integer)
     is_archived     = db.Column(db.Boolean, default=False)
     total_amount    = db.Column(db.Float, default=0)
+    walkin_customer_id = db.Column(db.Integer, nullable=True)
 
 
 class Mechanic(db.Model):
@@ -198,6 +195,7 @@ class Order(db.Model):
     created_at      = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     items           = db.relationship('OrderItem', backref='order', lazy=True)
     is_archived     = db.Column(db.Boolean, default=False)
+    walkin_customer_id = db.Column(db.Integer, nullable=True)
 
 
 class OrderItem(db.Model):
@@ -215,6 +213,17 @@ class Service(db.Model):
     price       = db.Column(db.Float, default=0.0)
     is_active   = db.Column(db.Boolean, default=True)
     created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class WalkInCustomer(db.Model):
+    __tablename__ = 'walkin_customer'
+    id               = db.Column(db.Integer, primary_key=True)
+    name             = db.Column(db.String(100), nullable=False)
+    phone            = db.Column(db.String(20), nullable=False)
+    motorcycle_model = db.Column(db.String(100))
+    motorcycle_plate = db.Column(db.String(20))
+    notes            = db.Column(db.Text)
+    created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
 
 
 class Notification(db.Model):
@@ -524,6 +533,8 @@ def update_booking_status(bid):
     if new_status in messages:
         title, msg = messages[new_status]
         send_notification(booking.user_id, title, msg, type='booking', status=new_status.replace('_', ''))
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'new_status': new_status, 'message': 'Booking status updated!'})
     flash('Booking status updated!', 'success')
     return redirect(url_for('admin_dashboard'))
 
@@ -555,6 +566,8 @@ def update_order_status(oid):
     if new_status in messages:
         title, msg = messages[new_status]
         send_notification(order.user_id, title, msg, type='order', status=new_status)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'new_status': new_status, 'message': 'Order status updated!'})
     flash('Order status updated!', 'success')
     return redirect(url_for('admin_dashboard'))
 
@@ -1019,6 +1032,196 @@ def pos_transactions():
     return jsonify(result)
 
 
+@admin_app.route('/walk-in')
+@login_required
+@require_admin_or_staff
+def walk_in():
+    products  = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
+    mechanics = Mechanic.query.order_by(Mechanic.name).all()
+    services  = Service.query.filter_by(is_active=True).order_by(Service.name).all()
+    return render_template('walkin.html', products=products, mechanics=mechanics, services=services)
+
+
+@admin_app.route('/walk-in/search-customer')
+@login_required
+@require_admin_or_staff
+def walkin_search_customer():
+    phone = request.args.get('phone', '').strip()
+    if len(phone) < 4:
+        return jsonify([])
+    customers = WalkInCustomer.query.filter(
+        WalkInCustomer.phone.like(f'%{phone}%')
+    ).order_by(WalkInCustomer.created_at.desc()).limit(5).all()
+    return jsonify([{
+        'id': c.id, 'name': c.name, 'phone': c.phone,
+        'motorcycle_model': c.motorcycle_model or '',
+        'motorcycle_plate': c.motorcycle_plate or ''
+    } for c in customers])
+
+
+@admin_app.route('/walk-in/customer/<int:cid>/history')
+@login_required
+@require_admin_or_staff
+def walkin_customer_history(cid):
+    customer = WalkInCustomer.query.get_or_404(cid)
+    bookings = Booking.query.filter_by(walkin_customer_id=cid).order_by(Booking.created_at.desc()).limit(15).all()
+    orders   = Order.query.filter_by(walkin_customer_id=cid).order_by(Order.created_at.desc()).limit(15).all()
+    history  = []
+    for b in bookings:
+        history.append({
+            'type': 'service',
+            'date': b.created_at.strftime('%b %d, %Y'),
+            'description': b.service,
+            'amount': b.total_amount or 0,
+            'status': b.status,
+            'mechanic': b.mechanic_name or '—'
+        })
+    for o in orders:
+        items_desc = ', '.join(f"{oi.product.name} x{oi.quantity}" for oi in o.items if oi.product)
+        history.append({
+            'type': 'product',
+            'date': o.created_at.strftime('%b %d, %Y'),
+            'description': items_desc or 'Products',
+            'amount': o.total_amount,
+            'status': o.status,
+            'mechanic': '—'
+        })
+    history.sort(key=lambda x: x['date'], reverse=True)
+    return jsonify({
+        'customer': {
+            'id': customer.id, 'name': customer.name, 'phone': customer.phone,
+            'motorcycle_model': customer.motorcycle_model or '',
+            'motorcycle_plate': customer.motorcycle_plate or '',
+            'created_at': customer.created_at.strftime('%b %d, %Y')
+        },
+        'history': history[:20]
+    })
+
+
+@admin_app.route('/walk-in/checkout', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def walkin_checkout():
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data received'}), 400
+
+    customer_name  = clean_str(data.get('customer_name', ''), max_len=100)
+    customer_phone = clean_str(data.get('customer_phone', ''), max_len=20)
+    moto_model     = clean_str(data.get('motorcycle_model', ''), max_len=100)
+    moto_plate     = clean_str(data.get('motorcycle_plate', ''), max_len=20)
+    walkin_id      = data.get('walkin_customer_id')
+    mechanic_id    = data.get('mechanic_id')
+    cart           = data.get('cart', [])
+    services       = data.get('services', [])
+    payment_method = data.get('payment_method', 'cash')
+    action         = data.get('action', 'complete')  # 'complete' | 'save'
+    work_status    = data.get('work_status', 'pending')
+
+    if not customer_name:
+        return jsonify({'success': False, 'error': 'Customer name is required'}), 400
+    if not cart and not services:
+        return jsonify({'success': False, 'error': 'Cart is empty'}), 400
+
+    # Get or create walk-in customer record
+    if walkin_id:
+        walkin_customer = WalkInCustomer.query.get(int(walkin_id))
+        if walkin_customer:
+            walkin_customer.name  = customer_name
+            walkin_customer.phone = customer_phone
+            if moto_model: walkin_customer.motorcycle_model = moto_model
+            if moto_plate: walkin_customer.motorcycle_plate = moto_plate
+    else:
+        walkin_customer = None
+
+    if not walkin_customer:
+        walkin_customer = WalkInCustomer(
+            name=customer_name, phone=customer_phone,
+            motorcycle_model=moto_model, motorcycle_plate=moto_plate
+        )
+        db.session.add(walkin_customer)
+        db.session.flush()
+
+    # Mechanic info
+    mechanic_name = None
+    mechanic_spec = None
+    if mechanic_id:
+        mechanic = Mechanic.query.get(int(mechanic_id))
+        if mechanic:
+            mechanic_name = mechanic.name
+            mechanic_spec = mechanic.specialization
+
+    order_id    = None
+    booking_ids = []
+    booking_status = 'completed' if action == 'complete' else work_status
+
+    # Products — only deduct stock on complete
+    if cart and action == 'complete':
+        for item in cart:
+            product = Product.query.get(item['product_id'])
+            if not product:
+                db.session.rollback()
+                return jsonify({'success': False, 'error': 'Product not found'}), 400
+            if product.stock < item['quantity']:
+                db.session.rollback()
+                return jsonify({'success': False, 'error': f'Insufficient stock for {product.name}'}), 400
+
+        prod_total = sum(item['quantity'] * float(item['unit_price']) for item in cart)
+        order = Order(
+            user_id=current_user.id,
+            total_amount=prod_total,
+            status='completed',
+            payment_method=payment_method,
+            walkin_customer_id=walkin_customer.id
+        )
+        db.session.add(order)
+        db.session.flush()
+        order_id = order.id
+        for item in cart:
+            product = Product.query.get(item['product_id'])
+            db.session.add(OrderItem(
+                order_id=order.id, product_id=product.id,
+                quantity=item['quantity'], unit_price=float(item['unit_price'])
+            ))
+            product.stock -= item['quantity']
+
+    # Services
+    for svc in services:
+        svc_price = float(svc.get('price', 0))
+        svc_qty   = int(svc.get('qty', 1))
+        booking = Booking(
+            user_id=current_user.id,
+            service=svc['name'],
+            date=date.today(),
+            time=datetime.now().time(),
+            motorcycle_model=moto_model,
+            motorcycle_plate=moto_plate,
+            contact_name=customer_name,
+            contact_mobile=customer_phone,
+            notes=svc.get('notes', '') or 'Walk-in transaction.',
+            status=booking_status,
+            payment_method=payment_method if action == 'complete' else 'cash',
+            total_amount=svc_price * svc_qty,
+            mechanic_name=mechanic_name,
+            mechanic_specialization=mechanic_spec,
+            walkin_customer_id=walkin_customer.id
+        )
+        db.session.add(booking)
+        db.session.flush()
+        booking_ids.append(booking.id)
+
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'action': action,
+        'order_id': order_id,
+        'booking_ids': booking_ids,
+        'walkin_customer_id': walkin_customer.id,
+        'customer_name': walkin_customer.name,
+        'message': 'Transaction completed successfully.' if action == 'complete' else 'Walk-in saved successfully.'
+    })
+
+
 @admin_app.route('/pos/customer/<int:cid>/items')
 @login_required
 @require_admin_or_staff
@@ -1053,6 +1256,175 @@ def pos_customer_items(cid: int):
         })
     return jsonify({'customer_id': cid, 'customer_name': customer.fullname,
                     'orders': orders_data, 'bookings': bookings_data})
+
+
+# Walk-In E-Receipt PDF
+
+@admin_app.route('/walk-in/receipt')
+@login_required
+@require_admin_or_staff
+def walkin_receipt():
+    walkin_id       = request.args.get('walkin_id', type=int)
+    order_id        = request.args.get('order_id', type=int)
+    booking_ids_str = request.args.get('booking_ids', '')
+    payment         = request.args.get('payment', 'cash')
+
+    walkin   = WalkInCustomer.query.get(walkin_id) if walkin_id else None
+    order    = Order.query.get(order_id) if order_id else None
+    bookings = []
+    if booking_ids_str:
+        for bid in booking_ids_str.split(','):
+            bid = bid.strip()
+            if bid.isdigit():
+                b = Booking.query.get(int(bid))
+                if b:
+                    bookings.append(b)
+
+    ref_id  = bookings[0].id if bookings else (order.id if order else 0)
+    txn_ref = f'WLK-{ref_id:05d}'
+    now     = ph_now()
+
+    svc_total   = sum((b.total_amount or 0) for b in bookings)
+    parts_total = (order.total_amount or 0) if order else 0
+    grand_total = svc_total + parts_total
+
+    mechanic_name = ''
+    if bookings and bookings[0].mechanic_name:
+        mechanic_name = bookings[0].mechanic_name
+        if bookings[0].mechanic_specialization:
+            mechanic_name += f' · {bookings[0].mechanic_specialization}'
+
+    # --- Build PDF ---
+    W = 3.5 * inch
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=(W, 11 * inch),
+        rightMargin=0.2 * inch, leftMargin=0.2 * inch,
+        topMargin=0.3 * inch, bottomMargin=0.3 * inch
+    )
+
+    RED  = colors.HexColor('#e8401c')
+    DARK = colors.HexColor('#111827')
+    GREY = colors.HexColor('#6b7280')
+    LGREY= colors.HexColor('#d1d5db')
+
+    def s(name, **kw):
+        return ParagraphStyle(name, **kw)
+
+    ctr      = s('c',  alignment=1, fontName='Helvetica',      fontSize=8,  textColor=DARK, spaceAfter=2)
+    ctr_bold = s('cb', alignment=1, fontName='Helvetica-Bold', fontSize=8,  textColor=DARK, spaceAfter=2)
+    lft      = s('l',  alignment=0, fontName='Helvetica',      fontSize=8,  textColor=DARK, spaceAfter=2)
+    lft_bold = s('lb', alignment=0, fontName='Helvetica-Bold', fontSize=8,  textColor=DARK, spaceAfter=2)
+    sm       = s('sm', alignment=1, fontName='Helvetica',      fontSize=7,  textColor=GREY, spaceAfter=2)
+    label    = s('lbl',alignment=0, fontName='Helvetica-Bold', fontSize=6,  textColor=GREY, spaceAfter=3, leading=8)
+
+    story = []
+
+    # Header
+    story.append(Paragraph(f'<font color="#e8401c"><b>MOTO</b></font><b>TYRE</b>',
+        s('brand', alignment=1, fontName='Helvetica-Bold', fontSize=20, textColor=DARK, spaceAfter=1)))
+    story.append(Paragraph('MOTO SHOP', s('sub', alignment=1, fontName='Helvetica', fontSize=7, textColor=GREY, spaceAfter=2)))
+    story.append(Paragraph('Saranay Rd, Brgy. 171 Bagumbong, Caloocan City', sm))
+    story.append(Paragraph('0915 269 8366  ·  Mon–Sat 8AM–7PM', sm))
+    story.append(HRFlowable(width='100%', thickness=2, color=RED, spaceBefore=5, spaceAfter=6))
+
+    # Receipt ID
+    story.append(Paragraph('WALK-IN E-RECEIPT',
+        s('rt', alignment=1, fontName='Helvetica-Bold', fontSize=9, textColor=GREY, spaceAfter=3, letterSpacing=1.5)))
+    story.append(Paragraph(f'<b><font color="#e8401c">{txn_ref}</font></b>',
+        s('rn', alignment=1, fontName='Helvetica-Bold', fontSize=14, textColor=DARK, spaceAfter=2)))
+    story.append(Paragraph(now.strftime('%B %d, %Y  ·  %I:%M %p'), sm))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=LGREY, spaceBefore=5, spaceAfter=5))
+
+    # Customer
+    if walkin:
+        story.append(Paragraph('CUSTOMER', label))
+        story.append(Paragraph(f'<b>{walkin.name}</b>', lft_bold))
+        if walkin.phone:
+            story.append(Paragraph(walkin.phone, lft))
+        moto_parts = [walkin.motorcycle_model, walkin.motorcycle_plate]
+        moto = '  ·  '.join(x for x in moto_parts if x)
+        if moto:
+            story.append(Paragraph(moto, lft))
+
+    # Mechanic
+    if mechanic_name:
+        story.append(Spacer(1, 4))
+        story.append(Paragraph('MECHANIC', label))
+        story.append(Paragraph(mechanic_name, lft))
+
+    story.append(HRFlowable(width='100%', thickness=0.5, color=LGREY, spaceBefore=5, spaceAfter=5))
+
+    # Services
+    if bookings:
+        story.append(Paragraph('SERVICES', label))
+        for b in bookings:
+            amt = b.total_amount or 0
+            t = Table([[b.service, f'₱{amt:,.2f}']], colWidths=[2.4*inch, 0.9*inch])
+            t.setStyle(TableStyle([
+                ('FONTNAME',      (0,0), (-1,-1), 'Helvetica'),
+                ('FONTSIZE',      (0,0), (-1,-1), 8),
+                ('TEXTCOLOR',     (0,0), (-1,-1), DARK),
+                ('ALIGN',         (1,0), (1,-1),  'RIGHT'),
+                ('TOPPADDING',    (0,0), (-1,-1), 1),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+            ]))
+            story.append(t)
+
+    # Products
+    if order and order.items:
+        story.append(Spacer(1, 4))
+        story.append(Paragraph('PARTS & PRODUCTS', label))
+        for oi in order.items:
+            name_str = oi.product.name if oi.product else 'Product'
+            sub      = oi.unit_price * oi.quantity
+            t = Table([[f'{name_str}  x{oi.quantity}', f'₱{sub:,.2f}']], colWidths=[2.4*inch, 0.9*inch])
+            t.setStyle(TableStyle([
+                ('FONTNAME',      (0,0), (-1,-1), 'Helvetica'),
+                ('FONTSIZE',      (0,0), (-1,-1), 8),
+                ('TEXTCOLOR',     (0,0), (-1,-1), DARK),
+                ('ALIGN',         (1,0), (1,-1),  'RIGHT'),
+                ('TOPPADDING',    (0,0), (-1,-1), 1),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+            ]))
+            story.append(t)
+
+    story.append(HRFlowable(width='100%', thickness=0.5, color=LGREY, spaceBefore=5, spaceAfter=4))
+
+    # Totals
+    rows = []
+    if bookings and order:
+        rows.append([Paragraph('Services', lft), Paragraph(f'₱{svc_total:,.2f}',   s('tr', alignment=2, fontName='Helvetica',      fontSize=8, textColor=DARK))])
+        rows.append([Paragraph('Parts',    lft), Paragraph(f'₱{parts_total:,.2f}', s('tr2',alignment=2, fontName='Helvetica',      fontSize=8, textColor=DARK))])
+    rows.append([
+        Paragraph('<b>TOTAL</b>', s('tl', alignment=0, fontName='Helvetica-Bold', fontSize=10, textColor=DARK)),
+        Paragraph(f'<b><font color="#e8401c">₱{grand_total:,.2f}</font></b>',
+                  s('tv', alignment=2, fontName='Helvetica-Bold', fontSize=10, textColor=RED))
+    ])
+    rows.append([
+        Paragraph('Payment', lft),
+        Paragraph('GCash' if payment == 'gcash' else 'Cash',
+                  s('pm', alignment=2, fontName='Helvetica', fontSize=8, textColor=GREY))
+    ])
+
+    totals_tbl = Table(rows, colWidths=[2.0*inch, 1.3*inch])
+    totals_tbl.setStyle(TableStyle([
+        ('TOPPADDING',    (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('LINEABOVE',     (0,-2), (-1,-2), 0.75, DARK),
+    ]))
+    story.append(totals_tbl)
+
+    story.append(HRFlowable(width='100%', thickness=2, color=RED, spaceBefore=7, spaceAfter=6))
+    story.append(Paragraph('Thank you for choosing MotoTyre!', sm))
+    story.append(Paragraph(f'Transaction: {txn_ref}', s('tf', alignment=1, fontName='Helvetica', fontSize=7, textColor=LGREY)))
+
+    doc.build(story)
+    buffer.seek(0)
+    resp = make_response(buffer.read())
+    resp.headers['Content-Type'] = 'application/pdf'
+    resp.headers['Content-Disposition'] = f'inline; filename=receipt_{txn_ref}.pdf'
+    return resp
 
 
 # Report routes
@@ -1230,6 +1602,22 @@ def staff_dashboard():
         order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all())
     )
 
+
+with admin_app.app_context():
+    try:
+        db.create_all()
+    except Exception as e:
+        print('[MIGRATION] create_all error:', e)
+    for _stmt in [
+        "ALTER TABLE booking ADD COLUMN walkin_customer_id INT DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN walkin_customer_id INT DEFAULT NULL",
+    ]:
+        try:
+            from sqlalchemy import text as _tmig
+            db.session.execute(_tmig(_stmt))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 with admin_app.app_context():
     try:

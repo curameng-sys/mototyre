@@ -85,6 +85,24 @@
     .badge-staff      { background: rgba(37,99,235,0.2);    color: #93c5fd; border: 1px solid rgba(37,99,235,0.4); }
     .badge-customer   { background: rgba(255,255,255,0.06); color: #9ca3af; border: 1px solid rgba(255,255,255,0.1); }
 
+    tr.booking-done       { opacity: 0.45; background: rgba(255,255,255,0.015) !important; }
+    tr.booking-cancelled  { opacity: 0.35; background: rgba(255,15,15,0.03)    !important; }
+    tr.booking-done .bk-name, tr.booking-cancelled .bk-name { color: var(--muted) !important; }
+    td.bk-svc-done        { text-decoration: line-through; color: var(--muted)  !important; }
+
+    .admin-toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+      padding: 0.75rem 1.25rem; border-radius: 10px;
+      font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700;
+      color: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      transform: translateY(20px); opacity: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      pointer-events: none; max-width: 320px;
+    }
+    .admin-toast.show { transform: translateY(0); opacity: 1; }
+    .admin-toast-success { background: rgba(21,128,61,0.92); border: 1px solid rgba(134,239,172,0.3); }
+    .admin-toast-error   { background: rgba(185,28,28,0.92); border: 1px solid rgba(252,165,165,0.3); }
+
     .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
     .filter-bar input, .filter-bar select { padding: 0.55rem 1rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.875rem; font-family: 'DM Sans', sans-serif; background: rgba(255,255,255,0.05); color: #fff; outline: none; }
     .filter-bar input { min-width: 220px; }
@@ -259,6 +277,7 @@
     <a href="#" onclick="showSection('mechanics', this)">🔧 Mechanics</a>
     <a href="#" onclick="showSection('services', this)">🛠️ Services</a>
     <a href="{{ url_for('pos') }}">🖥️ Quotation</a>
+    <a href="{{ url_for('walk_in') }}">🏍️ Walk-In</a>
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)">📈 Reports & Sales</a>
     <a href="#" onclick="showSection('archive', this)">🗃️ Archive</a>
@@ -372,12 +391,15 @@
             </thead>
             <tbody>
               {% for b in all_bookings %}
-              <tr style="cursor:pointer;"
+              {% set is_done      = b.status == 'completed' %}
+              {% set is_cancelled = b.status == 'cancelled' %}
+              <tr class="{% if is_done %}booking-done{% elif is_cancelled %}booking-cancelled{% endif %}"
+                  style="cursor:pointer;"
                   onclick="openBookingDetails(this)"
                   data-id="{{ b.id }}"
-                  data-customer="{{ b.customer.fullname|e }}"
-                  data-email="{{ b.customer.email|e }}"
-                  data-phone="{{ b.customer.phone|e }}"
+                  data-customer="{{ (b.contact_name if b.walkin_customer_id else b.customer.fullname)|e }}"
+                  data-email="{{ ('' if b.walkin_customer_id else b.customer.email)|e }}"
+                  data-phone="{{ (b.contact_mobile if b.walkin_customer_id else b.customer.phone)|e }}"
                   data-contact-name="{{ (b.contact_name or '')|e }}"
                   data-contact-mobile="{{ (b.contact_mobile or '')|e }}"
                   data-moto-model="{{ (b.motorcycle_model or '')|e }}"
@@ -394,8 +416,17 @@
                   data-total-amount="{{ b.total_amount or 0 }}"
                   data-created="{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}">
                 <td>{{ b.id }}</td>
-                <td><div style="font-weight:600;color:#fff;">{{ b.customer.fullname }}</div></td>
-                <td>{{ b.service }}</td>
+                <td>
+                  <div class="bk-name" style="font-weight:600;color:#fff;">
+                    {% if b.walkin_customer_id %}
+                      {{ b.contact_name or '—' }}
+                      <span style="font-size:0.63rem;font-weight:700;color:#c4b5fd;background:rgba(109,40,217,0.15);border:1px solid rgba(109,40,217,0.3);padding:0.1rem 0.4rem;border-radius:4px;margin-left:0.3rem;vertical-align:middle;">Walk-In</span>
+                    {% else %}
+                      {{ b.customer.fullname }}
+                    {% endif %}
+                  </div>
+                </td>
+                <td class="{% if is_done %}bk-svc-done{% endif %}">{{ b.service }}</td>
                 <td>
                   <div>{{ b.date.strftime('%b %d, %Y') }}</div>
                   <div style="font-size:0.72rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }}</div>
@@ -409,16 +440,32 @@
                   {% endif %}
                 </td>
                 <td onclick="event.stopPropagation()">
+                  {% if is_done %}
+                    <span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;color:#86efac;background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.25);padding:0.25rem 0.6rem;border-radius:6px;">
+                      ✔ Done
+                    </span>
+                  {% elif is_cancelled %}
+                    <span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;color:#fca5a5;background:rgba(255,15,15,0.08);border:1px solid rgba(255,15,15,0.2);padding:0.25rem 0.6rem;border-radius:6px;">
+                      ✖ Cancelled
+                    </span>
+                  {% else %}
                   <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
                     <select name="status">
-                      <option value="pending"      {% if b.status=='pending' %}selected{% endif %}>Pending</option>
-                      <option value="confirmed"    {% if b.status=='confirmed' %}selected{% endif %}>Confirmed</option>
-                      <option value="in_progress"  {% if b.status=='in_progress' %}selected{% endif %}>In Progress</option>
-                      <option value="completed"    {% if b.status=='completed' %}selected{% endif %}>Completed</option>
-                      <option value="cancelled"    {% if b.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                      {% if b.status == 'pending' %}
+                        <option value="confirmed">Confirmed</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="cancelled">Cancelled</option>
+                      {% elif b.status == 'confirmed' %}
+                        <option value="in_progress">In Progress</option>
+                        <option value="cancelled">Cancelled</option>
+                      {% elif b.status == 'in_progress' %}
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      {% endif %}
                     </select>
                     <button type="submit">Save</button>
                   </form>
+                  {% endif %}
                 </td>
                 <td onclick="event.stopPropagation()">
                 {% set age = (today - b.date).days %}
@@ -1286,6 +1333,7 @@
     document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
     if (el) el.classList.add('active');
+    sessionStorage.setItem('adminSection', name);
   }
 
   function openBookingDetails(row) {
@@ -1479,7 +1527,14 @@
   }
 
   // Init on load
-  document.addEventListener('DOMContentLoaded', () => renderProductPage());
+  document.addEventListener('DOMContentLoaded', () => {
+    renderProductPage();
+    const saved = sessionStorage.getItem('adminSection');
+    if (saved && document.getElementById('sec-' + saved)) {
+      const link = document.querySelector(`.sidebar a[onclick*="'${saved}'"]`);
+      showSection(saved, link || null);
+    }
+  });
   // ─────────────────────────────────────────────────────────────────────────
 
   function filterTable(tableId, query) {
@@ -1859,6 +1914,80 @@ document.addEventListener('click', function(e) {
 });
 
 fetchAdminNotifications();
+
+// ── Toast notification ──────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'admin-toast admin-toast-' + (type || 'success');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 350); }, 2800);
+}
+
+// ── AJAX status-form interceptor ────────────────────────────────────────────
+const _STATUS_BADGE = {
+  pending:'badge-pending', confirmed:'badge-confirmed', inprogress:'badge-inprogress',
+  in_progress:'badge-inprogress', processing:'badge-processing', shipped:'badge-shipped',
+  delivered:'badge-delivered', completed:'badge-completed', cancelled:'badge-cancelled'
+};
+document.addEventListener('submit', function(e) {
+  const form = e.target.closest('.status-form');
+  if (!form) return;
+  e.preventDefault();
+  const sel = form.querySelector('select[name="status"]');
+  const newStatus = sel ? sel.value : '';
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+  fetch(form.action, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+    body: 'status=' + encodeURIComponent(newStatus)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.success) throw new Error(data.error || 'Update failed');
+    const row = form.closest('tr');
+    if (row) {
+      // Update the status badge td
+      row.querySelectorAll('td').forEach(td => {
+        const badge = td.querySelector('span.badge');
+        if (badge && [...badge.classList].some(c => c.startsWith('badge-'))) {
+          const cls = _STATUS_BADGE[newStatus] || 'badge-pending';
+          badge.className = 'badge ' + cls;
+          badge.textContent = newStatus.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+      });
+      row.dataset.status = newStatus;
+      // Gray out completed / cancelled booking rows
+      if (newStatus === 'completed') {
+        row.classList.add('booking-done'); row.classList.remove('booking-cancelled');
+        form.closest('td').innerHTML = '<span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:\'Syne\',sans-serif;font-size:0.68rem;font-weight:700;color:#86efac;background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.25);padding:0.25rem 0.6rem;border-radius:6px;">✔ Done</span>';
+        const tds = [...row.querySelectorAll('td')]; if (tds[2]) tds[2].classList.add('bk-svc-done');
+      } else if (newStatus === 'cancelled') {
+        row.classList.add('booking-cancelled'); row.classList.remove('booking-done');
+        form.closest('td').innerHTML = '<span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:\'Syne\',sans-serif;font-size:0.68rem;font-weight:700;color:#fca5a5;background:rgba(255,15,15,0.08);border:1px solid rgba(255,15,15,0.2);padding:0.25rem 0.6rem;border-radius:6px;">✖ Cancelled</span>';
+      } else {
+        row.classList.remove('booking-done', 'booking-cancelled');
+        // Narrow the select options to reflect the new valid transitions
+        const nextOptions = {
+          confirmed:   [['in_progress','In Progress'],['cancelled','Cancelled']],
+          in_progress: [['completed','Completed'],['cancelled','Cancelled']]
+        };
+        if (sel && nextOptions[newStatus]) {
+          sel.innerHTML = nextOptions[newStatus].map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+        }
+        if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+      }
+    }
+    showToast(data.message, 'success');
+  })
+  .catch(err => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+    showToast('Error: ' + err.message, 'error');
+  });
+});
 
 // ── Mobile sidebar ──
 function toggleAdminSidebar() {
