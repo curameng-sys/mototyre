@@ -392,97 +392,127 @@
               </tr>
             </thead>
             <tbody>
+              {# Group bookings by customer + date #}
+              {% set ns = namespace(seen=[], groups={}) %}
               {% for b in all_bookings %}
-              {% set is_done      = b.status == 'completed' %}
-              {% set is_cancelled = b.status == 'cancelled' %}
-              <tr class="{% if is_done %}booking-done{% elif is_cancelled %}booking-cancelled{% endif %}"
-                  style="cursor:pointer;"
-                  onclick="openBookingDetails(this)"
-                  data-id="{{ b.id }}"
-                  data-customer="{{ (b.contact_name if b.walkin_customer_id else b.customer.fullname)|e }}"
-                  data-email="{{ ('' if b.walkin_customer_id else b.customer.email)|e }}"
-                  data-phone="{{ (b.contact_mobile if b.walkin_customer_id else b.customer.phone)|e }}"
-                  data-contact-name="{{ (b.contact_name or '')|e }}"
-                  data-contact-mobile="{{ (b.contact_mobile or '')|e }}"
-                  data-moto-model="{{ (b.motorcycle_model or '')|e }}"
-                  data-moto-plate="{{ (b.motorcycle_plate or '')|e }}"
-                  data-odometer="{{ b.odometer if b.odometer else '' }}"
-                  data-service="{{ b.service|e }}"
-                  data-date="{{ b.date.strftime('%b %d, %Y') }}"
-                  data-time="{{ b.time.strftime('%I:%M %p') }}"
-                  data-status="{{ b.status }}"
-                  data-payment="{{ b.payment_method or 'cash' }}"
-                  data-mechanic="{{ (b.mechanic_name or '')|e }}"
-                  data-mechanic-spec="{{ (b.mechanic_specialization or '')|e }}"
-                  data-notes="{{ (b.notes or '')|e }}"
-                  data-total-amount="{{ b.total_amount or 0 }}"
-                  data-created="{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}">
-                <td>{{ b.id }}</td>
-                <td>
-                  <div class="bk-name" style="font-weight:600;color:#fff;">
-                    {% if b.walkin_customer_id %}
-                      {{ b.contact_name or '—' }}
-                      <span style="font-size:0.63rem;font-weight:700;color:#c4b5fd;background:rgba(109,40,217,0.15);border:1px solid rgba(109,40,217,0.3);padding:0.1rem 0.4rem;border-radius:4px;margin-left:0.3rem;vertical-align:middle;">Walk-In</span>
-                    {% else %}
-                      {{ b.customer.fullname }}
-                    {% endif %}
-                  </div>
-                </td>
-                <td class="{% if is_done %}bk-svc-done{% endif %}">{{ b.service }}</td>
-                <td>
-                  <div>{{ b.date.strftime('%b %d, %Y') }}</div>
-                  <div style="font-size:0.72rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }}</div>
-                </td>
-                <td><span class="badge badge-{{ b.status|replace('_','') }}">{{ b.status|replace('_',' ')|title }}</span></td>
-                <td>
-                  {% if b.payment_method == 'gcash' %}
-                    <span class="badge" style="background:rgba(0,125,255,0.15);color:#93c5fd;border:1px solid rgba(0,125,255,0.3);">💳 GCash</span>
-                  {% else %}
-                    <span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>
-                  {% endif %}
-                </td>
-                <td onclick="event.stopPropagation()">
-                  {% if is_done %}
-                    <span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;color:#86efac;background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.25);padding:0.25rem 0.6rem;border-radius:6px;">
-                      ✔ Done
-                    </span>
-                  {% elif is_cancelled %}
-                    <span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;color:#fca5a5;background:rgba(255,15,15,0.08);border:1px solid rgba(255,15,15,0.2);padding:0.25rem 0.6rem;border-radius:6px;">
-                      ✖ Cancelled
-                    </span>
-                  {% else %}
-                  <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
-                    <select name="status">
-                      {% if b.status == 'pending' %}
-                        <option value="confirmed">Confirmed</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% elif b.status == 'confirmed' %}
-                        <option value="in_progress">In Progress</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% elif b.status == 'in_progress' %}
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% endif %}
-                    </select>
-                    <button type="submit">Save</button>
-                  </form>
-                  {% endif %}
-                </td>
-                <td onclick="event.stopPropagation()">
-                {% set age = (today - b.date).days %}
-                {% set min_days = 30 if b.status == 'completed' else 7 %}
-                {% if b.status in ['completed', 'cancelled'] and age >= min_days %}
-                  <form method="POST" action="{{ url_for('archive_booking', bid=b.id) }}" onsubmit="return confirm('Archive Booking #{{ b.id }}?')">
-                    <button type="submit" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9ca3af;padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">🗃️ Archive</button>
-                  </form>
-                {% elif b.status not in ['completed', 'cancelled'] %}
-                  <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">Not eligible</span>
-                {% else %}
-                  <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">{{ min_days - age }}d left</span>
+                {% set key = (b.customer.fullname if not b.walkin_customer_id else (b.contact_name or 'Walk-In')) + '|' + b.date.strftime('%Y-%m-%d') %}
+                {% if key not in ns.seen %}
+                  {% set _ = ns.seen.append(key) %}
                 {% endif %}
-                </td>
-              </tr>
+              {% endfor %}
+
+              {% for group_key in ns.seen %}
+                {% set group_bookings = [] %}
+                {% for b in all_bookings %}
+                  {% set key = (b.customer.fullname if not b.walkin_customer_id else (b.contact_name or 'Walk-In')) + '|' + b.date.strftime('%Y-%m-%d') %}
+                  {% if key == group_key %}
+                    {% set _ = group_bookings.append(b) %}
+                  {% endif %}
+                {% endfor %}
+                {% set b = group_bookings[0] %}
+                {% set is_done      = group_bookings | selectattr('status','equalto','completed') | list | length == group_bookings | length %}
+                {% set is_cancelled = group_bookings | selectattr('status','equalto','cancelled') | list | length == group_bookings | length %}
+                {% set service_names = group_bookings | map(attribute='service') | list %}
+                {% set all_statuses = group_bookings | map(attribute='status') | list %}
+                {% set display_status = b.status %}
+
+                <tr class="{% if is_done %}booking-done{% elif is_cancelled %}booking-cancelled{% endif %}"
+                    style="cursor:pointer;"
+                    onclick="openGroupedBookingDetails(this)"
+                    data-ids="{{ group_bookings | map(attribute='id') | list | join(',') }}"
+                    data-customer="{{ (b.contact_name if b.walkin_customer_id else b.customer.fullname)|e }}"
+                    data-email="{{ ('' if b.walkin_customer_id else b.customer.email)|e }}"
+                    data-phone="{{ (b.contact_mobile if b.walkin_customer_id else b.customer.phone)|e }}"
+                    data-contact-name="{{ (b.contact_name or '')|e }}"
+                    data-contact-mobile="{{ (b.contact_mobile or '')|e }}"
+                    data-moto-model="{{ (b.motorcycle_model or '')|e }}"
+                    data-moto-plate="{{ (b.motorcycle_plate or '')|e }}"
+                    data-services="{{ service_names | join('|||') | e }}"
+                    data-statuses="{{ all_statuses | join('|||') | e }}"
+                    data-date="{{ b.date.strftime('%b %d, %Y') }}"
+                    data-time="{{ b.time.strftime('%I:%M %p') }}"
+                    data-status="{{ display_status }}"
+                    data-payment="{{ b.payment_method or 'cash' }}"
+                    data-mechanic="{{ (b.mechanic_name or '')|e }}"
+                    data-mechanic-spec="{{ (b.mechanic_specialization or '')|e }}"
+                    data-notes="{{ (b.notes or '')|e }}"
+                    data-odometer="{{ b.odometer if b.odometer else '' }}"
+                    data-total-amount="{{ group_bookings | sum(attribute='total_amount') }}"
+                    data-created="{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}"
+                    data-walkin="{{ '1' if b.walkin_customer_id else '' }}">
+                  <td>{{ b.id }}{% if group_bookings|length > 1 %}<span style="font-size:0.6rem;color:#c4b5fd;margin-left:3px;">+{{ group_bookings|length - 1 }}</span>{% endif %}</td>
+                  <td>
+                    <div class="bk-name" style="font-weight:600;color:#fff;">
+                      {% if b.walkin_customer_id %}
+                        {{ b.contact_name or '—' }}
+                        <span style="font-size:0.63rem;font-weight:700;color:#c4b5fd;background:rgba(109,40,217,0.15);border:1px solid rgba(109,40,217,0.3);padding:0.1rem 0.4rem;border-radius:4px;margin-left:0.3rem;vertical-align:middle;">Walk-In</span>
+                      {% else %}
+                        {{ b.customer.fullname }}
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td class="{% if is_done %}bk-svc-done{% endif %}">
+                    {{ b.service }}
+                    {% if group_bookings|length > 1 %}
+                      <span style="font-size:0.68rem;color:#c4b5fd;background:rgba(109,40,217,0.15);border:1px solid rgba(109,40,217,0.25);padding:0.15rem 0.5rem;border-radius:4px;margin-left:0.4rem;vertical-align:middle;font-family:'Syne',sans-serif;font-weight:700;">+{{ group_bookings|length - 1 }} more</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div>{{ b.date.strftime('%b %d, %Y') }}</div>
+                    <div style="font-size:0.72rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }}</div>
+                  </td>
+                  <td>
+                    {% if group_bookings|length > 1 %}
+                      <span style="font-size:0.7rem;color:var(--muted);">Multiple</span>
+                    {% else %}
+                      <span class="badge badge-{{ b.status|replace('_','') }}">{{ b.status|replace('_',' ')|title }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if b.payment_method == 'gcash' %}
+                      <span class="badge" style="background:rgba(0,125,255,0.15);color:#93c5fd;border:1px solid rgba(0,125,255,0.3);">💳 GCash</span>
+                    {% else %}
+                      <span class="badge" style="background:rgba(22,163,74,0.15);color:#86efac;border:1px solid rgba(22,163,74,0.3);">💵 Cash</span>
+                    {% endif %}
+                  </td>
+                  <td onclick="event.stopPropagation()">
+                    {% if is_done %}
+                      <span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;color:#86efac;background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.25);padding:0.25rem 0.6rem;border-radius:6px;">✔ Done</span>
+                    {% elif is_cancelled %}
+                      <span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;color:#fca5a5;background:rgba(255,15,15,0.08);border:1px solid rgba(255,15,15,0.2);padding:0.25rem 0.6rem;border-radius:6px;">✖ Cancelled</span>
+                    {% else %}
+                      <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form">
+                        <select name="status">
+                          {% if b.status == 'pending' %}
+                            <option value="confirmed">Confirmed</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="cancelled">Cancelled</option>
+                          {% elif b.status == 'confirmed' %}
+                            <option value="in_progress">In Progress</option>
+                            <option value="cancelled">Cancelled</option>
+                          {% elif b.status == 'in_progress' %}
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          {% endif %}
+                        </select>
+                        <button type="submit">Save</button>
+                      </form>
+                    {% endif %}
+                  </td>
+                  <td onclick="event.stopPropagation()">
+                    {% set age = (today - b.date).days %}
+                    {% set min_days = 30 if b.status == 'completed' else 7 %}
+                    {% if b.status in ['completed', 'cancelled'] and age >= min_days %}
+                      <form method="POST" action="{{ url_for('archive_booking', bid=b.id) }}" onsubmit="return confirm('Archive Booking #{{ b.id }}?')">
+                        <button type="submit" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9ca3af;padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;">🗃️ Archive</button>
+                      </form>
+                    {% elif b.status not in ['completed', 'cancelled'] %}
+                      <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">Not eligible</span>
+                    {% else %}
+                      <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">{{ min_days - age }}d left</span>
+                    {% endif %}
+                  </td>
+                </tr>
               {% endfor %}
             </tbody>
           </table>
@@ -989,53 +1019,56 @@
 
 <!-- BOOKING DETAILS MODAL -->
 <div class="modal-overlay" id="modal-booking-details">
-  <div class="modal-box" style="width:520px;max-width:95vw;">
+  <div class="modal-box" style="width:560px;max-width:95vw;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
       <h5 style="margin:0;">📅 Booking Details</h5>
       <button onclick="closeModal('modal-booking-details')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;">✕</button>
     </div>
 
-    <!-- Header row: ID + status -->
+    <!-- Header: ID + status -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--accent,#e8401c);letter-spacing:0.04em;" id="bd-id"></div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#e8401c;letter-spacing:0.04em;" id="bd-id"></div>
       <div id="bd-status"></div>
     </div>
 
     <!-- Contact Person -->
     <div style="margin-bottom:0.75rem;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Contact Person</div>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;display:flex;flex-direction:column;gap:0.35rem;">
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;">
         <div style="font-weight:700;color:#fff;font-size:0.9rem;" id="bd-contact-name"></div>
-        <div style="font-size:0.8rem;color:var(--muted);" id="bd-contact-mobile"></div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem;" id="bd-contact-mobile"></div>
       </div>
     </div>
 
-    <!-- Appointment -->
+    <!-- Services List -->
     <div style="margin-bottom:0.75rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Appointment</div>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
-        <div><div style="font-size:0.7rem;color:var(--muted);">Service</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-service"></div></div>
-        <div><div style="font-size:0.7rem;color:var(--muted);">Date & Time</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-datetime"></div></div>
-        <div><div style="font-size:0.7rem;color:var(--muted);">Motorcycle</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-moto"></div></div>
-        <div><div style="font-size:0.7rem;color:var(--muted);">Mechanic</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-mechanic"></div></div>
-        <div id="bd-odo-wrap"><div style="font-size:0.7rem;color:var(--muted);">Odometer</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-odometer"></div></div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Services Booked</div>
+      <div id="bd-services-list" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+    </div>
+
+    <!-- Date, Moto, Mechanic -->
+    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.75rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+      <div><div style="font-size:0.7rem;color:var(--muted);">Date</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-date"></div></div>
+      <div><div style="font-size:0.7rem;color:var(--muted);">Time</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-time"></div></div>
+      <div><div style="font-size:0.7rem;color:var(--muted);">Motorcycle</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-moto"></div></div>
+      <div><div style="font-size:0.7rem;color:var(--muted);">Mechanic</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-mechanic"></div></div>
+      <div id="bd-odo-wrap" style="display:none;"><div style="font-size:0.7rem;color:var(--muted);">Odometer</div><div style="font-size:0.85rem;color:#fff;font-weight:600;" id="bd-odometer"></div></div>
+    </div>
+
+    <!-- Payment & Total -->
+    <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#4ade80;">💳 Payment</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;" id="bd-payment"></span>
       </div>
-    </div>
-
-    <!-- Payment -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;margin-bottom:0.5rem;">
-      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#4ade80;">💳 Payment Method</span>
-      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;" id="bd-payment"></span>
-    </div>
-
-    <!-- Total Amount -->
-    <div id="bd-total-wrap" style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(232,64,28,0.08);border:1px solid rgba(232,64,28,0.2);border-radius:8px;margin-bottom:0.75rem;">
-      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fca5a5;">💵 Total Amount</span>
-      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;" id="bd-total"></span>
+      <div id="bd-total-wrap" style="flex:1;display:none;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(232,64,28,0.08);border:1px solid rgba(232,64,28,0.2);border-radius:8px;">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fca5a5;">💵 Total</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;" id="bd-total"></span>
+      </div>
     </div>
 
     <!-- Notes -->
-    <div id="bd-notes-wrap" style="margin-bottom:1rem;">
+    <div id="bd-notes-wrap" style="display:none;margin-bottom:1rem;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Notes</div>
       <div style="background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.2);border-radius:10px;padding:0.85rem 1rem;font-size:0.85rem;color:#fde047;line-height:1.6;" id="bd-notes"></div>
     </div>
@@ -1338,8 +1371,12 @@
     sessionStorage.setItem('adminSection', name);
   }
 
-  function openBookingDetails(row) {
+  function openGroupedBookingDetails(row) {
     const d = row.dataset;
+    const services  = d.services.split('|||');
+    const statuses  = d.statuses.split('|||');
+    const ids       = d.ids.split(',');
+
     const statusColors = {
       pending:     { bg:'rgba(180,83,9,0.2)',   color:'#fbbf24', border:'rgba(180,83,9,0.3)' },
       confirmed:   { bg:'rgba(29,78,216,0.2)',  color:'#93c5fd', border:'rgba(29,78,216,0.3)' },
@@ -1348,21 +1385,51 @@
       completed:   { bg:'rgba(21,128,61,0.2)',  color:'#86efac', border:'rgba(21,128,61,0.3)' },
       cancelled:   { bg:'rgba(220,38,38,0.15)', color:'#fca5a5', border:'rgba(220,38,38,0.2)' },
     };
+
+    // Header ID — show range if multiple
+    document.getElementById('bd-id').textContent =
+      ids.length > 1
+        ? 'BKG-' + String(ids[0]).padStart(3,'0') + ' – BKG-' + String(ids[ids.length-1]).padStart(3,'0')
+        : 'BKG-' + String(ids[0]).padStart(3,'0');
+
+    // Overall status — use first booking's status
     const sc = statusColors[d.status.replace('-','_')] || statusColors.pending;
+    document.getElementById('bd-status').innerHTML =
+      `<span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.35em 0.85em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${d.status.replace('_',' ')}</span>`;
 
-    document.getElementById('bd-id').textContent = 'BKG-' + String(d.id).padStart(3, '0');
-    document.getElementById('bd-status').innerHTML = `<span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.35em 0.85em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${d.status.replace('_',' ')}</span>`;
-
+    // Contact
     document.getElementById('bd-contact-name').textContent   = '👤 ' + (d.contactName   || d.customer);
     document.getElementById('bd-contact-mobile').textContent = '📞 ' + (d.contactMobile || d.phone);
 
-    document.getElementById('bd-service').textContent = d.service;
-    document.getElementById('bd-datetime').textContent = d.date + ' · ' + d.time;
+    // Services list — one card per service
+    const servicesList = document.getElementById('bd-services-list');
+    servicesList.innerHTML = '';
+    services.forEach((svc, i) => {
+      const st   = (statuses[i] || 'pending').replace('-','_');
+      const sc2  = statusColors[st] || statusColors.pending;
+      const card = document.createElement('div');
+      card.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;';
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(232,64,28,0.12);display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">🔧</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.88rem;">${svc}</div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">BKG-${String(ids[i] || ids[0]).padStart(3,'0')}</div>
+          </div>
+        </div>
+        <span style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.25em 0.65em;border-radius:6px;background:${sc2.bg};color:${sc2.color};border:1px solid ${sc2.border};">${st.replace('_',' ')}</span>`;
+      servicesList.appendChild(card);
+    });
+
+    // Date, moto, mechanic
+    document.getElementById('bd-date').textContent = d.date;
+    document.getElementById('bd-time').textContent = d.time;
     const moto = [d.motoModel, d.motoPlate].filter(Boolean).join(' — ');
     document.getElementById('bd-moto').textContent = moto || '—';
     const mech = d.mechanic ? (d.mechanic + (d.mechanicSpec ? ' · ' + d.mechanicSpec : '')) : '—';
     document.getElementById('bd-mechanic').textContent = mech;
 
+    // Odometer
     const odoWrap = document.getElementById('bd-odo-wrap');
     if (d.odometer) {
       document.getElementById('bd-odometer').textContent = parseInt(d.odometer).toLocaleString() + ' km';
@@ -1371,8 +1438,10 @@
       odoWrap.style.display = 'none';
     }
 
+    // Payment
     document.getElementById('bd-payment').textContent = d.payment === 'gcash' ? '📱 GCash' : '💵 Cash';
 
+    // Total
     const totalAmount = parseFloat(d.totalAmount || 0);
     const totalWrap = document.getElementById('bd-total-wrap');
     if (totalAmount > 0) {
@@ -1382,6 +1451,7 @@
       totalWrap.style.display = 'none';
     }
 
+    // Notes
     const notesWrap = document.getElementById('bd-notes-wrap');
     if (d.notes) {
       document.getElementById('bd-notes').textContent = d.notes;

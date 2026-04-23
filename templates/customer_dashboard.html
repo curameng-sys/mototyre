@@ -552,7 +552,7 @@
         <div class="cal-legend">
           <span><span class="cal-legend-dot" style="background:rgba(21,128,61,0.4);border:1px solid rgba(21,128,61,0.5);"></span>Available</span>
           <span><span class="cal-legend-dot" style="background:rgba(232,64,28,0.3);border:1px solid rgba(232,64,28,0.4);"></span>Fully Booked</span>
-          <span><span class="cal-legend-dot" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);"></span>Unavailable</span>
+          <span><span class="cal-legend-dot" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);"></span>Holiday / Closed</span>
           <span><span class="cal-legend-dot" style="background:var(--red);"></span>Selected</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
@@ -607,7 +607,10 @@
           </div>
           <div class="form-group">
             <label>Plate Number</label>
-            <input type="text" id="moto-plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234">
+            <input type="text" id="moto-plate" value="{{ current_user.motorcycle_plate or '' }}" 
+              placeholder="ABC 1234" maxlength="8"
+              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9\s]/g,''); checkBookingReady()">
+            <div id="plate-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Plate must be 7 characters (e.g. ABC 1234 or ABC1234).</div>
           </div>
           <div class="form-group">
             <label>Odometer Reading <span style="color:var(--muted);font-size:0.75rem;">(km)</span></label>
@@ -1610,6 +1613,42 @@ let currentYear, currentMonth, selectedDate = null, selectedTime = null, bookedD
 const today = new Date(); today.setHours(0,0,0,0);
 currentYear = today.getFullYear(); currentMonth = today.getMonth();
 
+// ── Philippine Regular & Special Non-Working Holidays ──
+// Format: 'YYYY-MM-DD' : 'Holiday Name'
+function getPHHolidays(year) {
+  return {
+    // Regular Holidays (fixed)
+    [`${year}-01-01`]: "New Year's Day",
+    [`${year}-04-09`]: "Araw ng Kagitingan",
+    [`${year}-05-01`]: "Labor Day",
+    [`${year}-06-12`]: "Independence Day",
+    [`${year}-08-25`]: "National Heroes Day",  // last Monday of August — approximate
+    [`${year}-11-01`]: "All Saints' Day",
+    [`${year}-11-30`]: "Bonifacio Day",
+    [`${year}-12-25`]: "Christmas Day",
+    [`${year}-12-30`]: "Rizal Day",
+    // Special Non-Working (fixed)
+    [`${year}-02-25`]: "EDSA Revolution Anniversary",
+    [`${year}-08-21`]: "Ninoy Aquino Day",
+    [`${year}-11-02`]: "All Souls' Day",
+    [`${year}-12-08`]: "Feast of the Immaculate Conception",
+    [`${year}-12-24`]: "Christmas Eve",
+    [`${year}-12-31`]: "New Year's Eve",
+    // 2025 moveable (Eid, Holy Week) — update yearly
+    [`${year}-04-17`]: "Maundy Thursday",
+    [`${year}-04-18`]: "Good Friday",
+    [`${year}-04-19`]: "Black Saturday",
+    [`${year}-03-31`]: "Eid'l Fitr (approx)",
+    [`${year}-06-07`]: "Eid'l Adha (approx)",
+  };
+}
+
+function isHoliday(dateStr) {
+  const year = parseInt(dateStr.split('-')[0]);
+  const holidays = getPHHolidays(year);
+  return holidays[dateStr] || null;
+}
+
 // ── BOOKING QUEUE ──
 let bookingQueue = [];
 
@@ -1779,20 +1818,47 @@ async function renderCalendar() {
   const grid = document.getElementById('cal-grid'); grid.innerHTML = '';
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
   for (let i = 0; i < firstDay; i++) { const e = document.createElement('div'); e.className = 'cal-day empty'; grid.appendChild(e); }
+
   for (let d = 1; d <= daysInMonth; d++) {
     const dateObj = new Date(currentYear, currentMonth, d); dateObj.setHours(0,0,0,0);
     const mm = String(currentMonth+1).padStart(2,'0'); const dd = String(d).padStart(2,'0');
     const dateStr = `${currentYear}-${mm}-${dd}`;
     const cell = document.createElement('div'); cell.className = 'cal-day'; cell.textContent = d;
+
     if (dateObj.getTime() === today.getTime()) cell.classList.add('today');
+
     const isToday = dateObj.getTime() === today.getTime();
     const now = new Date();
     const pastClosing = isToday && now.getHours() >= 19;
     const isQueued = bookingQueue.some(b => b.date === dateStr);
-    if (dateObj < today || dateObj.getDay() === 0) {
+    const holidayName = isHoliday(dateStr);
+    const isSunday = dateObj.getDay() === 0;
+    const isBeyondMaxYear = currentYear > 2026;
+
+    if (dateObj < today || isBeyondMaxYear) {
       cell.classList.add('past');
-      cell.title = dateObj.getDay() === 0 ? 'Closed Sundays' : 'Past date';
+      cell.title = dateObj < today ? 'Past date' : 'Booking not yet available for this year';
+    } else if (isSunday) {
+      // Closed on Sundays
+      cell.classList.add('past');
+      cell.style.position = 'relative';
+      cell.title = 'Closed — Sunday';
+      cell.style.background = 'rgba(255,255,255,0.02)';
+      // Small "SUN" label
+      cell.innerHTML = `<span>${d}</span><span style="display:block;font-size:0.45rem;color:#ef4444;letter-spacing:0.05em;font-family:'Syne',sans-serif;font-weight:700;margin-top:1px;">SUN</span>`;
+    } else if (holidayName) {
+      // Philippine holiday
+      cell.classList.add('past');
+      cell.style.background = 'rgba(239,68,68,0.08)';
+      cell.style.borderColor = 'rgba(239,68,68,0.2)';
+      cell.style.color = '#ef4444';
+      cell.style.opacity = '0.7';
+      cell.style.cursor = 'not-allowed';
+      // Show holiday name tooltip and indicator
+      cell.innerHTML = `<span>${d}</span><span style="display:block;font-size:0.42rem;color:#ef4444;letter-spacing:0.03em;font-family:'Syne',sans-serif;font-weight:700;margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;">🇵🇭</span>`;
+      cell.title = `Holiday: ${holidayName}`;
     } else if (pastClosing) {
       cell.classList.add('past'); cell.title = 'Shop closed for today';
     } else if (isFullyBooked(dateStr)) {
@@ -1801,7 +1867,8 @@ async function renderCalendar() {
       cell.classList.add('available');
       cell.onclick = () => selectDate(dateStr, d, cell);
     }
-    if (isQueued) {
+
+    if (isQueued && !isSunday && !holidayName) {
       cell.style.outline = '2px solid rgba(29,78,216,0.7)';
       cell.style.outlineOffset = '-2px';
     }
@@ -1859,11 +1926,18 @@ function renderTimeSlots(dateStr) {
 function checkBookingReady() {
   const name      = document.getElementById('contact-name').value.trim();
   const mobile    = document.getElementById('contact-mobile').value.trim();
+  const plate     = document.getElementById('moto-plate').value.trim().replace(/\s/g, '');
   const hasTime   = !!document.getElementById('selected-time-value').value;
   const hasService = !!document.getElementById('service-value').value;
   const nameOk    = /^[a-zA-Z\s]+$/.test(name) && name !== '';
   const mobileOk  = /^0\d{10}$/.test(mobile);
-  document.getElementById('btn-add-queue').disabled = !(hasTime && hasService && nameOk && mobileOk);
+  // 7 alphanumeric chars (spaces ignored), e.g. "ABC 1234" or "ABC1234"
+  const plateOk   = plate === '' || /^[A-Z0-9]{7}$/.test(plate);
+
+  const plateError = document.getElementById('plate-error');
+  if (plateError) plateError.style.display = (!plateOk && plate !== '') ? 'block' : 'none';
+
+  document.getElementById('btn-add-queue').disabled = !(hasTime && hasService && nameOk && mobileOk && plateOk);
 }
 
 function selectTime(slot, btn) {
@@ -1878,6 +1952,18 @@ async function changeMonth(dir) {
   currentMonth += dir;
   if (currentMonth > 11) { currentMonth = 0; currentYear++; }
   if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+
+  // Cap at December 2026
+  if (currentYear > 2026 || (currentYear === 2026 && currentMonth > 11)) {
+    currentYear = 2026; currentMonth = 11;
+    showCartToast('⚠️ Bookings are only available up to December 2026.');
+    return;
+  }
+  // Don't go before current month
+  const now = new Date();
+  if (currentYear < now.getFullYear() || (currentYear === now.getFullYear() && currentMonth < now.getMonth())) {
+    currentYear = now.getFullYear(); currentMonth = now.getMonth();
+  }
   selectedDate = null; selectedTime = null;
   document.getElementById('selected-date-display').value = '';
   document.getElementById('selected-date-value').value   = '';
@@ -2165,6 +2251,21 @@ function validateBookingForm() {
 
   return valid;
 }
+
+// Validate plate — 7 alphanumeric chars (optional field)
+  const plate = document.getElementById('moto-plate');
+  const plateError = document.getElementById('plate-error');
+  const plateClean = plate.value.trim().replace(/\s/g, '');
+  if (plateClean !== '' && !/^[A-Z0-9]{7}$/.test(plateClean)) {
+    plateError.style.display = 'block';
+    plate.style.borderColor = 'var(--red)';
+    valid = false;
+  } else {
+    if (plateError) plateError.style.display = 'none';
+    plate.style.borderColor = '';
+  }
+
+
 
 fetchNotifications();
 

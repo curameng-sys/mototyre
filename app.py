@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -5,12 +8,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
 from sqlalchemy import func
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -18,6 +15,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from io import BytesIO
 from security import clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_otp_purpose
+from gmail_helper import send_gmail_html as _send_gmail, send_otp_email
 import os, uuid, random, string, base64, requests
 import pymysql
 import threading
@@ -45,16 +43,12 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Gmail config
+# ── Gmail config ────────────────────────────────────────────────────────────
+# Handled by gmail_helper.py (SMTP App Password — no OAuth, no re-auth needed)
+# Set GMAIL_SENDER and GMAIL_APP_PASSWORD in your .env file.
+OTP_EXPIRY_MINS = 2
 
-GMAIL_SCOPES     = ["https://www.googleapis.com/auth/gmail.send"]
-GMAIL_TOKEN_FILE = "gmail_token.json"
-GMAIL_CREDS_FILE = "credentials.json"
-GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mototyre0505@gmail.com")
-OTP_EXPIRY_MINS  = 2
-
-# PayMongo config
-
+# ── PayMongo config ──────────────────────────────────────────────────────────
 PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
 BASE_URL = "https://ninja-portion-recycler.ngrok-free.dev"
@@ -101,62 +95,7 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
         return {"success": False, "error": response.json()}
 
 
-_gmail_service_lock = threading.Lock()
-_gmail_service_cache = None
-
-def _get_gmail_service():
-    global _gmail_service_cache
-    creds = None
-    if os.path.exists(GMAIL_TOKEN_FILE):
-        creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_FILE, GMAIL_SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request(timeout=15))
-        else:
-            flow  = InstalledAppFlow.from_client_secrets_file(GMAIL_CREDS_FILE, GMAIL_SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open(GMAIL_TOKEN_FILE, "w") as f:
-            f.write(creds.to_json())
-        _gmail_service_cache = None
-    with _gmail_service_lock:
-        if _gmail_service_cache is None:
-            _gmail_service_cache = build("gmail", "v1", credentials=creds)
-    return _gmail_service_cache
-
-
-def _send_gmail(to, subject, html_body):
-    msg = MIMEMultipart("alternative")
-    msg["to"], msg["from"], msg["subject"] = to, GMAIL_SENDER, subject
-    msg.attach(MIMEText(html_body, "html"))
-    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-    def _do_send():
-        try:
-            _get_gmail_service().users().messages().send(userId="me", body={"raw": raw}).execute()
-        except Exception as e:
-            print(f"[GMAIL] Send failed: {e}")
-    threading.Thread(target=_do_send, daemon=True).start()
-
-
-def send_otp_email(email, otp, purpose="verify"):
-    configs = {
-        "verify": ("Verify your MotoTyre email",        "Email Verification", "verify your email address"),
-        "reset":  ("Your MotoTyre password reset code", "Password Reset",     "reset your password"),
-        "login":  ("Your MotoTyre login code",          "Login Verification", "complete your login"),
-    }
-    subject, heading, action = configs.get(purpose, configs["login"])
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;
-                border:1px solid #e5e7eb;border-radius:8px;">
-      <h2 style="color:#111827;">{heading}</h2>
-      <p style="color:#6b7280;">Use the code below to {action}. Expires in {OTP_EXPIRY_MINS} minutes.</p>
-      <div style="font-size:36px;font-weight:bold;letter-spacing:12px;color:#111827;
-                  background:#f3f4f6;padding:20px;border-radius:6px;text-align:center;margin:24px 0;">{otp}</div>
-      <p style="color:#9ca3af;font-size:13px;">If you didn't request this, ignore this email.</p>
-    </div>"""
-    _send_gmail(email, subject, html)
-
-
-def send_order_receipt_email(order, override_email=None):  # ADD override_email=None
+def send_order_receipt_email(order, override_email=None):
     try:
         if order.receipt_sent:
             return
@@ -164,7 +103,6 @@ def send_order_receipt_email(order, override_email=None):  # ADD override_email=
         if not user:
             return
 
-        # Use PayMongo email if provided, otherwise fall back to registered email
         recipient_email = override_email or user.email
         if not recipient_email:
             return
@@ -192,13 +130,10 @@ def send_order_receipt_email(order, override_email=None):  # ADD override_email=
 
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
-          <!-- Header -->
           <div style="background:#0c0d0f;padding:28px 32px;text-align:center;">
             <div style="font-family:Georgia,serif;font-size:26px;font-weight:900;letter-spacing:4px;color:#ffffff;">MOTO<span style="color:#ff0f0f;">TYRE</span></div>
             <div style="color:#6b7280;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:4px;">Order Receipt</div>
           </div>
-
-          <!-- Success banner -->
           <div style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;padding:16px 32px;display:flex;align-items:center;gap:12px;">
             <div style="width:36px;height:36px;background:#16a34a;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <span style="color:#fff;font-size:18px;line-height:1;">&#10003;</span>
@@ -208,8 +143,6 @@ def send_order_receipt_email(order, override_email=None):  # ADD override_email=
               <div style="color:#4b5563;font-size:13px;margin-top:2px;">Your GCash payment was received successfully.</div>
             </div>
           </div>
-
-          <!-- Order info -->
           <div style="padding:24px 32px 0;">
             <table style="width:100%;border-collapse:collapse;">
               <tr>
@@ -237,8 +170,6 @@ def send_order_receipt_email(order, override_email=None):  # ADD override_email=
               </tr>
             </table>
           </div>
-
-          <!-- Items table -->
           <div style="padding:20px 32px 0;">
             <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Items Ordered</div>
             <table style="width:100%;border-collapse:collapse;border:1px solid #f3f4f6;border-radius:8px;overflow:hidden;">
@@ -253,8 +184,6 @@ def send_order_receipt_email(order, override_email=None):  # ADD override_email=
               <tbody>{items_rows}</tbody>
             </table>
           </div>
-
-          <!-- Total -->
           <div style="padding:16px 32px;">
             <table style="width:100%;border-collapse:collapse;">
               <tr>
@@ -271,8 +200,6 @@ def send_order_receipt_email(order, override_email=None):  # ADD override_email=
               </tr>
             </table>
           </div>
-
-          <!-- Footer -->
           <div style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 32px;text-align:center;">
             <div style="color:#6b7280;font-size:12px;line-height:1.7;">
               <strong style="color:#111827;">MotoTyre North Caloocan</strong><br>
@@ -286,19 +213,19 @@ def send_order_receipt_email(order, override_email=None):  # ADD override_email=
         _send_gmail(recipient_email, f"Your MotoTyre Receipt — {order_num}", html)
         order.receipt_sent = True
         db.session.commit()
-        print(f"[receipt email] sent to {user.email} for {order_num}")
+        print(f"[receipt email] sent to {recipient_email} for {order_num}")
     except Exception as e:
         print(f"[receipt email] failed for order {order.id}: {e}")
         db.session.rollback()
 
 
-# Helpers
+# ── Helpers ──────────────────────────────────────────────────────────────────
 
 def ph_now():
     return datetime.utcnow() + timedelta(hours=8)
 
 
-# Models
+# ── Models ───────────────────────────────────────────────────────────────────
 
 class User(db.Model, UserMixin):
     id               = db.Column(db.Integer, primary_key=True)
@@ -339,14 +266,15 @@ class Booking(db.Model):
     notes            = db.Column(db.Text)
     status           = db.Column(db.String(20), default='pending')
     payment_method   = db.Column(db.String(20), default='cash')
-    created_at = db.Column(db.DateTime, default=ph_now)
+    created_at       = db.Column(db.DateTime, default=ph_now)
     reminder_sent    = db.Column(db.Boolean, default=False)
     mechanic_name           = db.Column(db.String(100))
     mechanic_specialization = db.Column(db.String(100))
-    contact_name  = db.Column(db.String(100))
+    contact_name   = db.Column(db.String(100))
     contact_mobile = db.Column(db.String(20))
-    odometer = db.Column(db.Integer)
-    is_archived = db.Column(db.Boolean, default=False)
+    odometer       = db.Column(db.Integer)
+    is_archived    = db.Column(db.Boolean, default=False)
+
 
 class Mechanic(db.Model):
     id             = db.Column(db.Integer, primary_key=True)
@@ -364,7 +292,7 @@ class Product(db.Model):
     description = db.Column(db.Text)
     price       = db.Column(db.Float, nullable=False)
     stock       = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=ph_now)
+    created_at  = db.Column(db.DateTime, default=ph_now)
     order_items = db.relationship('OrderItem', backref='product', lazy=True)
 
 
@@ -419,6 +347,7 @@ def send_notification(user_id, title, message, type='update', status=None):
     db.session.add(Notification(user_id=user_id, title=title, message=message, type=type, status=status))
     db.session.commit()
 
+
 def check_upcoming_bookings():
     """Every minute: find bookings starting in ~15 min and send in-app reminder."""
     with app.app_context():
@@ -446,29 +375,21 @@ def check_upcoming_bookings():
                 db.session.commit()
                 print(f'[REMINDER] Sent for booking #{b.id} to user {b.user_id}')
 
-                
-
 
 def _generate_otp(length=6):
     return "".join(random.choices(string.digits, k=length))
 
+
 ALLOWED_EMAIL_DOMAINS = {
-    # Google
     'gmail.com',
-    # Yahoo
     'yahoo.com', 'yahoo.com.ph', 'ymail.com',
-    # Microsoft
     'outlook.com', 'hotmail.com', 'live.com', 'msn.com',
-    # Apple
     'icloud.com', 'me.com', 'mac.com',
-    # ProtonMail
     'proton.me', 'protonmail.com',
-    # Others
     'zoho.com', 'aol.com', 'mail.com',
 }
 
 def is_public_email(email: str) -> bool:
-    """Return True only if the email domain is in the allowed public providers list."""
     try:
         domain = email.strip().lower().split('@')[1]
         return domain in ALLOWED_EMAIL_DOMAINS
@@ -508,35 +429,31 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
 def cleanup_abandoned_gcash_orders():
-    """Cancel GCash orders that haven't been paid within 30 minutes."""
     cutoff = ph_now() - timedelta(minutes=30)
     abandoned = Order.query.filter(
         Order.status == 'awaiting_payment',
         Order.payment_method == 'gcash',
         Order.created_at < cutoff
     ).all()
-    
     for order in abandoned:
         Notification.query.filter(
             Notification.user_id == order.user_id,
             Notification.type == 'order',
             Notification.created_at >= order.created_at
         ).delete(synchronize_session=False)
-        
         for item in order.items:
             product = Product.query.get(item.product_id)
             if product:
                 product.stock += item.quantity
-        
         OrderItem.query.filter_by(order_id=order.id).delete()
         db.session.delete(order)
-    
     db.session.commit()
     return len(abandoned)
 
 
-# Auth routes
+# ── Auth routes ───────────────────────────────────────────────────────────────
 
 @app.route('/')
 def home():
@@ -550,7 +467,6 @@ def products():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        # Admins/staff should not be using this portal — redirect them out
         if current_user.role in ['admin', 'staff']:
             logout_user()
             flash('Please use the Admin Portal to log in.', 'warning')
@@ -565,7 +481,6 @@ def login():
             return redirect(url_for('login'))
         user = User.query.filter_by(email=email).first()
 
-        # Block admin/staff from logging in through the user portal
         if user and user.role in ['admin', 'staff']:
             flash('Admin and staff accounts must use the Admin Portal.', 'danger')
             return redirect(url_for('login'))
@@ -635,33 +550,24 @@ def register():
         email = clean_str(request.form.get('email', ''), max_len=254).lower()
         phone = clean_str(request.form.get('phone', ''), max_len=11)
 
-        # 1. Format check
         if not is_valid_email(email):
             flash('Invalid email address.', 'danger')
             return redirect(url_for('register'))
-
-        # 2. Domain whitelist check  ← THIS MUST BE HERE, NOT LATER
         if not is_public_email(email):
             flash('Please use a public email address (e.g. Gmail, Yahoo, Outlook, iCloud).', 'danger')
             return redirect(url_for('register'))
-
-        # 3. Duplicate check
         if User.query.filter_by(email=email).first():
             flash('Email already registered.', 'danger')
             return redirect(url_for('register'))
-
-        # 4. Phone check
         if not is_valid_phone(phone):
             flash('Invalid phone number.', 'danger')
             return redirect(url_for('register'))
-        
-        password        = request.form.get('password', '')
+
+        password         = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
         if password != confirm_password:
             flash('Passwords do not match.', 'danger')
             return redirect(url_for('register'))
-
-        # ... rest of register logic unchanged
 
         firstname = clean_str(request.form.get('firstname', ''), max_len=50)
         lastname  = clean_str(request.form.get('lastname', ''), max_len=50)
@@ -711,8 +617,6 @@ def verify_email_otp():
 
     return render_template('verify_otp.html', purpose='verify', email=email)
 
-
-# Forgot password routes
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -783,7 +687,7 @@ def logout():
     return redirect(url_for('login'))
 
 
-# Customer routes
+# ── Customer routes ───────────────────────────────────────────────────────────
 
 @app.route('/customer/dashboard')
 @login_required
@@ -798,10 +702,10 @@ def customer_dashboard():
     ).delete(synchronize_session=False)
     db.session.commit()
 
-    bookings   = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
-    orders     = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
-    products   = Product.query.filter(Product.stock > 0).all()
-    services   = Service.query.filter_by(is_active=True).order_by(Service.name).all()
+    bookings = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
+    orders   = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
+    products = Product.query.filter(Product.stock > 0).all()
+    services = Service.query.filter_by(is_active=True).order_by(Service.name).all()
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders,
                            products=products, services=services)
 
@@ -824,16 +728,16 @@ def book_service():
 
     odo_raw = clean_str(request.form.get('odometer', ''), max_len=10)
     booking = Booking(
-    user_id=current_user.id,
-    service=service,
-    date=booking_date,
-    time=booking_time,
-    motorcycle_model=clean_str(request.form.get('motorcycle_model', current_user.motorcycle_model or ''), max_len=100),
-    motorcycle_plate=clean_str(request.form.get('motorcycle_plate', current_user.motorcycle_plate or ''), max_len=20),
-    notes=clean_str(request.form.get('notes', ''), max_len=500),
-    contact_name=clean_str(request.form.get('contact_name', ''), max_len=100),
-    contact_mobile=clean_str(request.form.get('contact_mobile', ''), max_len=13),
-    odometer=int(odo_raw) if odo_raw.isdigit() else None,
+        user_id=current_user.id,
+        service=service,
+        date=booking_date,
+        time=booking_time,
+        motorcycle_model=clean_str(request.form.get('motorcycle_model', current_user.motorcycle_model or ''), max_len=100),
+        motorcycle_plate=clean_str(request.form.get('motorcycle_plate', current_user.motorcycle_plate or ''), max_len=20),
+        notes=clean_str(request.form.get('notes', ''), max_len=500),
+        contact_name=clean_str(request.form.get('contact_name', ''), max_len=100),
+        contact_mobile=clean_str(request.form.get('contact_mobile', ''), max_len=13),
+        odometer=int(odo_raw) if odo_raw.isdigit() else None,
     )
     mechanic_id = request.form.get('mechanic_id', '')
     if mechanic_id:
@@ -843,24 +747,22 @@ def book_service():
             booking.mechanic_specialization = mechanic.specialization
     db.session.add(booking)
     db.session.commit()
-    
+
     send_notification(
         current_user.id, 'Booking Received!',
         f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} is pending confirmation.',
         type='booking', status='pending'
     )
-    
-    admins = User.query.filter_by(role='admin').all()
-    for admin in admins:
+    for admin in User.query.filter_by(role='admin').all():
         send_notification(
-            admin.id,
-            'New Booking Received',
+            admin.id, 'New Booking Received',
             f'{current_user.fullname} booked {service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")}.',
             type='booking', status='pending'
         )
-    
+
     flash('Appointment booked successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
+
 
 @app.route('/customer/book-multiple', methods=['POST'])
 @login_required
@@ -924,19 +826,14 @@ def book_multiple_services():
 
     if created:
         db.session.commit()
-        admins = User.query.filter_by(role='admin').all()
-        for admin in admins:
+        for admin in User.query.filter_by(role='admin').all():
             send_notification(
                 admin.id, f'{len(created)} New Booking(s) Received',
                 f'{current_user.fullname} booked {len(created)} service(s).',
                 type='booking', status='pending'
             )
 
-    return jsonify({
-        'success': len(created) > 0,
-        'created': len(created),
-        'errors': errors
-    })
+    return jsonify({'success': len(created) > 0, 'created': len(created), 'errors': errors})
 
 
 @app.route('/customer/cart/checkout', methods=['POST'])
@@ -955,13 +852,13 @@ def cart_checkout():
     for item in items_data:
         product = Product.query.get(item['product_id'])
         if not product:
-            return jsonify({'success': False, 'error': f'Product not found'}), 400
+            return jsonify({'success': False, 'error': 'Product not found'}), 400
         qty = int(item['quantity'])
         if product.stock < qty:
             return jsonify({'success': False, 'error': f'Not enough stock for {product.name}'}), 400
         resolved.append((product, qty))
 
-    total = sum(p.price * q for p, q in resolved)
+    total        = sum(p.price * q for p, q in resolved)
     order_status = 'awaiting_payment' if payment_method.lower() == 'gcash' else 'pending'
 
     order = Order(user_id=current_user.id, total_amount=total,
@@ -977,7 +874,7 @@ def cart_checkout():
     db.session.commit()
 
     if payment_method.lower() == 'gcash':
-        desc = f"MotoTyre Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
+        desc   = f"MotoTyre Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
         result = create_gcash_payment(amount=total, description=desc[:100], order_id=order.id)
         if result['success']:
             return jsonify({'success': True, 'gcash': True, 'checkout_url': result['checkout_url']})
@@ -1003,7 +900,7 @@ def place_order():
         flash('Not enough stock available.', 'danger')
         return redirect(url_for('customer_dashboard'))
 
-    total = product.price * quantity
+    total           = product.price * quantity
     payment_method  = clean_str(request.form.get('payment_method', 'cash'), max_len=20)
     delivery_method = clean_str(request.form.get('delivery_method', 'pickup'), max_len=20)
 
@@ -1016,28 +913,25 @@ def place_order():
         ship_province = clean_str(request.form.get('ship_province', ''), max_len=100)
         ship_zip      = clean_str(request.form.get('ship_zip', ''), max_len=10)
         ship_address  = f"{ship_name}\n{ship_mobile}\n{ship_street}, {ship_city}, {ship_province} {ship_zip}"
-        
+
     if payment_method.lower() == 'gcash':
         order_status = 'awaiting_payment'
     elif delivery_method == 'pickup':
         order_status = 'awaiting_payment'
     else:
         order_status = 'pending'
-    
+
     order = Order(
-        user_id=current_user.id,
-        total_amount=total,
-        payment_method=payment_method,
-        delivery_method=delivery_method,
-        ship_address=ship_address,
-        status=order_status
+        user_id=current_user.id, total_amount=total,
+        payment_method=payment_method, delivery_method=delivery_method,
+        ship_address=ship_address, status=order_status
     )
     db.session.add(order)
     db.session.flush()
     db.session.add(OrderItem(order_id=order.id, product_id=product.id, quantity=quantity, unit_price=product.price))
     product.stock -= quantity
     db.session.commit()
-    
+
     if payment_method.lower() != 'gcash':
         delivery_text = "for pickup" if delivery_method == 'pickup' else "for delivery"
         send_notification(
@@ -1045,21 +939,16 @@ def place_order():
             f'Your order for {product.name} (x{quantity}) worth ₱{total:.2f} is now pending {delivery_text}.',
             type='order', status='pending'
         )
-    
+
     if payment_method.lower() == 'gcash':
         description = f"MotoTyre Order #{order.id:03d}: {product.name} x{quantity}"
-        result = create_gcash_payment(
-            amount=total,
-            description=description,
-            order_id=order.id
-        )
-        
+        result = create_gcash_payment(amount=total, description=description, order_id=order.id)
         if result["success"]:
             return redirect(result["checkout_url"])
         else:
             flash('Could not create GCash payment. Please try again or pay in-store.', 'warning')
             return redirect(url_for('customer_dashboard'))
-    
+
     flash('Order placed successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
 
@@ -1117,18 +1006,15 @@ def get_booked_slots():
         result.setdefault(b.date.strftime('%Y-%m-%d'), []).append(b.time.strftime('%H:%M'))
     return jsonify(result)
 
+
 @app.route('/api/mechanics')
 @login_required
 def get_mechanics():
     mechanics = Mechanic.query.filter_by(status='available').order_by(Mechanic.name).all()
-    return jsonify([{
-        'id': m.id,
-        'name': m.name,
-        'specialization': m.specialization
-    } for m in mechanics])
+    return jsonify([{'id': m.id, 'name': m.name, 'specialization': m.specialization} for m in mechanics])
 
 
-# Notification routes
+# ── Notification routes ───────────────────────────────────────────────────────
 
 @app.route('/api/notifications')
 @login_required
@@ -1137,8 +1023,7 @@ def get_notifications():
                                .order_by(Notification.created_at.desc()).limit(50).all()
     return jsonify([{
         'id': n.id, 'title': n.title, 'message': n.message,
-        'type': n.type, 'status': n.status,
-        'is_read': n.is_read,
+        'type': n.type, 'status': n.status, 'is_read': n.is_read,
         'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
     } for n in notifs])
 
@@ -1169,7 +1054,7 @@ def delete_notification(nid):
     return jsonify({'success': True})
 
 
-# Order confirm received
+# ── Order confirm received ────────────────────────────────────────────────────
 
 @app.route('/customer/order/<int:oid>/confirm-received', methods=['POST'])
 @login_required
@@ -1179,24 +1064,19 @@ def confirm_order_received(oid):
         return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
     if order.status != 'shipped':
         return jsonify({'success': False, 'message': 'Order is not in shipped status.'}), 400
-    new_status = 'completed'
-    order.status = new_status
+    order.status = 'completed'
     db.session.commit()
-    send_notification(
-        current_user.id, 'Order Received!',
+    send_notification(current_user.id, 'Order Received!',
         f'You confirmed receipt of your order ORD-{order.id:03d}. Thank you!',
-        type='order', status=new_status
-    )
+        type='order', status='completed')
     for admin in User.query.filter_by(role='admin').all():
-        send_notification(
-            admin.id, 'Order Received ✅',
+        send_notification(admin.id, 'Order Received ✅',
             f'{current_user.fullname} confirmed receipt of ORD-{order.id:03d}.',
-            type='order', status=new_status
-        )
-    return jsonify({'success': True, 'new_status': new_status})
+            type='order', status='completed')
+    return jsonify({'success': True, 'new_status': 'completed'})
 
 
-# Payment routes
+# ── Payment routes ────────────────────────────────────────────────────────────
 
 @app.route('/pay/order/<int:oid>')
 @login_required
@@ -1208,16 +1088,15 @@ def pay_order(oid):
     if order.status not in ['pending']:
         flash('This order cannot be paid online.', 'warning')
         return redirect(url_for('customer_dashboard'))
-    items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
+    items_desc  = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
     description = f"MotoTyre Order #{order.id:03d}: {items_desc[:100]}"
     result = create_gcash_payment(amount=order.total_amount, description=description, order_id=order.id)
     if result["success"]:
         order.payment_method = 'gcash'
         db.session.commit()
         return redirect(result["checkout_url"])
-    else:
-        flash('Could not create payment. Please try again.', 'danger')
-        return redirect(url_for('customer_dashboard'))
+    flash('Could not create payment. Please try again.', 'danger')
+    return redirect(url_for('customer_dashboard'))
 
 
 @app.route('/pay/booking/<int:bid>')
@@ -1249,45 +1128,27 @@ def pay_booking(bid):
         booking.payment_method = 'gcash'
         db.session.commit()
         return redirect(result["checkout_url"])
-    else:
-        flash('Could not create payment. Please try again.', 'danger')
-        return redirect(url_for('customer_dashboard'))
+    flash('Could not create payment. Please try again.', 'danger')
+    return redirect(url_for('customer_dashboard'))
 
 
 @app.route('/payment/success')
 def payment_success():
-    order_id = request.args.get('order_id')
-    booking_id = request.args.get('booking_id')
+    order_id    = request.args.get('order_id')
+    booking_id  = request.args.get('booking_id')
     checkout_id = request.args.get('checkout_id')
     gcash_email = None
 
-
     if checkout_id:
         try:
-            headers = {
-                "Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"
-            }
-            res = requests.get(
-                f"{PAYMONGO_API_URL}/checkout_sessions/{checkout_id}",
-                headers=headers
-            )
-            
+            headers = {"Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"}
+            res = requests.get(f"{PAYMONGO_API_URL}/checkout_sessions/{checkout_id}", headers=headers)
             if res.status_code == 200:
-                data = res.json()
-                attrs = data['data']['attributes']
-                print(f"[paymongo] full attributes keys: {list(attrs.keys())}")
-                print(f"[paymongo] billing: {attrs.get('billing')}")
-                print(f"[paymongo] email: {attrs.get('email')}")
-                gcash_email = (
-                    attrs.get('email') or
-                    (attrs.get('billing') or {}).get('email')
-                )
-                print(f"[paymongo] gcash_email resolved: {gcash_email}")
-            else:
-                print(f"[paymongo] fetch failed: {res.status_code} {res.text}")
+                attrs = res.json()['data']['attributes']
+                gcash_email = attrs.get('email') or (attrs.get('billing') or {}).get('email')
         except Exception as e:
             print(f"[paymongo] could not fetch checkout session: {e}")
-    
+
     if order_id:
         try:
             order = Order.query.get(int(order_id))
@@ -1295,16 +1156,14 @@ def payment_success():
                 order.status = 'confirmed'
                 db.session.commit()
                 items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
-                send_notification(
-                    order.user_id, 'Order Confirmed! ✅',
+                send_notification(order.user_id, 'Order Confirmed! ✅',
                     f'Your payment for Order ORD-{order.id:03d} ({items_desc}) worth ₱{order.total_amount:.2f} has been confirmed.',
-                    type='order', status='confirmed'
-                )
+                    type='order', status='confirmed')
             if order and order.status == 'confirmed':
-                send_order_receipt_email(order, override_email=gcash_email)  # PASS EMAIL
+                send_order_receipt_email(order, override_email=gcash_email)
         except Exception as e:
             print(f"[payment/success] order error: {e}")
-            
+
     if booking_id:
         try:
             booking = Booking.query.get(int(booking_id))
@@ -1313,12 +1172,13 @@ def payment_success():
                 db.session.commit()
         except:
             pass
+
     return redirect('http://127.0.0.1:5000/customer/dashboard')
 
 
 @app.route('/payment/failed')
 def payment_failed():
-    order_id = request.args.get('order_id')
+    order_id   = request.args.get('order_id')
     booking_id = request.args.get('booking_id')
     if order_id:
         try:
@@ -1360,10 +1220,11 @@ def paymongo_webhook():
     if not data:
         return jsonify({'error': 'No data'}), 400
     event_type = data.get('data', {}).get('attributes', {}).get('type')
-    resource = data.get('data', {}).get('attributes', {}).get('data', {})
+    resource   = data.get('data', {}).get('attributes', {}).get('data', {})
     if event_type == 'link.payment.paid':
-        metadata = resource.get('attributes', {}).get('metadata', {})
-        order_id = metadata.get('order_id')
+        metadata   = resource.get('attributes', {}).get('metadata', {})
+        order_id   = metadata.get('order_id')
+        booking_id = metadata.get('booking_id')
         if order_id:
             order = Order.query.get(int(order_id))
             if order and order.status in ['pending', 'awaiting_payment']:
@@ -1373,7 +1234,6 @@ def paymongo_webhook():
                 send_notification(order.user_id, 'Payment Received!',
                     f'Your payment for Order #{order.id:03d} has been confirmed.', type='order', status='confirmed')
                 send_order_receipt_email(order)
-        booking_id = metadata.get('booking_id')
         if booking_id:
             booking = Booking.query.get(int(booking_id))
             if booking and booking.status == 'pending':
@@ -1384,6 +1244,7 @@ def paymongo_webhook():
                     f'Your payment for {booking.service} on {booking.date.strftime("%b %d")} has been confirmed.',
                     type='booking', status='confirmed')
     return jsonify({'success': True})
+
 
 @app.route('/terms')
 def terms():
@@ -1398,98 +1259,76 @@ def api_services():
     try:
         svcs = Service.query.filter_by(is_active=True).order_by(Service.name).all()
         return jsonify([{'name': s.name, 'price': s.price} for s in svcs])
-    except Exception as e:
+    except Exception:
         return jsonify([])
 
+
+# ── Scheduler ─────────────────────────────────────────────────────────────────
 
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 
 scheduler = BackgroundScheduler(timezone='Asia/Manila')
-scheduler.add_job(
-    func=check_upcoming_bookings,
-    trigger='interval',
-    minutes=1,
-    id='booking_reminder_job',
-    replace_existing=True
-)
+scheduler.add_job(func=check_upcoming_bookings, trigger='interval', minutes=1,
+                  id='booking_reminder_job', replace_existing=True)
 scheduler.start()
 print('[SCHEDULER] Booking reminder service started — checking every 1 minute')
 atexit.register(lambda: scheduler.shutdown())
 
-with app.app_context():
-    try:
-        from sqlalchemy import text as _text
-        db.session.execute(_text("ALTER TABLE `order` ADD COLUMN receipt_sent TINYINT(1) NOT NULL DEFAULT 0"))
-        db.session.commit()
-        print('[MIGRATION] Added receipt_sent column to order table')
-    except Exception:
-        db.session.rollback()
+
+# ── Migrations ────────────────────────────────────────────────────────────────
 
 with app.app_context():
-    try:
-        from sqlalchemy import text as _text2
-        db.session.execute(_text2("ALTER TABLE service ADD COLUMN description VARCHAR(200) NOT NULL DEFAULT ''"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-    try:
-        from sqlalchemy import text as _text2
-        db.session.execute(_text2("ALTER TABLE service ADD COLUMN price FLOAT NOT NULL DEFAULT 0"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-    try:
-        from sqlalchemy import text as _text3
-        db.session.execute(_text3("UPDATE service SET is_active=1 WHERE is_active IS NULL"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-    try:
-        from sqlalchemy import text as _text4
-        db.session.execute(_text4("ALTER TABLE booking ADD COLUMN odometer INT DEFAULT NULL"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
+    for _stmt in [
+        "ALTER TABLE `order` ADD COLUMN receipt_sent TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE service ADD COLUMN description VARCHAR(200) NOT NULL DEFAULT ''",
+        "ALTER TABLE service ADD COLUMN price FLOAT NOT NULL DEFAULT 0",
+        "UPDATE service SET is_active=1 WHERE is_active IS NULL",
+        "ALTER TABLE booking ADD COLUMN odometer INT DEFAULT NULL",
+    ]:
+        try:
+            from sqlalchemy import text as _t
+            db.session.execute(_t(_stmt))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 with app.app_context():
     try:
         db.create_all()
         _default_services = [
-            ('Ball Race Installation',      'Steering ball race replacement',         350),
-            ('Brake Cleaning',              'Brake system cleaning',                  200),
-            ('Change Brake Pad',            'Brake pad replacement',                  300),
-            ('Change Oil',                  'Engine oil replacement',                 350),
-            ('CVT Cleaning',                'CVT belt & pulley cleaning',             500),
-            ('CVT Upgrade',                 'CVT performance upgrade',                700),
-            ('Diagnostic (API Tech / MST)', 'Electronic diagnostic scan',             300),
-            ('FI Cleaning',                 'Fuel injection system cleaning',         600),
-            ('Full Maintenance Package',    'Complete maintenance service',          1200),
-            ('General Rewiring',            'Full electrical rewiring',               500),
-            ('Horn Installation',           'Horn install & wiring',                  150),
-            ('Overhaul',                    'Full engine overhaul',                  2500),
-            ('Remap',                       'ECU remapping & tuning',                1500),
-            ('Rubber Link Stopper',         'Rubber link stopper replacement',        100),
-            ('Suspension Tuning',           'Front & rear suspension setup',          400),
-            ('Throttle Body Cleaning',      'Clean throttle body assembly',           400),
-            ('Top Overhaul',               'Top-end engine rebuild',                 1500),
-            ('Tune-Up',                     'Spark plug, filters & adjustment',       800),
+            ('Ball Race Installation',      'Steering ball race replacement',        350),
+            ('Brake Cleaning',              'Brake system cleaning',                 200),
+            ('Change Brake Pad',            'Brake pad replacement',                 300),
+            ('Change Oil',                  'Engine oil replacement',                350),
+            ('CVT Cleaning',                'CVT belt & pulley cleaning',            500),
+            ('CVT Upgrade',                 'CVT performance upgrade',               700),
+            ('Diagnostic (API Tech / MST)', 'Electronic diagnostic scan',            300),
+            ('FI Cleaning',                 'Fuel injection system cleaning',        600),
+            ('Full Maintenance Package',    'Complete maintenance service',         1200),
+            ('General Rewiring',            'Full electrical rewiring',              500),
+            ('Horn Installation',           'Horn install & wiring',                 150),
+            ('Overhaul',                    'Full engine overhaul',                 2500),
+            ('Remap',                       'ECU remapping & tuning',               1500),
+            ('Rubber Link Stopper',         'Rubber link stopper replacement',       100),
+            ('Suspension Tuning',           'Front & rear suspension setup',         400),
+            ('Throttle Body Cleaning',      'Clean throttle body assembly',          400),
+            ('Top Overhaul',                'Top-end engine rebuild',               1500),
+            ('Tune-Up',                     'Spark plug, filters & adjustment',      800),
         ]
         for name, desc, price in _default_services:
             svc = Service.query.filter_by(name=name).first()
             if not svc:
                 db.session.add(Service(name=name, description=desc, price=price))
             else:
-                if not svc.description:
-                    svc.description = desc
-                if not svc.price:
-                    svc.price = price
+                if not svc.description: svc.description = desc
+                if not svc.price:       svc.price = price
         db.session.commit()
         print('[MIGRATION] Service table ready')
     except Exception as e:
         db.session.rollback()
         print('[MIGRATION] Service table error:', e)
 
+
 if __name__ == '__main__':
-    # USER PORTAL — runs on port 5000
     app.run(debug=True, port=5000, use_reloader=False)
