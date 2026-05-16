@@ -3,1645 +3,963 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mototyre Moto Shop</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>MotoTyre — Motorcycle Shop Caloocan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
-
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root {
-      --ink: #0c0d0f;
-      --red: #ff0f0f;
-      --gold: #ff0f0f;
-      --light: #f7f6f2;
-      --muted: #6b7280;
-      --border: #e2e0db;
+      --bg-page:   #ffffff;
+      --bg-panel:  #ffffff;
+      --bg-subtle: #f5f4f2;
+      --bg-ink:    #1c1814;
+      --fg-1:      #1c1814;
+      --fg-2:      #5a544d;
+      --fg-3:      #908980;
+      --brand-red:        #e8401c;
+      --brand-red-hover:  #c73418;
+      --brand-red-soft:   rgba(232,64,28,0.10);
+      --brand-red-border: rgba(232,64,28,0.25);
+      --line-1: #ebe9e4;
+      --line-2: #d6d3cd;
+      --shadow-1: 0 1px 2px rgba(28,24,20,0.04);
+      --shadow-2: 0 4px 16px rgba(28,24,20,0.06);
+      --shadow-3: 0 12px 32px rgba(28,24,20,0.10);
+      --shadow-red: 0 8px 24px rgba(232,64,28,0.18);
+      --font-display: 'Bebas Neue','Oswald',sans-serif;
+      --font-body:    'DM Sans',system-ui,sans-serif;
+      --font-label:   'Syne','DM Sans',sans-serif;
+      --font-mono:    'DM Mono','JetBrains Mono',monospace;
+      --ease: cubic-bezier(.2,.7,.2,1);
     }
+    html,body{background:var(--bg-page);color:var(--fg-1);font-family:var(--font-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    a{color:inherit;text-decoration:none}
+    button{font-family:inherit;cursor:pointer}
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+    @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-33.333%)}}
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--ink);
-      color: #fff;
-      overflow-x: hidden;
-    }
+    /* ── NAV ── */
+    .nav-bar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-1);padding:0 clamp(20px,4vw,48px);height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .nav-logo{font-family:var(--font-display);font-size:26px;letter-spacing:0.06em;color:var(--fg-1);line-height:1;user-select:none}
+    .nav-logo span{color:var(--brand-red)}
+    .nav-links{display:flex;gap:4px;flex:1;justify-content:center;overflow:hidden}
+    .nav-links a{display:inline-flex;align-items:center;padding:8px 13px;border-radius:10px;font-family:var(--font-label);font-weight:700;font-size:12px;letter-spacing:0.05em;color:var(--fg-2);white-space:nowrap;transition:all 120ms var(--ease);border:1px solid transparent}
+    .nav-links a:hover{background:var(--bg-subtle);color:var(--fg-1)}
+    .nav-links a.nav-cta{background:var(--brand-red);color:#fff;border-color:var(--brand-red);padding:9px 18px}
+    .nav-links a.nav-cta:hover{background:var(--brand-red-hover);box-shadow:var(--shadow-red)}
+    .nav-toggle{display:none;background:none;border:none;padding:8px;color:var(--fg-1);align-items:center;justify-content:center}
+    .nav-overlay{display:none;position:fixed;inset:0;background:rgba(28,24,20,0.4);z-index:99}
+    .nav-overlay.open{display:block}
 
-    /* ── NAVBAR ── */
-    .nav-bar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.25rem 4rem;
-      background: rgba(12,13,15,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .nav-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.6rem;
-      letter-spacing: 0.05em;
-      color: #fff;
-      text-decoration: none;
-    }
-
-    .nav-logo span { color: var(--red); }
-
-    .nav-links { display: flex; gap: 2rem; align-items: center; }
-    .nav-links a {
-      color: #9ca3af;
-      text-decoration: none;
-      font-size: 0.875rem;
-      font-weight: 500;
-      transition: color 0.15s;
-      position: relative;
-      padding: 0.35rem 0;
-    }
-    .nav-links a:not(.nav-cta)::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      width: 100%;
-      height: 2px;
-      background: var(--red);
-      transform: scaleX(0);
-      transform-origin: right;
-      transition: transform 0.3s ease;
-    }
-    .nav-links a:not(.nav-cta):hover {
-      color: #fff;
-    }
-    .nav-links a:not(.nav-cta):hover::after {
-      transform: scaleX(1);
-      transform-origin: left;
-    }
-    .nav-links a:not(.nav-cta).active {
-      color: #fff;
-    }
-    .nav-links a:not(.nav-cta).active::after {
-      transform: scaleX(1);
-      transform-origin: left;
-      transition: none;
-    }
-
-    .nav-cta {
-      background: var(--red);
-      color: #fff !important;
-      padding: 0.5rem 1.25rem;
-      border-radius: 6px;
-      font-weight: 600 !important;
-      transition: all 0.2s ease !important;
-    }
-    .nav-cta:hover {
-      background: #c73418 !important;
-      color: #fff !important;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(255,15,15,0.4);
-    }
-
-    /* Hamburger Button */
-    .nav-toggle {
-      display: none;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      padding: 0.5rem;
-      z-index: 101;
-      width: 40px;
-      height: 40px;
-      position: relative;
-    }
-
-    .nav-toggle span {
-      display: block;
-      position: absolute;
-      left: 8px;
-      right: 8px;
-      height: 2px;
-      background: #fff;
-      border-radius: 2px;
-      transition: all 0.3s ease;
-    }
-
-    .nav-toggle span:nth-child(1) { top: 12px; }
-    .nav-toggle span:nth-child(2) { top: 19px; }
-    .nav-toggle span:nth-child(3) { top: 26px; }
-
-    .nav-toggle.active span:nth-child(1) {
-      top: 19px;
-      transform: rotate(45deg);
-    }
-    .nav-toggle.active span:nth-child(2) {
-      opacity: 0;
-    }
-    .nav-toggle.active span:nth-child(3) {
-      top: 19px;
-      transform: rotate(-45deg);
-    }
+    /* ── BUTTONS ── */
+    .btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--brand-red);color:#fff;padding:14px 28px;border-radius:12px;font-family:var(--font-body);font-weight:700;font-size:16px;border:1px solid var(--brand-red);white-space:nowrap;transition:all 120ms var(--ease)}
+    .btn-primary:hover{background:var(--brand-red-hover);box-shadow:var(--shadow-red);color:#fff}
+    .btn-ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--fg-2);padding:14px 28px;border-radius:12px;font-family:var(--font-body);font-weight:600;font-size:16px;border:none;white-space:nowrap;transition:all 120ms var(--ease)}
+    .btn-ghost:hover{background:var(--bg-subtle);color:var(--fg-1)}
 
     /* ── HERO ── */
-    .hero {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      position: relative;
-      overflow: hidden;
-      padding: 0 4rem;
-    }
+    .hero{position:relative;min-height:clamp(560px,78vh,760px);overflow:hidden;background:var(--fg-1)}
+    .hero-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;z-index:0}
+    .hero-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,0.97) 0%,rgba(255,255,255,0.92) 32%,rgba(255,255,255,0.55) 56%,rgba(255,255,255,0.05) 100%),linear-gradient(180deg,rgba(255,255,255,0.10) 0%,rgba(255,255,255,0) 25%,rgba(0,0,0,0.18) 100%);z-index:1}
+    .hero-num{position:absolute;font-family:var(--font-display);line-height:1;letter-spacing:-0.02em;color:transparent;pointer-events:none;user-select:none}
+    .hero-num-left{font-size:clamp(18rem,32vw,30rem);left:clamp(-2vw,-1vw,0);top:50%;transform:translateY(-50%);-webkit-text-stroke:1px rgba(28,24,20,0.08);z-index:1}
+    .hero-num-right{font-size:clamp(20rem,38vw,36rem);right:-3vw;top:52%;transform:translateY(-50%);-webkit-text-stroke:1px var(--line-1);z-index:0}
+    .hero-content-wrap{position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:clamp(60px,10vw,112px) clamp(20px,4vw,48px) clamp(80px,10vw,128px);min-height:inherit;display:flex;align-items:center}
+    .hero-content{max-width:640px}
+    .hero-tag{display:inline-flex;align-items:center;gap:8px;background:var(--brand-red-soft);border:1px solid var(--brand-red-border);color:var(--brand-red);padding:6px 14px;border-radius:999px;font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:28px}
+    .hero-tag-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);animation:pulse 1.5s infinite;flex-shrink:0}
+    .hero h1{font-family:var(--font-display);font-size:clamp(3.25rem,7vw,6.5rem);line-height:0.88;letter-spacing:0.01em;margin:0 0 28px;text-transform:uppercase}
+    .hero-line-1{color:var(--fg-1);display:block}
+    .hero-line-2{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+    .hero-line-2 .accent{color:var(--brand-red)}
+    .hero-line-2 .est{font-family:var(--font-mono);font-size:0.18em;letter-spacing:0.1em;color:var(--fg-3);text-transform:uppercase;font-weight:400;transform:translateY(-0.5em)}
+    .hero-line-3{display:block;-webkit-text-stroke:2px var(--fg-1);color:transparent}
+    .hero-desc{font-family:var(--font-body);font-size:17px;color:var(--fg-2);line-height:1.65;max-width:500px;margin:0 0 36px}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .hero-trust{display:flex;gap:32px;margin-top:48px;flex-wrap:wrap}
+    .hero-trust-item{display:flex;align-items:center;gap:10px}
+    .trust-icon{width:36px;height:36px;border-radius:8px;background:var(--bg-panel);border:1px solid var(--line-1);display:flex;align-items:center;justify-content:center;color:var(--brand-red);flex-shrink:0}
+    .trust-title{font-family:var(--font-label);font-weight:700;font-size:13px;color:var(--fg-1)}
+    .trust-sub{font-family:var(--font-body);font-size:11px;color:var(--fg-3)}
+    .hero-badge{position:absolute;z-index:3}
+    .hero-badge-top{right:clamp(20px,4vw,48px);top:clamp(28px,6vw,64px);background:var(--bg-panel);border:1px solid var(--line-1);border-radius:14px;padding:14px 18px;box-shadow:var(--shadow-3);min-width:156px;backdrop-filter:blur(8px)}
+    .hero-badge-bottom{right:clamp(20px,4vw,48px);bottom:clamp(28px,6vw,56px);background:var(--fg-1);color:#fff;border-radius:12px;padding:12px 16px;box-shadow:var(--shadow-3)}
+    .badge-label{font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--fg-3);display:flex;align-items:center;gap:8px;margin-bottom:4px}
+    .hero-badge-bottom .badge-label{color:rgba(255,255,255,0.6)}
+    .badge-num{font-family:var(--font-display);font-size:36px;letter-spacing:0.02em;color:var(--fg-1);line-height:1}
+    .badge-sub{font-family:var(--font-body);font-size:11px;color:var(--fg-3);margin-top:2px}
+    .badge-loc{font-family:var(--font-display);font-size:18px;letter-spacing:0.04em;margin-top:4px;white-space:nowrap;color:#fff}
 
-    .hero-bg {
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 70% 50%, rgba(232,64,28,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 20% 80%, rgba(245,166,35,0.06) 0%, transparent 50%),
-        var(--ink);
-    }
+    /* ── TICKER ── */
+    .ticker{background:var(--fg-1);padding:16px 0;overflow:hidden}
+    .ticker-inner{display:flex;gap:48px;white-space:nowrap;animation:ticker 38s linear infinite}
+    .ticker-item{display:inline-flex;align-items:center;gap:48px;flex-shrink:0}
+    .ticker-text{font-family:var(--font-display);font-size:22px;letter-spacing:0.08em;color:#fff}
+    .ticker-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);flex-shrink:0}
 
-    .hero-bg::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-      background-size: 60px 60px;
-    }
+    /* ── SHARED SECTION ── */
+    .section{padding:clamp(64px,8vw,96px) clamp(20px,4vw,48px)}
+    .section-light{background:var(--bg-page)}
+    .section-panel{background:var(--bg-panel);border-top:1px solid var(--line-1);border-bottom:1px solid var(--line-1)}
+    .inner{max-width:1280px;margin:0 auto}
+    .eyebrow{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--brand-red)}
+    .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:32px;flex-wrap:wrap}
+    .section-head h2{font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);letter-spacing:0.03em;line-height:1;margin:8px 0 8px;color:var(--fg-1);text-transform:uppercase}
+    .section-head h2 .accent{color:var(--brand-red)}
+    .section-head p{font-family:var(--font-body);font-size:15px;color:var(--fg-2);max-width:540px;line-height:1.6;margin:0}
+    .section-action a{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--brand-red);white-space:nowrap}
+    .section-action a:hover{text-decoration:underline}
 
-    .hero-content {
-      position: relative;
-      z-index: 2;
-      max-width: 680px;
-    }
-
-    .hero-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(232,64,28,0.15);
-      border: 1px solid rgba(232,64,28,0.3);
-      color: var(--red);
-      padding: 0.35rem 1rem;
-      border-radius: 99px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-bottom: 1.5rem;
-      animation: fadeUp 0.6s ease both;
-    }
-
-    .hero-tag::before {
-      content: '';
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--red);
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.3); }
-    }
-
-    .hero h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(3.5rem, 8vw, 7rem);
-      line-height: 0.92;
-      letter-spacing: 0.02em;
-      margin-bottom: 1.5rem;
-      animation: fadeUp 0.6s 0.1s ease both;
-    }
-
-    .hero h1 .accent { color: var(--red); }
-    .hero h1 .outline {
-      -webkit-text-stroke: 2px rgba(255,255,255,0.3);
-      color: transparent;
-    }
-
-    .hero-desc {
-      font-size: 1.05rem;
-      color: #9ca3af;
-      line-height: 1.7;
-      max-width: 480px;
-      margin-bottom: 2.5rem;
-      animation: fadeUp 0.6s 0.2s ease both;
-    }
-
-    .hero-actions {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      animation: fadeUp 0.6s 0.3s ease both;
-    }
-
-    .btn-hero-primary {
-      background: var(--red);
-      color: #fff;
-      padding: 0.875rem 2rem;
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 700;
-      font-size: 1rem;
-      text-decoration: none;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .btn-hero-primary:hover {
-      background: #c73418;
-      color: #fff;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(232,64,28,0.35);
-    }
-
-    .btn-hero-secondary {
-      background: rgba(255,255,255,0.07);
-      color: #fff;
-      padding: 0.875rem 2rem;
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
-      font-size: 1rem;
-      text-decoration: none;
-      border: 1px solid rgba(255,255,255,0.12);
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .btn-hero-secondary:hover {
-      background: rgba(255,255,255,0.12);
-      color: #fff;
-      transform: translateY(-2px);
-    }
-
-    .hero-visual {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      overflow: hidden;
-    }
-
-    .hero-img-wrap {
-      position: relative;
-      width: 100%;
-      height: 100%;
-    }
-
-    .hero-img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center 35%;
-      opacity: 0.45;
-      display: block;
-    }
-
-    .hero-img-wrap::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to right, rgba(12,13,15,0.95) 0%, rgba(12,13,15,0.85) 35%, rgba(12,13,15,0.35) 65%, rgba(12,13,15,0.2) 100%);
-      z-index: 1;
-    }
-
-    .hero-img-wrap::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to top, rgba(12,13,15,0.8) 0%, transparent 35%);
-      z-index: 1;
-    }
-
-    .scroll-hint {
-      position: absolute;
-      bottom: 2rem;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      color: #4b5563;
-      font-size: 0.72rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      animation: fadeUp 1s 0.8s ease both;
-    }
-
-    .scroll-line {
-      width: 1px;
-      height: 40px;
-      background: linear-gradient(to bottom, transparent, #4b5563);
-      animation: scrollAnim 1.5s infinite;
-    }
-
-    @keyframes scrollAnim {
-      0% { transform: scaleY(0); transform-origin: top; }
-      50% { transform: scaleY(1); transform-origin: top; }
-      51% { transform: scaleY(1); transform-origin: bottom; }
-      100% { transform: scaleY(0); transform-origin: bottom; }
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    /* ── ABOUT ── */
+    .about-grid{display:grid;grid-template-columns:0.85fr 1.15fr;gap:64px;align-items:center}
+    .about-img-wrap{position:relative;aspect-ratio:3/4}
+    .about-img-corner{position:absolute;left:-18px;bottom:-18px;width:60%;height:60%;background:var(--brand-red-soft);border:1px solid var(--brand-red-border);border-radius:20px}
+    .about-img-inner{position:relative;width:100%;height:100%;border-radius:20px;overflow:hidden;border:1px solid var(--line-1)}
+    .about-img-inner img{width:100%;height:100%;object-fit:cover;display:block}
+    .about-yrs-badge{position:absolute;right:-20px;top:24px;background:var(--brand-red);color:#fff;padding:14px 18px;border-radius:14px;box-shadow:var(--shadow-2)}
+    .about-yrs-badge .yrs{font-family:var(--font-display);font-size:32px;line-height:1;letter-spacing:0.02em}
+    .about-yrs-badge .yrs-lbl{font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-top:4px;opacity:0.85}
+    .about-text h2{font-family:var(--font-display);font-size:clamp(2.5rem,4.5vw,4rem);letter-spacing:0.02em;line-height:0.95;margin:12px 0 24px;text-transform:uppercase;color:var(--fg-1)}
+    .about-text h2 .accent{color:var(--brand-red)}
+    .about-text h2 .outline{-webkit-text-stroke:2px var(--fg-1);color:transparent}
+    .about-text p{font-family:var(--font-body);font-size:16px;color:var(--fg-2);line-height:1.7;max-width:520px;margin:0 0 16px}
+    .about-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line-1);margin-top:8px}
+    .about-stat{padding:24px 16px 0;border-right:1px solid var(--line-1)}
+    .about-stat:last-child{border-right:none}
+    .about-stat .num{font-family:var(--font-display);font-size:clamp(2.5rem,4vw,3.5rem);line-height:1;letter-spacing:0.02em;color:var(--fg-1)}
+    .about-stat .num .accent{color:var(--brand-red)}
+    .about-stat .lbl{font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--fg-3);margin-top:10px}
 
     /* ── SERVICES ── */
-    .services {
-      padding: 6rem 4rem;
-      background: #111215;
-      position: relative;
-    }
+    .services-featured{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px;margin-bottom:16px}
+    .svc-featured{background:var(--fg-1);color:#fff;border-radius:16px;padding:32px;display:flex;flex-direction:column;justify-content:space-between;gap:32px;position:relative;overflow:hidden;min-height:280px}
+    .svc-featured-bg{position:absolute;right:-40px;bottom:-40px;opacity:0.18;pointer-events:none;color:var(--brand-red)}
+    .svc-hot-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(232,64,28,0.18);color:#ffb19a;padding:4px 12px;border-radius:999px;font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:16px}
+    .svc-featured-title{font-family:var(--font-display);font-size:44px;letter-spacing:0.03em;line-height:1;margin:0}
+    .svc-featured-title .accent{color:var(--brand-red)}
+    .svc-featured-desc{font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,0.75);line-height:1.6;max-width:340px;margin:0 0 16px}
+    .svc-price-row{display:flex;align-items:baseline;gap:12px}
+    .svc-price-from{font-family:var(--font-label);font-size:11px;color:rgba(255,255,255,0.5)}
+    .svc-price{font-family:var(--font-display);font-size:32px;letter-spacing:0.02em;color:#fff}
 
-    .section-tag {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--red);
-      margin-bottom: 0.75rem;
-    }
+    .service-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:10px;transition:all 160ms var(--ease)}
+    .service-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-2)}
+    .service-card.hidden{display:none}
+    .svc-icon{width:44px;height:44px;border-radius:10px;background:var(--brand-red-soft);color:var(--brand-red);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+    .svc-name{font-family:var(--font-display);font-size:22px;letter-spacing:0.04em;color:var(--fg-1)}
+    .svc-desc{font-family:var(--font-body);font-size:14px;color:var(--fg-2);line-height:1.55}
+    .services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
 
-    .section-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(2rem, 4vw, 3.5rem);
-      line-height: 1;
-      letter-spacing: 0.02em;
-      margin-bottom: 0.75rem;
-    }
+    /* Pagination */
+    .pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:32px;flex-wrap:wrap}
+    .page-btn{height:40px;min-width:40px;padding:0 12px;border-radius:8px;border:1px solid var(--line-1);background:var(--bg-panel);color:var(--fg-3);font-family:var(--font-body);font-weight:600;font-size:14px;transition:all 120ms var(--ease);display:inline-flex;align-items:center;justify-content:center}
+    .page-btn:hover:not(:disabled):not(.active){background:var(--fg-1);color:#fff}
+    .page-btn.active{background:var(--brand-red);border-color:var(--brand-red);color:#fff}
+    .page-btn:disabled{opacity:0.3;cursor:not-allowed}
 
-    .section-sub {
-      color: #6b7280;
-      font-size: 0.95rem;
-      max-width: 480px;
-      line-height: 1.7;
-      margin-bottom: 3rem;
-    }
-
-    .services-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 1.5rem;
-    }
-
-    /* Services Pagination */
-    .service-card.hidden {
-      display: none;
-    }
-
-    .pagination {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-top: 3rem;
-      flex-wrap: wrap;
-    }
-
-    .page-btn {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #9ca3af;
-      width: 42px;
-      height: 42px;
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .page-btn:hover:not(:disabled):not(.active) {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,15,15,0.4);
-      color: #fff;
-      transform: translateY(-2px);
-    }
-
-    .page-btn.active {
-      background: var(--red);
-      border-color: var(--red);
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(255,15,15,0.35);
-    }
-
-    .page-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-
-    .page-btn.nav-arrow {
-      width: auto;
-      padding: 0 1rem;
-      gap: 0.35rem;
-    }
-
-    .page-info {
-      color: #6b7280;
-      font-size: 0.8rem;
-      margin: 0 0.75rem;
-      letter-spacing: 0.05em;
-    }
-
-    .service-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 16px;
-      padding: 2rem;
-      transition: all 0.2s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .service-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--red);
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.3s;
-    }
-
-    .service-card:hover {
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(232,64,28,0.2);
-      transform: translateY(-4px);
-    }
-    .service-card:hover::before { transform: scaleX(1); }
-
-    .service-icon {
-      font-size: 2.25rem;
-      margin-bottom: 1rem;
-    }
-
-    .service-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.4rem;
-      letter-spacing: 0.04em;
-      margin-bottom: 0.5rem;
-    }
-
-    .service-desc {
-      color: #6b7280;
-      font-size: 0.875rem;
-      line-height: 1.6;
-    }
+    /* ── PRODUCTS ── */
+    .products-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .product-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:all 160ms var(--ease)}
+    .product-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-2)}
+    .product-img{height:110px;background:var(--bg-subtle);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--fg-3);margin-bottom:4px}
+    .product-cat{font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--fg-3)}
+    .product-name{font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--fg-1);line-height:1.3}
+    .product-price{font-family:var(--font-display);font-size:22px;letter-spacing:0.02em;color:var(--brand-red)}
 
     /* ── HOW IT WORKS ── */
-    .how-it-works {
-      padding: 6rem 4rem;
-      background: var(--ink);
-    }
-
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 2rem;
-      margin-top: 3rem;
-    }
-
-    .step {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      position: relative;
-    }
-
-    .step-num {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 4rem;
-      line-height: 1;
-      color: rgba(232,64,28,0.15);
-      transition: color 0.2s;
-    }
-    .step:hover .step-num { color: rgba(232,64,28,0.4); }
-
-    .step-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.3rem;
-      letter-spacing: 0.04em;
-    }
-
-    .step-desc {
-      color: #6b7280;
-      font-size: 0.875rem;
-      line-height: 1.6;
-    }
+    .steps-wrap{position:relative}
+    .steps-line{position:absolute;top:30px;left:12.5%;right:12.5%;height:1px;border-top:1px dashed var(--line-2);z-index:0}
+    .steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px;position:relative;z-index:1}
+    .step{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+    .step-circle{width:60px;height:60px;border-radius:50%;background:var(--bg-panel);border:2px solid var(--brand-red);display:flex;align-items:center;justify-content:center;color:var(--brand-red);box-shadow:var(--shadow-1)}
+    .step-num{font-family:var(--font-mono);font-size:11px;letter-spacing:0.18em;color:var(--brand-red);font-weight:600;margin-top:4px}
+    .step-title{font-family:var(--font-display);font-size:22px;letter-spacing:0.04em;color:var(--fg-1);text-transform:uppercase}
+    .step-desc{font-family:var(--font-body);font-size:14px;color:var(--fg-2);line-height:1.55}
 
     /* ── TESTIMONIALS ── */
-    .testimonials {
-      padding: 6rem 4rem;
-      background: #111215;
-    }
-
-    .testimonials-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.5rem;
-      margin-top: 3rem;
-    }
-
-    .testi-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 16px;
-      padding: 2rem;
-      transition: transform 0.2s;
-    }
-    .testi-card:hover { transform: translateY(-4px); }
-
-    .testi-stars {
-      color: var(--gold);
-      font-size: 0.875rem;
-      margin-bottom: 1rem;
-    }
-
-    .testi-text {
-      color: #d1d5db;
-      font-size: 0.9rem;
-      line-height: 1.7;
-      margin-bottom: 1.5rem;
-      font-style: italic;
-    }
-
-    .testi-author {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .testi-avatar {
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      background: var(--red);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1rem;
-      color: #fff;
-      flex-shrink: 0;
-    }
-
-    .testi-name { font-weight: 600; font-size: 0.875rem; }
-    .testi-bike { font-size: 0.75rem; color: #6b7280; }
+    .testi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+    .testi-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:18px;transition:all 160ms var(--ease)}
+    .testi-card:hover{box-shadow:var(--shadow-2);border-color:var(--line-2)}
+    .testi-stars{display:flex;gap:2px}
+    .testi-text{font-family:var(--font-body);font-size:15px;color:var(--fg-1);line-height:1.6;font-style:italic;flex:1}
+    .testi-footer{display:flex;align-items:center;gap:12px;padding-top:16px;border-top:1px solid var(--line-1)}
+    .testi-avatar{width:40px;height:40px;border-radius:50%;background:var(--brand-red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:14px;flex-shrink:0}
+    .testi-name{font-family:var(--font-label);font-weight:700;font-size:13px;color:var(--fg-1)}
+    .testi-meta{font-family:var(--font-body);font-size:12px;color:var(--fg-3)}
 
     /* ── CONTACT ── */
-    .contact {
-      padding: 6rem 4rem;
-      background: #111215;
-    }
-
-    .contact-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 1.5rem;
-      margin-top: 3rem;
-    }
-
-    .contact-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 16px;
-      padding: 2rem;
-      display: flex;
-      align-items: flex-start;
-      gap: 1.25rem;
-      transition: all 0.2s;
-      position: relative;
-      overflow: hidden;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .contact-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--red);
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.3s;
-    }
-
-    .contact-card:hover {
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(232,64,28,0.2);
-      transform: translateY(-4px);
-      color: inherit;
-    }
-    .contact-card:hover::before { transform: scaleX(1); }
-
-    .contact-icon {
-      font-size: 2rem;
-      flex-shrink: 0;
-      margin-top: 0.1rem;
-    }
-
-    .contact-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--red);
-      margin-bottom: 0.4rem;
-    }
-
-    .contact-value {
-      font-size: 0.95rem;
-      color: #e5e7eb;
-      line-height: 1.6;
-      font-weight: 500;
-    }
-
-    .contact-hint {
-      font-size: 0.78rem;
-      color: #6b7280;
-      margin-top: 0.3rem;
-    }
-
-    /* ── CTA SECTION ── */
-    .cta-section {
-      padding: 6rem 4rem;
-      background: var(--ink);
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .cta-section::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(232,64,28,0.1) 0%, transparent 70%);
-    }
-
-    .cta-section h2 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(2.5rem, 5vw, 4.5rem);
-      letter-spacing: 0.02em;
-      margin-bottom: 1rem;
-      position: relative;
-    }
-
-    .cta-section p {
-      color: #6b7280;
-      font-size: 1rem;
-      margin-bottom: 2.5rem;
-      position: relative;
-    }
-
-    .cta-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      position: relative;
-    }
-
-    /* ── ABOUT US ── */
-    .about {
-      padding: 6rem 4rem;
-      background: #111215;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .about-inner {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 5rem;
-      align-items: center;
-    }
-
-    .about-text .section-tag { margin-bottom: 0.75rem; }
-
-    .about-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(2.5rem, 4vw, 3.8rem);
-      line-height: 0.95;
-      letter-spacing: 0.02em;
-      margin-bottom: 1.5rem;
-    }
-
-    .about-title span { color: var(--red); }
-
-    .about-desc {
-      color: #9ca3af;
-      font-size: 1rem;
-      line-height: 1.8;
-      margin-bottom: 1rem;
-    }
-
-    .about-divider {
-      width: 48px;
-      height: 3px;
-      background: var(--red);
-      margin: 1.75rem 0;
-      border-radius: 2px;
-    }
-
-    .about-stats {
-      display: flex;
-      gap: 2.5rem;
-      flex-wrap: wrap;
-    }
-
-    .about-stat .num {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.8rem;
-      color: #fff;
-      line-height: 1;
-    }
-
-    .about-stat .num span { color: var(--red); }
-    .about-stat .lbl {
-      font-size: 0.75rem;
-      color: #6b7280;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-top: 0.2rem;
-    }
-
-    .about-visual {
-      position: relative;
-    }
-
-    .about-img-wrap {
-      position: relative;
-      border-radius: 16px;
-      overflow: hidden;
-      aspect-ratio: 4/3;
-    }
-
-    .about-img-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center 20%;
-      display: block;
-      opacity: 0.85;
-    }
-
-    .about-img-wrap::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .about-badge {
-      position: absolute;
-      bottom: -1.25rem;
-      left: -1.25rem;
-      background: var(--red);
-      border-radius: 12px;
-      padding: 1rem 1.5rem;
-      z-index: 2;
-      box-shadow: 0 8px 24px rgba(255,15,15,0.3);
-    }
-
-    .about-badge .b-num {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2rem;
-      color: #fff;
-      line-height: 1;
-    }
-
-    .about-badge .b-lbl {
-      font-size: 0.7rem;
-      color: rgba(255,255,255,0.8);
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    @media (max-width: 900px) {
-      .about { padding: 4rem 2rem; }
-      .about-inner { grid-template-columns: 1fr; gap: 3rem; }
-      .about-visual { display: none; }
-    }
-
-    /* ── FOOTER ── */
-    .footer {
-      background: #080909;
-      padding: 3rem 4rem;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 1.5rem 3rem;
-      text-align: center;
-    }
-
-    .footer-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.4rem;
-      color: #fff;
-    }
-    .footer-logo span { color: var(--red); }
-
-    .footer-copy {
-      color: #4b5563;
-      font-size: 0.8rem;
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .footer-links a {
-      color: #4b5563;
-      text-decoration: none;
-      font-size: 0.8rem;
-      transition: color 0.15s;
-    }
-    .footer-links a:hover { color: #fff; }
+    .contact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+    .contact-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;gap:16px;transition:all 160ms var(--ease)}
+    .contact-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-2)}
+    .contact-icon{width:44px;height:44px;border-radius:10px;background:var(--brand-red-soft);color:var(--brand-red);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .contact-lbl{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--brand-red)}
+    .contact-val{font-family:var(--font-body);font-size:15px;color:var(--fg-1);margin-top:4px;line-height:1.55}
 
     /* ── FEEDBACK ── */
-    .feedback {
-      padding: 6rem 4rem;
-      background: var(--ink);
-    }
+    .feedback-wrap{max-width:720px;margin:0 auto}
+    .feedback-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:32px}
+    .form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .form-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+    .form-label{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-2)}
+    .form-input,.form-select,.form-textarea{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:10px;padding:11px 14px;font-family:var(--font-body);font-size:14px;color:var(--fg-1);outline:none;width:100%;transition:border-color 120ms var(--ease),box-shadow 120ms var(--ease)}
+    .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(232,64,28,0.10)}
+    .form-input::placeholder,.form-textarea::placeholder{color:var(--fg-3)}
+    .form-textarea{resize:vertical;min-height:80px}
+    .form-select{appearance:none;cursor:pointer}
+    .star-rating{display:flex;gap:8px;margin-bottom:14px;flex-direction:row-reverse;justify-content:flex-end}
+    .star-rating input{display:none}
+    .star-rating label{font-size:26px;color:var(--line-2);cursor:pointer;transition:color 0.15s;margin:0}
+    .star-rating input:checked~label,.star-rating label:hover,.star-rating label:hover~label{color:var(--brand-red)}
+    .feedback-success{display:none;text-align:center;padding:2rem;color:var(--fg-2)}
+    .feedback-success .big{font-size:48px;margin-bottom:8px}
+    .feedback-success h4{font-family:var(--font-display);font-size:1.8rem;letter-spacing:0.04em;color:var(--fg-1)}
 
-    .feedback-form {
-      max-width: 620px;
-      margin: 3rem auto 0;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      padding: 2.5rem;
-    }
+    /* ── CTA (dark) ── */
+    .cta-section{padding:clamp(80px,10vw,128px) clamp(20px,4vw,48px);background:var(--bg-ink);position:relative;overflow:hidden}
+    .cta-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.18;filter:grayscale(20%)}
+    .cta-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(28,24,20,0.96) 0%,rgba(28,24,20,0.78) 50%,rgba(28,24,20,0.92) 100%)}
+    .cta-inner{position:relative;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1.2fr 0.8fr;gap:48px;align-items:center}
+    .cta-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(232,64,28,0.15);border:1px solid rgba(232,64,28,0.35);color:#ff9a82;padding:6px 14px;border-radius:999px;font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:24px}
+    .cta-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);animation:pulse 1.5s infinite;flex-shrink:0}
+    .cta-section h2{font-family:var(--font-display);font-size:clamp(2.75rem,6vw,5.5rem);line-height:0.92;letter-spacing:0.02em;margin:0 0 24px;color:#fff;text-transform:uppercase}
+    .cta-section h2 .accent{color:var(--brand-red)}
+    .cta-section p{font-family:var(--font-body);font-size:17px;color:rgba(255,255,255,0.7);max-width:480px;margin:0 0 36px;line-height:1.6}
+    .cta-btns{display:flex;gap:12px;flex-wrap:wrap}
+    .btn-cta-phone{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.06);color:#fff;padding:14px 28px;border-radius:12px;font-family:var(--font-body);font-weight:600;font-size:16px;border:1px solid rgba(255,255,255,0.18);white-space:nowrap;transition:all 120ms var(--ease)}
+    .btn-cta-phone:hover{background:rgba(255,255,255,0.12)}
+    .hours-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px;backdrop-filter:blur(12px)}
+    .hours-header{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+    .hours-lbl{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.55)}
+    .hours-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.08)}
+    .hours-row:last-child{border-bottom:none}
+    .hours-day{font-family:var(--font-label);font-size:12px;font-weight:700;letter-spacing:0.06em;color:rgba(255,255,255,0.55)}
+    .hours-time{font-family:var(--font-display);font-size:18px;letter-spacing:0.03em;color:#fff}
 
-    .feedback-form label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #9ca3af;
-      margin-bottom: 0.4rem;
-      display: block;
-    }
-
-    .feedback-form input,
-    .feedback-form textarea,
-    .feedback-form select {
-      width: 100%;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      color: #fff;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.9rem;
-      margin-bottom: 1.25rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .feedback-form input::placeholder,
-    .feedback-form textarea::placeholder {
-      color: #4b5563;
-    }
-
-    .feedback-form input:focus,
-    .feedback-form textarea:focus,
-    .feedback-form select:focus {
-      border-color: var(--red);
-    }
-
-    .feedback-form select option {
-      background: #1a1a1a;
-      color: #fff;
-    }
-
-    .feedback-form textarea {
-      resize: vertical;
-      min-height: 120px;
-    }
-
-    .star-rating {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1.25rem;
-      flex-direction: row-reverse;
-      justify-content: flex-end;
-    }
-
-    .star-rating input { display: none; }
-
-    .star-rating label {
-      font-size: 1.8rem;
-      color: #4b5563;
-      cursor: pointer;
-      transition: color 0.15s;
-      margin: 0;
-    }
-
-    .star-rating input:checked ~ label,
-    .star-rating label:hover,
-    .star-rating label:hover ~ label {
-      color: var(--red);
-    }
-
-    .btn-feedback {
-      background: var(--red);
-      color: #fff;
-      border: none;
-      padding: 0.875rem 2rem;
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 700;
-      font-size: 1rem;
-      width: 100%;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-feedback:hover {
-      background: #c73418;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(232,64,28,0.35);
-    }
-
-    .feedback-success {
-      display: none;
-      text-align: center;
-      padding: 2rem;
-      color: #9ca3af;
-    }
-
-    .feedback-success .big { font-size: 3rem; margin-bottom: 0.5rem; }
-    .feedback-success h4 { color: #fff; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.04em; }
-
-    /* ── PRODUCTS PREVIEW ── */
-    .products-preview {
-      padding: 6rem 4rem;
-      background: var(--ink);
-    }
-
-    .btn-view-all {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(255,255,255,0.07);
-      color: #fff;
-      padding: 0.875rem 2rem;
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
-      font-size: 1rem;
-      text-decoration: none;
-      border: 1px solid rgba(255,255,255,0.12);
-      transition: all 0.2s;
-    }
-    .btn-view-all:hover {
-      background: var(--red);
-      border-color: var(--red);
-      color: #fff;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(232,64,28,0.35);
-    }
+    /* ── FOOTER ── */
+    .footer{background:var(--bg-panel);border-top:1px solid var(--line-1);padding:28px clamp(20px,4vw,48px);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+    .footer-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .footer-logo{font-family:var(--font-display);font-size:20px;letter-spacing:0.06em;color:var(--fg-1)}
+    .footer-logo span{color:var(--brand-red)}
+    .footer-copy{font-family:var(--font-body);font-size:12px;color:var(--fg-3)}
+    .footer-links{display:flex;gap:20px;flex-wrap:wrap}
+    .footer-links a{font-family:var(--font-body);font-size:12px;color:var(--fg-3);transition:color 120ms var(--ease)}
+    .footer-links a:hover{color:var(--fg-1)}
 
     /* ── RESPONSIVE ── */
-    @media (max-width: 900px) {
-      .hero { padding: 6rem 2rem 4rem; min-height: auto; }
-      .hero-visual { display: none; }
-      .services, .products-preview, .how-it-works, .testimonials, .cta-section, .contact, .feedback { padding: 4rem 2rem; }
-
-      .nav-bar { padding: 1rem 1.5rem; }
-
-      .nav-toggle { display: block; }
-
-      .nav-links {
-        position: fixed;
-        top: 0;
-        right: 0;
-        width: 75%;
-        max-width: 320px;
-        height: 100vh;
-        background: rgba(12,13,15,0.98);
-        backdrop-filter: blur(16px);
-        border-left: 1px solid rgba(255,255,255,0.08);
-        flex-direction: column;
-        align-items: flex-start;
-        justify-content: flex-start;
-        padding: 5.5rem 2rem 2rem;
-        gap: 1.75rem;
-        transform: translateX(100%);
-        transition: transform 0.35s ease;
-        z-index: 99;
-      }
-
-      .nav-links.active {
-        transform: translateX(0);
-      }
-
-      .nav-links a {
-        font-size: 1.05rem;
-        width: 100%;
-        padding: 0.5rem 0 0.5rem 1rem;
-        border-left: 2px solid transparent;
-        transition: all 0.2s ease;
-      }
-
-      .nav-links a:not(.nav-cta)::after {
-        display: none;
-      }
-
-      .nav-links a:not(.nav-cta):hover,
-      .nav-links a:not(.nav-cta):active {
-        color: #fff;
-        border-left-color: var(--red);
-        padding-left: 1.25rem;
-      }
-
-      .nav-cta {
-        display: inline-block;
-        width: auto !important;
-        margin-top: 0.5rem;
-        padding: 0.6rem 1.5rem !important;
-      }
-
-      /* Overlay when menu is open */
-      .nav-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-        z-index: 98;
-      }
-
-      .nav-overlay.active {
-        opacity: 1;
-        pointer-events: auto;
-      }
-
-      .footer { padding: 2rem 1.5rem; }
+    @media(max-width:900px){
+      .nav-links{display:none}
+      .nav-toggle{display:flex}
+      .nav-links.open{display:flex;flex-direction:column;position:fixed;top:0;right:0;width:80%;max-width:320px;height:100vh;background:rgba(255,255,255,0.98);backdrop-filter:blur(16px);border-left:1px solid var(--line-1);padding:80px 24px 24px;gap:4px;z-index:200;box-shadow:var(--shadow-3);justify-content:flex-start}
+      .nav-links.open a{font-size:14px;padding:12px 16px}
+      .nav-overlay.open{display:block;z-index:199}
+      .about-grid{grid-template-columns:1fr}
+      .about-img-wrap{display:none}
+      .about-stats{grid-template-columns:repeat(2,1fr)}
+      .services-featured{grid-template-columns:1fr}
+      .cta-inner{grid-template-columns:1fr}
+      .hours-card{display:none}
+      .hero-badge-top,.hero-badge-bottom{display:none}
     }
-
-    @media (max-width: 480px) {
-      .nav-bar { padding: 0.85rem 1.25rem; }
-      .nav-logo { font-size: 1.35rem; }
-      .hero { padding: 5.5rem 1.25rem 3rem; }
-      .services, .products-preview, .how-it-works, .testimonials, .cta-section, .contact, .feedback { padding: 3.5rem 1.25rem; }
-      .feedback-form { padding: 1.75rem 1.25rem; }
-      .service-card, .contact-card, .testi-card { padding: 1.5rem; }
-      .hero-actions, .cta-buttons { flex-direction: column; width: 100%; }
-      .btn-hero-primary, .btn-hero-secondary { width: 100%; justify-content: center; }
+    @media(max-width:480px){
+      .form-grid2{grid-template-columns:1fr}
+      .hero-trust{gap:16px}
+      .cta-btns{flex-direction:column}
     }
   </style>
 </head>
 <body>
 
-  <!-- NAVBAR -->
-  <nav class="nav-bar">
-    <a class="nav-logo" href="/">MOTO<span>TYRE</span></a>
-    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
-    <div class="nav-links" id="navLinks">
-      <a href="#about">About</a>
-      <a href="#products">Products</a>
-      <a href="#services">Services</a>
-      <a href="#how">How It Works</a>
-      <a href="#contact">Contact</a>
-      <a href="#feedback">Feedback</a>
-      <a href="/login" class="nav-cta">Login</a>
-    </div>
-  </nav>
+<!-- NAV -->
+<nav class="nav-bar">
+  <a class="nav-logo" href="/">MOTO<span>TYRE</span></a>
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+    <i data-lucide="menu" style="width:22px;height:22px"></i>
+  </button>
+  <div class="nav-links" id="navLinks">
+    <a href="#about">About</a>
+    <a href="#products">Products</a>
+    <a href="#services">Services</a>
+    <a href="#how">How It Works</a>
+    <a href="#contact">Contact</a>
+    <a href="#feedback">Feedback</a>
+    <a href="{{ url_for('login') }}" class="nav-cta">Sign In →</a>
+  </div>
   <div class="nav-overlay" id="navOverlay"></div>
+</nav>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-bg"></div>
+<!-- HERO -->
+<section class="hero">
+  <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="" aria-hidden="true" class="hero-bg-img">
+  <div class="hero-scrim" aria-hidden="true"></div>
+  <div class="hero-num hero-num-left" aria-hidden="true">01</div>
+  <div class="hero-num hero-num-right" aria-hidden="true">01</div>
 
+  <div class="hero-content-wrap">
     <div class="hero-content">
-      <div class="hero-tag">Now Open for Online Booking</div>
+      <div class="hero-tag">
+        <span class="hero-tag-dot"></span>
+        Now Open for Online Booking
+      </div>
       <h1>
-        YOUR RIDE.<br>
-        <span class="accent">OUR</span><br>
-        <span class="outline">EXPERTISE.</span>
+        <span class="hero-line-1">YOUR RIDE.</span>
+        <span class="hero-line-2">
+          <span class="accent">OUR</span>
+          <span class="est">/ EST. 2018</span>
+        </span>
+        <span class="hero-line-3">EXPERTISE.</span>
       </h1>
       <p class="hero-desc">
-        MotoTyres North Caloocan is your trusted shop for 
-        high-quality motorcycle tires, parts, and fast, reliable service.
-        Located in Caloocan City, we proudly serve riders by providing durable products and expert 
-        installation to keep you safe on the road
+        Trusted by riders across North Caloocan for premium tires, OEM parts, and mechanics who actually know your bike. Walk in or book online — we'll get you back on the road.
       </p>
       <div class="hero-actions">
-        <a href="/register" class="btn-hero-primary">
-          🏍️ Get Started Free
+        <a href="{{ url_for('register') }}" class="btn-primary">
+          Book Service Now <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
         </a>
-        <a href="/login" class="btn-hero-secondary">
-          🔑 Sign In
+        <a href="#how" class="btn-ghost">
+          <i data-lucide="play-circle" style="width:18px;height:18px"></i>
+          How it works
         </a>
       </div>
-    </div>
-
-    <div class="hero-visual">
-      <div class="hero-img-wrap">
-        <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="Mototyre Shop" class="hero-img">
+      <div class="hero-trust">
+        <div class="hero-trust-item">
+          <div class="trust-icon"><i data-lucide="star" style="width:16px;height:16px"></i></div>
+          <div><div class="trust-title">4.9 / 5</div><div class="trust-sub">120+ reviews</div></div>
+        </div>
+        <div class="hero-trust-item">
+          <div class="trust-icon"><i data-lucide="shield-check" style="width:16px;height:16px"></i></div>
+          <div><div class="trust-title">OEM Parts</div><div class="trust-sub">IRC · Motul · Brembo</div></div>
+        </div>
+        <div class="hero-trust-item">
+          <div class="trust-icon"><i data-lucide="truck" style="width:16px;height:16px"></i></div>
+          <div><div class="trust-title">Same-day</div><div class="trust-sub">Most services</div></div>
+        </div>
       </div>
     </div>
+  </div>
 
-    <div class="scroll-hint">
-      <span>Scroll</span>
-      <div class="scroll-line"></div>
+  <!-- Floating badges -->
+  <div class="hero-badge hero-badge-top">
+    <div class="badge-label">
+      <i data-lucide="users" style="width:13px;height:13px;color:var(--brand-red)"></i>
+      HAPPY RIDERS
     </div>
-  </section>
+    <div class="badge-num">500+</div>
+    <div class="badge-sub">and counting</div>
+  </div>
+  <div class="hero-badge hero-badge-bottom">
+    <div class="badge-label">
+      <i data-lucide="map-pin" style="width:14px;height:14px;color:var(--brand-red)"></i>
+      SHOP LOCATION
+    </div>
+    <div class="badge-loc">BAGUMBONG, CALOOCAN</div>
+  </div>
+</section>
 
-  <!-- ABOUT US -->
-  <section class="about" id="about">
-    <div class="about-inner">
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-inner" id="tickerInner"></div>
+</div>
 
+<!-- ABOUT -->
+<section class="section section-light" id="about">
+  <div class="inner">
+    <div class="about-grid">
+      <div class="about-img-wrap">
+        <div class="about-img-corner"></div>
+        <div class="about-img-inner">
+          <img src="{{ url_for('static', filename='images/shop-front.jpg') }}" alt="MotoTyre shop front">
+        </div>
+        <div class="about-yrs-badge">
+          <div class="yrs">8 YRS</div>
+          <div class="yrs-lbl">Serving riders</div>
+        </div>
+      </div>
       <div class="about-text">
-        <div class="section-tag">Who We Are</div>
-        <h2 class="about-title">ABOUT <span>US</span></h2>
-        <p class="about-desc">
-          MotoTyres North Caloocan is your trusted shop for high-quality motorcycle tires, parts, and fast, reliable service.
-        </p>
-        <p class="about-desc">
-          Located in Caloocan City, we proudly serve riders by providing durable products and expert installation to keep you safe on the road.
-        </p>
-        <div class="about-divider"></div>
+        <div class="eyebrow">WHO WE ARE</div>
+        <h2>
+          A SHOP BUILT<br>
+          <span class="accent">BY RIDERS,</span><br>
+          <span class="outline">FOR RIDERS.</span>
+        </h2>
+        <p>MotoTyres North Caloocan started as a small tire stall in 2018. Today we run a full-service shop trusted by hundreds of daily commuters, delivery riders, and weekend warriors across the Bagumbong area.</p>
+        <p>Every job is done by a mechanic, not a trainee. Every part is one we'd put on our own bike. No upselling. No mystery fees.</p>
         <div class="about-stats">
           <div class="about-stat">
-            <div class="num">500<span>+</span></div>
+            <div class="num">500<span class="accent">+</span></div>
             <div class="lbl">Riders Served</div>
           </div>
           <div class="about-stat">
-            <div class="num">18<span>+</span></div>
+            <div class="num">18<span class="accent">+</span></div>
             <div class="lbl">Services Offered</div>
           </div>
           <div class="about-stat">
-            <div class="num">100<span>%</span></div>
+            <div class="num">100<span class="accent">%</span></div>
             <div class="lbl">Trusted Quality</div>
+          </div>
+          <div class="about-stat">
+            <div class="num">7</div>
+            <div class="lbl">Days a Week</div>
           </div>
         </div>
       </div>
-
-      <div class="about-visual">
-        <div class="about-img-wrap">
-          <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="Mototyre Shop">
-        </div>
-        <div class="about-badge">
-          <div class="b-num">North</div>
-          <div class="b-lbl">Caloocan</div>
-        </div>
-      </div>
-
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- SERVICES -->
-  <section class="services" id="services">
-    <div class="section-tag">What We Offer</div>
-    <div class="section-title">OUR SERVICES</div>
-    <p class="section-sub">From routine maintenance to full tire replacements — we keep your motorcycle running at its best.</p>
-
-    <div class="services-grid">
-      <div class="service-card">
-        <div class="service-icon">💉</div>
-        <div class="service-name">FI Cleaning</div>
-        <p class="service-desc">Fuel injector cleaning for better throttle response, fuel efficiency, and smoother acceleration.</p>
+<!-- SERVICES -->
+<section class="section section-panel" id="services">
+  <div class="inner">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">WHAT WE OFFER</div>
+        <h2>OUR <span class="accent">SERVICES</span></h2>
+        <p>From routine maintenance to full tire replacements — we keep your motorcycle running at its best.</p>
       </div>
-      <div class="service-card">
-        <div class="service-icon">🌀</div>
-        <div class="service-name">Throttle Body Cleaning</div>
-        <p class="service-desc">Remove carbon buildup from the throttle body to restore smooth idle and engine performance.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">⚙️</div>
-        <div class="service-name">Tune-Up</div>
-        <p class="service-desc">Spark plug replacement, air filter check, and full engine performance tuning for optimal ride.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🔩</div>
-        <div class="service-name">Ball Race Installation</div>
-        <p class="service-desc">Proper installation of steering head ball bearings for stable and smooth handlebar control.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🔌</div>
-        <div class="service-name">General Rewiring</div>
-        <p class="service-desc">Full electrical system inspection and rewiring to fix shorts, faulty connections, and lighting issues.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🏎️</div>
-        <div class="service-name">CVT Upgrade</div>
-        <p class="service-desc">Upgrade your CVT components for improved acceleration, top speed, and overall scooter performance.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🧹</div>
-        <div class="service-name">CVT Cleaning</div>
-        <p class="service-desc">Deep cleaning of the CVT belt and pulley system to prevent slipping and extend component life.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🖥️</div>
-        <div class="service-name">Diagnostic Services</div>
-        <p class="service-desc">Advanced ECU scanning using API Tech / MST tools to accurately identify and resolve error codes.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🛞</div>
-        <div class="service-name">Suspension Tuning</div>
-        <p class="service-desc">Front fork and rear shock adjustment or replacement for a smoother, more controlled ride.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🔧</div>
-        <div class="service-name">Full Overhaul</div>
-        <p class="service-desc">Complete engine disassembly, inspection, and rebuild — restoring your motorcycle to peak condition.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🔝</div>
-        <div class="service-name">Top Overhaul</div>
-        <p class="service-desc">Cylinder head reconditioning including valve lapping, piston ring replacement, and gasket renewal.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🛑</div>
-        <div class="service-name">Brake Cleaning</div>
-        <p class="service-desc">Thorough cleaning of brake calipers, discs, and drums to maintain safe and consistent stopping power.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">💻</div>
-        <div class="service-name">ECU Remapping</div>
-        <p class="service-desc">Custom ECU tune to optimize fuel maps, ignition timing, and throttle response for your setup.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🛢️</div>
-        <div class="service-name">Oil Change</div>
-        <p class="service-desc">Fresh engine oil and filter replacement to keep your engine smooth, cool, and well-protected.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">📯</div>
-        <div class="service-name">Horn Installation</div>
-        <p class="service-desc">Quick and clean installation of aftermarket or OEM horns with full electrical testing.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🔗</div>
-        <div class="service-name">Rubber Link Stopper Installation</div>
-        <p class="service-desc">Installation of rubber link stoppers to reduce chain noise and protect your swingarm from wear.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🅱️</div>
-        <div class="service-name">Brake Pad Replacement</div>
-        <p class="service-desc">High-quality brake pad replacement for both front and rear to ensure maximum stopping power.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🏍️</div>
-        <div class="service-name">Full Maintenance Package</div>
-        <p class="service-desc">All-in-one maintenance package covering oil, brakes, chain, filters, and a full mechanical inspection.</p>
+      <div class="section-action">
+        <a href="{{ url_for('login') }}">View all 18 services <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
       </div>
     </div>
 
-    <!-- Pagination -->
-    <div class="pagination" id="servicesPagination">
-      <button class="page-btn nav-arrow" id="prevPage" aria-label="Previous page">←</button>
+    <!-- Featured row -->
+    <div class="services-featured">
+      <div class="svc-featured">
+        <i data-lucide="circle-dot" class="svc-featured-bg" style="width:220px;height:220px"></i>
+        <div style="position:relative">
+          <div class="svc-hot-tag">
+            <i data-lucide="flame" style="width:11px;height:11px"></i> MOST BOOKED
+          </div>
+          <h3 class="svc-featured-title">TIRE<br><span class="accent">FITTING</span></h3>
+        </div>
+        <div style="position:relative">
+          <p class="svc-featured-desc">IRC, Pirelli, FDR. Pro install with proper balancing — under 45 minutes, no appointments needed.</p>
+          <div class="svc-price-row">
+            <span class="svc-price-from">FROM</span>
+            <span class="svc-price">₱350</span>
+          </div>
+        </div>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="droplet" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">OIL CHANGE</div>
+        <p class="svc-desc">Fresh engine oil and filter replacement to keep your engine smooth and well-protected.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="settings-2" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">TUNE-UP</div>
+        <p class="svc-desc">Spark plug replacement, air filter check, and full engine performance tuning.</p>
+      </div>
+    </div>
+
+    <!-- Full service list (paginated) -->
+    <div class="services-grid" id="allServices">
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="zap" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">FI CLEANING</div>
+        <p class="svc-desc">Fuel injector cleaning for better throttle response, fuel efficiency, and smoother acceleration.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="rotate-cw" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">THROTTLE BODY CLEANING</div>
+        <p class="svc-desc">Remove carbon buildup from the throttle body to restore smooth idle and engine performance.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="settings-2" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">TUNE-UP</div>
+        <p class="svc-desc">Spark plug replacement, air filter check, and full engine performance tuning for optimal ride.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="anchor" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">BALL RACE INSTALLATION</div>
+        <p class="svc-desc">Proper installation of steering head ball bearings for stable and smooth handlebar control.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="git-branch" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">GENERAL REWIRING</div>
+        <p class="svc-desc">Full electrical system inspection and rewiring to fix shorts, faulty connections, and lighting issues.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="gauge" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">CVT UPGRADE</div>
+        <p class="svc-desc">Upgrade your CVT components for improved acceleration, top speed, and overall scooter performance.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="wind" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">CVT CLEANING</div>
+        <p class="svc-desc">Deep cleaning of the CVT belt and pulley system to prevent slipping and extend component life.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="cpu" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">DIAGNOSTIC SERVICES</div>
+        <p class="svc-desc">Advanced ECU scanning using API Tech / MST tools to accurately identify and resolve error codes.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="sliders-vertical" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">SUSPENSION TUNING</div>
+        <p class="svc-desc">Front fork and rear shock adjustment or replacement for a smoother, more controlled ride.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="wrench" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">FULL OVERHAUL</div>
+        <p class="svc-desc">Complete engine disassembly, inspection, and rebuild — restoring your motorcycle to peak condition.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="layers" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">TOP OVERHAUL</div>
+        <p class="svc-desc">Cylinder head reconditioning including valve lapping, piston ring replacement, and gasket renewal.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="octagon-alert" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">BRAKE CLEANING</div>
+        <p class="svc-desc">Thorough cleaning of brake calipers, discs, and drums to maintain safe and consistent stopping power.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="cpu" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">ECU REMAPPING</div>
+        <p class="svc-desc">Custom ECU tune to optimize fuel maps, ignition timing, and throttle response for your setup.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="droplet" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">OIL CHANGE</div>
+        <p class="svc-desc">Fresh engine oil and filter replacement to keep your engine smooth, cool, and well-protected.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="volume-2" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">HORN INSTALLATION</div>
+        <p class="svc-desc">Quick and clean installation of aftermarket or OEM horns with full electrical testing.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="link-2" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">RUBBER LINK STOPPER INSTALLATION</div>
+        <p class="svc-desc">Installation of rubber link stoppers to reduce chain noise and protect your swingarm from wear.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="disc" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">BRAKE PAD REPLACEMENT</div>
+        <p class="svc-desc">High-quality brake pad replacement for both front and rear to ensure maximum stopping power.</p>
+      </div>
+      <div class="service-card">
+        <div class="svc-icon"><i data-lucide="bike" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">FULL MAINTENANCE PACKAGE</div>
+        <p class="svc-desc">All-in-one maintenance package covering oil, brakes, chain, filters, and a full mechanical inspection.</p>
+      </div>
+    </div>
+
+    <div class="pagination">
+      <button class="page-btn" id="prevPage">←</button>
       <button class="page-btn active" data-page="1">1</button>
       <button class="page-btn" data-page="2">2</button>
       <button class="page-btn" data-page="3">3</button>
       <button class="page-btn" data-page="4">4</button>
-      <button class="page-btn nav-arrow" id="nextPage" aria-label="Next page">→</button>
+      <button class="page-btn" id="nextPage">→</button>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- PRODUCTS -->
-  <section class="products-preview" id="products">
-    <div class="section-tag">Parts &amp; Accessories</div>
-    <div class="section-title">OUR PRODUCTS</div>
-    <p class="section-sub">Quality motorcycle parts, tires, and accessories — hand-picked for durability, performance, and rider safety.</p>
-
-    <div class="services-grid">
-      <div class="service-card">
-        <div class="service-icon">🛞</div>
-        <div class="service-name">IRC Street Sport Tire</div>
-        <p class="service-desc">Grippy all-weather street tire for commuter and sport motorcycles. Durable tread pattern for long mileage.</p>
+<!-- PRODUCTS -->
+<section class="section section-light" id="products">
+  <div class="inner">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">PARTS &amp; ACCESSORIES</div>
+        <h2>OUR <span class="accent">PRODUCTS</span></h2>
+        <p>Quality motorcycle parts, tires, and accessories — hand-picked for durability, performance, and rider safety.</p>
       </div>
-      <div class="service-card">
-        <div class="service-icon">🛢️</div>
-        <div class="service-name">Motul 5100 4T 10W-40</div>
-        <p class="service-desc">Semi-synthetic engine oil for 4-stroke motorcycles — smooth gear shifts and strong engine protection.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🛑</div>
-        <div class="service-name">Brembo Semi-Metallic Pads</div>
-        <p class="service-desc">High-performance brake pads for strong, consistent stopping power with minimal fade.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🔋</div>
-        <div class="service-name">Motolite MF Battery</div>
-        <p class="service-desc">Maintenance-free motorcycle battery with strong cranking amps and long service life.</p>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🪖</div>
-        <div class="service-name">HJC Full Face Helmet</div>
-        <p class="service-desc">DOT-certified full face helmet with ventilation system and anti-fog visor.</p>
+      <div class="section-action">
+        <a href="{{ url_for('login') }}">View All <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
       </div>
     </div>
-
-    <div style="text-align:center;margin-top:2.5rem;">
-      <a href="/products" class="btn-view-all">More &rarr;</a>
-    </div>
-  </section>
-
-  <!-- HOW IT WORKS -->
-  <section class="how-it-works" id="how">
-    <div class="section-tag">Simple Process</div>
-    <div class="section-title">HOW IT WORKS</div>
-    <p class="section-sub">Book your appointment in just a few steps — no hassle, no waiting in line.</p>
-
-    <div class="steps-grid">
-      <div class="step">
-        <div class="step-num">01</div>
-        <div class="step-title">Create Account</div>
-        <p class="step-desc">Register for free with your name, email, and motorcycle details.</p>
+    <div class="products-grid">
+      <div class="product-card">
+        <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
+        <div class="product-cat">Tire</div>
+        <div class="product-name">IRC Street Sport Tire</div>
+        <div class="product-price">₱1,890</div>
       </div>
-      <div class="step">
-        <div class="step-num">02</div>
-        <div class="step-title">Pick a Service</div>
-        <p class="step-desc">Choose from our list of available motorcycle services and parts.</p>
+      <div class="product-card">
+        <div class="product-img"><i data-lucide="droplet" style="width:40px;height:40px"></i></div>
+        <div class="product-cat">Engine Oil</div>
+        <div class="product-name">Motul 5100 10W-40 1L</div>
+        <div class="product-price">₱520</div>
       </div>
-      <div class="step">
-        <div class="step-num">03</div>
-        <div class="step-title">Book a Schedule</div>
-        <p class="step-desc">Select your preferred date and time slot from our live availability calendar.</p>
+      <div class="product-card">
+        <div class="product-img"><i data-lucide="octagon-alert" style="width:40px;height:40px"></i></div>
+        <div class="product-cat">Brake</div>
+        <div class="product-name">Brembo Brake Pads</div>
+        <div class="product-price">₱1,250</div>
       </div>
-      <div class="step">
-        <div class="step-num">04</div>
-        <div class="step-title">We Got You</div>
-        <p class="step-desc">Show up on time and our mechanics will take care of the rest.</p>
+      <div class="product-card">
+        <div class="product-img"><i data-lucide="battery-charging" style="width:40px;height:40px"></i></div>
+        <div class="product-cat">Battery</div>
+        <div class="product-name">Motolite MF Battery 12V</div>
+        <div class="product-price">₱2,450</div>
+      </div>
+      <div class="product-card">
+        <div class="product-img"><i data-lucide="hard-hat" style="width:40px;height:40px"></i></div>
+        <div class="product-cat">Helmet</div>
+        <div class="product-name">HJC Full Face Helmet</div>
+        <div class="product-price">₱4,890</div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
+<!-- HOW IT WORKS -->
+<section class="section section-panel" id="how">
+  <div class="inner">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">SIMPLE PROCESS</div>
+        <h2>HOW IT <span class="accent">WORKS</span></h2>
+        <p>Book your appointment in just a few steps — no hassle, no waiting in line.</p>
+      </div>
+    </div>
+    <div class="steps-wrap">
+      <div class="steps-line"></div>
+      <div class="steps-grid">
+        <div class="step">
+          <div class="step-circle"><i data-lucide="bike" style="width:22px;height:22px"></i></div>
+          <div class="step-num">STEP 01</div>
+          <div class="step-title">CREATE ACCOUNT</div>
+          <p class="step-desc">Register for free with your name, email, and motorcycle details.</p>
+        </div>
+        <div class="step">
+          <div class="step-circle"><i data-lucide="list-checks" style="width:22px;height:22px"></i></div>
+          <div class="step-num">STEP 02</div>
+          <div class="step-title">PICK A SERVICE</div>
+          <p class="step-desc">Choose from our list of available motorcycle services and parts.</p>
+        </div>
+        <div class="step">
+          <div class="step-circle"><i data-lucide="calendar" style="width:22px;height:22px"></i></div>
+          <div class="step-num">STEP 03</div>
+          <div class="step-title">BOOK A SCHEDULE</div>
+          <p class="step-desc">Select your preferred date and time slot from our live calendar.</p>
+        </div>
+        <div class="step">
+          <div class="step-circle"><i data-lucide="badge-check" style="width:22px;height:22px"></i></div>
+          <div class="step-num">STEP 04</div>
+          <div class="step-title">WE GOT YOU</div>
+          <p class="step-desc">Show up on time and our mechanics will take care of the rest.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
+<!-- TESTIMONIALS -->
+<section class="section section-light">
+  <div class="inner">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">RIDER VOICES</div>
+        <h2>WHAT RIDERS <span class="accent">ARE SAYING</span></h2>
+        <p>Real feedback from real customers. We're not perfect — but we own up to it.</p>
+      </div>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card">
+        <div class="testi-stars">
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+        </div>
+        <i data-lucide="quote" style="width:28px;height:28px;color:var(--line-2)"></i>
+        <p class="testi-text">"Brought my Click here after a bad tune-up somewhere else. They diagnosed the issue in 10 minutes and fixed it the same day. Honest pricing."</p>
+        <div class="testi-footer">
+          <div class="testi-avatar">MS</div>
+          <div>
+            <div class="testi-name">Mark S.</div>
+            <div class="testi-meta">Honda Click 125i · 2 weeks ago</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+        </div>
+        <i data-lucide="quote" style="width:28px;height:28px;color:var(--line-2)"></i>
+        <p class="testi-text">"Sulit yung IRC tires nila. Maliit lang yung shop pero malinis at maaga magbukas. Mga mechanic friendly at marunong. Solid."</p>
+        <div class="testi-footer">
+          <div class="testi-avatar">LR</div>
+          <div>
+            <div class="testi-name">Lara R.</div>
+            <div class="testi-meta">Yamaha Mio Sporty · 1 month ago</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
+        </div>
+        <i data-lucide="quote" style="width:28px;height:28px;color:var(--line-2)"></i>
+        <p class="testi-text">"Online booking actually works — text confirmation in 5 min, bike was ready an hour before estimated time. Will come back."</p>
+        <div class="testi-footer">
+          <div class="testi-avatar">PR</div>
+          <div>
+            <div class="testi-name">Paolo R.</div>
+            <div class="testi-meta">Yamaha NMAX · 3 weeks ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <!-- VISIT & CONTACT US -->
-  <section class="contact" id="contact">
-    <div class="section-tag">Find Us</div>
-    <div class="section-title">VISIT &amp; CONTACT US</div>
-    <p class="section-sub">We're open and ready to serve you. Drop by, give us a call, or message us on Facebook.</p>
-
+<!-- CONTACT -->
+<section class="section section-panel" id="contact">
+  <div class="inner">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">FIND US</div>
+        <h2>VISIT &amp; <span class="accent">CONTACT</span></h2>
+        <p>We're open and ready to serve you. Drop by, give us a call, or message us on Facebook.</p>
+      </div>
+    </div>
     <div class="contact-grid">
-
-      <!-- Location -->
       <div class="contact-card">
-        <div class="contact-icon">📍</div>
+        <div class="contact-icon"><i data-lucide="map-pin" style="width:20px;height:20px"></i></div>
         <div>
-          <div class="contact-label">Location</div>
-          <div class="contact-value">Saranay Rd, Barangay 171 Bagumbong,<br>Caloocan City, Metro Manila, 1421 NCR</div>
+          <div class="contact-lbl">LOCATION</div>
+          <div class="contact-val">Saranay Rd, Brgy 171 Bagumbong, Caloocan City, Metro Manila 1421</div>
         </div>
       </div>
-
-      <!-- Phone -->
       <div class="contact-card">
-        <div class="contact-icon">📞</div>
+        <div class="contact-icon"><i data-lucide="phone" style="width:20px;height:20px"></i></div>
         <div>
-          <div class="contact-label">Call / Text</div>
-          <div class="contact-value">0915 269 8366</div>
+          <div class="contact-lbl">CALL / TEXT</div>
+          <div class="contact-val">0915 269 8366</div>
         </div>
       </div>
-
-      <!-- Facebook -->
       <div class="contact-card">
-        <div class="contact-icon">📘</div>
+        <div class="contact-icon"><i data-lucide="facebook" style="width:20px;height:20px"></i></div>
         <div>
-          <div class="contact-label">Facebook</div>
-          <div class="contact-value">MotoTyres North Caloocan</div>
+          <div class="contact-lbl">FACEBOOK</div>
+          <div class="contact-val">MotoTyres North Caloocan</div>
         </div>
       </div>
-
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- FEEDBACK -->
-  <section class="feedback" id="feedback">
-    <div class="section-tag">Share Your Thoughts</div>
-    <div class="section-title">SEND US FEEDBACK</div>
-    <p class="section-sub">We'd love to hear about your experience. Your feedback helps us improve our service.</p>
-
-    <div class="feedback-form">
+<!-- FEEDBACK -->
+<section class="section section-light" id="feedback">
+  <div class="feedback-wrap">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div class="eyebrow">SHARE YOUR THOUGHTS</div>
+      <h2 style="font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);letter-spacing:0.03em;line-height:1;margin:8px 0 8px;color:var(--fg-1);text-transform:uppercase;">
+        SEND US <span style="color:var(--brand-red)">FEEDBACK</span>
+      </h2>
+      <p style="font-family:var(--font-body);font-size:15px;color:var(--fg-2);max-width:520px;margin:0 auto;line-height:1.6;">
+        We'd love to hear about your experience. Your feedback helps us improve our service.
+      </p>
+    </div>
+    <div class="feedback-card">
       <div id="formContent">
-        <label>Your Name</label>
-        <input type="text" placeholder="Juan Dela Cruz"
-          oninput="this.value = this.value.replace(/[^A-Za-z\s]/g, '')">
-
-        <label>Email (optional)</label>
-        <input type="email" placeholder="juan@email.com">
-
-        <label>Service Used</label>
-        <select>
-          <option value="" disabled selected>Select a service...</option>
-          <option>Oil Change</option>
-          <option>Tire Replacement</option>
-          <option>General Checkup</option>
-          <option>Brake Service</option>
-          <option>Chain Cleaning</option>
-          <option>Engine Tune-up</option>
-          <option>Parts Order</option>
-        </select>
-
-        <label>Rating</label>
-        <div class="star-rating">
-          <input type="radio" id="s5" name="rating" value="5"><label for="s5">★</label>
-          <input type="radio" id="s4" name="rating" value="4"><label for="s4">★</label>
-          <input type="radio" id="s3" name="rating" value="3"><label for="s3">★</label>
-          <input type="radio" id="s2" name="rating" value="2"><label for="s2">★</label>
-          <input type="radio" id="s1" name="rating" value="1"><label for="s1">★</label>
+        <div class="form-grid2">
+          <div class="form-field">
+            <label class="form-label">Your Name</label>
+            <input class="form-input" type="text" placeholder="Juan Dela Cruz" oninput="this.value=this.value.replace(/[^A-Za-z\s]/g,'')">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Email (optional)</label>
+            <input class="form-input" type="email" placeholder="juan@email.com">
+          </div>
         </div>
-
-        <label>Your Feedback</label>
-        <textarea placeholder="Tell us about your experience..."></textarea>
-
-        <button class="btn-feedback" onclick="submitFeedback()">Submit Feedback</button>
+        <div class="form-field">
+          <label class="form-label">Service Used</label>
+          <select class="form-select">
+            <option value="" disabled selected>Select a service...</option>
+            <option>Oil Change</option>
+            <option>Tire Fitting</option>
+            <option>Tune-Up</option>
+            <option>Brake Service</option>
+            <option>General Checkup</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Rating</label>
+          <div class="star-rating">
+            <input type="radio" id="s5" name="rating" value="5"><label for="s5">★</label>
+            <input type="radio" id="s4" name="rating" value="4"><label for="s4">★</label>
+            <input type="radio" id="s3" name="rating" value="3"><label for="s3">★</label>
+            <input type="radio" id="s2" name="rating" value="2"><label for="s2">★</label>
+            <input type="radio" id="s1" name="rating" value="1"><label for="s1">★</label>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Your Feedback</label>
+          <textarea class="form-textarea" rows="4" placeholder="Tell us about your experience..."></textarea>
+        </div>
+        <button class="btn-primary" onclick="submitFeedback()" style="width:100%;justify-content:center;">
+          Submit Feedback <i data-lucide="send" style="width:16px;height:16px"></i>
+        </button>
       </div>
-
       <div class="feedback-success" id="feedbackSuccess">
         <div class="big">🙏</div>
         <h4>Thank You!</h4>
         <p>Your feedback has been received. We appreciate you taking the time to share your experience.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- CTA -->
-  <section class="cta-section">
-    <h2>READY TO BOOK<br><span style="color:var(--red)">YOUR SERVICE?</span></h2>
-    <p>Join hundreds of riders who trust Mototyre Moto Shop for all their motorcycle needs.</p>
-    <div class="cta-buttons">
-      <a href="/register" class="btn-hero-primary">🏍️ Create Free Account</a>
-      <a href="/login" class="btn-hero-secondary">🔑 Sign In</a>
+<!-- CTA (dark) -->
+<section class="cta-section">
+  <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="" aria-hidden="true" class="cta-bg-img">
+  <div class="cta-scrim" aria-hidden="true"></div>
+  <div class="cta-inner">
+    <div>
+      <div class="cta-badge">
+        <span class="cta-badge-dot"></span>
+        Open today · 8AM — 7PM
+      </div>
+      <h2>READY TO<br><span class="accent">RIDE BETTER?</span></h2>
+      <p>Book online in 60 seconds, walk in any day of the week, or DM us on Facebook. Same shop, same mechanics, same prices — promise.</p>
+      <div class="cta-btns">
+        <a href="{{ url_for('register') }}" class="btn-primary">
+          Create Free Account <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
+        </a>
+        <a href="tel:09152698366" class="btn-cta-phone">
+          <i data-lucide="phone" style="width:18px;height:18px"></i> 0915 269 8366
+        </a>
+      </div>
     </div>
-  </section>
-
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-copy">© <span id="footer-year"></span> Mototyre Moto Shop. All rights reserved.</div>
-    <div class="footer-links">
-      <a href="#about">About</a>
-      <a href="/products">Products</a>
-      <a href="#services">Services</a>
-      <a href="#how">How It Works</a>
-      <a href="#contact">Contact</a>
-      <a href="/login">Login</a>
-      <a href="/register">Register</a>
+    <div class="hours-card">
+      <div class="hours-header">
+        <i data-lucide="clock" style="width:16px;height:16px;color:var(--brand-red)"></i>
+        <span class="hours-lbl">SHOP HOURS</span>
+      </div>
+      <div class="hours-row">
+        <span class="hours-day">MON — FRI</span>
+        <span class="hours-time">8:00 AM — 7:00 PM</span>
+      </div>
+      <div class="hours-row">
+        <span class="hours-day">SATURDAY</span>
+        <span class="hours-time">8:00 AM — 6:00 PM</span>
+      </div>
+      <div class="hours-row">
+        <span class="hours-day">SUNDAY</span>
+        <span class="hours-time">9:00 AM — 4:00 PM</span>
+      </div>
     </div>
-  </footer>
+  </div>
+</section>
 
-  <script>
-    function submitFeedback() {
-      document.getElementById('formContent').style.display = 'none';
-      document.getElementById('feedbackSuccess').style.display = 'block';
-    }
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-left">
+    <div class="footer-logo">MOTO<span>TYRE</span></div>
+    <span class="footer-copy">© <span id="footer-year"></span> MotoTyres North Caloocan. All rights reserved.</span>
+  </div>
+  <div class="footer-links">
+    <a href="#about">About</a>
+    <a href="#products">Products</a>
+    <a href="#services">Services</a>
+    <a href="#how">How It Works</a>
+    <a href="#contact">Contact</a>
+    <a href="#feedback">Feedback</a>
+    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('register') }}">Register</a>
+  </div>
+</footer>
 
-    // Mobile menu toggle
-    const navToggle = document.getElementById('navToggle');
-    const navMenu = document.getElementById('navLinks');
-    const navOverlay = document.getElementById('navOverlay');
+<script>
+  lucide.createIcons();
+  document.getElementById('footer-year').textContent = new Date().getFullYear();
 
-    function closeMenu() {
-      navToggle.classList.remove('active');
-      navMenu.classList.remove('active');
-      navOverlay.classList.remove('active');
-      document.body.style.overflow = '';
-    }
-
-    function toggleMenu() {
-      const isActive = navMenu.classList.toggle('active');
-      navToggle.classList.toggle('active');
-      navOverlay.classList.toggle('active');
-      document.body.style.overflow = isActive ? 'hidden' : '';
-    }
-
-    navToggle.addEventListener('click', toggleMenu);
-    navOverlay.addEventListener('click', closeMenu);
-
-    // Close menu when a link is tapped
-    navMenu.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', closeMenu);
+  // Ticker
+  const tickerItems = ['TIRE FITTING','OIL CHANGE','TUNE-UP','ECU REMAPPING','BRAKE SERVICE','CVT CLEANING','FULL OVERHAUL','THROTTLE BODY CLEANING','SUSPENSION TUNING','BATTERY REPLACEMENT'];
+  const tInner = document.getElementById('tickerInner');
+  for (let i = 0; i < 3; i++) {
+    tickerItems.forEach(t => {
+      tInner.innerHTML += `<span class="ticker-item"><span class="ticker-text">${t}</span><span class="ticker-dot"></span></span>`;
     });
+  }
 
-    // Close menu if resized to desktop
-    window.addEventListener('resize', () => {
-      if (window.innerWidth > 900) closeMenu();
+  // Feedback
+  function submitFeedback() {
+    document.getElementById('formContent').style.display = 'none';
+    document.getElementById('feedbackSuccess').style.display = 'block';
+  }
+
+  // Mobile nav
+  const navToggle = document.getElementById('navToggle');
+  const navLinks = document.getElementById('navLinks');
+  const navOverlay = document.getElementById('navOverlay');
+  function closeNav() {
+    navLinks.classList.remove('open');
+    navOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  navToggle.addEventListener('click', () => {
+    const isOpen = navLinks.classList.toggle('open');
+    navOverlay.classList.toggle('open', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+    // re-init lucide for close icon
+    lucide.createIcons();
+  });
+  navOverlay.addEventListener('click', closeNav);
+  navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', closeNav));
+  window.addEventListener('resize', () => { if (window.innerWidth > 900) closeNav(); });
+
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
     });
+  });
 
-    // Services Pagination
-    const SERVICES_PER_PAGE = 5;
-    const serviceCards = document.querySelectorAll('#services .service-card');
-    const pageButtons = document.querySelectorAll('.page-btn[data-page]');
-    const prevBtn = document.getElementById('prevPage');
-    const nextBtn = document.getElementById('nextPage');
-    const totalPages = Math.ceil(serviceCards.length / SERVICES_PER_PAGE);
-    let currentPage = 1;
+  // Services pagination
+  const SERVICES_PER_PAGE = 5;
+  const svcCards = document.querySelectorAll('#allServices .service-card');
+  const pageBtns = document.querySelectorAll('.page-btn[data-page]');
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
+  const totalPages = Math.ceil(svcCards.length / SERVICES_PER_PAGE);
+  let currentPage = 1;
 
-    function showPage(page, scroll = true) {
-      currentPage = page;
-      const start = (page - 1) * SERVICES_PER_PAGE;
-      const end = start + SERVICES_PER_PAGE;
+  function showPage(page, scroll) {
+    currentPage = page;
+    const start = (page - 1) * SERVICES_PER_PAGE;
+    const end = start + SERVICES_PER_PAGE;
+    svcCards.forEach((c, i) => c.classList.toggle('hidden', i < start || i >= end));
+    pageBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.page) === page));
+    prevBtn.disabled = page === 1;
+    nextBtn.disabled = page === totalPages;
+    if (scroll) document.getElementById('services').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
-      serviceCards.forEach((card, idx) => {
-        if (idx >= start && idx < end) {
-          card.classList.remove('hidden');
-          card.style.opacity = '1';
-          card.style.transform = 'translateY(0)';
-        } else {
-          card.classList.add('hidden');
-        }
-      });
+  pageBtns.forEach(b => b.addEventListener('click', () => showPage(parseInt(b.dataset.page), true)));
+  prevBtn.addEventListener('click', () => { if (currentPage > 1) showPage(currentPage - 1, true); });
+  nextBtn.addEventListener('click', () => { if (currentPage < totalPages) showPage(currentPage + 1, true); });
+  showPage(1, false);
 
-      pageButtons.forEach(btn => {
-        btn.classList.toggle('active', parseInt(btn.dataset.page) === page);
-      });
-
-      prevBtn.disabled = page === 1;
-      nextBtn.disabled = page === totalPages;
-
-      // Scroll to top of services section smoothly (skip on initial load)
-      if (scroll) {
-        document.getElementById('services').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-
-    pageButtons.forEach(btn => {
-      btn.addEventListener('click', () => showPage(parseInt(btn.dataset.page)));
+  // Fade-in on scroll
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.style.opacity='1'; e.target.style.transform='translateY(0)'; }
     });
-
-    prevBtn.addEventListener('click', () => {
-      if (currentPage > 1) showPage(currentPage - 1);
-    });
-
-    nextBtn.addEventListener('click', () => {
-      if (currentPage < totalPages) showPage(currentPage + 1);
-    });
-
-    // Initialize without scrolling
-    showPage(1, false);
-
-    // ── Smooth scroll + active nav highlight ──────────────
-    const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
-
-    navLinks.forEach(a => {
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        const href = a.getAttribute('href');
-        const target = document.querySelector(href);
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth' });
-          navLinks.forEach(link => link.classList.remove('active'));
-          a.classList.add('active');
-        }
-      });
-    });
-
-    const nav = document.querySelector('.nav-bar');
-    window.addEventListener('scroll', () => {
-      nav.style.background = window.scrollY > 50
-        ? 'rgba(12,13,15,0.98)'
-        : 'rgba(12,13,15,0.85)';
-    });
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.style.opacity = '1';
-          e.target.style.transform = 'translateY(0)';
-        }
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('#services .service-card, #products .service-card, .step, .testi-card, .stat-badge, .contact-card').forEach(el => {
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(20px)';
-      el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-      observer.observe(el);
-    });
-
-    document.getElementById('footer-year').textContent = new Date().getFullYear();
-  </script>
-
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.service-card,.product-card,.step,.testi-card,.contact-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    io.observe(el);
+  });
+</script>
 </body>
 </html>
