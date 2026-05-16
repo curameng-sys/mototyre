@@ -134,7 +134,7 @@ class User(db.Model, UserMixin):
     phone            = db.Column(db.String(20), nullable=False)
     password_hash    = db.Column(db.String(255), nullable=False)
     role             = db.Column(db.String(20), default='customer')
-    motorcycle_plate = db.Column(db.String(20))
+    address          = db.Column(db.String(255))
     motorcycle_model = db.Column(db.String(100))
     profile_pic      = db.Column(db.String(255))
     email_verified   = db.Column(db.Boolean, default=False)
@@ -605,11 +605,12 @@ def update_booking_status(bid):
     booking.status = new_status
     db.session.commit()
     messages = {
-        'confirmed':   ('Booking Confirmed! ✅', f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been confirmed. Please arrive 15 minutes before your scheduled time.'),
-        'inprogress':  ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
-        'in_progress': ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
-        'completed':   ('Service Completed! 🎉',  f'Your {booking.service} has been completed. Thank you!'),
-        'cancelled':   ('Booking Cancelled ❌',   f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} was cancelled.'),
+        'confirmed':        ('Booking Confirmed! ✅', f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been confirmed. Please arrive 15 minutes before your scheduled time.'),
+        'inprogress':       ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
+        'in_progress':      ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
+        'awaiting_payment': ('Service Done! 💳', f'Your {booking.service} is complete. Please proceed to the counter for payment.'),
+        'completed':        ('Service Completed! 🎉',  f'Your {booking.service} has been completed. Thank you!'),
+        'cancelled':        ('Booking Cancelled ❌',   f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} was cancelled.'),
     }
     if new_status in messages:
         title, msg = messages[new_status]

@@ -6,7 +6,8 @@
       "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"SELECT email, fullname, role FROM mototyre.user WHERE role IN \\('admin','staff'\\);\" 2>&1)",
       "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"SELECT email, fullname, role FROM mototyre.user;\" 2>&1)",
       "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"SELECT email FROM mototyre.user WHERE email='mototyre0505@gmail.com';\" 2>&1)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\CAPS\\\\mototyre\" -Recurse -File | Where-Object { $_.Extension -in @\\('.py', '.html', '.js'\\) -and $_.FullName -notmatch 'venv|node_modules|__pycache__' } | Select-Object FullName)"
     ]
   }
 }

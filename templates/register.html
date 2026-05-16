@@ -588,25 +588,13 @@
           </div>
         </div>
 
-        <div class="section-label">Motorcycle (Optional)</div>
-
-        <div class="field-row">
-          <div class="field-group">
-            <label>Plate Number</label>
-            <input type="text" name="plate" id="plate-input"
-              placeholder="e.g. ABC 1234 XX"
-              minlength="7" maxlength="7"
-              oninput="validatePlate(this)"
-              style="text-transform:uppercase;">
-            <div id="plate-msg" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
-          </div>
-          <div class="field-group">
-            <label>Model <span id="model-counter" style="font-weight:400;color:#4b5563;float:right;">0/50</span></label>
-            <input type="text" name="model" id="model-input"
-              placeholder="Honda Click 125i"
-              maxlength="50"
-              oninput="updateModelCounter(this)">
-          </div>
+        <div class="field-group">
+          <label>Address</label>
+          <input type="text" name="address" placeholder="House No., Street, Barangay, City" maxlength="255">
+        </div>
+        <div class="field-group">
+          <label>Motorcycle Model <span style="font-weight:400;color:#9ca3af;">(Optional)</span></label>
+          <input type="text" name="model" id="model-input" placeholder="Honda Click 125i" maxlength="100">
         </div>
 
         <div class="section-label">Security</div>
@@ -741,18 +729,6 @@
       return;
     }
 
-    // 3. Check plate length
-    const plate = document.getElementById('plate-input').value.trim();
-    if (plate.length > 0 && plate.length < 7) {
-      e.preventDefault();
-      const msg = document.getElementById('plate-msg');
-      msg.style.display = 'block';
-      msg.style.color = '#f87171';
-      msg.textContent = '✗ Plate number must be exactly 7 characters';
-      document.getElementById('plate-input').focus();
-      return;
-    }
-
     // All good — set email display for OTP panel
     emailDisplay.textContent = document.getElementById('reg-email').value;
   });
@@ -783,14 +759,6 @@
       cpwInput.dispatchEvent(new Event('input'));
     }
   });
-
-  // ── Model counter ──
-  function updateModelCounter(input) {
-    const counter = document.getElementById('model-counter');
-    const len = input.value.length;
-    counter.textContent = `${len}/50`;
-    counter.style.color = len >= 45 ? '#f87171' : '#4b5563';
-  }
 
   // ── OTP Panel transition ──
   function showOtpPanel() {

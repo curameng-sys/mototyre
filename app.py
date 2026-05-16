@@ -239,7 +239,7 @@ class User(db.Model, UserMixin):
     phone            = db.Column(db.String(20), nullable=False)
     password_hash    = db.Column(db.String(255), nullable=False)
     role             = db.Column(db.String(20), default='customer')
-    motorcycle_plate = db.Column(db.String(20))
+    address          = db.Column(db.String(255))
     motorcycle_model = db.Column(db.String(100))
     profile_pic      = db.Column(db.String(255))
     email_verified   = db.Column(db.Boolean, default=False)
@@ -581,8 +581,8 @@ def register():
 
         user = User(
             fullname=fullname, email=email, phone=phone,
-            motorcycle_plate=request.form.get('plate'),
-            motorcycle_model=request.form.get('model'),
+            address=clean_str(request.form.get('address', ''), max_len=255),
+            motorcycle_model=clean_str(request.form.get('model', ''), max_len=100),
             email_verified=False
         )
         user.set_password(request.form['password'])
@@ -737,8 +737,9 @@ def book_service():
         service=service,
         date=booking_date,
         time=booking_time,
-        motorcycle_model=clean_str(request.form.get('motorcycle_model', current_user.motorcycle_model or ''), max_len=100),
-        motorcycle_plate=clean_str(request.form.get('motorcycle_plate', current_user.motorcycle_plate or ''), max_len=20),
+        status='confirmed',
+        motorcycle_model=clean_str(request.form.get('motorcycle_model', ''), max_len=100),
+        motorcycle_plate=clean_str(request.form.get('motorcycle_plate', ''), max_len=20),
         notes=clean_str(request.form.get('notes', ''), max_len=500),
         contact_name=clean_str(request.form.get('contact_name', ''), max_len=100),
         contact_mobile=clean_str(request.form.get('contact_mobile', ''), max_len=13),
@@ -754,15 +755,15 @@ def book_service():
     db.session.commit()
 
     send_notification(
-        current_user.id, 'Booking Received!',
-        f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} is pending confirmation.',
-        type='booking', status='pending'
+        current_user.id, 'Booking Confirmed! ✅',
+        f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} is confirmed. Please arrive 15 minutes early.',
+        type='booking', status='confirmed'
     )
     for admin in User.query.filter_by(role='admin').all():
         send_notification(
-            admin.id, 'New Booking Received',
+            admin.id, 'New Booking Confirmed',
             f'{current_user.fullname} booked {service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")}.',
-            type='booking', status='pending'
+            type='booking', status='confirmed'
         )
 
     flash('Appointment booked successfully!', 'success')
@@ -804,8 +805,9 @@ def book_multiple_services():
             service=service,
             date=booking_date,
             time=booking_time,
-            motorcycle_model=clean_str(b.get('motorcycle_model', current_user.motorcycle_model or ''), max_len=100),
-            motorcycle_plate=clean_str(b.get('motorcycle_plate', current_user.motorcycle_plate or ''), max_len=20),
+            status='confirmed',
+            motorcycle_model=clean_str(b.get('motorcycle_model', ''), max_len=100),
+            motorcycle_plate=clean_str(b.get('motorcycle_plate', ''), max_len=20),
             notes=clean_str(b.get('notes', ''), max_len=500),
             contact_name=clean_str(b.get('contact_name', ''), max_len=100),
             contact_mobile=clean_str(b.get('contact_mobile', ''), max_len=13),
@@ -823,19 +825,19 @@ def book_multiple_services():
         created.append(booking.id)
 
         send_notification(
-            current_user.id, 'Booking Received!',
+            current_user.id, 'Booking Confirmed! ✅',
             f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} '
-            f'at {booking.time.strftime("%I:%M %p")} is pending confirmation.',
-            type='booking', status='pending'
+            f'at {booking.time.strftime("%I:%M %p")} is confirmed. Please arrive 15 minutes early.',
+            type='booking', status='confirmed'
         )
 
     if created:
         db.session.commit()
         for admin in User.query.filter_by(role='admin').all():
             send_notification(
-                admin.id, f'{len(created)} New Booking(s) Received',
+                admin.id, f'{len(created)} New Booking(s) Confirmed',
                 f'{current_user.fullname} booked {len(created)} service(s).',
-                type='booking', status='pending'
+                type='booking', status='confirmed'
             )
 
     return jsonify({'success': len(created) > 0, 'created': len(created), 'errors': errors})
@@ -968,8 +970,8 @@ def customer_profile():
             return redirect(url_for('customer_dashboard'))
         current_user.fullname         = clean_str(request.form.get('fullname', ''), max_len=100)
         current_user.phone            = phone
+        current_user.address          = clean_str(request.form.get('address', ''), max_len=255)
         current_user.motorcycle_model = clean_str(request.form.get('motorcycle_model', ''), max_len=100)
-        current_user.motorcycle_plate = clean_str(request.form.get('motorcycle_plate', ''), max_len=20)
         db.session.commit()
         flash('Profile updated successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
@@ -1015,8 +1017,18 @@ def get_booked_slots():
 @app.route('/api/mechanics')
 @login_required
 def get_mechanics():
+    active_statuses = ('pending', 'confirmed', 'in_progress', 'inprogress')
+    busy_names = {
+        b.mechanic_name for b in Booking.query.filter(
+            Booking.mechanic_name.isnot(None),
+            Booking.status.in_(active_statuses)
+        ).all()
+    }
     mechanics = Mechanic.query.filter_by(status='available').order_by(Mechanic.name).all()
-    return jsonify([{'id': m.id, 'name': m.name, 'specialization': m.specialization} for m in mechanics])
+    return jsonify([
+        {'id': m.id, 'name': m.name, 'specialization': m.specialization}
+        for m in mechanics if m.name not in busy_names
+    ])
 
 
 # ── Notification routes ───────────────────────────────────────────────────────

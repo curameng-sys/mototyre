@@ -9,32 +9,39 @@
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
     :root {
-      --ink: #0c0d0f;
-      --panel: #111215;
-      --card: #1a1d23;
-      --red: #ff0f0f;
-      --muted: #6b7280;
-      --border: rgba(255,255,255,0.07);
-      --text: #e5e7eb;
-      --green: #15803d;
-      --blue: #1d4ed8;
+      --ink: #f5f0eb;
+      --panel: #ffffff;
+      --card: #ffffff;
+      --red: #e8401c;
+      --muted: #b3aea8;
+      --border: #dad5cf;
+      --text: #1c1814;
+      --green: #16a34a;
+      --blue: #2563eb;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--ink); color: var(--text); overflow-anchor: none; }
 
+    /* ── FORCE ALL TEXT DARK ── */
+    * { color: var(--text); }
+    /* exceptions: keep white text on colored/dark backgrounds */
+    .hero-btn.primary, .hero-btn.primary *,
+    .nav-avatar, .nav-avatar *,
+    .badge, .badge * { color: revert; }
+
     /* ── TOP NAVBAR ── */
     .top-nav {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(17,18,21,0.95);
-      backdrop-filter: blur(12px);
+      background: #ffffff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 1.25rem; height: 72px; gap: 1rem;
     }
     .nav-logo {
       font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem;
-      letter-spacing: 0.08em; color: #fff; white-space: nowrap; cursor: default;
+      letter-spacing: 0.08em; color: var(--text); white-space: nowrap; cursor: default;
     }
     .nav-logo span { color: var(--red); }
 
@@ -49,8 +56,8 @@
       transition: all 0.15s; white-space: nowrap;
       border: 1px solid transparent;
     }
-    .nav-links a:hover { color: #fff; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.08); }
-    .nav-links a.active { color: #fff; background: rgba(232,64,28,0.15); border-color: rgba(232,64,28,0.3); }
+    .nav-links a:hover { color: var(--text); background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08); }
+    .nav-links a.active { color: var(--red); background: rgba(232,64,28,0.08); border-color: rgba(232,64,28,0.2); }
 
     .nav-right { display: flex; align-items: center; gap: 0.75rem; }
     .nav-avatar {
@@ -62,7 +69,7 @@
     }
     .nav-avatar:hover { border-color: var(--red); }
     .nav-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .nav-username { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: #fff; white-space: nowrap; }
+    .nav-username { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--text); white-space: nowrap; }
     .nav-logout-btn {
       background: rgba(232,64,28,0.1); border: 1px solid rgba(232,64,28,0.3);
       color: var(--red); padding: 0.5rem 1.1rem; border-radius: 8px;
@@ -81,7 +88,7 @@
 
     /* ── HERO ── */
     .hero-banner {
-      background: linear-gradient(135deg, #1a1d23 0%, #1e1218 50%, #1a1d23 100%);
+      background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 50%, #ffffff 100%);
       border: 1px solid var(--border); border-radius: 20px;
       padding: 2.5rem; margin-bottom: 2rem;
       position: relative; overflow: hidden;
@@ -89,7 +96,7 @@
     .hero-banner::before {
       content: ''; position: absolute; top: -60px; right: -60px;
       width: 240px; height: 240px;
-      background: radial-gradient(circle, rgba(232,64,28,0.15) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(232,64,28,0.08) 0%, transparent 70%);
       pointer-events: none;
     }
     .hero-banner::after {
@@ -97,7 +104,7 @@
       height: 3px; background: linear-gradient(90deg, var(--red), transparent);
     }
     .hero-greeting { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
-    .hero-name { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; line-height: 1; color: #fff; letter-spacing: 0.03em; margin-bottom: 0.6rem; }
+    .hero-name { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; line-height: 1; color: var(--text); letter-spacing: 0.03em; margin-bottom: 0.6rem; }
     .hero-name span { color: var(--red); }
     .hero-sub { font-size: 0.875rem; color: var(--muted); max-width: 360px; }
     .hero-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; }
@@ -109,9 +116,9 @@
     }
     .hero-btn.primary { background: var(--red); color: #fff; }
     .hero-btn.primary:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(232,64,28,0.3); }
-    .hero-btn.secondary { background: rgba(255,255,255,0.07); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
-    .hero-btn.secondary:hover { background: rgba(255,255,255,0.12); transform: translateY(-2px); }
-    .hero-bike { font-size: 6rem; opacity: 0.12; position: absolute; right: 2rem; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; }
+    .hero-btn.secondary { background: rgba(0,0,0,0.05); color: var(--text); border: 1px solid rgba(0,0,0,0.1); }
+    .hero-btn.secondary:hover { background: rgba(0,0,0,0.09); transform: translateY(-2px); }
+    .hero-bike { font-size: 6rem; opacity: 0.06; position: absolute; right: 2rem; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; }
 
     /* ── STATS ── */
     .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
@@ -120,12 +127,12 @@
       border-radius: 16px; padding: 1.5rem; position: relative; overflow: hidden;
       transition: all 0.2s; cursor: default;
     }
-    .stat-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
+    .stat-card:hover { border-color: rgba(0,0,0,0.15); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
     .stat-icon-wrap { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem; }
     .stat-icon-wrap.red { background: rgba(232,64,28,0.15); }
     .stat-icon-wrap.blue { background: rgba(29,78,216,0.15); }
     .stat-icon-wrap.green { background: rgba(21,128,61,0.15); }
-    .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: #fff; line-height: 1; margin-bottom: 0.25rem; }
+    .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--text); line-height: 1; margin-bottom: 0.25rem; }
     .stat-lbl { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
     .stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
     .stat-card.red::after { background: var(--red); }
@@ -134,7 +141,7 @@
 
     /* ── SECTION HEADER ── */
     .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-    .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; color: #fff; line-height: 1; }
+    .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; color: var(--text); line-height: 1; }
     .section-title span { color: var(--red); }
     .section-sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
     .section-link { font-size: 0.8rem; color: var(--red); text-decoration: none; font-weight: 600; font-family: 'Syne', sans-serif; }
@@ -153,52 +160,52 @@
     .quick-card.blue::after { background: var(--blue); }
     .quick-card.green::after { background: var(--green); }
     .quick-card.orange::after { background: #f97316; }
-    .quick-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
+    .quick-card:hover { border-color: rgba(0,0,0,0.15); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
     .quick-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
     .quick-icon.red { background: rgba(232,64,28,0.15); }
     .quick-icon.blue { background: rgba(29,78,216,0.15); }
     .quick-icon.green { background: rgba(21,128,61,0.15); }
     .quick-icon.orange { background: rgba(249,115,22,0.15); }
-    .quick-label { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: #fff; margin-bottom: 0.2rem; }
+    .quick-label { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--text); margin-bottom: 0.2rem; }
     .quick-sub { font-size: 0.78rem; color: var(--muted); }
     .quick-arrow { margin-left: auto; color: var(--muted); font-size: 1.1rem; }
 
     /* ── CARDS ── */
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem; }
     .card-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
-    .card-head h5 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: #fff; margin: 0; }
+    .card-head h5 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: var(--text); margin: 0; }
     .card-head a { font-size: 0.78rem; color: var(--red); text-decoration: none; font-weight: 600; font-family: 'Syne', sans-serif; }
     .card-body { padding: 1.5rem; }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
 
     /* ── TABLE ── */
-    .table { width: 100%; --bs-table-bg: transparent; --bs-table-hover-bg: rgba(255,255,255,0.03); color: var(--text); font-size: 0.875rem; margin: 0; }
+    .table { width: 100%; --bs-table-bg: transparent; --bs-table-hover-bg: rgba(0,0,0,0.02); color: var(--text); font-size: 0.875rem; margin: 0; }
     .table > :not(caption) > * > * { background-color: transparent !important; color: inherit; }
     .table thead th { font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0.75rem 1rem; }
-    .table tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+    .table tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .table tbody tr:last-child td { border-bottom: none; }
-    .table tbody tr:hover td { background: rgba(255,255,255,0.03) !important; }
+    .table tbody tr:hover td { background: rgba(0,0,0,0.02) !important; }
 
     /* ── BADGES ── */
     .badge { font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; padding: 0.3em 0.65em; border-radius: 6px; text-transform: uppercase; }
-    .badge-pending   { background: rgba(180,83,9,0.2);   color: #fbbf24; border: 1px solid rgba(180,83,9,0.3); }
-    .badge-awaitingpayment { background: rgba(249,115,22,0.2); color: #fdba74; border: 1px solid rgba(249,115,22,0.4); }
-    .badge-confirmed { background: rgba(29,78,216,0.2);  color: #93c5fd; border: 1px solid rgba(29,78,216,0.3); }
-    .badge-in_progress { background: rgba(234,179,8,0.2); color: #fde047; border: 1px solid rgba(234,179,8,0.4); }
-    .badge-completed { background: rgba(21,128,61,0.2);  color: #86efac; border: 1px solid rgba(21,128,61,0.3); }
-    .badge-cancelled { background: rgba(220,38,38,0.15); color: #fca5a5; border: 1px solid rgba(220,38,38,0.2); }
-    .badge-processing{ background: rgba(124,58,237,0.2); color: #c4b5fd; border: 1px solid rgba(124,58,237,0.3); }
-    .badge-shipped    { background: rgba(6,182,212,0.2);  color: #67e8f9; border: 1px solid rgba(6,182,212,0.3); }
-    .badge-delivered  { background: rgba(21,128,61,0.2);  color: #86efac; border: 1px solid rgba(21,128,61,0.3); }
+    .badge-pending        { background: #fef9c3; color: #713f12; border: 1px solid #eab308; }
+    .badge-awaitingpayment{ background: #fff7ed; color: #9a3412; border: 1px solid #f97316; }
+    .badge-confirmed      { background: #dbeafe; color: #1e3a8a; border: 1px solid #3b82f6; }
+    .badge-in_progress    { background: #ffedd5; color: #7c2d12; border: 1px solid #f97316; }
+    .badge-completed      { background: #dcfce7; color: #14532d; border: 1px solid #22c55e; }
+    .badge-cancelled      { background: #fee2e2; color: #7f1d1d; border: 1px solid #ef4444; }
+    .badge-processing     { background: #ede9fe; color: #4c1d95; border: 1px solid #8b5cf6; }
+    .badge-shipped        { background: #cffafe; color: #164e63; border: 1px solid #06b6d4; }
+    .badge-delivered      { background: #d1fae5; color: #064e3b; border: 1px solid #10b981; }
 
     /* ── FORMS ── */
     .form-group { margin-bottom: 1.1rem; }
     .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.4rem; font-family: 'Syne', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.65rem 0.9rem; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.15s; outline: none; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--red); }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; background: #ffffff; border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.15s; outline: none; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(232,64,28,0.08); }
     .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
-    .profile-field-hint { font-size: 0.72rem; color: #6b7280; margin-top: 0.3rem; }
-    .form-group select option { background: #1a1d23; }
+    .profile-field-hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+    .form-group select option { background: #ffffff; color: var(--text); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
     .btn-submit { background: var(--red); color: #fff; border: none; padding: 0.7rem 1.75rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.5rem; }
     .btn-submit:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,64,28,0.3); }
@@ -213,9 +220,9 @@
     /* ── PRODUCTS ── */
     .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
     .product-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; transition: all 0.2s; }
-    .product-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-3px); }
+    .product-card:hover { border-color: rgba(0,0,0,0.15); transform: translateY(-3px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
     .product-icon { font-size: 2rem; margin-bottom: 0.25rem; }
-    .product-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: #fff; }
+    .product-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--text); }
     .product-cat { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
     .product-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--red); }
     .product-stock { font-size: 0.75rem; color: #6b7280; }
@@ -226,54 +233,54 @@
     .book-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
     .cal-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.75rem; color: var(--muted); }
     .cal-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
-    .cal-day { aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 500; cursor: default; border: 1px solid transparent; transition: all 0.15s; background: rgba(255,255,255,0.03); color: var(--muted); }
+    .cal-day { aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 500; cursor: default; border: 1px solid #9ca3af; transition: all 0.15s; background: #4b5563; color: #d1d5db; }
     .cal-day.empty { background: transparent; border-color: transparent; }
-    .cal-day.today { border-color: rgba(232,64,28,0.4); color: var(--red); font-weight: 700; }
-    .cal-day.available { background: rgba(21,128,61,0.12); border-color: rgba(21,128,61,0.2); color: #86efac; cursor: pointer; }
-    .cal-day.available:hover { background: rgba(21,128,61,0.25); border-color: rgba(21,128,61,0.4); }
-    .cal-day.past { opacity: 0.3; }
-    .cal-day.fully-booked { background: rgba(232,64,28,0.12); border-color: rgba(232,64,28,0.2); color: #fca5a5; }
-    .cal-day.selected { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; font-weight: 700; }
-    .time-slot-btn { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text); border-radius: 8px; padding: 0.5rem 0.25rem; font-size: 0.78rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .cal-day.today { border-color: var(--red); color: var(--red); font-weight: 700; background: #4b5563; }
+    .cal-day.available { background: #16a34a; border-color: #15803d; color: #ffffff; cursor: pointer; }
+    .cal-day.available:hover { background: #15803d; border-color: #14532d; }
+    .cal-day.past { background: #4b5563; border-color: #6b7280; opacity: 0.5; }
+    .cal-day.fully-booked { background: #374151; border-color: #6b7280; color: #9ca3af; }
+    .cal-day.selected { background: #111111 !important; border-color: #111111 !important; color: #ffffff !important; font-weight: 700; }
+    .time-slot-btn { background: #f8f9fa; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 0.5rem 0.25rem; font-size: 0.78rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
     .time-slot-btn:hover:not(:disabled) { background: rgba(232,64,28,0.12); border-color: rgba(232,64,28,0.3); color: var(--red); }
     .time-slot-btn.booked { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
     .time-slot-btn.selected-slot { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
 
     /* ── SETTINGS ── */
     .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .pic-upload-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 1.5rem; border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; margin-bottom: 1.5rem; background: rgba(255,255,255,0.02); transition: border-color 0.2s; }
-    .pic-upload-wrap:hover { border-color: rgba(255,255,255,0.3); }
+    .pic-upload-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 1.5rem; border: 1px dashed rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 1.5rem; background: rgba(0,0,0,0.02); transition: border-color 0.2s; }
+    .pic-upload-wrap:hover { border-color: rgba(0,0,0,0.35); }
     .pic-preview { width: 90px; height: 90px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: #fff; overflow: hidden; }
     .pic-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .pic-upload-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 0.5rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
-    .pic-upload-btn:hover { background: rgba(255,255,255,0.12); }
+    .pic-upload-btn { background: #f5f0eb; border: 1px solid var(--border); color: var(--text); padding: 0.5rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
+    .pic-upload-btn:hover { background: #e4e6e9; }
     .pic-upload-hint { font-size: 0.75rem; color: var(--muted); text-align: center; }
 
     /* ── MODAL ── */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     .modal-overlay.open { display: flex; }
     .modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 420px; max-width: 95vw; animation: fadeUp 0.2s ease both; }
-    .modal-box h5 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.04em; margin-bottom: 1.25rem; color: #fff; }
+    .modal-box h5 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.04em; margin-bottom: 1.25rem; color: var(--text); }
     .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
-    .btn-cancel-modal { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--muted); padding: 0.6rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
-    .btn-cancel-modal:hover { color: #fff; }
+    .btn-cancel-modal { background: #f5f0eb; border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
+    .btn-cancel-modal:hover { background: #e4e6e9; }
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); border-radius: 3px; }
 
     /* ── HAMBURGER ── */
     .nav-hamburger {
       display: none;
       flex-direction: column; align-items: center; justify-content: center;
       gap: 5px; width: 40px; height: 40px; cursor: pointer;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+      background: rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.08); border-radius: 8px;
       transition: background 0.15s; flex-shrink: 0;
     }
-    .nav-hamburger:hover { background: rgba(255,255,255,0.12); }
-    .nav-hamburger span { display: block; width: 18px; height: 2px; background: #fff; border-radius: 2px; transition: all 0.3s; }
+    .nav-hamburger:hover { background: rgba(0,0,0,0.1); }
+    .nav-hamburger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
     .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
     .nav-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
     .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
@@ -281,11 +288,12 @@
     .mobile-nav-menu {
       display: none; position: fixed;
       top: 72px; left: 0; right: 0;
-      background: rgba(17,18,21,0.98);
+      background: #ffffff;
       border-bottom: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       padding: 1rem 1.25rem;
       flex-direction: column; gap: 0.4rem;
-      z-index: 99; backdrop-filter: blur(12px);
+      z-index: 99;
     }
     .mobile-nav-menu.open { display: flex; }
     .mobile-nav-menu a {
@@ -296,7 +304,7 @@
       transition: all 0.15s;
     }
     .mobile-nav-menu a:hover, .mobile-nav-menu a.active {
-      color: #fff; background: rgba(232,64,28,0.15);
+      color: var(--red); background: rgba(232,64,28,0.08);
     }
 
     @media (max-width: 768px) {
@@ -329,11 +337,11 @@
 .cat-tab {
   padding: 0.45rem 1.1rem; border-radius: 8px;
   font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem;
-  cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.05); color: var(--muted);
+  cursor: pointer; border: 1px solid var(--border);
+  background: #ffffff; color: var(--muted);
   transition: all 0.15s;
 }
-.cat-tab:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.cat-tab:hover { color: var(--text); background: #f5f0eb; }
 .cat-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
 
 
@@ -359,7 +367,7 @@
 
   <div class="nav-right">
   <div style="position:relative;cursor:pointer;" onclick="toggleNotifications()" title="Notifications">
-    <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">🔔</div>
+    <div style="width:40px;height:40px;border-radius:50%;background:#f5f0eb;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all 0.15s;" onmouseover="this.style.background='#dad5cf'" onmouseout="this.style.background='#f5f0eb'">🔔</div>
     <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;font-size:0.6rem;font-family:'Syne',sans-serif;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:2px solid var(--ink);" id="notif-badge">0</span>
   </div>
 
@@ -385,10 +393,10 @@
 </div>
 
 <!-- ═══ NOTIFICATION PANEL ═══ --> 
-<div id="notif-panel" style="display:none;position:fixed;top:76px;right:1.25rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,0.1);border-radius:16px;z-index:999;box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.07);">
+<div id="notif-panel" style="display:none;position:fixed;top:76px;right:1.25rem;width:380px;max-width:95vw;background:#ffffff;border:1px solid var(--border);border-radius:16px;z-index:999;box-shadow:0 20px 60px rgba(0,0,0,0.15);overflow:hidden;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
     <div style="display:flex;align-items:center;gap:0.75rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;">Notifications</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:var(--text);">Notifications</div>
       <div id="notif-count-badge" style="display:none;background:var(--red);color:#fff;font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;border-radius:20px;padding:0.15em 0.55em;">0</div>
     </div>
     <div style="display:flex;gap:0.75rem;align-items:center;">
@@ -399,11 +407,11 @@
   </div>
 
   <!-- Filter Tabs -->
-  <div style="display:flex;gap:0.5rem;padding:0.75rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.07);overflow-x:auto;">
+  <div style="display:flex;gap:0.5rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);overflow-x:auto;">
     <button class="notif-tab active" onclick="filterNotifs('all', this)" style="background:var(--red);border:1px solid var(--red);color:#fff;border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">All</button>
-    <button class="notif-tab" onclick="filterNotifs('booking', this)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">📅 Bookings</button>
-    <button class="notif-tab" onclick="filterNotifs('order', this)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">📦 Orders</button>
-    <button class="notif-tab" onclick="filterNotifs('unread', this)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">🔴 Unread</button>
+    <button class="notif-tab" onclick="filterNotifs('booking', this)" style="background:#f5f0eb;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">📅 Bookings</button>
+    <button class="notif-tab" onclick="filterNotifs('order', this)" style="background:#f5f0eb;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">📦 Orders</button>
+    <button class="notif-tab" onclick="filterNotifs('unread', this)" style="background:#f5f0eb;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">🔴 Unread</button>
   </div>
 
   <div id="notif-list" style="max-height:460px;overflow-y:auto;">
@@ -412,7 +420,7 @@
       <div style="font-size:0.85rem;">No notifications yet.</div>
     </div>
   </div>
-  <div id="notif-footer" style="display:none;padding:0.75rem 1.25rem;border-top:1px solid rgba(255,255,255,0.07);text-align:center;">
+  <div id="notif-footer" style="display:none;padding:0.75rem 1.25rem;border-top:1px solid var(--border);text-align:center;">
   <span id="notif-showing" style="font-size:0.75rem;color:var(--muted);font-family:'Syne',sans-serif;"></span>
   <button onclick="toggleShowAll()" id="btn-view-history" style="background:none;border:none;color:var(--red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">View History</button>
 </div>
@@ -544,8 +552,8 @@
       <div class="card-head">
         <h5 id="cal-month-label">Month Year</h5>
         <div style="display:flex;gap:0.5rem;">
-          <button onclick="changeMonth(-1)" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:#fff;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">‹</button>
-          <button onclick="changeMonth(1)"  style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:#fff;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">›</button>
+          <button onclick="changeMonth(-1)" style="background:#f5f0eb;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:var(--text);transition:background 0.15s;" onmouseover="this.style.background='#dad5cf'" onmouseout="this.style.background='#f5f0eb'">‹</button>
+          <button onclick="changeMonth(1)"  style="background:#f5f0eb;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:var(--text);transition:background 0.15s;" onmouseover="this.style.background='#dad5cf'" onmouseout="this.style.background='#f5f0eb'">›</button>
         </div>
       </div>
       <div class="card-body" style="padding:1rem;">
@@ -596,21 +604,14 @@
               oninput="filterServices(this.value)"
               onfocus="document.getElementById('service-dropdown').style.display='block'">
             <div id="service-dropdown" style="display:none;position:absolute;z-index:200;left:0;right:0;
-              background:#1a1d23;border:1px solid rgba(255,255,255,0.12);border-radius:8px;
-              max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+              background:#ffffff;border:1px solid var(--border);border-radius:8px;
+              max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
             </div>
             <input type="hidden" id="service-value">
           </div>
           <div class="form-group">
             <label>Motorcycle Model</label>
-            <input type="text" id="moto-model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i">
-          </div>
-          <div class="form-group">
-            <label>Plate Number</label>
-            <input type="text" id="moto-plate" value="{{ current_user.motorcycle_plate or '' }}" 
-              placeholder="ABC 1234" maxlength="8"
-              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9\s]/g,''); checkBookingReady()">
-            <div id="plate-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Plate must be 7 characters (e.g. ABC 1234 or ABC1234).</div>
+            <input type="text" id="moto-model" value="" placeholder="Honda Click 125i">
           </div>
           <div class="form-group">
             <label>Odometer Reading <span style="color:var(--muted);font-size:0.75rem;">(km)</span></label>
@@ -621,7 +622,7 @@
             <select id="mechanic-select">
               <option value="">-- No preference --</option>
             </select>
-            <div id="mechanic-info" style="display:none;margin-top:0.5rem;padding:0.6rem 0.85rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.78rem;color:var(--muted);">
+            <div id="mechanic-info" style="display:none;margin-top:0.5rem;padding:0.6rem 0.85rem;background:#f5f0eb;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;color:var(--muted);">
               🔧 Specialization: <span id="mechanic-spec-display"></span>
             </div>
           </div>
@@ -688,17 +689,17 @@
         <tbody>
           {% for b in bookings %}
           <tr class="booking-row" style="cursor:pointer;" onclick="openBookingDetails({{ b.id }})">
-            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">{{ loop.index }}</span></td>
+            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">{{ loop.index }}</span></td>
             <td>
-              <span style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;">{{ b.service }}</span>
+              <span style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);">{{ b.service }}</span>
             </td>
             <td>
-              <div style="font-size:0.85rem;color:#fff;">{{ b.date.strftime('%b %d, %Y') }}</div>
+              <div style="font-size:0.85rem;color:var(--text);">{{ b.date.strftime('%b %d, %Y') }}</div>
               <div style="font-size:0.75rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }}</div>
             </td>
             <td>
               {% if b.motorcycle_model %}
-              <div style="font-size:0.85rem;color:#fff;">{{ b.motorcycle_model }}</div>
+              <div style="font-size:0.85rem;color:var(--text);">{{ b.motorcycle_model }}</div>
               <div style="font-size:0.75rem;color:var(--muted);">{{ b.motorcycle_plate or '—' }}</div>
               {% else %}
               <span style="color:var(--muted);">—</span>
@@ -728,7 +729,7 @@
 
    <!-- Category Filter Tabs -->
     <div style="margin-bottom:1rem;">
-  <input type="text" id="shop-search" placeholder="🔍 Search products..." oninput="searchProducts()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:0.75rem 1rem;color:#fff;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+  <input type="text" id="shop-search" placeholder="🔍 Search products..." oninput="searchProducts()" style="width:100%;background:#ffffff;border:1px solid var(--border);border-radius:10px;padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"  >
 </div>
 <div id="cat-tabs" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
       <button class="cat-tab active" onclick="filterProducts('all', this)">All</button>
@@ -849,8 +850,8 @@
                      maxlength="11" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
               <div class="profile-field-hint">Numbers only, up to 11 digits.</div>
             </div>
-            <div class="form-group"><label>Motorcycle Model</label><input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i"></div>
-            <div class="form-group"><label>Plate Number</label><input type="text" name="motorcycle_plate" value="{{ current_user.motorcycle_plate or '' }}" placeholder="ABC 1234"></div>
+            <div class="form-group"><label>Address</label><input type="text" name="address" value="{{ current_user.address or '' }}" placeholder="House No., Street, Barangay, City" maxlength="255"></div>
+            <div class="form-group"><label>Motorcycle Model</label><input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i" maxlength="100"></div>
             <div class="form-group"><label>Email (cannot change)</label><input type="email" value="{{ current_user.email }}" disabled></div>
             <button type="submit" class="btn-submit">💾 Save Changes</button>
           </form>
@@ -870,9 +871,9 @@
     </div>
     
     <!-- Booking Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
       <div>
-        <div id="bd-service" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#fff;letter-spacing:0.04em;"></div>
+        <div id="bd-service" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--text);letter-spacing:0.04em;"></div>
         <div id="bd-created" style="font-size:0.75rem;color:var(--muted);"></div>
       </div>
       <div id="bd-status-badge"></div>
@@ -893,41 +894,41 @@
     </div>
 
     <!-- Motorcycle Info -->
-    <div style="padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+    <div style="padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">🏍️ Motorcycle Information</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <div>
           <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Model</div>
-          <div id="bd-model" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+          <div id="bd-model" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
         </div>
         <div>
           <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Plate Number</div>
-          <div id="bd-plate" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+          <div id="bd-plate" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
         </div>
         <div id="bd-odo-wrap">
           <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Odometer</div>
-          <div id="bd-odometer" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+          <div id="bd-odometer" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
         </div>
       </div>
     </div>
 
     <!-- Mechanic Info -->
-<div id="bd-mechanic-wrap" style="display:none;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+<div id="bd-mechanic-wrap" style="display:none;padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
   <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">🔧 Assigned Mechanic</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
     <div>
       <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Name</div>
-      <div id="bd-mechanic-name" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+      <div id="bd-mechanic-name" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
     </div>
     <div>
       <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Specialization</div>
-      <div id="bd-mechanic-spec" style="font-family:'Syne',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;"></div>
+      <div id="bd-mechanic-spec" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
     </div>
   </div>
 </div>
 
     <!-- Notes -->
-    <div id="bd-notes-wrap" style="padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+    <div id="bd-notes-wrap" style="padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">📝 Notes</div>
       <div id="bd-notes" style="font-size:0.85rem;color:var(--text);line-height:1.6;"></div>
     </div>
@@ -950,7 +951,7 @@
     </div>
     
     <!-- Order Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
       <div>
         <div id="od-order-num" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;"></div>
         <div id="od-order-date" style="font-size:0.78rem;color:var(--muted);"></div>
@@ -965,7 +966,7 @@
     </div>
 
     <!-- Order Summary -->
-    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+    <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:1rem;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Summary</div>
       <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text);margin-bottom:0.4rem;">
         <span>Subtotal</span>
@@ -976,7 +977,7 @@
         <span>To be arranged</span>
       </div>
       <div style="border-top:1px solid var(--border);padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">Total</span>
         <span id="od-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);"></span>
       </div>
     </div>
@@ -1014,7 +1015,7 @@
     </div>
     
     <!-- Order Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
       <div>
         <div id="od-order-num" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;"></div>
         <div id="od-order-date" style="font-size:0.78rem;color:var(--muted);"></div>
@@ -1029,7 +1030,7 @@
     </div>
 
     <!-- Order Summary -->
-    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+    <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:1rem;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Summary</div>
       <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text);margin-bottom:0.4rem;">
         <span>Subtotal</span>
@@ -1040,7 +1041,7 @@
         <span>To be arranged</span>
       </div>
       <div style="border-top:1px solid var(--border);padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">Total</span>
         <span id="od-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);"></span>
       </div>
     </div>
@@ -1089,7 +1090,7 @@
         <div id="opt-pickup" class="delivery-option selected" onclick="selectDelivery('pickup')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(21,128,61,0.1);border:2px solid var(--green);border-radius:10px;cursor:pointer;transition:all 0.15s;">
           <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">🏪</div>
           <div style="flex:1;">
-            <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">Shop Pickup</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.95rem;">Shop Pickup</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pick up at MotoTyre North Caloocan</div>
             <div style="font-size:0.75rem;color:#86efac;margin-top:4px;">FREE</div>
           </div>
@@ -1098,10 +1099,10 @@
           </div>
         </div>
         
-        <div id="opt-ship" class="delivery-option" onclick="selectDelivery('ship')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(255,255,255,0.03);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;">
+        <div id="opt-ship" class="delivery-option" onclick="selectDelivery('ship')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#ffffff;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;">
           <div style="width:48px;height:48px;border-radius:10px;background:rgba(29,78,216,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">🚚</div>
           <div style="flex:1;">
-            <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">Ship to Address</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.95rem;">Ship to Address</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Deliver to your location</div>
             <div style="font-size:0.75rem;color:#fbbf24;margin-top:4px;">Shipping fee to be calculated</div>
           </div>
@@ -1167,7 +1168,7 @@
   <div id="opt-cash" onclick="selectPayment('cash')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(21,128,61,0.1);border:2px solid var(--green);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:0.75rem;">
     <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">💵</div>
     <div style="flex:1;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">Cash</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.95rem;">Cash</div>
       <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pay in-store upon pickup</div>
     </div>
     <div id="check-cash" style="width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1176,10 +1177,10 @@
   </div>
 
   <!-- GCash Option -->
-  <div id="opt-gcash" onclick="selectPayment('gcash')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(255,255,255,0.03);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:1.25rem;">
+  <div id="opt-gcash" onclick="selectPayment('gcash')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#ffffff;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:1.25rem;">
     <div style="width:48px;height:48px;border-radius:10px;background:rgba(0,168,107,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">📱</div>
     <div style="flex:1;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.95rem;">GCash</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.95rem;">GCash</div>
       <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pay online via GCash</div>
     </div>
     <div id="check-gcash" style="width:22px;height:22px;border-radius:50%;background:transparent;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1187,13 +1188,13 @@
     </div>
   </div>
 
-  <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
+  <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Order Summary</div>
     <div id="pay-items-list" style="margin-bottom:0.5rem;"></div>
     <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Delivery</span><span id="pay-delivery-method"></span></div>
     <div id="pay-shipping-row" style="display:none;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Shipping Fee</span><span>To be calculated</span></div>
     <div style="border-top:1px solid var(--border);padding-top:0.75rem;margin-top:0.5rem;display:flex;justify-content:space-between;">
-      <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
+      <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">Total</span>
       <span id="pay-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--red);"></span>
     </div>
   </div>
@@ -1206,7 +1207,7 @@
     <!-- STEP 4: CONFIRMATION -->
     <div id="step-confirm" style="display:none;">
       <h5>✅ Confirm Order</h5>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
+      <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Items</div>
         <div id="conf-items-list" style="margin-bottom:0.5rem;"></div>
         <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
@@ -1219,7 +1220,7 @@
         </div>
         <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;">Total</span>
+          <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">Total</span>
           <span id="conf-total" style="color:var(--red);font-family:'Bebas Neue',sans-serif;font-size:1.3rem;"></span>
         </div>
       </div>
@@ -1241,10 +1242,10 @@
     </div>
     <div style="margin-bottom:1.25rem;">
       <div id="pi-name" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:#fff;margin-bottom:0.4rem;"></div>
-      <div id="pi-cat" style="display:inline-block;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:99px;padding:0.2rem 0.75rem;font-size:0.72rem;color:#9ca3af;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;"></div>
+      <div id="pi-cat" style="display:inline-block;background:#f5f0eb;border:1px solid var(--border);border-radius:99px;padding:0.2rem 0.75rem;font-size:0.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;"></div>
       <div id="pi-description" style="font-size:0.85rem;color:#9ca3af;line-height:1.6;"></div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1rem;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:0.9rem 1rem;margin-bottom:1rem;">
       <div>
         <div style="font-size:0.7rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Price</div>
         <div id="pi-price" style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--red);line-height:1.1;"></div>
@@ -1257,9 +1258,9 @@
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
       <span style="font-size:0.78rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Qty</span>
       <div style="display:flex;align-items:center;gap:0.5rem;">
-        <button type="button" onclick="changeInfoQty(-1)" style="width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1.1rem;cursor:pointer;">−</button>
-        <input type="number" id="pi-qty" min="1" value="1" style="width:52px;text-align:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:0.35rem;color:#fff;font-size:0.9rem;" oninput="clampInfoQty()">
-        <button type="button" onclick="changeInfoQty(1)" style="width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;font-size:1.1rem;cursor:pointer;">+</button>
+        <button type="button" onclick="changeInfoQty(-1)" style="width:30px;height:30px;border-radius:6px;background:#f5f0eb;border:1px solid var(--border);color:var(--text);font-size:1.1rem;cursor:pointer;">−</button>
+        <input type="number" id="pi-qty" min="1" value="1" style="width:52px;text-align:center;background:#ffffff;border:1px solid var(--border);border-radius:6px;padding:0.35rem;color:var(--text);font-size:0.9rem;" oninput="clampInfoQty()">
+        <button type="button" onclick="changeInfoQty(1)" style="width:30px;height:30px;border-radius:6px;background:#f5f0eb;border:1px solid var(--border);color:var(--text);font-size:1.1rem;cursor:pointer;">+</button>
       </div>
     </div>
     <div class="modal-actions">
@@ -1373,15 +1374,15 @@
       return;
     }
     list.innerHTML = cart.map(item => `
-      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:0.5rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:0.5rem;">
         <div style="flex:1;min-width:0;">
-          <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
           <div style="font-size:0.72rem;color:var(--muted);">${item.category} · ₱${item.price.toFixed(2)} each</div>
         </div>
         <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
-          <button type="button" onclick="updateCartItemQty(${item.id},-1)" style="width:24px;height:24px;border-radius:5px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;cursor:pointer;font-size:0.9rem;">−</button>
+          <button type="button" onclick="updateCartItemQty(${item.id},-1)" style="width:24px;height:24px;border-radius:5px;background:#f5f0eb;border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:0.9rem;">−</button>
           <span style="min-width:22px;text-align:center;color:#fff;font-size:0.88rem;">${item.qty}</span>
-          <button type="button" onclick="updateCartItemQty(${item.id},1)" style="width:24px;height:24px;border-radius:5px;background:rgba(255,255,255,0.07);border:1px solid var(--border);color:#fff;cursor:pointer;font-size:0.9rem;">+</button>
+          <button type="button" onclick="updateCartItemQty(${item.id},1)" style="width:24px;height:24px;border-radius:5px;background:#f5f0eb;border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:0.9rem;">+</button>
         </div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--red);min-width:58px;text-align:right;flex-shrink:0;">₱${(item.price*item.qty).toFixed(2)}</div>
         <button type="button" onclick="removeFromCart(${item.id})" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-size:1rem;padding:0 0.2rem;flex-shrink:0;" title="Remove">✕</button>
@@ -1412,7 +1413,7 @@
     if (!t) {
       t = document.createElement('div');
       t.id = 'cart-toast';
-      t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#1a1d23;border:1px solid rgba(255,255,255,0.1);color:#fff;padding:0.65rem 1.1rem;border-radius:10px;font-size:0.85rem;font-family:\'DM Sans\',sans-serif;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.4);transition:opacity 0.3s;';
+      t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#1c1814;border:1px solid #484340;color:#f5f0eb;padding:0.65rem 1.1rem;border-radius:10px;font-size:0.85rem;font-family:\'DM Sans\',sans-serif;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.25);transition:opacity 0.3s;';
       document.body.appendChild(t);
     }
     t.textContent = msg;
@@ -1489,7 +1490,7 @@ function selectDelivery(method) {
     checkPickup.style.border = 'none';
     checkPickup.querySelector('span').style.display = 'block';
     
-    optShip.style.background = 'rgba(255,255,255,0.03)';
+    optShip.style.background = '#ffffff';
     optShip.style.borderColor = 'var(--border)';
     checkShip.style.background = 'transparent';
     checkShip.style.border = '2px solid var(--border)';
@@ -1504,7 +1505,7 @@ function selectDelivery(method) {
     checkShip.style.border = 'none';
     checkShip.querySelector('span').style.display = 'block';
     
-    optPickup.style.background = 'rgba(255,255,255,0.03)';
+    optPickup.style.background = '#ffffff';
     optPickup.style.borderColor = 'var(--border)';
     checkPickup.style.background = 'transparent';
     checkPickup.style.border = '2px solid var(--border)';
@@ -1587,7 +1588,7 @@ function selectPayment(method) {
     checkCash.style.border = 'none';
     checkCash.querySelector('span').style.display = 'block';
 
-    optGcash.style.background = 'rgba(255,255,255,0.03)';
+    optGcash.style.background = '#ffffff';
     optGcash.style.borderColor = 'var(--border)';
     checkGcash.style.background = 'transparent';
     checkGcash.style.border = '2px solid var(--border)';
@@ -1599,7 +1600,7 @@ function selectPayment(method) {
     checkGcash.style.border = 'none';
     checkGcash.querySelector('span').style.display = 'block';
 
-    optCash.style.background = 'rgba(255,255,255,0.03)';
+    optCash.style.background = '#ffffff';
     optCash.style.borderColor = 'var(--border)';
     checkCash.style.background = 'transparent';
     checkCash.style.border = '2px solid var(--border)';
@@ -1678,7 +1679,6 @@ function addToBookingQueue() {
     time:             timeVal,
     service:          service,
     motorcycle_model: document.getElementById('moto-model').value,
-    motorcycle_plate: document.getElementById('moto-plate').value,
     odometer:         document.getElementById('odometer').value,
     mechanic_id:      mechId,
     mechanic_name:    mechName,
@@ -1846,7 +1846,7 @@ async function renderCalendar() {
       cell.classList.add('past');
       cell.style.position = 'relative';
       cell.title = 'Closed — Sunday';
-      cell.style.background = 'rgba(255,255,255,0.02)';
+      cell.style.background = '#f5f0eb';
       // Small "SUN" label
       cell.innerHTML = `<span>${d}</span><span style="display:block;font-size:0.45rem;color:#ef4444;letter-spacing:0.05em;font-family:'Syne',sans-serif;font-weight:700;margin-top:1px;">SUN</span>`;
     } else if (holidayName) {
@@ -1927,18 +1927,12 @@ function renderTimeSlots(dateStr) {
 function checkBookingReady() {
   const name      = document.getElementById('contact-name').value.trim();
   const mobile    = document.getElementById('contact-mobile').value.trim();
-  const plate     = document.getElementById('moto-plate').value.trim().replace(/\s/g, '');
   const hasTime   = !!document.getElementById('selected-time-value').value;
   const hasService = !!document.getElementById('service-value').value;
   const nameOk    = /^[a-zA-Z\s]+$/.test(name) && name !== '';
   const mobileOk  = /^0\d{10}$/.test(mobile);
-  // 7 alphanumeric chars (spaces ignored), e.g. "ABC 1234" or "ABC1234"
-  const plateOk   = plate === '' || /^[A-Z0-9]{7}$/.test(plate);
 
-  const plateError = document.getElementById('plate-error');
-  if (plateError) plateError.style.display = (!plateOk && plate !== '') ? 'block' : 'none';
-
-  document.getElementById('btn-add-queue').disabled = !(hasTime && hasService && nameOk && mobileOk && plateOk);
+  document.getElementById('btn-add-queue').disabled = !(hasTime && hasService && nameOk && mobileOk);
 }
 
 function selectTime(slot, btn) {
@@ -2063,7 +2057,7 @@ function renderNotifications() {
     cancelled:   { bg: 'rgba(220,38,38,0.15)',   color: '#fca5a5' },
     inprogress:  { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
     in_progress: { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
-    default:     { bg: 'rgba(255,255,255,0.05)', color: '#e5e7eb' },
+    default:     { bg: 'rgba(0,0,0,0.05)', color: '#484340' },
   };
 
   // Remove old items
@@ -2080,8 +2074,8 @@ function renderNotifications() {
 
     const div = document.createElement('div');
     div.className = 'notif-item';
-    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(232,64,28,0.05)'};transition:background 0.15s;`;
-    div.onmouseover = () => div.style.background = 'rgba(255,255,255,0.04)';
+    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(232,64,28,0.05)'};transition:background 0.15s;`;
+    div.onmouseover = () => div.style.background = '#f5f0eb';
     div.onmouseout  = () => div.style.background = n.is_read ? 'transparent' : 'rgba(232,64,28,0.05)';
     div.onclick     = () => readNotif(n.id, n);
 
@@ -2114,8 +2108,8 @@ function filterNotifs(filter, btn) {
   activeFilter = filter;
   showAll = false;
   document.querySelectorAll('.notif-tab').forEach(t => {
-    t.style.background = 'rgba(255,255,255,0.05)';
-    t.style.borderColor = 'rgba(255,255,255,0.1)';
+    t.style.background = '#f5f0eb';
+    t.style.borderColor = 'var(--border)';
     t.style.color = 'var(--muted)';
   });
   btn.style.background = 'var(--red)';
@@ -2253,18 +2247,6 @@ function validateBookingForm() {
   return valid;
 }
 
-// Validate plate — 7 alphanumeric chars (optional field)
-  const plate = document.getElementById('moto-plate');
-  const plateError = document.getElementById('plate-error');
-  const plateClean = plate.value.trim().replace(/\s/g, '');
-  if (plateClean !== '' && !/^[A-Z0-9]{7}$/.test(plateClean)) {
-    plateError.style.display = 'block';
-    plate.style.borderColor = 'var(--red)';
-    valid = false;
-  } else {
-    if (plateError) plateError.style.display = 'none';
-    plate.style.borderColor = '';
-  }
 
 
 
@@ -2446,7 +2428,7 @@ function openOrderDetails(orderId) {
   // Products list
   const productsList = document.getElementById('od-products-list');
   productsList.innerHTML = order.items.map(item => `
-    <div style="display:flex;align-items:center;gap:0.85rem;padding:0.85rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;">
+    <div style="display:flex;align-items:center;gap:0.85rem;padding:0.85rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;">
       <div style="width:44px;height:44px;border-radius:10px;background:rgba(232,64,28,0.12);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🔧</div>
       <div style="flex:1;min-width:0;">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.product_name}</div>
