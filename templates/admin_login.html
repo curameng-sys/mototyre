@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -10,7 +10,7 @@
 
     :root {
       --ink:   #0c0d0f;
-      --red:   #ff0f0f;
+      --red:   #d00019;
       --muted: #6b7280;
       --card:  #111215;
     }
@@ -34,7 +34,7 @@
       inset: 0;
       z-index: 0;
       background:
-        radial-gradient(ellipse 70% 55% at 50% 50%, rgba(255,15,15,0.07) 0%, transparent 65%),
+        radial-gradient(ellipse 70% 55% at 50% 50%, rgba(208,0,25,0.07) 0%, transparent 65%),
         var(--ink);
     }
 
@@ -139,7 +139,7 @@
       align-items: flex-start;
       gap: 0.5rem;
     }
-    .flash-danger  { background: rgba(255,15,15,0.1);   border: 1px solid rgba(255,15,15,0.25);   color: #ff6b6b; }
+    .flash-danger  { background: rgba(208,0,25,0.1);   border: 1px solid rgba(208,0,25,0.25);   color: #ff6b6b; }
     .flash-success { background: rgba(22,163,74,0.1);   border: 1px solid rgba(22,163,74,0.25);   color: #4ade80; }
     .flash-info    { background: rgba(37,99,235,0.1);   border: 1px solid rgba(37,99,235,0.25);   color: #60a5fa; }
     .flash-warning { background: rgba(217,119,6,0.1);   border: 1px solid rgba(217,119,6,0.25);   color: #fbbf24; }
@@ -181,7 +181,7 @@
     .field input:focus {
       border-color: var(--red);
       background: rgba(255,255,255,0.08);
-      box-shadow: 0 0 0 3px rgba(255,15,15,0.12);
+      box-shadow: 0 0 0 3px rgba(208,0,25,0.12);
     }
 
     .pass-wrap input { padding-right: 3.5rem; }
@@ -233,9 +233,9 @@
       transition: all 0.2s;
     }
     .btn-submit:hover {
-      background: #c73418;
+      background: #a8001a;
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(255,15,15,0.35);
+      box-shadow: 0 8px 24px rgba(208,0,25,0.35);
     }
     .btn-submit:active { transform: translateY(0); box-shadow: none; }
     .btn-submit:disabled {
@@ -269,8 +269,8 @@
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      background: rgba(255,15,15,0.1);
-      border: 1px solid rgba(255,15,15,0.25);
+      background: rgba(208,0,25,0.1);
+      border: 1px solid rgba(208,0,25,0.25);
       border-radius: 20px;
       padding: 0.3rem 0.8rem;
       font-size: 0.76rem;
@@ -303,11 +303,11 @@
     .otp-cell:focus {
       border-color: var(--red);
       background: rgba(255,255,255,0.08);
-      box-shadow: 0 0 0 3px rgba(255,15,15,0.12);
+      box-shadow: 0 0 0 3px rgba(208,0,25,0.12);
     }
     .otp-cell.filled {
-      border-color: rgba(255,15,15,0.45);
-      background: rgba(255,15,15,0.07);
+      border-color: rgba(208,0,25,0.45);
+      background: rgba(208,0,25,0.07);
     }
 
     .otp-footer {

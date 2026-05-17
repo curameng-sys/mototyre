@@ -34,11 +34,11 @@ app = Flask(__name__)
 app.config.update(
     SECRET_KEY='mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4',
     SESSION_COOKIE_NAME='mototyre_customer_session',
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=False,
     SESSION_COOKIE_DOMAIN=None,
-    REMEMBER_COOKIE_SAMESITE='None',
-    REMEMBER_COOKIE_SECURE=True,
+    REMEMBER_COOKIE_SAMESITE='Lax',
+    REMEMBER_COOKIE_SECURE=False,
     SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:@localhost:3306/mototyre",
     SQLALCHEMY_ENGINE_OPTIONS={},
     SQLALCHEMY_TRACK_MODIFICATIONS=False
@@ -501,7 +501,7 @@ def login():
                 flash(f'Could not send OTP: {e}', 'danger')
                 return redirect(url_for('login'))
             session['pending_login_email'] = email
-            return redirect(url_for('verify_login_otp'))
+            return redirect(url_for('login'))
 
         flash('Invalid email or password.', 'danger')
     return render_template('login.html')
@@ -535,7 +535,7 @@ def verify_login_otp():
 def resend_otp(purpose):
     validate_otp_purpose(purpose)
     key_map      = {'login': 'pending_login_email', 'verify': 'pending_verify_email', 'reset': 'pending_reset_email'}
-    redirect_map = {'login': 'verify_login_otp', 'reset': 'forgot_password_verify', 'verify': 'verify_email_otp'}
+    redirect_map = {'login': 'login', 'reset': 'forgot_password_verify', 'verify': 'register'}
     email = session.get(key_map.get(purpose))
     if not email:
         flash('Session expired. Please start again.', 'danger')
@@ -597,7 +597,7 @@ def register():
             return redirect(url_for('login'))
 
         session['pending_verify_email'] = email
-        return redirect(url_for('verify_email_otp'))
+        return redirect(url_for('register'))
 
     return render_template('register.html')
 
@@ -1305,6 +1305,10 @@ with app.app_context():
         "ALTER TABLE service ADD COLUMN price FLOAT NOT NULL DEFAULT 0",
         "UPDATE service SET is_active=1 WHERE is_active IS NULL",
         "ALTER TABLE booking ADD COLUMN odometer INT DEFAULT NULL",
+        "ALTER TABLE user ADD COLUMN address VARCHAR(255) DEFAULT NULL",
+        "ALTER TABLE user ADD COLUMN motorcycle_model VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE user ADD COLUMN profile_pic VARCHAR(255) DEFAULT NULL",
+        "ALTER TABLE user ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0",
     ]:
         try:
             from sqlalchemy import text as _t

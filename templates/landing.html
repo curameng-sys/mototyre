@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -18,22 +18,23 @@
       --fg-1:      #1c1814;
       --fg-2:      #5a544d;
       --fg-3:      #908980;
-      --brand-red:        #e8401c;
-      --brand-red-hover:  #c73418;
-      --brand-red-soft:   rgba(232,64,28,0.10);
-      --brand-red-border: rgba(232,64,28,0.25);
+      --brand-red:        #d00019;
+      --brand-red-hover:  #d00019;
+      --brand-red-soft:   rgba(208,0,25,0.10);
+      --brand-red-border: rgba(208,0,25,0.25);
       --line-1: #ebe9e4;
       --line-2: #d6d3cd;
       --shadow-1: 0 1px 2px rgba(28,24,20,0.04);
       --shadow-2: 0 4px 16px rgba(28,24,20,0.06);
       --shadow-3: 0 12px 32px rgba(28,24,20,0.10);
-      --shadow-red: 0 8px 24px rgba(232,64,28,0.18);
+      --shadow-red: 0 8px 24px rgba(208,0,25,0.18);
       --font-display: 'Bebas Neue','Oswald',sans-serif;
       --font-body:    'DM Sans',system-ui,sans-serif;
       --font-label:   'Syne','DM Sans',sans-serif;
       --font-mono:    'DM Mono','JetBrains Mono',monospace;
       --ease: cubic-bezier(.2,.7,.2,1);
     }
+    html{scroll-behavior:smooth;scroll-padding-top:72px}
     html,body{background:var(--bg-page);color:var(--fg-1);font-family:var(--font-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
     a{color:inherit;text-decoration:none}
     button{font-family:inherit;cursor:pointer}
@@ -43,12 +44,14 @@
     @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-33.333%)}}
 
     /* ── NAV ── */
-    .nav-bar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-1);padding:0 clamp(20px,4vw,48px);height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .nav-bar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-1);padding:0 clamp(20px,4vw,48px);height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    body{padding-top:72px}
     .nav-logo{font-family:var(--font-display);font-size:26px;letter-spacing:0.06em;color:var(--fg-1);line-height:1;user-select:none}
     .nav-logo span{color:var(--brand-red)}
     .nav-links{display:flex;gap:4px;flex:1;justify-content:center;overflow:hidden}
     .nav-links a{display:inline-flex;align-items:center;padding:8px 13px;border-radius:10px;font-family:var(--font-label);font-weight:700;font-size:12px;letter-spacing:0.05em;color:var(--fg-2);white-space:nowrap;transition:all 120ms var(--ease);border:1px solid transparent}
     .nav-links a:hover{background:var(--bg-subtle);color:var(--fg-1)}
+    .nav-links a.nav-active{color:var(--brand-red);background:var(--brand-red-soft);border-color:var(--brand-red-border)}
     .nav-links a.nav-cta{background:var(--brand-red);color:#fff;border-color:var(--brand-red);padding:9px 18px}
     .nav-links a.nav-cta:hover{background:var(--brand-red-hover);box-shadow:var(--shadow-red)}
     .nav-toggle{display:none;background:none;border:none;padding:8px;color:var(--fg-1);align-items:center;justify-content:center}
@@ -64,11 +67,11 @@
     /* ── HERO ── */
     .hero{position:relative;min-height:clamp(560px,78vh,760px);overflow:hidden;background:var(--fg-1)}
     .hero-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;z-index:0}
-    .hero-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,0.97) 0%,rgba(255,255,255,0.92) 32%,rgba(255,255,255,0.55) 56%,rgba(255,255,255,0.05) 100%),linear-gradient(180deg,rgba(255,255,255,0.10) 0%,rgba(255,255,255,0) 25%,rgba(0,0,0,0.18) 100%);z-index:1}
+    .hero-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,0.99) 0%,rgba(255,255,255,0.90) 18%,rgba(255,255,255,0.55) 34%,rgba(255,255,255,0.10) 40%,rgba(255,255,255,0.00) 100%),linear-gradient(180deg,rgba(255,255,255,0.10) 0%,rgba(255,255,255,0) 25%,rgba(0,0,0,0.18) 100%);z-index:1}
     .hero-num{position:absolute;font-family:var(--font-display);line-height:1;letter-spacing:-0.02em;color:transparent;pointer-events:none;user-select:none}
     .hero-num-left{font-size:clamp(18rem,32vw,30rem);left:clamp(-2vw,-1vw,0);top:50%;transform:translateY(-50%);-webkit-text-stroke:1px rgba(28,24,20,0.08);z-index:1}
     .hero-num-right{font-size:clamp(20rem,38vw,36rem);right:-3vw;top:52%;transform:translateY(-50%);-webkit-text-stroke:1px var(--line-1);z-index:0}
-    .hero-content-wrap{position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:clamp(60px,10vw,112px) clamp(20px,4vw,48px) clamp(80px,10vw,128px);min-height:inherit;display:flex;align-items:center}
+    .hero-content-wrap{position:relative;z-index:2;width:100%;padding:clamp(60px,10vw,112px) clamp(20px,4vw,48px) clamp(80px,10vw,128px) clamp(16px,3vw,32px);min-height:inherit;display:flex;align-items:center;justify-content:flex-start}
     .hero-content{max-width:640px}
     .hero-tag{display:inline-flex;align-items:center;gap:8px;background:var(--brand-red-soft);border:1px solid var(--brand-red-border);color:var(--brand-red);padding:6px 14px;border-radius:999px;font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:28px}
     .hero-tag-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);animation:pulse 1.5s infinite;flex-shrink:0}
@@ -78,7 +81,7 @@
     .hero-line-2 .accent{color:var(--brand-red)}
     .hero-line-2 .est{font-family:var(--font-mono);font-size:0.18em;letter-spacing:0.1em;color:var(--fg-3);text-transform:uppercase;font-weight:400;transform:translateY(-0.5em)}
     .hero-line-3{display:block;-webkit-text-stroke:2px var(--fg-1);color:transparent}
-    .hero-desc{font-family:var(--font-body);font-size:17px;color:var(--fg-2);line-height:1.65;max-width:500px;margin:0 0 36px}
+    .hero-desc{font-family:var(--font-body);font-size:17px;color:var(--fg-1);line-height:1.65;max-width:500px;margin:0 0 36px}
     .hero-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
     .hero-trust{display:flex;gap:32px;margin-top:48px;flex-wrap:wrap}
     .hero-trust-item{display:flex;align-items:center;gap:10px}
@@ -102,15 +105,16 @@
     .ticker-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);flex-shrink:0}
 
     /* ── SHARED SECTION ── */
-    .section{padding:clamp(64px,8vw,96px) clamp(20px,4vw,48px)}
+    .section{padding:clamp(64px,8vw,96px) clamp(20px,4vw,48px);border-top:1px solid var(--line-2);box-shadow:0 -12px 40px rgba(28,24,20,0.18)}
     .section-light{background:var(--bg-page)}
-    .section-panel{background:var(--bg-panel);border-top:1px solid var(--line-1);border-bottom:1px solid var(--line-1)}
+    .section-panel{background:var(--bg-subtle);border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);box-shadow:0 -12px 40px rgba(28,24,20,0.20),0 12px 40px rgba(28,24,20,0.20)}
+    #services.section-panel{box-shadow:inset 32px 0 48px -24px rgba(0,0,0,0.07),inset -32px 0 48px -24px rgba(0,0,0,0.07)}
     .inner{max-width:1280px;margin:0 auto}
     .eyebrow{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--brand-red)}
     .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:32px;flex-wrap:wrap}
     .section-head h2{font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);letter-spacing:0.03em;line-height:1;margin:8px 0 8px;color:var(--fg-1);text-transform:uppercase}
     .section-head h2 .accent{color:var(--brand-red)}
-    .section-head p{font-family:var(--font-body);font-size:15px;color:var(--fg-2);max-width:540px;line-height:1.6;margin:0}
+    .section-head p{font-family:var(--font-body);font-size:15px;color:var(--fg-1);max-width:540px;line-height:1.6;margin:0}
     .section-action a{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--brand-red);white-space:nowrap}
     .section-action a:hover{text-decoration:underline}
 
@@ -126,9 +130,9 @@
     .about-text h2{font-family:var(--font-display);font-size:clamp(2.5rem,4.5vw,4rem);letter-spacing:0.02em;line-height:0.95;margin:12px 0 24px;text-transform:uppercase;color:var(--fg-1)}
     .about-text h2 .accent{color:var(--brand-red)}
     .about-text h2 .outline{-webkit-text-stroke:2px var(--fg-1);color:transparent}
-    .about-text p{font-family:var(--font-body);font-size:16px;color:var(--fg-2);line-height:1.7;max-width:520px;margin:0 0 16px}
-    .about-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line-1);margin-top:8px}
-    .about-stat{padding:24px 16px 0;border-right:1px solid var(--line-1)}
+    .about-text p{font-family:var(--font-body);font-size:16px;color:var(--fg-1);line-height:1.7;max-width:520px;margin:0 0 16px}
+    .about-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:2px solid var(--line-2);margin-top:8px}
+    .about-stat{padding:24px 16px 0;border-right:2px solid var(--line-2)}
     .about-stat:last-child{border-right:none}
     .about-stat .num{font-family:var(--font-display);font-size:clamp(2.5rem,4vw,3.5rem);line-height:1;letter-spacing:0.02em;color:var(--fg-1)}
     .about-stat .num .accent{color:var(--brand-red)}
@@ -138,7 +142,7 @@
     .services-featured{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px;margin-bottom:16px}
     .svc-featured{background:var(--fg-1);color:#fff;border-radius:16px;padding:32px;display:flex;flex-direction:column;justify-content:space-between;gap:32px;position:relative;overflow:hidden;min-height:280px}
     .svc-featured-bg{position:absolute;right:-40px;bottom:-40px;opacity:0.18;pointer-events:none;color:var(--brand-red)}
-    .svc-hot-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(232,64,28,0.18);color:#ffb19a;padding:4px 12px;border-radius:999px;font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:16px}
+    .svc-hot-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(208,0,25,0.18);color:#ffb19a;padding:4px 12px;border-radius:999px;font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:16px}
     .svc-featured-title{font-family:var(--font-display);font-size:44px;letter-spacing:0.03em;line-height:1;margin:0}
     .svc-featured-title .accent{color:var(--brand-red)}
     .svc-featured-desc{font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,0.75);line-height:1.6;max-width:340px;margin:0 0 16px}
@@ -146,25 +150,32 @@
     .svc-price-from{font-family:var(--font-label);font-size:11px;color:rgba(255,255,255,0.5)}
     .svc-price{font-family:var(--font-display);font-size:32px;letter-spacing:0.02em;color:#fff}
 
-    .service-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:10px;transition:all 160ms var(--ease)}
-    .service-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-2)}
-    .service-card.hidden{display:none}
+    .service-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:18px;display:none;flex-direction:column;gap:8px;transition:all 160ms var(--ease);box-shadow:0 6px 24px rgba(28,24,20,0.35),0 2px 6px rgba(28,24,20,0.15)}
+    .service-card:hover{border-color:var(--line-2);box-shadow:0 16px 48px rgba(28,24,20,0.45),0 4px 12px rgba(28,24,20,0.20)}
+    #allServices[data-page="1"] .service-card:nth-child(-n+5){display:flex}
+    #allServices[data-page="2"] .service-card:nth-child(n+6):nth-child(-n+10){display:flex}
+    #allServices[data-page="3"] .service-card:nth-child(n+11):nth-child(-n+15){display:flex}
+    #allServices[data-page="4"] .service-card:nth-child(n+16):nth-child(-n+20){display:flex}
     .svc-icon{width:44px;height:44px;border-radius:10px;background:var(--brand-red-soft);color:var(--brand-red);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
     .svc-name{font-family:var(--font-display);font-size:22px;letter-spacing:0.04em;color:var(--fg-1)}
-    .svc-desc{font-family:var(--font-body);font-size:14px;color:var(--fg-2);line-height:1.55}
-    .services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+    .svc-desc{font-family:var(--font-body);font-size:14px;color:var(--fg-1);line-height:1.55}
+    .services-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+    @media(max-width:1100px){.services-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:700px){.services-grid{grid-template-columns:repeat(2,1fr)}}
+    .svc-img{height:110px;background:var(--bg-subtle);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--brand-red);margin-bottom:4px}
+    .svc-cat{font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--fg-3)}
 
     /* Pagination */
     .pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:32px;flex-wrap:wrap}
-    .page-btn{height:40px;min-width:40px;padding:0 12px;border-radius:8px;border:1px solid var(--line-1);background:var(--bg-panel);color:var(--fg-3);font-family:var(--font-body);font-weight:600;font-size:14px;transition:all 120ms var(--ease);display:inline-flex;align-items:center;justify-content:center}
-    .page-btn:hover:not(:disabled):not(.active){background:var(--fg-1);color:#fff}
-    .page-btn.active{background:var(--brand-red);border-color:var(--brand-red);color:#fff}
+    .page-btn{height:40px;min-width:40px;padding:0 12px;border-radius:8px;border:1px solid var(--line-1);background:var(--bg-panel);color:var(--fg-3);font-family:var(--font-body);font-weight:600;font-size:14px;transition:all 120ms var(--ease);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(28,24,20,0.18),0 1px 4px rgba(28,24,20,0.10)}
+    .page-btn:hover:not(:disabled):not(.active){background:var(--fg-1);color:#fff;box-shadow:0 8px 24px rgba(28,24,20,0.30),0 2px 6px rgba(28,24,20,0.15)}
+    .page-btn.active{background:var(--brand-red);border-color:var(--brand-red);color:#fff;box-shadow:0 6px 20px rgba(208,0,25,0.40),0 2px 6px rgba(208,0,25,0.20)}
     .page-btn:disabled{opacity:0.3;cursor:not-allowed}
 
     /* ── PRODUCTS ── */
     .products-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-    .product-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:all 160ms var(--ease)}
-    .product-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-2)}
+    .product-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:all 160ms var(--ease);box-shadow:0 6px 24px rgba(28,24,20,0.35),0 2px 6px rgba(28,24,20,0.15)}
+    .product-card:hover{border-color:var(--line-2);box-shadow:0 16px 48px rgba(28,24,20,0.45),0 4px 12px rgba(28,24,20,0.20)}
     .product-img{height:110px;background:var(--bg-subtle);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--fg-3);margin-bottom:4px}
     .product-cat{font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--fg-3)}
     .product-name{font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--fg-1);line-height:1.3}
@@ -178,12 +189,12 @@
     .step-circle{width:60px;height:60px;border-radius:50%;background:var(--bg-panel);border:2px solid var(--brand-red);display:flex;align-items:center;justify-content:center;color:var(--brand-red);box-shadow:var(--shadow-1)}
     .step-num{font-family:var(--font-mono);font-size:11px;letter-spacing:0.18em;color:var(--brand-red);font-weight:600;margin-top:4px}
     .step-title{font-family:var(--font-display);font-size:22px;letter-spacing:0.04em;color:var(--fg-1);text-transform:uppercase}
-    .step-desc{font-family:var(--font-body);font-size:14px;color:var(--fg-2);line-height:1.55}
+    .step-desc{font-family:var(--font-body);font-size:14px;color:var(--fg-1);line-height:1.55}
 
     /* ── TESTIMONIALS ── */
     .testi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
-    .testi-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:18px;transition:all 160ms var(--ease)}
-    .testi-card:hover{box-shadow:var(--shadow-2);border-color:var(--line-2)}
+    .testi-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:18px;transition:all 160ms var(--ease);box-shadow:0 6px 24px rgba(28,24,20,0.35),0 2px 6px rgba(28,24,20,0.15)}
+    .testi-card:hover{box-shadow:0 16px 48px rgba(28,24,20,0.45),0 4px 12px rgba(28,24,20,0.20);border-color:var(--line-2)}
     .testi-stars{display:flex;gap:2px}
     .testi-text{font-family:var(--font-body);font-size:15px;color:var(--fg-1);line-height:1.6;font-style:italic;flex:1}
     .testi-footer{display:flex;align-items:center;gap:12px;padding-top:16px;border-top:1px solid var(--line-1)}
@@ -193,20 +204,20 @@
 
     /* ── CONTACT ── */
     .contact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
-    .contact-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;gap:16px;transition:all 160ms var(--ease)}
-    .contact-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-2)}
+    .contact-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;gap:16px;transition:all 160ms var(--ease);box-shadow:0 6px 24px rgba(28,24,20,0.35),0 2px 6px rgba(28,24,20,0.15)}
+    .contact-card:hover{border-color:var(--line-2);box-shadow:0 16px 48px rgba(28,24,20,0.45),0 4px 12px rgba(28,24,20,0.20)}
     .contact-icon{width:44px;height:44px;border-radius:10px;background:var(--brand-red-soft);color:var(--brand-red);display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .contact-lbl{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--brand-red)}
     .contact-val{font-family:var(--font-body);font-size:15px;color:var(--fg-1);margin-top:4px;line-height:1.55}
 
     /* ── FEEDBACK ── */
     .feedback-wrap{max-width:720px;margin:0 auto}
-    .feedback-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:32px}
+    .feedback-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:32px;box-shadow:0 6px 24px rgba(28,24,20,0.35),0 2px 6px rgba(28,24,20,0.15)}
     .form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .form-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
     .form-label{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-2)}
     .form-input,.form-select,.form-textarea{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:10px;padding:11px 14px;font-family:var(--font-body);font-size:14px;color:var(--fg-1);outline:none;width:100%;transition:border-color 120ms var(--ease),box-shadow 120ms var(--ease)}
-    .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(232,64,28,0.10)}
+    .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(208,0,25,0.10)}
     .form-input::placeholder,.form-textarea::placeholder{color:var(--fg-3)}
     .form-textarea{resize:vertical;min-height:80px}
     .form-select{appearance:none;cursor:pointer}
@@ -223,7 +234,7 @@
     .cta-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.18;filter:grayscale(20%)}
     .cta-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(28,24,20,0.96) 0%,rgba(28,24,20,0.78) 50%,rgba(28,24,20,0.92) 100%)}
     .cta-inner{position:relative;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1.2fr 0.8fr;gap:48px;align-items:center}
-    .cta-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(232,64,28,0.15);border:1px solid rgba(232,64,28,0.35);color:#ff9a82;padding:6px 14px;border-radius:999px;font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:24px}
+    .cta-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(208,0,25,0.15);border:1px solid rgba(208,0,25,0.35);color:#ff9a82;padding:6px 14px;border-radius:999px;font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:24px}
     .cta-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);animation:pulse 1.5s infinite;flex-shrink:0}
     .cta-section h2{font-family:var(--font-display);font-size:clamp(2.75rem,6vw,5.5rem);line-height:0.92;letter-spacing:0.02em;margin:0 0 24px;color:#fff;text-transform:uppercase}
     .cta-section h2 .accent{color:var(--brand-red)}
@@ -275,17 +286,18 @@
 
 <!-- NAV -->
 <nav class="nav-bar">
-  <a class="nav-logo" href="/">MOTO<span>TYRE</span></a>
+  <span class="nav-logo">MOTO<span>TYRE</span></span>
   <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
     <i data-lucide="menu" style="width:22px;height:22px"></i>
   </button>
   <div class="nav-links" id="navLinks">
-    <a href="#about">About</a>
-    <a href="#products">Products</a>
-    <a href="#services">Services</a>
-    <a href="#how">How It Works</a>
-    <a href="#contact">Contact</a>
-    <a href="#feedback">Feedback</a>
+    <a href="#" onclick="setNavActive(this);window.scrollTo({top:0,behavior:'smooth'});return false;">Home</a>
+    <a href="#about" onclick="setNavActive(this)">About</a>
+    <a href="#products" onclick="setNavActive(this)">Products</a>
+    <a href="#services" onclick="setNavActive(this)">Services</a>
+    <a href="#how" onclick="setNavActive(this)">How It Works</a>
+    <a href="#contact" onclick="setNavActive(this)">Contact</a>
+    <a href="#feedback" onclick="setNavActive(this)">Feedback</a>
     <a href="{{ url_for('login') }}" class="nav-cta">Sign In →</a>
   </div>
   <div class="nav-overlay" id="navOverlay"></div>
@@ -295,8 +307,6 @@
 <section class="hero">
   <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="" aria-hidden="true" class="hero-bg-img">
   <div class="hero-scrim" aria-hidden="true"></div>
-  <div class="hero-num hero-num-left" aria-hidden="true">01</div>
-  <div class="hero-num hero-num-right" aria-hidden="true">01</div>
 
   <div class="hero-content-wrap">
     <div class="hero-content">
@@ -319,37 +329,11 @@
         <a href="{{ url_for('register') }}" class="btn-primary">
           Book Service Now <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
         </a>
-        <a href="#how" class="btn-ghost">
-          <i data-lucide="play-circle" style="width:18px;height:18px"></i>
-          How it works
-        </a>
-      </div>
-      <div class="hero-trust">
-        <div class="hero-trust-item">
-          <div class="trust-icon"><i data-lucide="star" style="width:16px;height:16px"></i></div>
-          <div><div class="trust-title">4.9 / 5</div><div class="trust-sub">120+ reviews</div></div>
-        </div>
-        <div class="hero-trust-item">
-          <div class="trust-icon"><i data-lucide="shield-check" style="width:16px;height:16px"></i></div>
-          <div><div class="trust-title">OEM Parts</div><div class="trust-sub">IRC · Motul · Brembo</div></div>
-        </div>
-        <div class="hero-trust-item">
-          <div class="trust-icon"><i data-lucide="truck" style="width:16px;height:16px"></i></div>
-          <div><div class="trust-title">Same-day</div><div class="trust-sub">Most services</div></div>
-        </div>
       </div>
     </div>
   </div>
 
   <!-- Floating badges -->
-  <div class="hero-badge hero-badge-top">
-    <div class="badge-label">
-      <i data-lucide="users" style="width:13px;height:13px;color:var(--brand-red)"></i>
-      HAPPY RIDERS
-    </div>
-    <div class="badge-num">500+</div>
-    <div class="badge-sub">and counting</div>
-  </div>
   <div class="hero-badge hero-badge-bottom">
     <div class="badge-label">
       <i data-lucide="map-pin" style="width:14px;height:14px;color:var(--brand-red)"></i>
@@ -360,12 +344,8 @@
 </section>
 
 <!-- TICKER -->
-<div class="ticker">
-  <div class="ticker-inner" id="tickerInner"></div>
-</div>
-
 <!-- ABOUT -->
-<section class="section section-light" id="about">
+<section class="section section-light" id="about" style="border-top:2px solid var(--line-2);box-shadow:inset 0 8px 32px rgba(28,24,20,0.22), inset 0 2px 8px rgba(28,24,20,0.16)">
   <div class="inner">
     <div class="about-grid">
       <div class="about-img-wrap">
@@ -419,142 +399,119 @@
         <h2>OUR <span class="accent">SERVICES</span></h2>
         <p>From routine maintenance to full tire replacements — we keep your motorcycle running at its best.</p>
       </div>
-      <div class="section-action">
-        <a href="{{ url_for('login') }}">View all 18 services <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
-      </div>
-    </div>
-
-    <!-- Featured row -->
-    <div class="services-featured">
-      <div class="svc-featured">
-        <i data-lucide="circle-dot" class="svc-featured-bg" style="width:220px;height:220px"></i>
-        <div style="position:relative">
-          <div class="svc-hot-tag">
-            <i data-lucide="flame" style="width:11px;height:11px"></i> MOST BOOKED
-          </div>
-          <h3 class="svc-featured-title">TIRE<br><span class="accent">FITTING</span></h3>
-        </div>
-        <div style="position:relative">
-          <p class="svc-featured-desc">IRC, Pirelli, FDR. Pro install with proper balancing — under 45 minutes, no appointments needed.</p>
-          <div class="svc-price-row">
-            <span class="svc-price-from">FROM</span>
-            <span class="svc-price">₱350</span>
-          </div>
-        </div>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="droplet" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">OIL CHANGE</div>
-        <p class="svc-desc">Fresh engine oil and filter replacement to keep your engine smooth and well-protected.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="settings-2" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">TUNE-UP</div>
-        <p class="svc-desc">Spark plug replacement, air filter check, and full engine performance tuning.</p>
-      </div>
     </div>
 
     <!-- Full service list (paginated) -->
-    <div class="services-grid" id="allServices">
+    <div class="services-grid" id="allServices" data-page="1">
       <div class="service-card">
-        <div class="svc-icon"><i data-lucide="zap" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">FI CLEANING</div>
-        <p class="svc-desc">Fuel injector cleaning for better throttle response, fuel efficiency, and smoother acceleration.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="rotate-cw" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">THROTTLE BODY CLEANING</div>
-        <p class="svc-desc">Remove carbon buildup from the throttle body to restore smooth idle and engine performance.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="settings-2" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">TUNE-UP</div>
-        <p class="svc-desc">Spark plug replacement, air filter check, and full engine performance tuning for optimal ride.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="anchor" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">BALL RACE INSTALLATION</div>
-        <p class="svc-desc">Proper installation of steering head ball bearings for stable and smooth handlebar control.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="git-branch" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">GENERAL REWIRING</div>
-        <p class="svc-desc">Full electrical system inspection and rewiring to fix shorts, faulty connections, and lighting issues.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="gauge" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">CVT UPGRADE</div>
-        <p class="svc-desc">Upgrade your CVT components for improved acceleration, top speed, and overall scooter performance.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="wind" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">CVT CLEANING</div>
-        <p class="svc-desc">Deep cleaning of the CVT belt and pulley system to prevent slipping and extend component life.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="cpu" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">DIAGNOSTIC SERVICES</div>
-        <p class="svc-desc">Advanced ECU scanning using API Tech / MST tools to accurately identify and resolve error codes.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="sliders-vertical" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">SUSPENSION TUNING</div>
-        <p class="svc-desc">Front fork and rear shock adjustment or replacement for a smoother, more controlled ride.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="wrench" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">FULL OVERHAUL</div>
-        <p class="svc-desc">Complete engine disassembly, inspection, and rebuild — restoring your motorcycle to peak condition.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="layers" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">TOP OVERHAUL</div>
-        <p class="svc-desc">Cylinder head reconditioning including valve lapping, piston ring replacement, and gasket renewal.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="octagon-alert" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">BRAKE CLEANING</div>
-        <p class="svc-desc">Thorough cleaning of brake calipers, discs, and drums to maintain safe and consistent stopping power.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="cpu" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">ECU REMAPPING</div>
-        <p class="svc-desc">Custom ECU tune to optimize fuel maps, ignition timing, and throttle response for your setup.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="droplet" style="width:22px;height:22px"></i></div>
+        <div class="svc-img"><i data-lucide="droplet" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Maintenance</div>
         <div class="svc-name">OIL CHANGE</div>
-        <p class="svc-desc">Fresh engine oil and filter replacement to keep your engine smooth, cool, and well-protected.</p>
       </div>
       <div class="service-card">
-        <div class="svc-icon"><i data-lucide="volume-2" style="width:22px;height:22px"></i></div>
+        <div class="svc-img"><i data-lucide="settings-2" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Maintenance</div>
+        <div class="svc-name">TUNE-UP</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="zap" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Fuel System</div>
+        <div class="svc-name">FI CLEANING</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="rotate-cw" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Fuel System</div>
+        <div class="svc-name">THROTTLE BODY CLEANING</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Tires</div>
+        <div class="svc-name">TIRE FITTING</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="anchor" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Steering</div>
+        <div class="svc-name">BALL RACE INSTALLATION</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="git-branch" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Electrical</div>
+        <div class="svc-name">GENERAL REWIRING</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="gauge" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Transmission</div>
+        <div class="svc-name">CVT UPGRADE</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="wind" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Transmission</div>
+        <div class="svc-name">CVT CLEANING</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="cpu" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Diagnostics</div>
+        <div class="svc-name">DIAGNOSTIC SERVICES</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="sliders-vertical" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Suspension</div>
+        <div class="svc-name">SUSPENSION TUNING</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="wrench" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Engine</div>
+        <div class="svc-name">FULL OVERHAUL</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="layers" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Engine</div>
+        <div class="svc-name">TOP OVERHAUL</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="octagon-alert" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Brakes</div>
+        <div class="svc-name">BRAKE CLEANING</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="cpu" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Electronics</div>
+        <div class="svc-name">ECU REMAPPING</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="volume-2" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Electrical</div>
         <div class="svc-name">HORN INSTALLATION</div>
-        <p class="svc-desc">Quick and clean installation of aftermarket or OEM horns with full electrical testing.</p>
       </div>
       <div class="service-card">
-        <div class="svc-icon"><i data-lucide="link-2" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">RUBBER LINK STOPPER INSTALLATION</div>
-        <p class="svc-desc">Installation of rubber link stoppers to reduce chain noise and protect your swingarm from wear.</p>
+        <div class="svc-img"><i data-lucide="link-2" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Drivetrain</div>
+        <div class="svc-name">RUBBER LINK STOPPER</div>
       </div>
       <div class="service-card">
-        <div class="svc-icon"><i data-lucide="disc" style="width:22px;height:22px"></i></div>
+        <div class="svc-img"><i data-lucide="disc" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Brakes</div>
         <div class="svc-name">BRAKE PAD REPLACEMENT</div>
-        <p class="svc-desc">High-quality brake pad replacement for both front and rear to ensure maximum stopping power.</p>
       </div>
       <div class="service-card">
-        <div class="svc-icon"><i data-lucide="bike" style="width:22px;height:22px"></i></div>
+        <div class="svc-img"><i data-lucide="battery-charging" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Electrical</div>
+        <div class="svc-name">BATTERY REPLACEMENT</div>
+      </div>
+      <div class="service-card">
+        <div class="svc-img"><i data-lucide="bike" style="width:40px;height:40px"></i></div>
+        <div class="svc-cat">Maintenance</div>
         <div class="svc-name">FULL MAINTENANCE PACKAGE</div>
-        <p class="svc-desc">All-in-one maintenance package covering oil, brakes, chain, filters, and a full mechanical inspection.</p>
       </div>
     </div>
 
-    <div class="pagination">
-      <button class="page-btn" id="prevPage">←</button>
-      <button class="page-btn active" data-page="1">1</button>
-      <button class="page-btn" data-page="2">2</button>
-      <button class="page-btn" data-page="3">3</button>
-      <button class="page-btn" data-page="4">4</button>
-      <button class="page-btn" id="nextPage">→</button>
+    <div class="pagination" id="svcPagination">
+      <button class="page-btn" onclick="svcGo(svcPage-1)">←</button>
+      <button class="page-btn active" onclick="svcGo(1)">1</button>
+      <button class="page-btn" onclick="svcGo(2)">2</button>
+      <button class="page-btn" onclick="svcGo(3)">3</button>
+      <button class="page-btn" onclick="svcGo(4)">4</button>
+      <button class="page-btn" onclick="svcGo(svcPage+1)">→</button>
     </div>
   </div>
 </section>
@@ -569,7 +526,7 @@
         <p>Quality motorcycle parts, tires, and accessories — hand-picked for durability, performance, and rider safety.</p>
       </div>
       <div class="section-action">
-        <a href="{{ url_for('login') }}">View All <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        <a href="{{ url_for('products') }}">View All <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
       </div>
     </div>
     <div class="products-grid">
@@ -762,7 +719,7 @@
       <h2 style="font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);letter-spacing:0.03em;line-height:1;margin:8px 0 8px;color:var(--fg-1);text-transform:uppercase;">
         SEND US <span style="color:var(--brand-red)">FEEDBACK</span>
       </h2>
-      <p style="font-family:var(--font-body);font-size:15px;color:var(--fg-2);max-width:520px;margin:0 auto;line-height:1.6;">
+      <p style="font-family:var(--font-body);font-size:15px;color:var(--fg-1);max-width:520px;margin:0 auto;line-height:1.6;">
         We'd love to hear about your experience. Your feedback helps us improve our service.
       </p>
     </div>
@@ -831,9 +788,6 @@
       <div class="cta-btns">
         <a href="{{ url_for('register') }}" class="btn-primary">
           Create Free Account <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
-        </a>
-        <a href="tel:09152698366" class="btn-cta-phone">
-          <i data-lucide="phone" style="width:18px;height:18px"></i> 0915 269 8366
         </a>
       </div>
     </div>
@@ -916,37 +870,43 @@
   window.addEventListener('resize', () => { if (window.innerWidth > 900) closeNav(); });
 
   // Smooth scroll
-  document.querySelectorAll('a[href^="#"]').forEach(a => {
-    a.addEventListener('click', e => {
-      const target = document.querySelector(a.getAttribute('href'));
-      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
-    });
-  });
 
   // Services pagination
-  const SERVICES_PER_PAGE = 5;
-  const svcCards = document.querySelectorAll('#allServices .service-card');
-  const pageBtns = document.querySelectorAll('.page-btn[data-page]');
-  const prevBtn = document.getElementById('prevPage');
-  const nextBtn = document.getElementById('nextPage');
-  const totalPages = Math.ceil(svcCards.length / SERVICES_PER_PAGE);
-  let currentPage = 1;
-
-  function showPage(page, scroll) {
-    currentPage = page;
-    const start = (page - 1) * SERVICES_PER_PAGE;
-    const end = start + SERVICES_PER_PAGE;
-    svcCards.forEach((c, i) => c.classList.toggle('hidden', i < start || i >= end));
-    pageBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.page) === page));
-    prevBtn.disabled = page === 1;
-    nextBtn.disabled = page === totalPages;
-    if (scroll) document.getElementById('services').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  var svcPage = 1;
+  function svcGo(page) {
+    if (page < 1 || page > 4) return;
+    svcPage = page;
+    document.getElementById('allServices').dataset.page = page;
+    var btns = document.querySelectorAll('#svcPagination .page-btn');
+    btns[0].disabled = page === 1;
+    btns[5].disabled = page === 4;
+    for (var i = 1; i <= 4; i++) btns[i].classList.toggle('active', i === page);
   }
 
-  pageBtns.forEach(b => b.addEventListener('click', () => showPage(parseInt(b.dataset.page), true)));
-  prevBtn.addEventListener('click', () => { if (currentPage > 1) showPage(currentPage - 1, true); });
-  nextBtn.addEventListener('click', () => { if (currentPage < totalPages) showPage(currentPage + 1, true); });
-  showPage(1, false);
+  // Scrollspy
+  var spyTimer = null;
+  var spyPaused = false;
+  function setNavActive(el) {
+    document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('nav-active'));
+    el.classList.add('nav-active');
+    spyPaused = true;
+    clearTimeout(spyTimer);
+    spyTimer = setTimeout(function(){ spyPaused = false; }, 1000);
+  }
+  var spySections = ['about','services','products','how','contact','feedback']
+    .map(function(id){ return document.getElementById(id); }).filter(Boolean);
+  function updateNav() {
+    if (spyPaused) return;
+    var current = spySections[0];
+    spySections.forEach(function(s){
+      if (s.getBoundingClientRect().top <= 100) current = s;
+    });
+    document.querySelectorAll('.nav-links a[href^="#"]').forEach(function(a){
+      a.classList.toggle('nav-active', a.getAttribute('href') === '#' + current.id);
+    });
+  }
+  window.addEventListener('scroll', updateNav, { passive: true });
+  updateNav();
 
   // Fade-in on scroll
   const io = new IntersectionObserver(entries => {
@@ -954,7 +914,7 @@
       if (e.isIntersecting) { e.target.style.opacity='1'; e.target.style.transform='translateY(0)'; }
     });
   }, { threshold: 0.08 });
-  document.querySelectorAll('.service-card,.product-card,.step,.testi-card,.contact-card').forEach(el => {
+  document.querySelectorAll('.product-card,.step,.testi-card,.contact-card').forEach(el => {
     el.style.opacity = '0';
     el.style.transform = 'translateY(20px)';
     el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';

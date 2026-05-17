@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -15,7 +15,7 @@
       --sidebar-active: rgba(255,255,255,0.12);
       --ink: #f3f4f6;
       --card: #ffffff;
-      --red: #e8401c;
+      --red: #d00019;
       --blue: #3b82f6;
       --green: #16a34a;
       --warning: #f59e0b;
@@ -60,10 +60,10 @@
     }
     .sidebar-logo span { color: var(--red); }
     .sidebar-badge {
-      background: rgba(232,64,28,0.2); color: var(--red);
+      background: rgba(208,0,25,0.2); color: var(--red);
       font-size: 0.55rem; font-weight: 700; letter-spacing: 0.08em;
       text-transform: uppercase; padding: 0.1rem 0.4rem;
-      border-radius: 3px; border: 1px solid rgba(232,64,28,0.25);
+      border-radius: 3px; border: 1px solid rgba(208,0,25,0.25);
       margin-left: auto; flex-shrink: 0;
     }
 
@@ -289,7 +289,7 @@
     .bar-pending { background: #f59e0b; }
     .bar-confirmed { background: #3b82f6; }
     .bar-completed { background: #16a34a; }
-    .bar-cancelled { background: #e8401c; }
+    .bar-cancelled { background: #d00019; }
     .bar-processing { background: #8b5cf6; }
     .bar-shipped { background: #06b6d4; }
     .bar-green { background: #16a34a; }
@@ -454,7 +454,7 @@
         </div>
         <div style="margin-left:auto;cursor:pointer;position:relative;" onclick="toggleAdminNotifications(event)" title="Notifications">
           <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.85rem;transition:all 0.15s;">🔔</div>
-          <span id="admin-notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:#ff0f0f;color:#fff;font-size:0.6rem;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center;border:2px solid var(--sidebar-bg);">0</span>
+          <span id="admin-notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:#d00019;color:#fff;font-size:0.6rem;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center;border:2px solid var(--sidebar-bg);">0</span>
         </div>
       </div>
     </div>
@@ -1403,7 +1403,7 @@
 
     <!-- Header: ID + status -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
-      <div style="font-weight:800;font-family:inherit;font-size:1.4rem;color:#e8401c;letter-spacing:0.04em;" id="bd-id"></div>
+      <div style="font-weight:800;font-family:inherit;font-size:1.4rem;color:#d00019;letter-spacing:0.04em;" id="bd-id"></div>
       <div id="bd-status"></div>
     </div>
 
@@ -1437,7 +1437,7 @@
         <span style="font-weight:600;font-size:0.82rem;color:var(--green);">💳 Payment</span>
         <span style="font-weight:600;font-size:0.82rem;color:var(--text);" id="bd-payment"></span>
       </div>
-      <div id="bd-total-wrap" style="flex:1;display:none;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(232,64,28,0.08);border:1px solid rgba(232,64,28,0.2);border-radius:8px;">
+      <div id="bd-total-wrap" style="flex:1;display:none;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(208,0,25,0.08);border:1px solid rgba(208,0,25,0.2);border-radius:8px;">
         <span style="font-weight:600;font-size:0.82rem;color:var(--red);">💵 Total</span>
         <span style="font-weight:700;font-size:0.95rem;color:var(--text);" id="bd-total"></span>
       </div>
@@ -1672,7 +1672,7 @@
     </div>
     <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:inherit;font-weight:700;margin-bottom:0.5rem;">Order Items</div>
     <div id="od-items" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1rem;"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem;background:rgba(255,15,15,0.06);border:1px solid rgba(255,15,15,0.2);border-radius:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.2);border-radius:8px;">
       <span style="font-weight:700;font-size:0.85rem;color:var(--text);">Total</span>
       <span style="font-weight:800;font-family:inherit;font-size:1.5rem;color:var(--red);letter-spacing:0.03em;" id="od-total"></span>
     </div>
@@ -1738,7 +1738,7 @@
     <p style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;">This action <strong style="color:var(--red);">cannot be undone</strong>. The customer will be notified.</p>
     <div class="modal-actions" style="justify-content:center;">
       <button class="btn-cancel" onclick="document.getElementById('modal-cancel-booking').style.display='none'">Go Back</button>
-      <button onclick="confirmCancelBooking()" style="padding:0.6rem 1.5rem;background:rgba(232,64,28,0.85);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">✖ Yes, Cancel</button>
+      <button onclick="confirmCancelBooking()" style="padding:0.6rem 1.5rem;background:rgba(208,0,25,0.85);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">✖ Yes, Cancel</button>
     </div>
   </div>
 </div>
@@ -1821,7 +1821,7 @@
       card.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:#f9fafb;border:1px solid var(--border);border-radius:10px;';
       card.innerHTML = `
         <div style="display:flex;align-items:center;gap:0.75rem;">
-          <div style="width:32px;height:32px;border-radius:8px;background:rgba(232,64,28,0.1);display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">🔧</div>
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(208,0,25,0.1);display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">🔧</div>
           <div>
             <div style="font-weight:700;color:var(--text);font-size:0.88rem;">${svc}</div>
             <div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">BKG-${String(ids[i] || ids[0]).padStart(3,'0')}</div>
@@ -2342,7 +2342,7 @@
   <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.07);">
     <div style="font-family:inherit;font-weight:700;font-size:0.95rem;color:#fff;">Notifications</div>
     <div style="display:flex;gap:0.75rem;">
-      <button onclick="adminMarkAllRead()" style="background:none;border:none;color:#ff0f0f;font-family:inherit;font-weight:700;font-size:0.75rem;cursor:pointer;">Mark all read</button>
+      <button onclick="adminMarkAllRead()" style="background:none;border:none;color:#d00019;font-family:inherit;font-weight:700;font-size:0.75rem;cursor:pointer;">Mark all read</button>
       <button onclick="toggleAdminNotifications()" style="background:none;border:none;color:#6b7280;font-size:1.1rem;cursor:pointer;">✕</button>
     </div>
   </div>
@@ -2401,14 +2401,14 @@ function renderAdminNotifications() {
     });
     const div = document.createElement('div');
     div.className = 'admin-notif-item';
-    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(255,15,15,0.05)'};`;
+    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(208,0,25,0.05)'};`;
     div.onclick = () => adminReadNotif(n.id, n);
     div.innerHTML = `
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(255,15,15,0.12);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">${icon}</div>
+      <div style="width:38px;height:38px;border-radius:10px;background:rgba(208,0,25,0.12);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">${icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-family:inherit;font-weight:700;font-size:0.82rem;color:#fff;margin-bottom:0.2rem;display:flex;align-items:center;gap:0.5rem;">
           ${n.title}
-          ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:#ff0f0f;display:inline-block;"></span>' : ''}
+          ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:#d00019;display:inline-block;"></span>' : ''}
         </div>
         <div style="font-size:0.78rem;color:#9ca3af;line-height:1.5;margin-bottom:0.3rem;">${formatStatusInText(n.message)}</div>
         <div style="font-size:0.7rem;color:#4b5563;">${time}</div>

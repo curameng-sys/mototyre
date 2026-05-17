@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -12,7 +12,7 @@
       --ink: #f5f0eb;
       --panel: #ffffff;
       --card: #ffffff;
-      --red: #e8401c;
+      --red: #d00019;
       --muted: #b3aea8;
       --border: #dad5cf;
       --text: #1c1814;
@@ -57,7 +57,7 @@
       border: 1px solid transparent;
     }
     .nav-links a:hover { color: var(--text); background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08); }
-    .nav-links a.active { color: var(--red); background: rgba(232,64,28,0.08); border-color: rgba(232,64,28,0.2); }
+    .nav-links a.active { color: var(--red); background: rgba(208,0,25,0.08); border-color: rgba(208,0,25,0.2); }
 
     .nav-right { display: flex; align-items: center; gap: 0.75rem; }
     .nav-avatar {
@@ -65,13 +65,13 @@
       background: var(--red); display: flex; align-items: center; justify-content: center;
       font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: #fff;
       cursor: pointer; overflow: hidden; flex-shrink: 0;
-      border: 2px solid rgba(232,64,28,0.4); transition: border-color 0.15s;
+      border: 2px solid rgba(208,0,25,0.4); transition: border-color 0.15s;
     }
     .nav-avatar:hover { border-color: var(--red); }
     .nav-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
     .nav-username { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--text); white-space: nowrap; }
     .nav-logout-btn {
-      background: rgba(232,64,28,0.1); border: 1px solid rgba(232,64,28,0.3);
+      background: rgba(208,0,25,0.1); border: 1px solid rgba(208,0,25,0.3);
       color: var(--red); padding: 0.5rem 1.1rem; border-radius: 8px;
       font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
       cursor: pointer; transition: all 0.15s; white-space: nowrap;
@@ -96,7 +96,7 @@
     .hero-banner::before {
       content: ''; position: absolute; top: -60px; right: -60px;
       width: 240px; height: 240px;
-      background: radial-gradient(circle, rgba(232,64,28,0.08) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(208,0,25,0.08) 0%, transparent 70%);
       pointer-events: none;
     }
     .hero-banner::after {
@@ -115,7 +115,7 @@
       cursor: pointer; border: none; transition: all 0.2s; text-decoration: none;
     }
     .hero-btn.primary { background: var(--red); color: #fff; }
-    .hero-btn.primary:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(232,64,28,0.3); }
+    .hero-btn.primary:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(208,0,25,0.3); }
     .hero-btn.secondary { background: rgba(0,0,0,0.05); color: var(--text); border: 1px solid rgba(0,0,0,0.1); }
     .hero-btn.secondary:hover { background: rgba(0,0,0,0.09); transform: translateY(-2px); }
     .hero-bike { font-size: 6rem; opacity: 0.06; position: absolute; right: 2rem; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; }
@@ -129,7 +129,7 @@
     }
     .stat-card:hover { border-color: rgba(0,0,0,0.15); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
     .stat-icon-wrap { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem; }
-    .stat-icon-wrap.red { background: rgba(232,64,28,0.15); }
+    .stat-icon-wrap.red { background: rgba(208,0,25,0.15); }
     .stat-icon-wrap.blue { background: rgba(29,78,216,0.15); }
     .stat-icon-wrap.green { background: rgba(21,128,61,0.15); }
     .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--text); line-height: 1; margin-bottom: 0.25rem; }
@@ -162,7 +162,7 @@
     .quick-card.orange::after { background: #f97316; }
     .quick-card:hover { border-color: rgba(0,0,0,0.15); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
     .quick-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
-    .quick-icon.red { background: rgba(232,64,28,0.15); }
+    .quick-icon.red { background: rgba(208,0,25,0.15); }
     .quick-icon.blue { background: rgba(29,78,216,0.15); }
     .quick-icon.green { background: rgba(21,128,61,0.15); }
     .quick-icon.orange { background: rgba(249,115,22,0.15); }
@@ -202,13 +202,13 @@
     .form-group { margin-bottom: 1.1rem; }
     .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.4rem; font-family: 'Syne', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; background: #ffffff; border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.15s; outline: none; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(232,64,28,0.08); }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(208,0,25,0.08); }
     .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
     .profile-field-hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
     .form-group select option { background: #ffffff; color: var(--text); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
     .btn-submit { background: var(--red); color: #fff; border: none; padding: 0.7rem 1.75rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.5rem; }
-    .btn-submit:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,64,28,0.3); }
+    .btn-submit:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(208,0,25,0.3); }
     .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
     /* ── EMPTY ── */
@@ -226,7 +226,7 @@
     .product-cat { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
     .product-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--red); }
     .product-stock { font-size: 0.75rem; color: #6b7280; }
-    .btn-order { margin-top: auto; background: rgba(232,64,28,0.12); border: 1px solid rgba(232,64,28,0.25); color: var(--red); padding: 0.55rem 1rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; width: 100%; }
+    .btn-order { margin-top: auto; background: rgba(208,0,25,0.12); border: 1px solid rgba(208,0,25,0.25); color: var(--red); padding: 0.55rem 1rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; width: 100%; }
     .btn-order:hover { background: var(--red); color: #fff; }
 
     /* ── CALENDAR ── */
@@ -242,7 +242,7 @@
     .cal-day.fully-booked { background: #374151; border-color: #6b7280; color: #9ca3af; }
     .cal-day.selected { background: #111111 !important; border-color: #111111 !important; color: #ffffff !important; font-weight: 700; }
     .time-slot-btn { background: #f8f9fa; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 0.5rem 0.25rem; font-size: 0.78rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
-    .time-slot-btn:hover:not(:disabled) { background: rgba(232,64,28,0.12); border-color: rgba(232,64,28,0.3); color: var(--red); }
+    .time-slot-btn:hover:not(:disabled) { background: rgba(208,0,25,0.12); border-color: rgba(208,0,25,0.3); color: var(--red); }
     .time-slot-btn.booked { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
     .time-slot-btn.selected-slot { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
 
@@ -304,7 +304,7 @@
       transition: all 0.15s;
     }
     .mobile-nav-menu a:hover, .mobile-nav-menu a.active {
-      color: var(--red); background: rgba(232,64,28,0.08);
+      color: var(--red); background: rgba(208,0,25,0.08);
     }
 
     @media (max-width: 768px) {
@@ -559,7 +559,7 @@
       <div class="card-body" style="padding:1rem;">
         <div class="cal-legend">
           <span><span class="cal-legend-dot" style="background:rgba(21,128,61,0.4);border:1px solid rgba(21,128,61,0.5);"></span>Available</span>
-          <span><span class="cal-legend-dot" style="background:rgba(232,64,28,0.3);border:1px solid rgba(232,64,28,0.4);"></span>Fully Booked</span>
+          <span><span class="cal-legend-dot" style="background:rgba(208,0,25,0.3);border:1px solid rgba(208,0,25,0.4);"></span>Fully Booked</span>
           <span><span class="cal-legend-dot" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);"></span>Holiday / Closed</span>
           <span><span class="cal-legend-dot" style="background:var(--red);"></span>Selected</span>
         </div>
@@ -578,7 +578,7 @@
       <div class="card-head">
         <h5>Booking Details</h5>
         <!-- Queue counter badge -->
-        <div id="queue-badge-wrap" style="display:none;background:rgba(232,64,28,0.15);border:1px solid rgba(232,64,28,0.3);border-radius:8px;padding:0.3rem 0.75rem;font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:var(--red);">
+        <div id="queue-badge-wrap" style="display:none;background:rgba(208,0,25,0.15);border:1px solid rgba(208,0,25,0.3);border-radius:8px;padding:0.3rem 0.75rem;font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:var(--red);">
           <span id="queue-count">0</span> in queue
         </div>
       </div>
@@ -721,7 +721,7 @@
   <section id="sec-shop" class="c-section" style="padding-left: 0.5rem; padding-right: 0.5rem;">
     <div class="section-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
       <div><div class="section-title">ORDER <span>PARTS</span></div><div class="section-sub">Browse available motorcycle parts and accessories.</div></div>
-      <button onclick="openCart()" style="position:relative;display:flex;align-items:center;gap:0.5rem;background:var(--red);border:none;color:#fff;padding:0.55rem 1.1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#c73418'" onmouseout="this.style.background='var(--red)'">
+      <button onclick="openCart()" style="position:relative;display:flex;align-items:center;gap:0.5rem;background:var(--red);border:none;color:#fff;padding:0.55rem 1.1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#a8001a'" onmouseout="this.style.background='var(--red)'">
         🛒 Cart
         <span id="cart-badge" style="display:none;position:absolute;top:-7px;right:-7px;background:#fff;color:var(--red);font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:800;border-radius:50%;width:18px;height:18px;align-items:center;justify-content:center;border:2px solid var(--red);">0</span>
       </button>
@@ -881,7 +881,7 @@
 
     <!-- Schedule Info -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
-      <div style="padding:1rem;background:rgba(232,64,28,0.08);border:1px solid rgba(232,64,28,0.2);border-radius:10px;text-align:center;">
+      <div style="padding:1rem;background:rgba(208,0,25,0.08);border:1px solid rgba(208,0,25,0.2);border-radius:10px;text-align:center;">
         <div style="font-size:1.5rem;margin-bottom:0.25rem;">📆</div>
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Date</div>
         <div id="bd-date" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;"></div>
@@ -2074,9 +2074,9 @@ function renderNotifications() {
 
     const div = document.createElement('div');
     div.className = 'notif-item';
-    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(232,64,28,0.05)'};transition:background 0.15s;`;
+    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(208,0,25,0.05)'};transition:background 0.15s;`;
     div.onmouseover = () => div.style.background = '#f5f0eb';
-    div.onmouseout  = () => div.style.background = n.is_read ? 'transparent' : 'rgba(232,64,28,0.05)';
+    div.onmouseout  = () => div.style.background = n.is_read ? 'transparent' : 'rgba(208,0,25,0.05)';
     div.onclick     = () => readNotif(n.id, n);
 
     div.innerHTML = `
@@ -2180,7 +2180,7 @@ function renderServiceDropdown(items) {
     `<div onclick="selectService('${s}')"
       style="padding:0.6rem 1rem;cursor:pointer;font-size:0.88rem;color:#e5e7eb;
              transition:background 0.15s;"
-      onmouseover="this.style.background='rgba(255,15,15,0.12)'"
+      onmouseover="this.style.background='rgba(208,0,25,0.12)'"
       onmouseout="this.style.background=''">${s}</div>`
   ).join('');
 }
@@ -2429,7 +2429,7 @@ function openOrderDetails(orderId) {
   const productsList = document.getElementById('od-products-list');
   productsList.innerHTML = order.items.map(item => `
     <div style="display:flex;align-items:center;gap:0.85rem;padding:0.85rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;">
-      <div style="width:44px;height:44px;border-radius:10px;background:rgba(232,64,28,0.12);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🔧</div>
+      <div style="width:44px;height:44px;border-radius:10px;background:rgba(208,0,25,0.12);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🔧</div>
       <div style="flex:1;min-width:0;">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.product_name}</div>
         <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;">${item.category}</div>

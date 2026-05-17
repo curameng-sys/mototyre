@@ -3,688 +3,358 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Products — Mototyre Moto Shop</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Products — MotoTyre</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
-
-    :root {
-      --ink: #0c0d0f;
-      --red: #ff0f0f;
-      --gold: #ff0f0f;
-      --light: #f7f6f2;
-      --muted: #6b7280;
-      --border: #e2e0db;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg-page:#ffffff;
+      --bg-panel:#ffffff;
+      --bg-subtle:#f5f4f2;
+      --fg-1:#1c1814;
+      --fg-2:#5a544d;
+      --fg-3:#908980;
+      --brand-red:#d00019;
+      --brand-red-hover:#a8001a;
+      --brand-red-soft:rgba(208,0,25,0.10);
+      --brand-red-border:rgba(208,0,25,0.25);
+      --line-1:#ebe9e4;
+      --line-2:#d6d3cd;
+      --shadow-1:0 1px 2px rgba(28,24,20,0.04);
+      --shadow-2:0 4px 16px rgba(28,24,20,0.06);
+      --shadow-3:0 12px 32px rgba(28,24,20,0.10);
+      --shadow-red:0 8px 24px rgba(208,0,25,0.18);
+      --font-display:'Bebas Neue','Oswald',sans-serif;
+      --font-body:'DM Sans',system-ui,sans-serif;
+      --font-label:'Syne','DM Sans',sans-serif;
+      --font-mono:'DM Mono','JetBrains Mono',monospace;
+      --ease:cubic-bezier(.2,.7,.2,1);
     }
+    html,body{background:var(--bg-page);color:var(--fg-1);font-family:var(--font-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    a{color:inherit;text-decoration:none}
+    button{font-family:inherit;cursor:pointer}
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--ink);
-      color: #fff;
-      overflow-x: hidden;
-    }
-
-    /* ── NAVBAR ── */
-    .nav-bar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.25rem 4rem;
-      background: rgba(12,13,15,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .nav-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.6rem;
-      letter-spacing: 0.05em;
-      color: #fff;
-      text-decoration: none;
-    }
-
-    .nav-logo span { color: var(--red); }
-
-    .nav-links { display: flex; gap: 2rem; align-items: center; }
-    .nav-links a {
-      color: #9ca3af;
-      text-decoration: none;
-      font-size: 0.875rem;
-      font-weight: 500;
-      transition: color 0.15s;
-      position: relative;
-      padding: 0.35rem 0;
-    }
-    .nav-links a:not(.nav-cta)::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      width: 100%;
-      height: 2px;
-      background: var(--red);
-      transform: scaleX(0);
-      transform-origin: right;
-      transition: transform 0.3s ease;
-    }
-    .nav-links a:not(.nav-cta):hover { color: #fff; }
-    .nav-links a:not(.nav-cta):hover::after {
-      transform: scaleX(1);
-      transform-origin: left;
-    }
-    .nav-links a.active { color: #fff; }
-    .nav-links a.active::after {
-      transform: scaleX(1);
-      transform-origin: left;
-    }
-
-    .nav-cta {
-      background: var(--red);
-      color: #fff !important;
-      padding: 0.5rem 1.25rem;
-      border-radius: 6px;
-      font-weight: 600 !important;
-      transition: all 0.2s ease !important;
-    }
-    .nav-cta:hover {
-      background: #c73418 !important;
-      color: #fff !important;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(255,15,15,0.4);
-    }
-
-    /* Hamburger Button */
-    .nav-toggle {
-      display: none;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      padding: 0.5rem;
-      z-index: 101;
-      width: 40px;
-      height: 40px;
-      position: relative;
-    }
-
-    .nav-toggle span {
-      display: block;
-      position: absolute;
-      left: 8px;
-      right: 8px;
-      height: 2px;
-      background: #fff;
-      border-radius: 2px;
-      transition: all 0.3s ease;
-    }
-
-    .nav-toggle span:nth-child(1) { top: 12px; }
-    .nav-toggle span:nth-child(2) { top: 19px; }
-    .nav-toggle span:nth-child(3) { top: 26px; }
-
-    .nav-toggle.active span:nth-child(1) { top: 19px; transform: rotate(45deg); }
-    .nav-toggle.active span:nth-child(2) { opacity: 0; }
-    .nav-toggle.active span:nth-child(3) { top: 19px; transform: rotate(-45deg); }
+    /* ── NAV ── */
+    .nav-bar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-1);padding:0 clamp(20px,4vw,48px);height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    body{padding-top:72px}
+    .nav-logo{font-family:var(--font-display);font-size:26px;letter-spacing:0.06em;color:var(--fg-1);line-height:1}
+    .nav-logo span{color:var(--brand-red)}
+    .nav-links{display:flex;gap:4px;flex:1;justify-content:center}
+    .nav-links a{display:inline-flex;align-items:center;padding:8px 13px;border-radius:10px;font-family:var(--font-label);font-weight:700;font-size:12px;letter-spacing:0.05em;color:var(--fg-2);white-space:nowrap;transition:all 120ms var(--ease);border:1px solid transparent}
+    .nav-links a:hover{background:var(--bg-subtle);color:var(--fg-1)}
+    .nav-links a.nav-active{color:var(--brand-red);background:var(--brand-red-soft);border-color:var(--brand-red-border)}
+    .nav-links a.active{color:var(--brand-red);border-color:var(--brand-red-border);background:var(--brand-red-soft)}
+    .nav-links a.nav-cta{background:var(--brand-red);color:#fff;border-color:var(--brand-red);padding:9px 18px}
+    .nav-links a.nav-cta:hover{background:var(--brand-red-hover);box-shadow:var(--shadow-red)}
+    .nav-toggle{display:none;background:none;border:none;padding:8px;color:var(--fg-1)}
 
     /* ── PAGE HEADER ── */
-    .page-header {
-      padding: 9rem 4rem 4rem;
-      background: var(--ink);
-      position: relative;
-      overflow: hidden;
-    }
+    .page-hero{position:relative;background:var(--fg-1);padding:clamp(64px,10vw,96px) clamp(20px,4vw,48px);overflow:hidden;border-bottom:1px solid var(--line-2);box-shadow:0 6px 32px rgba(28,24,20,0.18)}
+    .page-hero-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%;z-index:0;opacity:0.35}
+    .page-hero-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(28,24,20,0.95) 0%,rgba(28,24,20,0.75) 60%,rgba(28,24,20,0.4) 100%);z-index:1}
+    .page-hero-content{position:relative;z-index:2;max-width:640px}
+    .eyebrow{font-family:var(--font-label);font-size:0.72rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--brand-red);margin-bottom:12px}
+    .page-hero h1{font-family:var(--font-display);font-size:clamp(2.5rem,5vw,4.5rem);line-height:0.92;letter-spacing:0.02em;text-transform:uppercase;color:#fff;margin-bottom:16px}
+    .page-hero h1 .accent{color:var(--brand-red)}
+    .page-hero p{font-family:var(--font-body);font-size:15px;color:rgba(255,255,255,0.65);line-height:1.65;max-width:480px}
 
-    .page-header-img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center 30%;
-      display: block;
-    }
+    /* ── FILTERS ── */
+    .filters-bar{background:var(--bg-page);border-bottom:1px solid var(--line-1);padding:16px clamp(20px,4vw,48px);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .filter-btn{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:7px 16px;border-radius:999px;border:1px solid var(--line-2);background:var(--bg-page);color:var(--fg-2);transition:all 120ms var(--ease);cursor:pointer}
+    .filter-btn:hover{border-color:var(--brand-red);color:var(--brand-red);background:var(--brand-red-soft)}
+    .filter-btn.active{background:var(--brand-red);border-color:var(--brand-red);color:#fff}
 
-    .page-header::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(to right, rgba(12,13,15,0.92) 0%, rgba(12,13,15,0.75) 45%, rgba(12,13,15,0.55) 100%),
-        linear-gradient(to bottom, rgba(12,13,15,0.4) 0%, transparent 40%, rgba(12,13,15,0.6) 100%);
-      z-index: 1;
-      pointer-events: none;
-    }
+    /* ── PRODUCTS GRID ── */
+    .products-section{padding:clamp(48px,6vw,80px) clamp(20px,4vw,48px);background:var(--bg-subtle);border-top:1px solid var(--line-2);box-shadow:0 -8px 32px rgba(28,24,20,0.08)}
+    .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 
-    .page-header::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-      background-size: 60px 60px;
-      z-index: 2;
-      pointer-events: none;
-    }
+    .product-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:all 160ms var(--ease);box-shadow:0 6px 24px rgba(28,24,20,0.35),0 2px 6px rgba(28,24,20,0.15)}
+    .product-card:hover{border-color:var(--line-2);box-shadow:0 16px 48px rgba(28,24,20,0.45),0 4px 12px rgba(28,24,20,0.20);transform:translateY(-2px)}
+    .product-card.hidden{display:none}
+    .product-img{height:110px;background:var(--bg-subtle);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--brand-red);margin-bottom:4px}
+    .product-cat{font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--fg-3)}
+    .product-name{font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--fg-1);line-height:1.3}
+    .product-price{font-family:var(--font-display);font-size:22px;letter-spacing:0.02em;color:var(--brand-red);margin-top:auto}
 
-    .header-content { position: relative; z-index: 3; max-width: 720px; }
-
-    .section-tag {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--red);
-      margin-bottom: 0.75rem;
-    }
-
-    .page-header h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(2.75rem, 6vw, 5rem);
-      line-height: 0.95;
-      letter-spacing: 0.02em;
-      margin-bottom: 1rem;
-    }
-
-    .page-header h1 .accent { color: var(--red); }
-
-    .page-header p {
-      color: #9ca3af;
-      font-size: 1.05rem;
-      line-height: 1.7;
-      max-width: 560px;
-    }
-
-    /* ── PRODUCTS (mirrors services section) ── */
-    .products {
-      padding: 4rem 4rem 6rem;
-      background: #111215;
-    }
-
-    .products-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 1.5rem;
-    }
-
-    .product-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 16px;
-      padding: 2rem;
-      transition: all 0.2s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .product-card.hidden { display: none; }
-
-    .product-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--red);
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.3s;
-    }
-
-    .product-card:hover {
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(232,64,28,0.2);
-      transform: translateY(-4px);
-    }
-    .product-card:hover::before { transform: scaleX(1); }
-
-    .product-icon {
-      font-size: 2.25rem;
-      margin-bottom: 1rem;
-    }
-
-    .product-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.4rem;
-      letter-spacing: 0.04em;
-      margin-bottom: 0.5rem;
-    }
-
-    .product-desc {
-      color: #6b7280;
-      font-size: 0.875rem;
-      line-height: 1.6;
-    }
-
-    /* ── PAGINATION (same as services) ── */
-    .pagination {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-top: 3rem;
-      flex-wrap: wrap;
-    }
-
-    .page-btn {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #9ca3af;
-      width: 42px;
-      height: 42px;
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .page-btn:hover:not(:disabled):not(.active) {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,15,15,0.4);
-      color: #fff;
-      transform: translateY(-2px);
-    }
-
-    .page-btn.active {
-      background: var(--red);
-      border-color: var(--red);
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(255,15,15,0.35);
-    }
-
-    .page-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-
-    .page-btn.nav-arrow {
-      width: auto;
-      padding: 0 1rem;
-    }
+    /* ── PAGINATION ── */
+    .pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:32px;flex-wrap:wrap}
+    .page-btn{height:40px;min-width:40px;padding:0 12px;border-radius:8px;border:1px solid var(--line-1);background:var(--bg-panel);color:var(--fg-3);font-family:var(--font-body);font-weight:600;font-size:14px;transition:all 120ms var(--ease);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(28,24,20,0.18),0 1px 4px rgba(28,24,20,0.10)}
+    .page-btn:hover:not(:disabled):not(.active){background:var(--fg-1);color:#fff;box-shadow:0 8px 24px rgba(28,24,20,0.30)}
+    .page-btn.active{background:var(--brand-red);border-color:var(--brand-red);color:#fff;box-shadow:0 6px 20px rgba(208,0,25,0.40)}
+    .page-btn:disabled{opacity:0.3;cursor:not-allowed}
 
     /* ── FOOTER ── */
-    .footer {
-      background: #080909;
-      padding: 3rem 4rem;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 1.5rem 3rem;
-      text-align: center;
-    }
+    .footer{background:var(--fg-1);padding:clamp(32px,4vw,48px) clamp(20px,4vw,48px);border-top:2px solid var(--line-2);display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+    .footer-logo{font-family:var(--font-display);font-size:22px;letter-spacing:0.06em;color:#fff}
+    .footer-logo span{color:var(--brand-red)}
+    .footer-links{display:flex;gap:20px;flex-wrap:wrap}
+    .footer-links a{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.06em;color:rgba(255,255,255,0.4);transition:color 120ms}
+    .footer-links a:hover{color:#fff}
+    .footer-copy{font-family:var(--font-body);font-size:12px;color:rgba(255,255,255,0.3)}
 
-    .footer-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.4rem;
-      color: #fff;
-    }
-    .footer-logo span { color: var(--red); }
-
-    .footer-copy {
-      color: #4b5563;
-      font-size: 0.8rem;
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .footer-links a {
-      color: #4b5563;
-      text-decoration: none;
-      font-size: 0.8rem;
-      transition: color 0.15s;
-    }
-    .footer-links a:hover { color: #fff; }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 900px) {
-      .nav-bar { padding: 1rem 1.5rem; }
-      .nav-toggle { display: block; }
-
-      .nav-links {
-        position: fixed;
-        top: 0;
-        right: 0;
-        width: 75%;
-        max-width: 320px;
-        height: 100vh;
-        background: rgba(12,13,15,0.98);
-        backdrop-filter: blur(16px);
-        border-left: 1px solid rgba(255,255,255,0.08);
-        flex-direction: column;
-        align-items: flex-start;
-        justify-content: flex-start;
-        padding: 5.5rem 2rem 2rem;
-        gap: 1.75rem;
-        transform: translateX(100%);
-        transition: transform 0.35s ease;
-        z-index: 99;
-      }
-
-      .nav-links.active { transform: translateX(0); }
-
-      .nav-links a {
-        font-size: 1.05rem;
-        width: 100%;
-        padding: 0.5rem 0 0.5rem 1rem;
-        border-left: 2px solid transparent;
-        transition: all 0.2s ease;
-      }
-
-      .nav-links a:not(.nav-cta)::after { display: none; }
-
-      .nav-links a:not(.nav-cta):hover,
-      .nav-links a:not(.nav-cta).active {
-        color: #fff;
-        border-left-color: var(--red);
-        padding-left: 1.25rem;
-      }
-
-      .nav-cta {
-        display: inline-block;
-        width: auto !important;
-        margin-top: 0.5rem;
-        padding: 0.6rem 1.5rem !important;
-      }
-
-      .nav-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-        z-index: 98;
-      }
-      .nav-overlay.active { opacity: 1; pointer-events: auto; }
-
-      .page-header { padding: 7rem 1.5rem 3rem; }
-      .products { padding: 3rem 1.5rem 5rem; }
-      .footer {
-        padding: 2rem 1.5rem;
-        flex-direction: column;
-        gap: 1rem;
-      }
-      .footer-links {
-        gap: 1rem 1.5rem;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .nav-bar { padding: 0.85rem 1.25rem; }
-      .nav-logo { font-size: 1.35rem; }
-      .page-header { padding: 6.5rem 1.25rem 2.5rem; }
-      .products { padding: 2.5rem 1.25rem 4rem; }
-      .product-card { padding: 1.5rem; }
-      .footer {
-        padding: 1.75rem 1.25rem;
-        gap: 0.75rem;
-      }
-      .footer-logo { font-size: 1.2rem; }
-      .footer-links {
-        gap: 0.75rem 1.25rem;
-      }
+    @media(max-width:900px){
+      .nav-toggle{display:flex;align-items:center;justify-content:center}
+      .nav-links{display:none;position:fixed;inset:0;top:72px;background:var(--bg-page);flex-direction:column;padding:24px;gap:8px;z-index:99;border-top:1px solid var(--line-1)}
+      .nav-links.open{display:flex}
+      .footer{flex-direction:column;text-align:center}
     }
   </style>
 </head>
 <body>
 
-  <!-- NAVBAR -->
-  <nav class="nav-bar">
-    <a class="nav-logo" href="/">MOTO<span>TYRE</span></a>
-    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
-    <div class="nav-links" id="navLinks">
-      <a href="/#about">About</a>
-      <a href="/products" class="active">Products</a>
-      <a href="/#services">Services</a>
-      <a href="/#how">How It Works</a>
-      <a href="/#contact">Contact</a>
-      <a href="/#feedback">Feedback</a>
-      <a href="/login" class="nav-cta">Login</a>
-    </div>
-  </nav>
-  <div class="nav-overlay" id="navOverlay"></div>
+<!-- NAV -->
+<nav class="nav-bar">
+  <span class="nav-logo">MOTO<span>TYRE</span></span>
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+    <i data-lucide="menu" style="width:22px;height:22px"></i>
+  </button>
+  <div class="nav-links" id="navLinks">
+    <a href="/" onclick="setNavActive(this)">Home</a>
+    <a href="/#about" onclick="setNavActive(this)">About</a>
+    <a href="/products" class="nav-active" onclick="setNavActive(this)">Products</a>
+    <a href="/#services" onclick="setNavActive(this)">Services</a>
+    <a href="/#how" onclick="setNavActive(this)">How It Works</a>
+    <a href="/#contact" onclick="setNavActive(this)">Contact</a>
+    <a href="/#feedback" onclick="setNavActive(this)">Feedback</a>
+    <a href="{{ url_for('login') }}" class="nav-cta">Sign In →</a>
+  </div>
+</nav>
 
-  <!-- PAGE HEADER -->
-  <section class="page-header">
-    <img src="{{ url_for('static', filename='images/shop-front.jpg') }}" alt="Mototyre Shop" class="page-header-img">
-    <div class="header-content">
-      <div class="section-tag">Shop Parts &amp; Accessories</div>
-      <h1>OUR <span class="accent">PRODUCTS</span></h1>
-      <p>Quality motorcycle parts, tires, and accessories — hand-picked for durability, performance, and rider safety.</p>
-    </div>
-  </section>
+<!-- PAGE HEADER -->
+<section class="page-hero">
+  <img src="{{ url_for('static', filename='images/shop-front.jpg') }}" alt="" aria-hidden="true" class="page-hero-bg">
+  <div class="page-hero-scrim" aria-hidden="true"></div>
+  <div class="page-hero-content">
+    <div class="eyebrow">Parts &amp; Accessories</div>
+    <h1>OUR <span class="accent">PRODUCTS</span></h1>
+    <p>Quality motorcycle parts, tires, and accessories — hand-picked for durability, performance, and rider safety.</p>
+  </div>
+</section>
 
-  <!-- PRODUCTS -->
-  <section class="products">
-    <div class="products-grid" id="productsGrid">
+<!-- FILTER BAR -->
+<div class="filters-bar">
+  <button class="filter-btn active" onclick="filterProducts('all', this)">All</button>
+  <button class="filter-btn" onclick="filterProducts('tires', this)">Tires</button>
+  <button class="filter-btn" onclick="filterProducts('oil', this)">Engine Oil</button>
+  <button class="filter-btn" onclick="filterProducts('brakes', this)">Brakes</button>
+  <button class="filter-btn" onclick="filterProducts('electrical', this)">Electrical</button>
+  <button class="filter-btn" onclick="filterProducts('accessories', this)">Accessories</button>
+</div>
 
-      <div class="product-card">
-        <div class="product-icon">🛞</div>
-        <div class="product-name">IRC Street Sport Tire</div>
-        <p class="product-desc">Grippy all-weather street tire for commuter and sport motorcycles. Durable tread pattern for long mileage.</p>
-      </div>
+<!-- PRODUCTS -->
+<section class="products-section">
+  <div class="products-grid" id="productsGrid">
 
-      <div class="product-card">
-        <div class="product-icon">🏁</div>
-        <div class="product-name">FDR Sport XR Evo</div>
-        <p class="product-desc">Performance sport tire with enhanced grip for aggressive riding and wet conditions.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🛞</div>
-        <div class="product-name">Michelin Pilot Street</div>
-        <p class="product-desc">Premium tire with advanced compound for longer mileage and superior wet-road grip.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🛢️</div>
-        <div class="product-name">Motul 5100 4T 10W-40</div>
-        <p class="product-desc">Semi-synthetic engine oil for 4-stroke motorcycles — smooth gear shifts and strong engine protection.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🛢️</div>
-        <div class="product-name">Shell Advance AX7</div>
-        <p class="product-desc">Reliable semi-synthetic motorcycle oil with advanced engine protection formula.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">⚙️</div>
-        <div class="product-name">CVT Belt &amp; Clutch Grease</div>
-        <p class="product-desc">High-temperature grease specifically formulated for CVT transmission components.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🛑</div>
-        <div class="product-name">Brembo Semi-Metallic Pads</div>
-        <p class="product-desc">High-performance brake pads for strong, consistent stopping power with minimal fade.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🅱️</div>
-        <div class="product-name">Ceramic Brake Pads</div>
-        <p class="product-desc">Premium ceramic pads — quiet operation, long lasting, and easy on your brake discs.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🔋</div>
-        <div class="product-name">Motolite MF Battery</div>
-        <p class="product-desc">Maintenance-free motorcycle battery with strong cranking amps and long service life.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">📯</div>
-        <div class="product-name">Hella Supertone Horn</div>
-        <p class="product-desc">Loud, dual-tone aftermarket horn for increased road safety and presence.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">💡</div>
-        <div class="product-name">LED Headlight Bulb H4</div>
-        <p class="product-desc">Ultra-bright LED upgrade for stock headlights. Brighter visibility, lower power draw.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🪖</div>
-        <div class="product-name">HJC Full Face Helmet</div>
-        <p class="product-desc">DOT-certified full face helmet with ventilation system and anti-fog visor.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🔗</div>
-        <div class="product-name">DID Chain &amp; Sprocket Kit</div>
-        <p class="product-desc">Premium O-ring chain with matched front and rear sprockets for smooth drive.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🧤</div>
-        <div class="product-name">Leather Riding Gloves</div>
-        <p class="product-desc">Durable leather gloves with knuckle protection and breathable mesh panels.</p>
-      </div>
-
-      <div class="product-card">
-        <div class="product-icon">🔧</div>
-        <div class="product-name">Complete Tool Kit</div>
-        <p class="product-desc">Compact on-the-go tool kit — wrenches, screwdrivers, and essentials for every rider.</p>
-      </div>
-
+    <div class="product-card" data-cat="tires">
+      <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Tire</div>
+      <div class="product-name">IRC Street Sport Tire</div>
+      <div class="product-price">₱1,890</div>
     </div>
 
-    <!-- Pagination -->
-    <div class="pagination" id="productsPagination">
-      <button class="page-btn nav-arrow" id="prevPage" aria-label="Previous page">←</button>
-      <button class="page-btn active" data-page="1">1</button>
-      <button class="page-btn nav-arrow" id="nextPage" aria-label="Next page">→</button>
+    <div class="product-card" data-cat="tires">
+      <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Tire</div>
+      <div class="product-name">FDR Sport XR Evo</div>
+      <div class="product-price">₱1,650</div>
     </div>
-  </section>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-copy">© <span id="footer-year"></span> Mototyre Moto Shop. All rights reserved.</div>
-    <div class="footer-links">
-      <a href="/#about">About</a>
-      <a href="/products">Products</a>
-      <a href="/#services">Services</a>
-      <a href="/#how">How It Works</a>
-      <a href="/#contact">Contact</a>
-      <a href="/login">Login</a>
-      <a href="/register">Register</a>
+    <div class="product-card" data-cat="tires">
+      <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Tire</div>
+      <div class="product-name">Michelin Pilot Street</div>
+      <div class="product-price">₱2,400</div>
     </div>
-  </footer>
 
-  <script>
-    // Mobile menu toggle
-    const navToggle = document.getElementById('navToggle');
-    const navLinks = document.getElementById('navLinks');
-    const navOverlay = document.getElementById('navOverlay');
+    <div class="product-card" data-cat="tires">
+      <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Tire</div>
+      <div class="product-name">Pirelli Diablo Scooter</div>
+      <div class="product-price">₱2,100</div>
+    </div>
 
-    function closeMenu() {
-      navToggle.classList.remove('active');
-      navLinks.classList.remove('active');
-      navOverlay.classList.remove('active');
-      document.body.style.overflow = '';
-    }
+    <div class="product-card" data-cat="oil">
+      <div class="product-img"><i data-lucide="droplet" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Engine Oil</div>
+      <div class="product-name">Motul 5100 10W-40 1L</div>
+      <div class="product-price">₱520</div>
+    </div>
 
-    function toggleMenu() {
-      const isActive = navLinks.classList.toggle('active');
-      navToggle.classList.toggle('active');
-      navOverlay.classList.toggle('active');
-      document.body.style.overflow = isActive ? 'hidden' : '';
-    }
+    <div class="product-card" data-cat="oil">
+      <div class="product-img"><i data-lucide="droplet" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Engine Oil</div>
+      <div class="product-name">Shell Advance AX7 1L</div>
+      <div class="product-price">₱380</div>
+    </div>
 
-    navToggle.addEventListener('click', toggleMenu);
-    navOverlay.addEventListener('click', closeMenu);
-    navLinks.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
-    window.addEventListener('resize', () => { if (window.innerWidth > 900) closeMenu(); });
+    <div class="product-card" data-cat="oil">
+      <div class="product-img"><i data-lucide="droplet" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Lubricant</div>
+      <div class="product-name">CVT Belt &amp; Clutch Grease</div>
+      <div class="product-price">₱220</div>
+    </div>
 
-    // Nav background on scroll
-    const nav = document.querySelector('.nav-bar');
-    window.addEventListener('scroll', () => {
-      nav.style.background = window.scrollY > 50
-        ? 'rgba(12,13,15,0.98)'
-        : 'rgba(12,13,15,0.85)';
+    <div class="product-card" data-cat="brakes">
+      <div class="product-img"><i data-lucide="disc" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Brake</div>
+      <div class="product-name">Brembo Semi-Metallic Pads</div>
+      <div class="product-price">₱1,250</div>
+    </div>
+
+    <div class="product-card" data-cat="brakes">
+      <div class="product-img"><i data-lucide="disc" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Brake</div>
+      <div class="product-name">Ceramic Brake Pads</div>
+      <div class="product-price">₱980</div>
+    </div>
+
+    <div class="product-card" data-cat="electrical">
+      <div class="product-img"><i data-lucide="battery-charging" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Battery</div>
+      <div class="product-name">Motolite MF Battery 12V</div>
+      <div class="product-price">₱2,450</div>
+    </div>
+
+    <div class="product-card" data-cat="electrical">
+      <div class="product-img"><i data-lucide="zap" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Lighting</div>
+      <div class="product-name">LED Headlight Bulb H4</div>
+      <div class="product-price">₱680</div>
+    </div>
+
+    <div class="product-card" data-cat="electrical">
+      <div class="product-img"><i data-lucide="volume-2" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Horn</div>
+      <div class="product-name">Hella Supertone Horn</div>
+      <div class="product-price">₱750</div>
+    </div>
+
+    <div class="product-card" data-cat="accessories">
+      <div class="product-img"><i data-lucide="hard-hat" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Helmet</div>
+      <div class="product-name">HJC Full Face Helmet</div>
+      <div class="product-price">₱4,890</div>
+    </div>
+
+    <div class="product-card" data-cat="accessories">
+      <div class="product-img"><i data-lucide="link-2" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Drivetrain</div>
+      <div class="product-name">DID Chain &amp; Sprocket Kit</div>
+      <div class="product-price">₱1,980</div>
+    </div>
+
+    <div class="product-card" data-cat="accessories">
+      <div class="product-img"><i data-lucide="shield" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Gear</div>
+      <div class="product-name">Leather Riding Gloves</div>
+      <div class="product-price">₱890</div>
+    </div>
+
+    <div class="product-card" data-cat="accessories">
+      <div class="product-img"><i data-lucide="wrench" style="width:40px;height:40px"></i></div>
+      <div class="product-cat">Tools</div>
+      <div class="product-name">Complete Tool Kit</div>
+      <div class="product-price">₱1,100</div>
+    </div>
+
+  </div>
+
+  <div class="pagination" id="productsPagination">
+    <button class="page-btn" id="prevPage">←</button>
+    <button class="page-btn active" data-page="1">1</button>
+    <button class="page-btn" id="nextPage">→</button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-logo">MOTO<span>TYRE</span></div>
+  <div class="footer-links">
+    <a href="/#about">About</a>
+    <a href="/products">Products</a>
+    <a href="/#services">Services</a>
+    <a href="/#contact">Contact</a>
+    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('register') }}">Register</a>
+  </div>
+  <div class="footer-copy">© <span id="yr"></span> MotoTyre. All rights reserved.</div>
+</footer>
+
+<script>
+  lucide.createIcons();
+
+  function setNavActive(el) {
+    document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('nav-active'));
+    el.classList.add('nav-active');
+  }
+
+  // Nav toggle
+  const navToggle = document.getElementById('navToggle');
+  const navLinks = document.getElementById('navLinks');
+  navToggle.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+    lucide.createIcons();
+  });
+  navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
+
+  // Filter
+  var activeFilter = 'all';
+  function filterProducts(cat, btn) {
+    activeFilter = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    prodGo(1);
+  }
+
+  // Pagination
+  var PROD_PER_PAGE = 10;
+  var prodPage = 1;
+
+  function getFilteredCards() {
+    return Array.from(document.querySelectorAll('#productsGrid .product-card')).filter(c => {
+      return activeFilter === 'all' || c.dataset.cat === activeFilter;
     });
+  }
 
-    // Products Pagination (20 per page)
-    const PRODUCTS_PER_PAGE = 20;
-    const productCards = document.querySelectorAll('.products-grid .product-card');
-    const pageButtons = document.querySelectorAll('.page-btn[data-page]');
-    const prevBtn = document.getElementById('prevPage');
-    const nextBtn = document.getElementById('nextPage');
-    const totalPages = Math.ceil(productCards.length / PRODUCTS_PER_PAGE);
-    let currentPage = 1;
+  function prodGo(page) {
+    var cards = getFilteredCards();
+    var total = Math.ceil(cards.length / PROD_PER_PAGE);
+    if (page < 1 || page > total) return;
+    prodPage = page;
 
-    function showPage(page, scroll = true) {
-      currentPage = page;
-      const start = (page - 1) * PRODUCTS_PER_PAGE;
-      const end = start + PRODUCTS_PER_PAGE;
+    // hide all
+    document.querySelectorAll('#productsGrid .product-card').forEach(c => c.classList.add('hidden'));
+    // show current page of filtered
+    var start = (page - 1) * PROD_PER_PAGE;
+    cards.slice(start, start + PROD_PER_PAGE).forEach(c => c.classList.remove('hidden'));
 
-      productCards.forEach((card, idx) => {
-        if (idx >= start && idx < end) {
-          card.classList.remove('hidden');
-        } else {
-          card.classList.add('hidden');
-        }
-      });
+    document.getElementById('prevPage').disabled = page === 1;
+    document.getElementById('nextPage').disabled = page >= total;
 
-      pageButtons.forEach(btn => {
-        btn.classList.toggle('active', parseInt(btn.dataset.page) === page);
-      });
-
-      prevBtn.disabled = page === 1;
-      nextBtn.disabled = page === totalPages;
-
-      if (scroll) {
-        document.querySelector('.products').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+    // rebuild page buttons
+    var pagination = document.getElementById('productsPagination');
+    var existingBtns = pagination.querySelectorAll('.page-btn[data-page]');
+    existingBtns.forEach(b => b.remove());
+    var prev = document.getElementById('prevPage');
+    for (var i = 1; i <= total; i++) {
+      var btn = document.createElement('button');
+      btn.className = 'page-btn' + (i === page ? ' active' : '');
+      btn.dataset.page = i;
+      btn.textContent = i;
+      btn.onclick = (function(p){ return function(){ prodGo(p); }; })(i);
+      pagination.insertBefore(btn, document.getElementById('nextPage'));
     }
+  }
 
-    pageButtons.forEach(btn => {
-      btn.addEventListener('click', () => showPage(parseInt(btn.dataset.page)));
-    });
+  document.getElementById('prevPage').addEventListener('click', () => prodGo(prodPage - 1));
+  document.getElementById('nextPage').addEventListener('click', () => prodGo(prodPage + 1));
 
-    prevBtn.addEventListener('click', () => { if (currentPage > 1) showPage(currentPage - 1); });
-    nextBtn.addEventListener('click', () => { if (currentPage < totalPages) showPage(currentPage + 1); });
+  prodGo(1);
 
-    showPage(1, false);
-
-    // Fade-in animation
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.style.opacity = '1';
-          e.target.style.transform = 'translateY(0)';
-        }
-      });
-    }, { threshold: 0.1 });
-
-    productCards.forEach(el => {
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(20px)';
-      el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-      observer.observe(el);
-    });
-
-    document.getElementById('footer-year').textContent = new Date().getFullYear();
-  </script>
-
+  document.getElementById('yr').textContent = new Date().getFullYear();
+</script>
 </body>
 </html>

@@ -1,726 +1,740 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sign In – Mototyre Moto Shop</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign In – MotoTyre</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page:          #ffffff;
+      --bg-subtle:        #f5f4f2;
+      --bg-ink:           #1c1814;
+      --fg-1:             #1c1814;
+      --fg-2:             #5a544d;
+      --fg-3:             #908980;
+      --fg-on-ink:        #f5f0eb;
+      --brand-red:        #d00019;
+      --brand-red-hover:  #a8001a;
+      --brand-red-soft:   rgba(208,0,25,0.10);
+      --brand-red-border: rgba(208,0,25,0.25);
+      --line-1:           #ebe9e4;
+      --line-2:           #d6d3cd;
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body:    'DM Sans', system-ui, sans-serif;
+      --font-label:   'Syne', 'DM Sans', sans-serif;
+      --font-mono:    'DM Mono', monospace;
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --radius-pill: 999px;
+      --ease: cubic-bezier(.2,.7,.2,1);
+    }
 
-      :root {
-        --ink: #0c0d0f;
-        --red: #ff0f0f;
-        --border: rgba(255,255,255,0.08);
-      }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: var(--font-body);
+      color: var(--fg-1);
+      -webkit-font-smoothing: antialiased;
+    }
 
-      body {
-        font-family: 'DM Sans', sans-serif;
-        background: var(--ink);
-        color: #fff;
-        min-height: 100vh;
-      }
+    /* ── SPLIT LAYOUT ── */
+    .page-wrap {
+      display: flex;
+      min-height: 100vh;
+    }
 
-      .auth-wrap {
-        min-height: 100vh;
-        display: flex;
-        align-items: stretch;
-      }
+    /* ── LEFT — PHOTO PANEL ── */
+    .photo-side {
+      width: 46%;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .photo-bg {
+      position: absolute;
+      inset: 0;
+      background-image: url("{{ url_for('static', filename='images/shop-hero.jpg') }}");
+      background-size: cover;
+      background-position: center;
+      transform: scale(1.03);
+      transition: transform 8s ease;
+    }
+    .photo-bg:hover { transform: scale(1); }
+    .photo-scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(28,24,20,0.55) 0%,
+        rgba(28,24,20,0.25) 40%,
+        rgba(28,24,20,0.70) 100%
+      );
+    }
+    .photo-content {
+      position: relative;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2.5rem;
+    }
 
-      /* LEFT PANEL */
-      .auth-left {
-        flex: 1;
-        background: var(--ink);
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 4rem;
-        overflow: hidden;
-      }
+    /* Logo top-left */
+    .photo-logo {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      letter-spacing: 0.06em;
+      color: #fff;
+      line-height: 1;
+    }
+    .photo-logo .accent { color: var(--brand-red); }
 
-      .auth-left-bg {
-        position: absolute;
-        inset: 0;
-        background:
-          radial-gradient(ellipse 80% 60% at 30% 50%, rgba(232,64,28,0.13) 0%, transparent 65%),
-          radial-gradient(ellipse 40% 40% at 80% 80%, rgba(232,64,28,0.05) 0%, transparent 50%);
-      }
+    /* Tagline bottom-left */
+    .photo-tagline {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .photo-tag-eyebrow {
+      font-family: var(--font-label);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+    }
+    .photo-tag-headline {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 0.92;
+      letter-spacing: 0.03em;
+      color: #fff;
+    }
+    .photo-tag-headline .red { color: var(--brand-red); }
+    .photo-tag-sub {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.6;
+      max-width: 280px;
+    }
 
-      .auth-left-bg::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background-image:
-          linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-        background-size: 60px 60px;
-      }
+    /* ── RIGHT — FORM PANEL ── */
+    .form-side {
+      flex: 1;
+      background: var(--bg-page);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
 
-      .auth-left-content { position: relative; z-index: 2; }
+    /* Top bar — register link */
+    .form-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 1.5rem 2.5rem;
+      border-bottom: 1px solid var(--line-1);
+      flex-shrink: 0;
+    }
+    .form-topbar-text {
+      font-size: 0.82rem;
+      color: var(--fg-2);
+    }
+    .form-topbar-text a {
+      font-weight: 700;
+      color: var(--brand-red);
+      text-decoration: none;
+      margin-left: 0.3rem;
+    }
+    .form-topbar-text a:hover { text-decoration: underline; }
 
-      .auth-logo {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 2rem;
-        letter-spacing: 0.05em;
-        color: #fff;
-        text-decoration: none;
-        display: inline-block;
-        margin-bottom: 3rem;
-      }
-      .auth-logo span { color: var(--red); }
+    /* Centered form area */
+    .form-center {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2.5rem;
+    }
+    .form-card {
+      width: 100%;
+      max-width: 400px;
+      animation: cardIn 0.45s var(--ease) both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-      .auth-left h2 {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: clamp(2.5rem, 4vw, 4rem);
-        line-height: 0.95;
-        letter-spacing: 0.02em;
-        margin-bottom: 1.25rem;
-        animation: fadeUp 0.6s ease both;
-      }
-      .auth-left h2 .accent { color: var(--red); }
-      .auth-left h2 .outline {
-        -webkit-text-stroke: 2px rgba(255,255,255,0.25);
-        color: transparent;
-      }
+    /* ── PANEL SYSTEM ── */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeUp 0.3s ease both; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-      .auth-left p {
-        color: #6b7280;
-        font-size: 0.95rem;
-        line-height: 1.7;
-        max-width: 380px;
-        margin-bottom: 2.5rem;
-        animation: fadeUp 0.6s 0.1s ease both;
-      }
+    /* ── CARD HEADER ── */
+    .card-eyebrow {
+      font-family: var(--font-label);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--brand-red);
+      margin-bottom: 0.5rem;
+    }
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 2.4rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--fg-1);
+      line-height: 0.95;
+      margin-bottom: 0.4rem;
+    }
+    .card-sub {
+      font-size: 0.875rem;
+      color: var(--fg-2);
+      margin-bottom: 2rem;
+    }
 
-      .auth-perks {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        animation: fadeUp 0.6s 0.2s ease both;
-      }
-      .auth-perk {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-size: 0.875rem;
-        color: #9ca3af;
-      }
-      .auth-perk-dot {
-        width: 6px; height: 6px;
-        border-radius: 50%;
-        background: var(--red);
-        flex-shrink: 0;
-      }
+    /* ── FLASH ── */
+    .flash {
+      padding: 0.65rem 0.9rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .flash-danger  { background: rgba(220,38,38,0.06);  border: 1px solid rgba(220,38,38,0.2);  color: #b91c1c; }
+    .flash-success { background: rgba(22,163,74,0.06);  border: 1px solid rgba(22,163,74,0.2);  color: #15803d; }
+    .flash-info    { background: rgba(37,99,235,0.06);  border: 1px solid rgba(37,99,235,0.2);  color: #1d4ed8; }
+    .flash-warning { background: rgba(217,119,6,0.06);  border: 1px solid rgba(217,119,6,0.2);  color: #b45309; }
 
-      /* LEFT PANEL — dynamic text */
-      .left-panel-text {
-        transition: opacity 0.4s, transform 0.4s;
-      }
-      .left-panel-text.hidden {
-        display: none;
-        opacity: 0;
-      }
+    /* ── FIELDS ── */
+    .field { margin-bottom: 1rem; }
+    .field label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      font-family: var(--font-label);
+      color: var(--fg-2);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .input-wrap { position: relative; }
+    .input-icon {
+      position: absolute;
+      left: 0.875rem; top: 50%;
+      transform: translateY(-50%);
+      color: var(--fg-3);
+      pointer-events: none;
+      display: flex;
+    }
+    .field input {
+      width: 100%;
+      background: var(--bg-page);
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      color: var(--fg-1);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field input::placeholder { color: var(--fg-3); }
+    .field input:hover:not(:focus) { border-color: var(--fg-3); }
+    .field input:focus {
+      border-color: var(--brand-red);
+      box-shadow: 0 0 0 3px var(--brand-red-soft);
+    }
 
-      /* RIGHT PANEL */
-      .auth-right {
-        width: 480px;
-        flex-shrink: 0;
-        background: #111215;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 3rem;
-        border-left: 1px solid var(--border);
-        animation: fadeUp 0.5s ease both;
-        overflow: hidden;
-        position: relative;
-      }
+    .pass-wrap input { padding-right: 3.5rem; }
+    .pass-toggle {
+      position: absolute; right: 0.875rem; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      color: var(--fg-3);
+      font-size: 0.62rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      letter-spacing: 0.08em;
+      transition: color 0.15s;
+    }
+    .pass-toggle:hover { color: var(--fg-1); }
 
-      /* PANELS inside right */
-      .panel {
-        position: absolute;
-        inset: 0;
-        padding: 3rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        transition: opacity 0.4s ease, transform 0.4s ease;
-      }
+    /* ── FORGOT ROW ── */
+    .forgot-row {
+      display: flex;
+      justify-content: flex-end;
+      margin: -0.4rem 0 0.75rem;
+    }
+    .text-link {
+      font-size: 0.78rem;
+      color: var(--fg-3);
+      font-family: var(--font-mono);
+      cursor: pointer;
+      background: none; border: none; padding: 0;
+      transition: color 0.15s;
+      text-decoration: none;
+    }
+    .text-link:hover { color: var(--brand-red); }
 
-      .panel-login  { opacity: 1;  transform: translateX(0);     pointer-events: auto; }
-      .panel-otp    { opacity: 0;  transform: translateX(60px);  pointer-events: none; }
-      .panel-forgot { opacity: 0;  transform: translateX(60px);  pointer-events: none; }
-      .panel-reset  { opacity: 0;  transform: translateX(60px);  pointer-events: none; }
+    /* ── SUBMIT ── */
+    .btn-submit {
+      width: 100%;
+      padding: 0.875rem;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: var(--bg-ink);
+      color: #fff;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+    .btn-submit:hover {
+      background: var(--brand-red);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(208,0,25,0.22);
+    }
+    .btn-submit:active { transform: translateY(0); box-shadow: none; }
+    .btn-submit:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .btn-submit svg { transition: transform 0.2s; }
+    .btn-submit:hover:not(:disabled) svg { transform: translateX(3px); }
 
-      .panel.active        { opacity: 1; transform: translateX(0);    pointer-events: auto; }
-      .panel.slide-out     { opacity: 0; transform: translateX(-60px); pointer-events: none; }
-      .panel.slide-in-wait { opacity: 0; transform: translateX(60px);  pointer-events: none; }
+    /* ── DIVIDER ── */
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      color: var(--fg-3);
+    }
+    .or-divider::before,
+    .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--line-1);
+    }
 
-      .auth-right h3 {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 2rem;
-        letter-spacing: 0.04em;
-        margin-bottom: 0.4rem;
-      }
-      .auth-right .sub {
-        color: #6b7280;
-        font-size: 0.875rem;
-        margin-bottom: 2rem;
-      }
+    /* ── OTP EMAIL TAG ── */
+    .otp-email-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--brand-red-soft);
+      border: 1px solid var(--brand-red-border);
+      border-radius: var(--radius-pill);
+      padding: 0.3rem 0.85rem;
+      font-size: 0.76rem;
+      color: var(--brand-red);
+      font-family: var(--font-mono);
+      margin-bottom: 1.5rem;
+    }
 
-      .flash-msg {
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        margin-bottom: 1.25rem;
-      }
-      .flash-danger  { background: rgba(232,64,28,0.12); border: 1px solid rgba(232,64,28,0.3); color: #f87171; }
-      .flash-success { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  color: #86efac; }
-      .flash-info    { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);  color: #93c5fd; }
-      .flash-warning { background: rgba(234,179,8,0.1);  border: 1px solid rgba(234,179,8,0.3);   color: #fde047; }
+    /* ── OTP GRID ── */
+    .otp-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .otp-cell {
+      width: 100%;
+      height: 56px;
+      background: var(--bg-page);
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--radius-md);
+      color: var(--fg-1);
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .otp-cell::placeholder { color: var(--fg-3); }
+    .otp-cell:focus {
+      border-color: var(--brand-red);
+      box-shadow: 0 0 0 3px var(--brand-red-soft);
+    }
+    .otp-cell.filled {
+      border-color: var(--brand-red);
+      background: var(--brand-red-soft);
+    }
 
-      .field-group { margin-bottom: 1.25rem; }
-      .field-group label {
-        display: block;
-        font-size: 0.78rem;
-        font-weight: 600;
-        color: #9ca3af;
-        margin-bottom: 0.4rem;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-      }
-      .field-group input {
-        width: 100%;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        color: #fff;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.95rem;
-        outline: none;
-        transition: border-color 0.2s, background 0.2s;
-      }
-      .field-group input::placeholder { color: #374151; }
-      .field-group input:focus {
-        border-color: var(--red);
-        background: rgba(232,64,28,0.05);
-      }
+    .otp-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--fg-3);
+      margin-top: 0.5rem;
+    }
+    .otp-timer { display: flex; align-items: center; gap: 0.4rem; }
+    .otp-timer-count { color: var(--brand-red); min-width: 3ch; }
+    .otp-timer-count.expired { color: var(--fg-3); }
 
-      .pass-wrap { position: relative; }
-      .pass-wrap input { padding-right: 3.5rem; }
-      .pass-toggle {
-        position: absolute;
-        right: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: #6b7280;
-        font-size: 0.78rem;
-        font-weight: 600;
-        cursor: pointer;
-        font-family: 'DM Sans', sans-serif;
-        transition: color 0.15s;
-      }
-      .pass-toggle:hover { color: #fff; }
+    .otp-resend {
+      background: none; border: none;
+      color: var(--brand-red); font-weight: 600;
+      font-family: var(--font-mono);
+      font-size: 0.75rem; cursor: pointer;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s; padding: 0;
+    }
+    .otp-resend.active { opacity: 1; pointer-events: auto; }
 
-      .btn-auth {
-        width: 100%;
-        background: var(--red);
-        color: #fff;
-        border: none;
-        padding: 0.875rem;
-        border-radius: 8px;
-        font-family: 'DM Sans', sans-serif;
-        font-weight: 700;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        margin-top: 0.5rem;
-      }
-      .btn-auth:hover {
-        background: #c73418;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(232,64,28,0.3);
-      }
-      .btn-auth:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-      .btn-auth-success {
-        background: #16a34a;
-      }
-      .btn-auth-success:hover {
-        background: #15803d;
-        box-shadow: 0 8px 24px rgba(22,163,74,0.3);
-      }
+    .back-btn {
+      display: inline-flex; align-items: center;
+      gap: 0.35rem; background: none; border: none;
+      color: var(--fg-2); font-size: 0.82rem;
+      font-family: var(--font-body);
+      cursor: pointer; padding: 0; margin-top: 1rem;
+      transition: color 0.15s;
+    }
+    .back-btn:hover { color: var(--fg-1); }
 
-      .auth-divider {
-        text-align: center;
-        color: #374151;
-        font-size: 0.8rem;
-        margin: 1.5rem 0;
-        position: relative;
-      }
-      .auth-divider::before, .auth-divider::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        width: 44%;
-        height: 1px;
-        background: rgba(255,255,255,0.07);
-      }
-      .auth-divider::before { left: 0; }
-      .auth-divider::after  { right: 0; }
+    /* ── FOOTER ── */
+    .form-footer {
+      padding: 1.25rem 2.5rem;
+      border-top: 1px solid var(--line-1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      color: var(--fg-3);
+      flex-shrink: 0;
+    }
+    .footer-dot {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--brand-red);
+      opacity: 0.45;
+    }
 
-      .auth-switch {
-        text-align: center;
-        font-size: 0.875rem;
-        color: #6b7280;
-      }
-      .auth-switch a, .auth-link {
-        color: var(--red);
-        font-weight: 600;
-        text-decoration: none;
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-family: 'DM Sans', sans-serif;
-        font-size: inherit;
-        padding: 0;
-      }
-      .auth-switch a:hover, .auth-link:hover { text-decoration: underline; }
-
-      /* OTP PANEL SPECIFIC */
-      .email-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: rgba(255,15,15,0.08);
-        border: 1px solid rgba(255,15,15,0.2);
-        border-radius: 20px;
-        padding: 0.3rem 0.75rem;
-        font-size: 0.8rem;
-        color: #f87171;
-        font-weight: 500;
-        margin-bottom: 1.75rem;
-      }
-
-      .otp-row {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 0.6rem;
-        margin-bottom: 1.5rem;
-      }
-
-      .otp-box {
-        width: 100%;
-        height: 56px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 10px;
-        color: #fff;
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 1.75rem;
-        letter-spacing: 0.05em;
-        text-align: center;
-        outline: none;
-        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-        caret-color: var(--red);
-      }
-      .otp-box::placeholder { color: #1f2937; }
-      .otp-box:focus {
-        border-color: var(--red);
-        background: rgba(232,64,28,0.05);
-        box-shadow: 0 0 0 3px rgba(255,15,15,0.1);
-      }
-      .otp-box.filled {
-        border-color: rgba(255,15,15,0.4);
-        background: rgba(232,64,28,0.08);
-      }
-
-      .otp-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 1.25rem;
-        font-size: 0.85rem;
-      }
-      .timer-wrap {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        color: #6b7280;
-      }
-      .timer-count {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 1rem;
-        color: var(--red);
-        min-width: 2.5ch;
-      }
-      .timer-count.expired { color: #4b5563; }
-
-      .resend-btn {
-        background: none;
-        border: none;
-        color: var(--red);
-        font-weight: 600;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.85rem;
-        cursor: pointer;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s;
-        padding: 0;
-      }
-      .resend-btn.active { opacity: 1; pointer-events: auto; }
-      .resend-btn:hover { text-decoration: underline; }
-
-      .back-btn {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-        background: none;
-        border: none;
-        color: #6b7280;
-        font-size: 0.85rem;
-        font-family: 'DM Sans', sans-serif;
-        cursor: pointer;
-        margin-top: 1.5rem;
-        padding: 0;
-        transition: color 0.15s;
-      }
-      .back-btn:hover { color: #fff; }
-
-      /* Forgot / Reset specific */
-      .panel-forgot .sub,
-      .panel-reset .sub {
-        margin-bottom: 1.5rem;
-      }
-
-      @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        20%  { transform: translateX(-6px); }
-        40%  { transform: translateX(6px); }
-        60%  { transform: translateX(-4px); }
-        80%  { transform: translateX(4px); }
-      }
-      .shake { animation: shake 0.4s ease; }
-
-      @media (max-width: 768px) {
-        .auth-left { display: none; }
-        .auth-right { width: 100%; }
-        .panel { padding: 2rem 1.5rem; }
-      }
-    </style>
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .photo-side { display: none; }
+      .form-topbar { padding: 1.25rem 1.5rem; }
+      .form-center { padding: 2rem 1.5rem; }
+      .form-footer { padding: 1rem 1.5rem; }
+    }
+    @media (max-width: 480px) {
+      .otp-cell { height: 50px; font-size: 1.3rem; }
+    }
+  </style>
 </head>
 <body>
 
-<div class="auth-wrap">
+<div class="page-wrap">
 
-  <!-- LEFT PANEL -->
-  <div class="auth-left">
-    <div class="auth-left-bg"></div>
-    <div class="auth-left-content">
-      <a href="{{ url_for('home') }}" class="auth-logo">MOTO<span>TYRE</span></a>
+  <!-- ── LEFT PHOTO PANEL ── -->
+  <aside class="photo-side">
+    <div class="photo-bg"></div>
+    <div class="photo-scrim"></div>
+    <div class="photo-content">
+      <!-- Logo -->
+      <div class="photo-logo">MOTO<span class="accent">TYRE</span></div>
 
-      <!-- Login text -->
-      <div class="left-panel-text" id="left-login">
-        <h2>
-          WELCOME<br>
-          <span class="accent">BACK</span><br>
-          <span class="outline">RIDER.</span>
-        </h2>
-        <p>Sign in to manage your appointments, track your orders, and keep your motorcycle in top shape.</p>
-        <div class="auth-perks">
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Book service appointments online</div>
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Order tires and parts anytime</div>
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Track your booking status live</div>
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Manage your motorcycle profile</div>
-        </div>
+      <!-- Tagline -->
+      <div class="photo-tagline">
+        <div class="photo-tag-eyebrow">Bagumbong, Caloocan</div>
+        <div class="photo-tag-headline">YOUR RIDE,<br><span class="red">YOUR RULES.</span></div>
+        <p class="photo-tag-sub">Book services, order parts, and manage your motorcycle — all in one place.</p>
       </div>
-
-      <!-- OTP text -->
-      <div class="left-panel-text hidden" id="left-otp">
-        <h2>
-          CHECK<br>
-          <span class="accent">YOUR</span><br>
-          <span class="outline">INBOX.</span>
-        </h2>
-        <p>We sent a 6-digit code to your email. Enter it to complete your sign in.</p>
-        <div class="auth-perks">
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Code expires in 10 minutes</div>
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Check your spam folder if needed</div>
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Request a new code anytime</div>
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Your account stays protected</div>
-        </div>
-      </div>
-
-      <!-- Forgot Password text -->
-      <div class="left-panel-text hidden" id="left-forgot">
-        <h2>
-          FORGOT<br>
-          <span class="accent">YOUR</span><br>
-          <span class="outline">PASSWORD?</span>
-        </h2>
-        <p>No worries. Enter your registered email and we'll send you a reset code right away.</p>
-        <div class="auth-perks">
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Reset code sent instantly</div>
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Code valid for 10 minutes</div>
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Check your spam folder if needed</div>
-          <div class="auth-perk"><div class="auth-perk-dot"></div> Your account stays secure</div>
-        </div>
-      </div>
-
-
-
     </div>
-  </div>
+  </aside>
 
-  <!-- RIGHT PANEL -->
-  <div class="auth-right">
+  <!-- ── RIGHT FORM PANEL ── -->
+  <main class="form-side">
 
-    <!-- ── STEP 1: LOGIN FORM ── -->
-    <div class="panel panel-login" id="panel-login">
-      <h3>Sign In</h3>
-      <p class="sub">Enter your credentials to access your account</p>
+    <!-- Top bar -->
+    <div class="form-topbar">
+      <span class="form-topbar-text">
+        No account yet?
+        <a href="{{ url_for('register') }}">Register</a>
+      </span>
+    </div>
 
-      <div id="login-flash">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% for category, message in messages %}
-            <div class="flash-msg flash-{{ category }}">{{ message }}</div>
-          {% endfor %}
-        {% endwith %}
-      </div>
+    <!-- Form area -->
+    <div class="form-center">
+      <div class="form-card">
 
-      <form method="POST" action="{{ url_for('login') }}" id="login-form">
-        <div class="field-group">
-          <label>Email Address</label>
-          <input type="email" name="email" id="login-email" placeholder="you@email.com" required>
-        </div>
-        <div class="field-group">
-          <label>Password</label>
-          <div class="pass-wrap">
-            <input type="password" name="password" id="loginPass" placeholder="Your password" required>
-            <button type="button" class="pass-toggle" onclick="togglePass('loginPass', this)">Show</button>
+        <!-- ── PANEL 1: LOGIN ── -->
+        <div class="panel active" id="panel-login">
+          <div class="card-eyebrow">Welcome Back</div>
+          <h1 class="card-title">Sign In</h1>
+          <p class="card-sub">Enter your credentials to continue</p>
+
+          <div id="login-flash">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  {{ message }}
+                </div>
+              {% endfor %}
+            {% endwith %}
           </div>
-        </div>
 
-        <div style="text-align: right; margin-bottom: 0.75rem; margin-top: -0.5rem;">
-          <button type="button" class="auth-link" style="font-size: 0.85rem;" onclick="showPanel('forgot')">Forgot password?</button>
-        </div>
+          <form method="POST" action="{{ url_for('login') }}" id="login-form">
+            <div class="field">
+              <label>Email Address</label>
+              <div class="input-wrap">
+                <span class="input-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                </span>
+                <input type="email" name="email" id="login-email" placeholder="you@email.com" required autocomplete="email">
+              </div>
+            </div>
 
-        <button type="submit" class="btn-auth" id="login-submit-btn">Sign In →</button>
-      </form>
+            <div class="field">
+              <label>Password</label>
+              <div class="input-wrap pass-wrap">
+                <span class="input-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </span>
+                <input type="password" name="password" id="login-pass" placeholder="••••••••" required autocomplete="current-password">
+                <button type="button" class="pass-toggle" onclick="togglePass('login-pass', this)">SHOW</button>
+              </div>
+            </div>
 
-      <div class="auth-divider">or</div>
-      <div class="auth-switch">
-        Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
-      </div>
+            <div class="forgot-row">
+              <button type="button" class="text-link" onclick="switchPanel('forgot')">Forgot password?</button>
+            </div>
+
+            <button type="submit" class="btn-submit">
+              Sign In
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12,5 19,12 12,19"/>
+              </svg>
+            </button>
+          </form>
+
+          <div class="or-divider">or</div>
+
+          <a href="{{ url_for('home') }}" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.8rem;border:1.5px solid var(--line-2);border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.875rem;font-weight:600;color:var(--fg-2);text-decoration:none;transition:border-color 0.2s,color 0.2s,background 0.2s;" onmouseover="this.style.borderColor='var(--fg-3)';this.style.color='var(--fg-1)'" onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--fg-2)'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9,22 9,12 15,12 15,22"/>
+            </svg>
+            Back to Homepage
+          </a>
+        </div><!-- end panel-login -->
+
+        <!-- ── PANEL 2: OTP ── -->
+        <div class="panel" id="panel-otp">
+          <div class="card-eyebrow">Verification</div>
+          <h1 class="card-title">Verify Identity</h1>
+          <p class="card-sub">Enter the 6-digit code sent to</p>
+          <div style="text-align:center;">
+            <div class="otp-email-tag">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              <span id="otp-email-display">—</span>
+            </div>
+          </div>
+
+          <div id="otp-flash"></div>
+
+          <form method="POST" action="{{ url_for('verify_login_otp') }}" id="otp-form">
+            <input type="hidden" name="otp" id="otp-hidden">
+            <div class="otp-grid">
+              <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+              <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+              <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+              <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+              <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+              <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
+            </div>
+
+            <button type="submit" class="btn-submit" id="otp-submit" disabled>
+              Verify &amp; Sign In
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20,6 9,17 4,12"/>
+              </svg>
+            </button>
+          </form>
+
+          <div class="otp-footer">
+            <div class="otp-timer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+              </svg>
+              Expires in <span class="otp-timer-count" id="timer">2:00</span>
+            </div>
+            <button class="otp-resend" id="resend-btn" onclick="resendOtp()">Resend code</button>
+          </div>
+
+          <div style="text-align:center;">
+            <button class="back-btn" onclick="switchPanel('login')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15,18 9,12 15,6"/>
+              </svg>
+              Back to sign in
+            </button>
+          </div>
+        </div><!-- end panel-otp -->
+
+        <!-- ── PANEL 3: FORGOT PASSWORD ── -->
+        <div class="panel" id="panel-forgot">
+          <div class="card-eyebrow">Account Recovery</div>
+          <h1 class="card-title">Reset Password</h1>
+          <p class="card-sub">We'll send a reset link to your email</p>
+
+          <div id="forgot-flash"></div>
+
+          <form method="POST" action="{{ url_for('forgot_password') }}">
+            <div class="field">
+              <label>Email Address</label>
+              <div class="input-wrap">
+                <span class="input-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                </span>
+                <input type="email" name="email" placeholder="you@email.com" required autocomplete="email">
+              </div>
+            </div>
+
+            <button type="submit" class="btn-submit">
+              Send Reset Link
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12,5 19,12 12,19"/>
+              </svg>
+            </button>
+          </form>
+
+          <div style="text-align:center;">
+            <button class="back-btn" onclick="switchPanel('login')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15,18 9,12 15,6"/>
+              </svg>
+              Back to sign in
+            </button>
+          </div>
+        </div><!-- end panel-forgot -->
+
+      </div><!-- end form-card -->
+    </div><!-- end form-center -->
+
+    <!-- Footer -->
+    <div class="form-footer">
+      <div class="footer-dot"></div>
+      MOTOTYRE © 2025
+      <div class="footer-dot"></div>
+      BAGUMBONG, CALOOCAN
     </div>
 
-    <!-- ── STEP 2: OTP FORM ── -->
-    <div class="panel panel-otp slide-in-wait" id="panel-otp">
-      <h3>Verify Login</h3>
-      <p class="sub">Enter the 6-digit code sent to</p>
-      <div class="email-badge">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-          <polyline points="22,6 12,13 2,6"/>
-        </svg>
-        <span id="otp-email-display">—</span>
-      </div>
+  </main>
 
-      <div id="otp-flash"></div>
-
-      <form method="POST" action="{{ url_for('verify_login_otp') }}" id="otp-form">
-        <input type="hidden" name="otp" id="otp-hidden">
-        <div class="otp-row" id="otp-row">
-          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
-          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
-          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
-          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
-          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
-          <input class="otp-box" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
-        </div>
-        <button type="submit" class="btn-auth" id="otp-submit-btn" disabled>Verify Code →</button>
-      </form>
-
-      <div class="otp-footer">
-        <div class="timer-wrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
-          </svg>
-          <span>Expires in</span>
-          <span class="timer-count" id="timer">2:00</span>
-        </div>
-        <button class="resend-btn" id="resend-btn" onclick="resendOtp()">Resend code</button>
-      </div>
-
-      <button class="back-btn" onclick="showPanel('login')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15,18 9,12 15,6"/>
-        </svg>
-        Back to Sign In
-      </button>
-    </div>
-
-    <!-- ── STEP 3: FORGOT PASSWORD ── -->
-    <div class="panel panel-forgot slide-in-wait" id="panel-forgot">
-      <h3>Forgot Password</h3>
-      <p class="sub">Enter your registered email and we'll send you a reset code.</p>
-
-      <div id="forgot-flash">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% for category, message in messages %}
-            <div class="flash-msg flash-{{ category }}">{{ message }}</div>
-          {% endfor %}
-        {% endwith %}
-      </div>
-
-      <form method="POST" action="{{ url_for('forgot_password') }}" id="forgot-form">
-        <div class="field-group">
-          <label>Email Address</label>
-          <input type="email" name="email" id="forgot-email" placeholder="you@example.com" required>
-        </div>
-        <button type="submit" class="btn-auth">Send Reset Code →</button>
-      </form>
-
-      <button class="back-btn" onclick="showPanel('login')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15,18 9,12 15,6"/>
-        </svg>
-        Back to Sign In
-      </button>
-    </div>
-
-
-
-  </div>
-</div>
+</div><!-- end page-wrap -->
 
 <script>
-  // ── Panel System ───────────────────────────────────────
-  const panels = {
-    login:  { panel: document.getElementById('panel-login'),  left: document.getElementById('left-login') },
-    otp:    { panel: document.getElementById('panel-otp'),    left: document.getElementById('left-otp') },
-    forgot: { panel: document.getElementById('panel-forgot'), left: document.getElementById('left-forgot') },
-  };
-
-  let currentPanel = 'login';
-
-  function showPanel(name) {
-    const from = panels[currentPanel];
-    const to   = panels[name];
-
-    // Slide out current
-    from.panel.classList.remove('active');
-    from.panel.classList.add('slide-out');
-
-    // Fade out left text
-    from.left.style.opacity = '0';
-    from.left.style.transform = 'translateY(-20px)';
-
-    setTimeout(() => {
-      from.panel.classList.remove('slide-out');
-      from.panel.classList.add('slide-in-wait');
-      from.left.style.display = 'none';
-      from.left.classList.add('hidden');
-
-      // Slide in new panel
-      to.panel.classList.remove('slide-in-wait');
-      to.panel.classList.add('active');
-
-      // Fade in new left text
-      to.left.classList.remove('hidden');
-      to.left.style.display = 'block';
-      to.left.style.opacity = '0';
-      to.left.style.transform = 'translateY(20px)';
-      setTimeout(() => {
-        to.left.style.opacity = '1';
-        to.left.style.transform = 'translateY(0)';
-      }, 50);
-
-      currentPanel = name;
-
-      // Panel-specific side effects
-      if (name === 'otp') {
-        startTimer();
-        setTimeout(() => boxes[0].focus(), 400);
-      }
-      if (name === 'forgot') {
-        setTimeout(() => document.getElementById('forgot-email').focus(), 400);
-      }
-
-      if (name === 'login') {
-        clearInterval(timerInterval);
-      }
-    }, 350);
+  // ── Panel switching ──
+  function switchPanel(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    if (name === 'otp') { startTimer(); setTimeout(() => cells[0].focus(), 100); }
+    if (name === 'login') clearInterval(timerInterval);
   }
 
-  // ── Auto-show OTP panel if session has pending email ──
-  const emailDisplay = document.getElementById('otp-email-display');
-
+  // Auto-show OTP if pending login session
   {% if session.get('pending_login_email') %}
-    window.addEventListener('DOMContentLoaded', () => {
-      emailDisplay.textContent = '{{ session.get("pending_login_email") }}';
-      showPanel('otp');
-    });
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('otp-email-display').textContent = '{{ session.get("pending_login_email") }}';
+    switchPanel('otp');
+  });
   {% endif %}
 
-document.getElementById('login-form').addEventListener('submit', function() {
-    const email = document.getElementById('login-email').value;
-    emailDisplay.textContent = email;
+  document.getElementById('login-form').addEventListener('submit', function () {
+    document.getElementById('otp-email-display').textContent =
+      document.getElementById('login-email').value;
   });
 
-  // ── OTP Boxes ──────────────────────────────────────────
-  const boxes     = document.querySelectorAll('.otp-box');
-  const hidden    = document.getElementById('otp-hidden');
-  const submitBtn = document.getElementById('otp-submit-btn');
+  // ── OTP Cells ──
+  const cells     = document.querySelectorAll('.otp-cell');
+  const otpHidden = document.getElementById('otp-hidden');
+  const otpSubmit = document.getElementById('otp-submit');
 
-  boxes.forEach((box, i) => {
-    box.addEventListener('input', (e) => {
-      box.value = e.target.value.replace(/\D/g, '');
-      box.classList.toggle('filled', box.value !== '');
-      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
-      syncHidden();
+  cells.forEach((cell, i) => {
+    cell.addEventListener('input', (e) => {
+      cell.value = e.target.value.replace(/\D/g, '');
+      cell.classList.toggle('filled', cell.value !== '');
+      if (cell.value && i < cells.length - 1) cells[i + 1].focus();
+      syncOtp();
     });
-    box.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !box.value && i > 0) {
-        boxes[i - 1].value = '';
-        boxes[i - 1].classList.remove('filled');
-        boxes[i - 1].focus();
-        syncHidden();
+    cell.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !cell.value && i > 0) {
+        cells[i - 1].value = '';
+        cells[i - 1].classList.remove('filled');
+        cells[i - 1].focus();
+        syncOtp();
       }
     });
-    box.addEventListener('paste', (e) => {
+    cell.addEventListener('paste', (e) => {
       e.preventDefault();
       const pasted = (e.clipboardData || window.clipboardData)
         .getData('text').replace(/\D/g, '').slice(0, 6);
       pasted.split('').forEach((ch, j) => {
-        if (boxes[j]) { boxes[j].value = ch; boxes[j].classList.add('filled'); }
+        if (cells[j]) { cells[j].value = ch; cells[j].classList.add('filled'); }
       });
-      boxes[Math.min(pasted.length, boxes.length - 1)].focus();
-      syncHidden();
+      cells[Math.min(pasted.length, cells.length - 1)].focus();
+      syncOtp();
     });
   });
 
-  function syncHidden() {
-    hidden.value = [...boxes].map(b => b.value).join('');
-    submitBtn.disabled = hidden.value.length < 6;
+  function syncOtp() {
+    otpHidden.value = [...cells].map(c => c.value).join('');
+    otpSubmit.disabled = otpHidden.value.length < 6;
   }
 
-  // ── Timer ──────────────────────────────────────────────
+  // ── Timer ──
   let timerInterval, seconds = 120;
   const timerEl  = document.getElementById('timer');
   const resendEl = document.getElementById('resend-btn');
@@ -737,7 +751,7 @@ document.getElementById('login-form').addEventListener('submit', function() {
         timerEl.textContent = '0:00';
         timerEl.classList.add('expired');
         resendEl.classList.add('active');
-        submitBtn.disabled = true;
+        otpSubmit.disabled = true;
         return;
       }
       const m = Math.floor(seconds / 60);
@@ -751,20 +765,20 @@ document.getElementById('login-form').addEventListener('submit', function() {
     fetch("{{ url_for('resend_otp', purpose='login') }}")
       .then(() => {
         startTimer();
-        boxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
-        syncHidden();
+        cells.forEach(c => { c.value = ''; c.classList.remove('filled'); });
+        syncOtp();
         const flash = document.getElementById('otp-flash');
-        flash.innerHTML = '<div class="flash-msg flash-info">A new code has been sent to your email.</div>';
+        flash.innerHTML = '<div class="flash flash-info"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>A new code has been sent.</div>';
         setTimeout(() => flash.innerHTML = '', 4000);
-        boxes[0].focus();
+        cells[0].focus();
       });
   }
 
-  // ── Password Toggle ────────────────────────────────────
+  // ── Password toggle ──
   function togglePass(id, btn) {
     const el = document.getElementById(id);
     el.type = el.type === 'password' ? 'text' : 'password';
-    btn.textContent = el.type === 'password' ? 'Show' : 'Hide';
+    btn.textContent = el.type === 'password' ? 'SHOW' : 'HIDE';
   }
 </script>
 </body>

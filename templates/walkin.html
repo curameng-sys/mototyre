@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -14,7 +14,7 @@
       --panel:   #111215;
       --surface: #16181d;
       --card:    #1a1d23;
-      --red:     #ff0f0f;
+      --red:     #d00019;
       --blue:    #2563eb;
       --green:   #16a34a;
       --warning: #d97706;
@@ -62,7 +62,7 @@
       font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em;
       text-decoration: none; text-transform: uppercase; transition: all 0.15s;
     }
-    .btn-back:hover { border-color: var(--red); color: #fff; background: rgba(255,15,15,0.08); }
+    .btn-back:hover { border-color: var(--red); color: #fff; background: rgba(208,0,25,0.08); }
 
     /* LAYOUT */
     .walkin-wrap {
@@ -104,7 +104,7 @@
       transition: border-color 0.15s;
     }
     .search-box input::placeholder { color: #374151; }
-    .search-box input:focus { border-color: var(--red); background: rgba(255,15,15,0.05); }
+    .search-box input:focus { border-color: var(--red); background: rgba(208,0,25,0.05); }
 
     .cat-row { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; }
     .cat-row::-webkit-scrollbar { display: none; }
@@ -115,7 +115,7 @@
       font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
       text-transform: uppercase; cursor: pointer; transition: all 0.15s;
     }
-    .cat-chip.active { background: rgba(255,15,15,0.15); border-color: rgba(255,15,15,0.4); color: var(--red); }
+    .cat-chip.active { background: rgba(208,0,25,0.15); border-color: rgba(208,0,25,0.4); color: var(--red); }
     .cat-chip:not(.active):hover { border-color: rgba(255,255,255,0.2); color: #fff; }
 
     .product-grid {
@@ -132,7 +132,7 @@
       padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--border);
       cursor: pointer; transition: background 0.15s; gap: 0.75rem;
     }
-    .product-card:hover { background: rgba(255,15,15,0.06); }
+    .product-card:hover { background: rgba(208,0,25,0.06); }
     .product-card.out-of-stock { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
     .services-panel {
@@ -167,7 +167,7 @@
       letter-spacing: 0.04em; text-transform: uppercase;
       cursor: pointer; transition: all 0.2s; white-space: nowrap;
     }
-    .btn-add-svc:hover { background: #c73418; transform: translateY(-1px); }
+    .btn-add-svc:hover { background: #a8001a; transform: translateY(-1px); }
     .service-list { display: flex; flex-direction: column; gap: 0.5rem; }
     .service-item {
       display: flex; align-items: center; justify-content: space-between;
@@ -304,7 +304,7 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 0.7rem; flex-shrink: 0;
     }
-    .ci-icon.product { background: rgba(255,15,15,0.12); color: var(--red); border: 1px solid rgba(255,15,15,0.2); }
+    .ci-icon.product { background: rgba(208,0,25,0.12); color: var(--red); border: 1px solid rgba(208,0,25,0.2); }
     .ci-icon.service { background: rgba(37,99,235,0.12); color: #93c5fd; border: 1px solid rgba(37,99,235,0.2); }
     .ci-name { font-family: 'Syne', sans-serif; font-size: 0.76rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ci-unit { font-size: 0.68rem; color: var(--muted); margin-top: 0.1rem; }
@@ -326,7 +326,7 @@
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; transition: all 0.12s;
     }
-    .btn-del:hover { border-color: rgba(255,15,15,0.4); color: var(--red); }
+    .btn-del:hover { border-color: rgba(208,0,25,0.4); color: var(--red); }
 
     /* FOOTER */
     .cart-footer { padding: 0.9rem 1.1rem; border-top: 1px solid var(--border); flex-shrink: 0; }
@@ -361,7 +361,7 @@
       letter-spacing: 0.04em; text-transform: uppercase;
       cursor: pointer; transition: all 0.15s;
     }
-    .btn-clear-cart:hover { border-color: rgba(255,15,15,0.4); color: var(--red); }
+    .btn-clear-cart:hover { border-color: rgba(208,0,25,0.4); color: var(--red); }
 
     /* MODALS */
     .modal-overlay {
@@ -414,7 +414,7 @@
       font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
       letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
     }
-    .btn-modal-ok:hover { background: #c73418; }
+    .btn-modal-ok:hover { background: #a8001a; }
     .btn-modal-ok.green { background: var(--green); }
     .btn-modal-ok.green:hover { background: #15803d; }
 
@@ -430,7 +430,7 @@
       font-size: 0.72rem; flex-shrink: 0;
     }
     .h-icon.service { background: rgba(37,99,235,0.15); color: #93c5fd; border: 1px solid rgba(37,99,235,0.2); }
-    .h-icon.product { background: rgba(255,15,15,0.12); color: var(--red); border: 1px solid rgba(255,15,15,0.2); }
+    .h-icon.product { background: rgba(208,0,25,0.12); color: var(--red); border: 1px solid rgba(208,0,25,0.2); }
     .h-desc { font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 600; color: #fff; }
     .h-meta { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
     .h-right { text-align: right; flex-shrink: 0; }
@@ -704,7 +704,7 @@
 <!-- CONFIRM MODAL -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal-box" style="width:400px;">
-    <div class="modal-head" style="background:rgba(255,15,15,0.08); border-bottom:1px solid var(--border);">
+    <div class="modal-head" style="background:rgba(208,0,25,0.08); border-bottom:1px solid var(--border);">
       <i class="fas fa-question-circle" style="color:var(--red);font-size:1.2rem;"></i>
       <h3 id="confirm-title">Confirm Transaction</h3>
     </div>
@@ -725,7 +725,7 @@
         <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><i class="fas fa-wrench"></i> Services</div>
         <div id="confirm-services-list" style="font-size:0.8rem;color:#d1d5db;"></div>
       </div>
-      <div id="confirm-products-box" style="display:none;background:rgba(255,15,15,0.06);border:1px solid rgba(255,15,15,0.2);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
+      <div id="confirm-products-box" style="display:none;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.2);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
         <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><i class="fas fa-box"></i> Products</div>
         <div id="confirm-products-list" style="font-size:0.8rem;color:#d1d5db;"></div>
       </div>

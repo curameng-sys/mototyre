@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -8,7 +8,7 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
 
-    :root { --ink: #0c0d0f; --red: #ff0f0f; --muted: #6b7280; --card: #111215; }
+    :root { --ink: #0c0d0f; --red: #d00019; --muted: #6b7280; --card: #111215; }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -24,7 +24,7 @@
 
     .bg-layer {
       position: fixed; inset: 0; z-index: 0;
-      background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(255,15,15,0.07) 0%, transparent 65%), var(--ink);
+      background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(208,0,25,0.07) 0%, transparent 65%), var(--ink);
     }
     .bg-layer::before {
       content: '';
@@ -61,17 +61,17 @@
     .card-sub { font-size: 0.85rem; color: var(--muted); text-align: center; margin-bottom: 0.75rem; }
 
     .flash { padding: 0.65rem 0.9rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 0.5rem; }
-    .flash-danger  { background: rgba(255,15,15,0.1);  border: 1px solid rgba(255,15,15,0.25);  color: #ff6b6b; }
+    .flash-danger  { background: rgba(208,0,25,0.1);  border: 1px solid rgba(208,0,25,0.25);  color: #ff6b6b; }
     .flash-success { background: rgba(22,163,74,0.1);  border: 1px solid rgba(22,163,74,0.25);  color: #4ade80; }
     .flash-info    { background: rgba(37,99,235,0.1);  border: 1px solid rgba(37,99,235,0.25);  color: #60a5fa; }
 
-    .otp-email-tag { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(255,15,15,0.1); border: 1px solid rgba(255,15,15,0.25); border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.76rem; color: #ff6b6b; font-family: 'DM Mono', monospace; margin-bottom: 1.5rem; }
+    .otp-email-tag { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(208,0,25,0.1); border: 1px solid rgba(208,0,25,0.25); border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.76rem; color: #ff6b6b; font-family: 'DM Mono', monospace; margin-bottom: 1.5rem; }
 
     .otp-grid { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
     .otp-cell { flex: 1; aspect-ratio: 1; max-width: 58px; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; text-align: center; outline: none; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; }
     .otp-cell::placeholder { color: #4b5563; }
-    .otp-cell:focus { border-color: var(--red); background: rgba(255,255,255,0.08); box-shadow: 0 0 0 3px rgba(255,15,15,0.12); }
-    .otp-cell.filled { border-color: rgba(255,15,15,0.45); background: rgba(255,15,15,0.07); }
+    .otp-cell:focus { border-color: var(--red); background: rgba(255,255,255,0.08); box-shadow: 0 0 0 3px rgba(208,0,25,0.12); }
+    .otp-cell.filled { border-color: rgba(208,0,25,0.45); background: rgba(208,0,25,0.07); }
 
     .otp-footer { display: flex; align-items: center; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
     .otp-timer { display: flex; align-items: center; gap: 0.4rem; }
@@ -82,7 +82,7 @@
     .otp-resend.active { opacity: 1; pointer-events: auto; }
 
     .btn-submit { width: 100%; padding: 0.875rem; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 0.04em; cursor: pointer; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--red); color: #fff; transition: all 0.2s; }
-    .btn-submit:hover:not(:disabled) { background: #c73418; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,15,15,0.35); }
+    .btn-submit:hover:not(:disabled) { background: #a8001a; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(208,0,25,0.35); }
     .btn-submit:active { transform: translateY(0); box-shadow: none; }
     .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
