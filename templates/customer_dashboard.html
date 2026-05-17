@@ -9,75 +9,85 @@
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
     :root {
-      --ink: #f5f0eb;
-      --panel: #ffffff;
-      --card: #ffffff;
-      --red: #d00019;
-      --muted: #b3aea8;
-      --border: #dad5cf;
-      --text: #1c1814;
+      --bg-page:          #ffffff;
+      --bg-subtle:        #f5f4f2;
+      --bg-ink:           #1c1814;
+      --fg-1:             #1c1814;
+      --fg-2:             #5a544d;
+      --fg-3:             #908980;
+      --brand-red:        #d00019;
+      --brand-red-soft:   rgba(208,0,25,0.10);
+      --brand-red-border: rgba(208,0,25,0.25);
+      --line-1:           #ebe9e4;
+      --line-2:           #d6d3cd;
+      --shadow-1:         0 1px 2px rgba(28,24,20,0.04);
+      --shadow-2:         0 4px 16px rgba(28,24,20,0.06);
+      --shadow-3:         0 12px 32px rgba(28,24,20,0.10);
+      --shadow-red:       0 8px 24px rgba(208,0,25,0.18);
       --green: #16a34a;
-      --blue: #2563eb;
+      --blue:  #2563eb;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--ink); color: var(--text); overflow-anchor: none; }
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg-subtle); color: var(--fg-1); overflow-anchor: none; }
 
     /* ── FORCE ALL TEXT DARK ── */
-    * { color: var(--text); }
+    * { color: var(--fg-1); }
     /* exceptions: keep white text on colored/dark backgrounds */
     .hero-btn.primary, .hero-btn.primary *,
     .nav-avatar, .nav-avatar *,
-    .badge, .badge * { color: revert; }
+    .badge, .badge *,
+    .nav-logout-btn, .nav-logout-btn * { color: revert; }
 
     /* ── TOP NAVBAR ── */
     .top-nav {
       position: sticky; top: 0; z-index: 100;
-      background: #ffffff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(10px);
+      box-shadow: none;
+      border-bottom: 1px solid var(--line-1);
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 1.25rem; height: 72px; gap: 1rem;
     }
     .nav-logo {
       font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem;
-      letter-spacing: 0.08em; color: var(--text); white-space: nowrap; cursor: default;
+      letter-spacing: 0.08em; color: var(--fg-1); white-space: nowrap; cursor: default;
     }
-    .nav-logo span { color: var(--red); }
+    .nav-logo span { color: var(--brand-red); }
 
     .nav-links { display: flex; align-items: center; gap: 0.5rem; flex: 1; justify-content: space-evenly; padding: 0 2rem; }
     .nav-links a {
       display: flex; align-items: center; gap: 0.5rem;
       padding: 0.55rem 1.25rem; border-radius: 10px;
-      color: var(--muted); text-decoration: none;
+      color: var(--fg-3); text-decoration: none;
       font-family: 'Syne', sans-serif;
       font-size: 0.95rem; font-weight: 700;
       letter-spacing: 0.03em;
       transition: all 0.15s; white-space: nowrap;
       border: 1px solid transparent;
     }
-    .nav-links a:hover { color: var(--text); background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08); }
-    .nav-links a.active { color: var(--red); background: rgba(208,0,25,0.08); border-color: rgba(208,0,25,0.2); }
+    .nav-links a:hover { color: var(--fg-1); background: var(--bg-subtle); border-color: var(--line-2); }
+    .nav-links a.active { color: var(--brand-red); background: var(--brand-red-soft); border-color: var(--brand-red-border); }
 
     .nav-right { display: flex; align-items: center; gap: 0.75rem; }
     .nav-avatar {
       width: 40px; height: 40px; border-radius: 50%;
-      background: var(--red); display: flex; align-items: center; justify-content: center;
+      background: var(--brand-red); display: flex; align-items: center; justify-content: center;
       font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: #fff;
       cursor: pointer; overflow: hidden; flex-shrink: 0;
-      border: 2px solid rgba(208,0,25,0.4); transition: border-color 0.15s;
+      border: 2px solid var(--brand-red-border); transition: border-color 0.15s;
     }
-    .nav-avatar:hover { border-color: var(--red); }
+    .nav-avatar:hover { border-color: var(--brand-red); }
     .nav-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .nav-username { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--text); white-space: nowrap; }
+    .nav-username { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--fg-1); white-space: nowrap; }
     .nav-logout-btn {
-      background: rgba(208,0,25,0.1); border: 1px solid rgba(208,0,25,0.3);
-      color: var(--red); padding: 0.5rem 1.1rem; border-radius: 8px;
+      background: var(--brand-red-soft); border: 1px solid var(--brand-red-border);
+      color: var(--brand-red); padding: 0.5rem 1.1rem; border-radius: 8px;
       font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
       cursor: pointer; transition: all 0.15s; white-space: nowrap;
       letter-spacing: 0.03em;
     }
-    .nav-logout-btn:hover { background: var(--red); color: #fff; }
+    .nav-logout-btn:hover { background: var(--brand-red); color: #fff; }
 
     /* ── PAGE WRAP ── */
     .page-wrap { width: 100%; padding: 0 1.25rem 4rem; overflow-anchor: none; }
@@ -88,103 +98,118 @@
 
     /* ── HERO ── */
     .hero-banner {
-      background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 50%, #ffffff 100%);
-      border: 1px solid var(--border); border-radius: 20px;
+      background: var(--bg-page);
+      border: 1px solid var(--line-2); border-radius: 20px;
       padding: 2.5rem; margin-bottom: 2rem;
       position: relative; overflow: hidden;
-    }
-    .hero-banner::before {
-      content: ''; position: absolute; top: -60px; right: -60px;
-      width: 240px; height: 240px;
-      background: radial-gradient(circle, rgba(208,0,25,0.08) 0%, transparent 70%);
-      pointer-events: none;
+      display: flex; align-items: center; justify-content: space-between; gap: 2.5rem;
+      box-shadow: 0 6px 24px rgba(28,24,20,0.35), 0 2px 6px rgba(28,24,20,0.15);
     }
     .hero-banner::after {
       content: ''; position: absolute; bottom: 0; left: 0; right: 0;
-      height: 3px; background: linear-gradient(90deg, var(--red), transparent);
+      height: 3px; background: linear-gradient(90deg, var(--brand-red), transparent 60%);
     }
-    .hero-greeting { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
-    .hero-name { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; line-height: 1; color: var(--text); letter-spacing: 0.03em; margin-bottom: 0.6rem; }
-    .hero-name span { color: var(--red); }
-    .hero-sub { font-size: 0.875rem; color: var(--muted); max-width: 360px; }
-    .hero-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    .hero-left { flex: 1; min-width: 0; }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--brand-red); margin-bottom: 0.65rem;
+    }
+    .hero-eyebrow::before { content: ''; display: inline-block; width: 18px; height: 2px; background: var(--brand-red); border-radius: 1px; }
+    .hero-greeting { font-size: 0.85rem; color: var(--fg-3); margin-bottom: 0.15rem; }
+    .hero-name { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; line-height: 0.95; color: var(--fg-1); letter-spacing: 0.03em; margin-bottom: 0.75rem; }
+    .hero-name span { color: var(--brand-red); }
+    .hero-tagline { font-size: 0.78rem; color: var(--fg-3); line-height: 1.7; margin-bottom: 1.5rem; }
+    .hero-tagline strong { color: var(--fg-2); font-weight: 600; }
+    .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
     .hero-btn {
-      display: inline-flex; align-items: center; gap: 0.5rem;
+      display: inline-flex; align-items: center; gap: 0.45rem;
       padding: 0.65rem 1.4rem; border-radius: 10px;
       font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
       cursor: pointer; border: none; transition: all 0.2s; text-decoration: none;
     }
-    .hero-btn.primary { background: var(--red); color: #fff; }
-    .hero-btn.primary:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(208,0,25,0.3); }
-    .hero-btn.secondary { background: rgba(0,0,0,0.05); color: var(--text); border: 1px solid rgba(0,0,0,0.1); }
-    .hero-btn.secondary:hover { background: rgba(0,0,0,0.09); transform: translateY(-2px); }
-    .hero-bike { font-size: 6rem; opacity: 0.06; position: absolute; right: 2rem; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; }
+    .hero-btn svg { flex-shrink: 0; }
+    .hero-btn.primary { background: var(--brand-red); color: #fff; }
+    .hero-btn.primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-red); }
+    .hero-btn.secondary { background: var(--bg-subtle); color: var(--fg-1); border: 1px solid var(--line-2); }
+    .hero-btn.secondary:hover { background: var(--line-1); transform: translateY(-2px); }
+    .hero-stat-panel {
+      display: flex; flex-shrink: 0;
+      border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden;
+      background: var(--bg-subtle);
+    }
+    .hero-stat-chip { padding: 1.25rem 1.5rem; text-align: center; border-right: 1px solid var(--line-1); }
+    .hero-stat-chip:last-child { border-right: none; }
+    .hero-stat-chip-val { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--fg-1); line-height: 1; margin-bottom: 0.25rem; }
+    .hero-stat-chip-key { font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.08em; }
 
     /* ── STATS ── */
     .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
     .stat-card {
-      background: var(--card); border: 1px solid var(--border);
+      background: var(--bg-page); border: 1px solid var(--line-2);
       border-radius: 16px; padding: 1.5rem; position: relative; overflow: hidden;
       transition: all 0.2s; cursor: default;
     }
-    .stat-card:hover { border-color: rgba(0,0,0,0.15); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .stat-card:hover { border-color: var(--line-2); transform: translateY(-2px); box-shadow: var(--shadow-2); }
     .stat-icon-wrap { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem; }
-    .stat-icon-wrap.red { background: rgba(208,0,25,0.15); }
-    .stat-icon-wrap.blue { background: rgba(29,78,216,0.15); }
-    .stat-icon-wrap.green { background: rgba(21,128,61,0.15); }
-    .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--text); line-height: 1; margin-bottom: 0.25rem; }
-    .stat-lbl { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+    .stat-icon-wrap.red { background: var(--brand-red-soft); }
+    .stat-icon-wrap.blue { background: rgba(29,78,216,0.12); }
+    .stat-icon-wrap.green { background: rgba(21,128,61,0.12); }
+    .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--fg-1); line-height: 1; margin-bottom: 0.25rem; }
+    .stat-lbl { font-size: 0.8rem; color: var(--fg-3); font-weight: 500; }
     .stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
-    .stat-card.red::after { background: var(--red); }
+    .stat-card.red::after { background: var(--brand-red); }
     .stat-card.blue::after { background: var(--blue); }
     .stat-card.green::after { background: var(--green); }
 
     /* ── SECTION HEADER ── */
     .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-    .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; color: var(--text); line-height: 1; }
-    .section-title span { color: var(--red); }
-    .section-sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
-    .section-link { font-size: 0.8rem; color: var(--red); text-decoration: none; font-weight: 600; font-family: 'Syne', sans-serif; }
-    .section-link:hover { color: #ff5533; }
+    .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; color: var(--fg-1); line-height: 1; }
+    .section-title span { color: var(--brand-red); }
+    .section-sub { font-size: 0.82rem; color: var(--fg-3); margin-top: 0.2rem; }
+    .section-link { font-size: 0.8rem; color: var(--brand-red); text-decoration: none; font-weight: 600; font-family: 'Syne', sans-serif; }
+    .section-link:hover { color: var(--brand-red); opacity: 0.8; }
 
     /* ── QUICK ACTIONS ── */
-    .quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
     .quick-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px;
       padding: 1.5rem; cursor: pointer; text-decoration: none;
       transition: all 0.2s; display: flex; align-items: center; gap: 1.25rem;
       position: relative; overflow: hidden;
+      box-shadow: 0 6px 24px rgba(28,24,20,0.35), 0 2px 6px rgba(28,24,20,0.15);
     }
     .quick-card::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
-    .quick-card.red::after { background: var(--red); }
+    .quick-card.red::after { background: var(--brand-red); }
     .quick-card.blue::after { background: var(--blue); }
     .quick-card.green::after { background: var(--green); }
     .quick-card.orange::after { background: #f97316; }
-    .quick-card:hover { border-color: rgba(0,0,0,0.15); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+    .quick-card:hover { border-color: var(--line-2); transform: translateY(-3px); box-shadow: var(--shadow-3); }
     .quick-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
-    .quick-icon.red { background: rgba(208,0,25,0.15); }
-    .quick-icon.blue { background: rgba(29,78,216,0.15); }
-    .quick-icon.green { background: rgba(21,128,61,0.15); }
-    .quick-icon.orange { background: rgba(249,115,22,0.15); }
-    .quick-label { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--text); margin-bottom: 0.2rem; }
-    .quick-sub { font-size: 0.78rem; color: var(--muted); }
-    .quick-arrow { margin-left: auto; color: var(--muted); font-size: 1.1rem; }
+    .quick-icon.red { background: var(--brand-red-soft); }
+    .quick-icon.blue { background: rgba(29,78,216,0.12); }
+    .quick-icon.green { background: rgba(21,128,61,0.12); }
+    .quick-icon.orange { background: rgba(249,115,22,0.12); }
+    .quick-label { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--fg-1); margin-bottom: 0.2rem; }
+    .quick-sub { font-size: 0.78rem; color: var(--fg-3); }
+    .quick-arrow { margin-left: auto; color: var(--fg-3); font-size: 1.1rem; }
 
     /* ── CARDS ── */
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem; }
-    .card-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
-    .card-head h5 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: var(--text); margin: 0; }
-    .card-head a { font-size: 0.78rem; color: var(--red); text-decoration: none; font-weight: 600; font-family: 'Syne', sans-serif; }
+    .card { background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem; box-shadow: 0 6px 24px rgba(28,24,20,0.35), 0 2px 6px rgba(28,24,20,0.15); }
+    .card-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--line-1); }
+    .card-head h5 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: var(--fg-1); margin: 0; }
+    .card-head a { font-size: 0.78rem; color: var(--brand-red); text-decoration: none; font-weight: 600; font-family: 'Syne', sans-serif; }
     .card-body { padding: 1.5rem; }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
 
     /* ── TABLE ── */
-    .table { width: 100%; --bs-table-bg: transparent; --bs-table-hover-bg: rgba(0,0,0,0.02); color: var(--text); font-size: 0.875rem; margin: 0; }
+    .table { width: 100%; --bs-table-bg: transparent; --bs-table-hover-bg: var(--bg-subtle); color: var(--fg-1); font-size: 0.875rem; margin: 0; }
     .table > :not(caption) > * > * { background-color: transparent !important; color: inherit; }
-    .table thead th { font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0.75rem 1rem; }
-    .table tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .table thead th { font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-3); border-bottom: 1px solid var(--line-1); padding: 0.75rem 1rem; }
+    .table tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--line-1); vertical-align: middle; }
     .table tbody tr:last-child td { border-bottom: none; }
-    .table tbody tr:hover td { background: rgba(0,0,0,0.02) !important; }
+    .table tbody tr:hover td { background: var(--bg-subtle) !important; }
 
     /* ── BADGES ── */
     .badge { font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; padding: 0.3em 0.65em; border-radius: 6px; text-transform: uppercase; }
@@ -200,70 +225,75 @@
 
     /* ── FORMS ── */
     .form-group { margin-bottom: 1.1rem; }
-    .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.4rem; font-family: 'Syne', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; background: #ffffff; border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.15s; outline: none; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(208,0,25,0.08); }
+    .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--fg-2); margin-bottom: 0.4rem; font-family: 'Syne', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--fg-1); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.15s; outline: none; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--brand-red); box-shadow: 0 0 0 3px var(--brand-red-soft); }
     .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
-    .profile-field-hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
-    .form-group select option { background: #ffffff; color: var(--text); }
+    .profile-field-hint { font-size: 0.72rem; color: var(--fg-3); margin-top: 0.3rem; }
+    .form-group select option { background: var(--bg-page); color: var(--fg-1); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
-    .btn-submit { background: var(--red); color: #fff; border: none; padding: 0.7rem 1.75rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.5rem; }
-    .btn-submit:hover { background: #d4381a; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(208,0,25,0.3); }
+    .btn-submit { background: var(--brand-red); color: #fff; border: none; padding: 0.7rem 1.75rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.5rem; }
+    .btn-submit:hover { background: var(--brand-red); transform: translateY(-2px); box-shadow: var(--shadow-red); }
     .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
     /* ── EMPTY ── */
-    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
-    .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--fg-3); }
+    .empty-icon { margin-bottom: 0.75rem; color: var(--line-2); display: flex; align-items: center; justify-content: center; }
     .empty-state p { font-size: 0.88rem; }
-    .empty-state a { color: var(--red); text-decoration: none; font-weight: 600; }
+    .empty-state a { color: var(--brand-red); text-decoration: none; font-weight: 600; }
+    /* ── NAV ICONS ── */
+    .nav-links a svg, .mobile-nav-menu a svg { flex-shrink: 0; }
+    /* ── BTN ICONS ── */
+    .btn-submit svg, .hero-btn svg, .btn-order svg { flex-shrink: 0; }
+    .btn-submit { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
 
     /* ── PRODUCTS ── */
     .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
-    .product-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; transition: all 0.2s; }
-    .product-card:hover { border-color: rgba(0,0,0,0.15); transform: translateY(-3px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .product-card { background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; transition: all 0.2s; box-shadow: 0 6px 24px rgba(28,24,20,0.35), 0 2px 6px rgba(28,24,20,0.15); }
+    .product-card:hover { border-color: var(--line-1); transform: translateY(-3px); box-shadow: 0 10px 32px rgba(28,24,20,0.42), 0 3px 10px rgba(28,24,20,0.18); }
     .product-icon { font-size: 2rem; margin-bottom: 0.25rem; }
-    .product-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--text); }
-    .product-cat { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .product-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--red); }
-    .product-stock { font-size: 0.75rem; color: #6b7280; }
-    .btn-order { margin-top: auto; background: rgba(208,0,25,0.12); border: 1px solid rgba(208,0,25,0.25); color: var(--red); padding: 0.55rem 1rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; width: 100%; }
-    .btn-order:hover { background: var(--red); color: #fff; }
+    .product-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--fg-1); }
+    .product-cat { font-size: 0.75rem; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.06em; }
+    .product-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--brand-red); }
+    .product-stock { font-size: 0.75rem; color: var(--fg-3); }
+    .btn-order { margin-top: auto; background: var(--brand-red-soft); border: 1px solid var(--brand-red-border); color: var(--brand-red); padding: 0.55rem 1rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; width: 100%; }
+    .btn-order:hover { background: var(--brand-red); color: #fff; }
 
     /* ── CALENDAR ── */
     .book-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .cal-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.75rem; color: var(--muted); }
+    .cal-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.75rem; color: var(--fg-3); }
     .cal-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
-    .cal-day { aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 500; cursor: default; border: 1px solid #9ca3af; transition: all 0.15s; background: #4b5563; color: #d1d5db; }
+    .cal-day { aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; cursor: default; border: 2px solid var(--line-2); transition: all 0.15s; background: var(--bg-page); color: var(--fg-1); }
     .cal-day.empty { background: transparent; border-color: transparent; }
-    .cal-day.today { border-color: var(--red); color: var(--red); font-weight: 700; background: #4b5563; }
-    .cal-day.available { background: #16a34a; border-color: #15803d; color: #ffffff; cursor: pointer; }
-    .cal-day.available:hover { background: #15803d; border-color: #14532d; }
-    .cal-day.past { background: #4b5563; border-color: #6b7280; opacity: 0.5; }
-    .cal-day.fully-booked { background: #374151; border-color: #6b7280; color: #9ca3af; }
-    .cal-day.selected { background: #111111 !important; border-color: #111111 !important; color: #ffffff !important; font-weight: 700; }
-    .time-slot-btn { background: #f8f9fa; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 0.5rem 0.25rem; font-size: 0.78rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
-    .time-slot-btn:hover:not(:disabled) { background: rgba(208,0,25,0.12); border-color: rgba(208,0,25,0.3); color: var(--red); }
+    .cal-day.today { border-color: var(--brand-red); color: var(--brand-red) !important; font-weight: 800; background: var(--brand-red-soft); }
+    .cal-day.available { background: #bbf7d0; border-color: #22c55e; color: #14532d !important; font-weight: 800; cursor: pointer; }
+    .cal-day.available:hover { background: #86efac; border-color: #16a34a; }
+    .cal-day.past { background: var(--bg-subtle); border-color: var(--line-1); color: #9ca3af !important; font-weight: 600; }
+    .cal-day.fully-booked { background: #fecaca; border-color: #f87171; color: #7f1d1d !important; font-weight: 700; }
+    .cal-day.selected { background: var(--brand-red) !important; border-color: var(--brand-red) !important; color: #ffffff !important; font-weight: 800; }
+    .time-slot-btn { background: var(--bg-subtle); border: 1px solid var(--line-2); color: var(--fg-1); border-radius: 8px; padding: 0.5rem 0.25rem; font-size: 0.78rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .time-slot-btn:hover:not(:disabled) { background: var(--brand-red-soft); border-color: var(--brand-red-border); color: var(--brand-red); }
     .time-slot-btn.booked { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
-    .time-slot-btn.selected-slot { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+    .time-slot-btn.selected-slot { background: var(--brand-red); border-color: var(--brand-red); color: #fff; font-weight: 600; }
 
     /* ── SETTINGS ── */
     .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .pic-upload-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 1.5rem; border: 1px dashed rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 1.5rem; background: rgba(0,0,0,0.02); transition: border-color 0.2s; }
-    .pic-upload-wrap:hover { border-color: rgba(0,0,0,0.35); }
-    .pic-preview { width: 90px; height: 90px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: #fff; overflow: hidden; }
+    .pic-upload-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 1.5rem; border: 1px dashed var(--line-2); border-radius: 12px; margin-bottom: 1.5rem; background: var(--bg-subtle); transition: border-color 0.2s; }
+    .pic-upload-wrap:hover { border-color: var(--fg-3); }
+    .pic-preview { width: 90px; height: 90px; border-radius: 50%; background: var(--brand-red); display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: #fff; overflow: hidden; }
     .pic-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .pic-upload-btn { background: #f5f0eb; border: 1px solid var(--border); color: var(--text); padding: 0.5rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
-    .pic-upload-btn:hover { background: #e4e6e9; }
-    .pic-upload-hint { font-size: 0.75rem; color: var(--muted); text-align: center; }
+    .pic-upload-btn { background: var(--bg-subtle); border: 1px solid var(--line-2); color: var(--fg-1); padding: 0.5rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
+    .pic-upload-btn:hover { background: var(--line-1); }
+    .pic-upload-hint { font-size: 0.75rem; color: var(--fg-3); text-align: center; }
 
     /* ── MODAL ── */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     .modal-overlay.open { display: flex; }
-    .modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 420px; max-width: 95vw; animation: fadeUp 0.2s ease both; }
-    .modal-box h5 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.04em; margin-bottom: 1.25rem; color: var(--text); }
+    .modal-box { background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px; padding: 2rem; width: 420px; max-width: 95vw; animation: fadeUp 0.2s ease both; }
+    .modal-box h5 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.04em; margin-bottom: 1.25rem; color: var(--fg-1); }
     .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
-    .btn-cancel-modal { background: #f5f0eb; border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
-    .btn-cancel-modal:hover { background: #e4e6e9; }
+    .btn-cancel-modal { background: var(--bg-subtle); border: 1px solid var(--line-2); color: var(--fg-1); padding: 0.6rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
+    .btn-cancel-modal:hover { background: var(--line-1); }
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     ::-webkit-scrollbar { width: 6px; }
@@ -275,12 +305,12 @@
       display: none;
       flex-direction: column; align-items: center; justify-content: center;
       gap: 5px; width: 40px; height: 40px; cursor: pointer;
-      background: rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.08); border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--line-1); border-radius: 8px;
       transition: background 0.15s; flex-shrink: 0;
     }
-    .nav-hamburger:hover { background: rgba(0,0,0,0.1); }
-    .nav-hamburger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
+    .nav-hamburger:hover { background: var(--line-1); }
+    .nav-hamburger span { display: block; width: 18px; height: 2px; background: var(--fg-1); border-radius: 2px; transition: all 0.3s; }
     .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
     .nav-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
     .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
@@ -288,9 +318,10 @@
     .mobile-nav-menu {
       display: none; position: fixed;
       top: 72px; left: 0; right: 0;
-      background: #ffffff;
-      border-bottom: 1px solid var(--border);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line-1);
+      box-shadow: var(--shadow-2);
       padding: 1rem 1.25rem;
       flex-direction: column; gap: 0.4rem;
       z-index: 99;
@@ -299,12 +330,12 @@
     .mobile-nav-menu a {
       display: flex; align-items: center; gap: 0.6rem;
       padding: 0.75rem 1rem; border-radius: 10px;
-      color: var(--muted); text-decoration: none;
+      color: var(--fg-3); text-decoration: none;
       font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem;
       transition: all 0.15s;
     }
     .mobile-nav-menu a:hover, .mobile-nav-menu a.active {
-      color: var(--red); background: rgba(208,0,25,0.08);
+      color: var(--brand-red); background: var(--brand-red-soft);
     }
 
     @media (max-width: 768px) {
@@ -312,38 +343,143 @@
       .nav-hamburger { display: flex; }
       .nav-username { display: none; }
       .nav-logout-btn { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
-      .stat-row { grid-template-columns: 1fr 1fr; }
-      .quick-actions, .two-col, .book-grid, .settings-grid { grid-template-columns: 1fr; }
+      .quick-actions { grid-template-columns: 1fr 1fr; }
+      .two-col, .book-grid, .settings-grid { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr; }
-      .hero-bike { display: none; }
+      .hero-banner { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+      .hero-stat-panel { width: 100%; }
+      .hero-stat-chip { flex: 1; }
       .modal-box { width: 95vw; max-width: 95vw; padding: 1.5rem; }
       .page-wrap { padding: 0 1rem 4rem; }
     }
 
     @media (max-width: 480px) {
-      .stat-row { grid-template-columns: 1fr; }
+      .quick-actions { grid-template-columns: 1fr; }
       .top-nav { height: 60px; }
       .mobile-nav-menu { top: 60px; }
       .nav-logo { font-size: 1.4rem; }
       .page-wrap { padding: 0 0.75rem 4rem; }
       .hero-banner { padding: 1.5rem; }
+      .hero-stat-panel { flex-direction: column; }
+      .hero-stat-chip { border-right: none; border-bottom: 1px solid var(--line-1); }
+      .hero-stat-chip:last-child { border-bottom: none; }
       .modal-box { padding: 1.25rem; }
       .modal-actions { flex-direction: column-reverse; gap: 0.5rem; }
       .modal-actions button { width: 100%; }
-      .quick-actions { grid-template-columns: 1fr 1fr; }
     }
 
     /* ── CATEGORY TABS ── */
 .cat-tab {
   padding: 0.45rem 1.1rem; border-radius: 8px;
   font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem;
-  cursor: pointer; border: 1px solid var(--border);
-  background: #ffffff; color: var(--muted);
+  cursor: pointer; border: 1px solid var(--line-2);
+  background: var(--bg-page); color: var(--fg-3);
   transition: all 0.15s;
 }
-.cat-tab:hover { color: var(--text); background: #f5f0eb; }
-.cat-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
+.cat-tab:hover { color: var(--fg-1); background: var(--bg-subtle); }
+.cat-tab.active { background: var(--brand-red); color: #fff; border-color: var(--brand-red); }
 
+    /* ── APPOINTMENT SECTION ── */
+    .appt-banner {
+      background: var(--bg-page);
+      border: 1px solid var(--line-2); border-radius: 16px;
+      padding: 1.75rem 2rem; margin-bottom: 1.5rem;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 2rem;
+      position: relative; overflow: hidden;
+    }
+    .appt-banner::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+      height: 3px; background: linear-gradient(90deg, var(--brand-red), transparent 60%);
+    }
+    .appt-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--brand-red); margin-bottom: 0.5rem;
+    }
+    .appt-eyebrow::before { content: ''; display: inline-block; width: 14px; height: 2px; background: var(--brand-red); border-radius: 1px; }
+    .appt-steps {
+      display: flex; align-items: flex-start; flex-shrink: 0;
+      background: var(--bg-subtle); border: 1px solid var(--line-2);
+      border-radius: 12px; padding: 0.9rem 1.25rem;
+    }
+    .appt-step { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; }
+    .appt-step-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700;
+      background: var(--line-2); color: var(--fg-3);
+    }
+    .appt-step-lbl {
+      font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-3); white-space: nowrap;
+    }
+    .appt-step-conn { width: 36px; height: 2px; background: var(--line-2); margin: 0 0.4rem; align-self: flex-start; margin-top: 14px; flex-shrink: 0; }
+    .appt-cal-card {
+      background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px;
+      overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 6px 24px rgba(28,24,20,0.35), 0 2px 6px rgba(28,24,20,0.15);
+    }
+    .appt-cal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--line-1);
+    }
+    .cal-month-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; color: var(--fg-1); }
+    .cal-nav-btn {
+      width: 34px; height: 34px; border-radius: 8px;
+      border: 1px solid var(--line-2); background: var(--bg-subtle); color: var(--fg-2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+    }
+    .cal-nav-btn:hover { background: var(--line-1); }
+    .appt-cal-body { padding: 1rem 1.25rem; flex: 1; }
+    .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
+    .cal-weekday-lbl { text-align: center; font-size: 0.8rem; font-weight: 700; color: var(--fg-2); font-family: 'Syne', sans-serif; padding: 6px 0; }
+    .cal-legend-bar {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      padding: 0.75rem 1.25rem; border-top: 1px solid var(--line-1);
+      font-size: 0.72rem; color: var(--fg-3); background: var(--bg-subtle);
+    }
+    .appt-form-card {
+      background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px;
+      overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 6px 24px rgba(28,24,20,0.35), 0 2px 6px rgba(28,24,20,0.15);
+    }
+    .appt-form-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--line-1); flex-shrink: 0;
+    }
+    .appt-form-header h5 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: var(--fg-1); margin: 0; }
+    .appt-form-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1; }
+    .appt-date-chip {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.85rem 1.1rem;
+      background: var(--bg-subtle); border: 1px solid var(--line-2); border-radius: 10px;
+      margin-bottom: 1.25rem;
+    }
+    .appt-date-chip-icon { color: var(--fg-3); flex-shrink: 0; }
+    .appt-date-chip-inner { flex: 1; min-width: 0; }
+    .appt-date-chip-lbl {
+      font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-3); margin-bottom: 0.15rem;
+    }
+    #selected-date-display {
+      background: transparent !important; border: none !important; box-shadow: none !important;
+      padding: 0 !important; font-size: 0.88rem; font-weight: 600; color: var(--fg-1); width: 100%; cursor: default;
+    }
+    #selected-date-display::placeholder { color: var(--fg-3); font-weight: 400; font-style: italic; font-size: 0.82rem; }
+    .appt-section-label {
+      font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-2);
+      display: flex; align-items: center; gap: 8px;
+      margin: 1.25rem 0 0.85rem;
+    }
+    .appt-section-label::after { content: ''; flex: 1; height: 1px; background: var(--line-1); }
+    .appt-btn-row { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+    @media (max-width: 768px) {
+      .appt-banner { flex-direction: column; gap: 1.25rem; }
+      .appt-steps { width: 100%; justify-content: center; }
+    }
 
   </style>
 </head>
@@ -354,11 +490,11 @@
   <div class="nav-logo">MOTO<span>TYRE</span></div>
 
   <div class="nav-links">
-    <a href="#" class="active" onclick="showSection('overview', this)">🏠 Home</a>
-    <a href="#" onclick="showSection('book', this)">📅 Book</a>
-    <a href="#" onclick="showSection('bookings', this)">📋 My Bookings</a>
-    <a href="#" onclick="showSection('shop', this)">🛒 Shop</a>
-    <a href="#" onclick="showSection('orders', this)">📦 My Orders</a>
+    <a href="#" class="active" onclick="showSection('overview', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
+    <a href="#" onclick="showSection('book', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="10" y1="17" x2="14" y2="17"/></svg> Appointments</a>
+    <a href="#" onclick="showSection('bookings', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg> My Bookings</a>
+    <a href="#" onclick="showSection('shop', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Parts Catalog</a>
+    <a href="#" onclick="showSection('orders', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> My Orders</a>
   </div>
 
   <div class="nav-hamburger" id="nav-hamburger" onclick="toggleCustomerNav()">
@@ -367,8 +503,8 @@
 
   <div class="nav-right">
   <div style="position:relative;cursor:pointer;" onclick="toggleNotifications()" title="Notifications">
-    <div style="width:40px;height:40px;border-radius:50%;background:#f5f0eb;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all 0.15s;" onmouseover="this.style.background='#dad5cf'" onmouseout="this.style.background='#f5f0eb'">🔔</div>
-    <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;font-size:0.6rem;font-family:'Syne',sans-serif;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:2px solid var(--ink);" id="notif-badge">0</span>
+    <div style="width:40px;height:40px;border-radius:50%;background:var(--brand-red-soft);border:1.5px solid var(--brand-red-border);display:flex;align-items:center;justify-content:center;color:var(--brand-red);transition:all 0.15s;box-shadow:0 2px 8px rgba(208,0,25,0.15);" onmouseover="this.style.background='rgba(208,0,25,0.18)';this.style.boxShadow='0 4px 14px rgba(208,0,25,0.28)'" onmouseout="this.style.background='var(--brand-red-soft)';this.style.boxShadow='0 2px 8px rgba(208,0,25,0.15)'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+    <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:var(--brand-red);color:#fff;font-size:0.6rem;font-family:'Syne',sans-serif;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-subtle);" id="notif-badge">0</span>
   </div>
 
     <div class="nav-avatar" onclick="showSection('profile', null)" title="Account Settings">
@@ -385,44 +521,44 @@
 
 <!-- ═══ MOBILE NAV MENU ═══ -->
 <div class="mobile-nav-menu" id="mobile-nav-menu">
-  <a href="#" class="active" onclick="showSection('overview', this)">🏠 Home</a>
-  <a href="#" onclick="showSection('book', this)">📅 Book</a>
-  <a href="#" onclick="showSection('bookings', this)">📋 My Bookings</a>
-  <a href="#" onclick="showSection('shop', this)">🛒 Shop</a>
-  <a href="#" onclick="showSection('orders', this)">📦 My Orders</a>
+  <a href="#" class="active" onclick="showSection('overview', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
+  <a href="#" onclick="showSection('book', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="10" y1="17" x2="14" y2="17"/></svg> Appointments</a>
+  <a href="#" onclick="showSection('bookings', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg> My Bookings</a>
+  <a href="#" onclick="showSection('shop', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Parts Catalog</a>
+  <a href="#" onclick="showSection('orders', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> My Orders</a>
 </div>
 
 <!-- ═══ NOTIFICATION PANEL ═══ --> 
-<div id="notif-panel" style="display:none;position:fixed;top:76px;right:1.25rem;width:380px;max-width:95vw;background:#ffffff;border:1px solid var(--border);border-radius:16px;z-index:999;box-shadow:0 20px 60px rgba(0,0,0,0.15);overflow:hidden;">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
+<div id="notif-panel" style="display:none;position:fixed;top:76px;right:1.25rem;width:380px;max-width:95vw;background:var(--bg-page);border:1px solid var(--line-2);border-radius:16px;z-index:999;box-shadow:0 20px 60px rgba(28,24,20,0.15);overflow:hidden;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--line-1);">
     <div style="display:flex;align-items:center;gap:0.75rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:var(--text);">Notifications</div>
-      <div id="notif-count-badge" style="display:none;background:var(--red);color:#fff;font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;border-radius:20px;padding:0.15em 0.55em;">0</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:var(--fg-1);">Notifications</div>
+      <div id="notif-count-badge" style="display:none;background:var(--brand-red);color:#fff;font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;border-radius:20px;padding:0.15em 0.55em;">0</div>
     </div>
     <div style="display:flex;gap:0.75rem;align-items:center;">
-      <button onclick="toggleShowAll()" id="btn-show-all" style="background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">Show All</button>
-      <button onclick="markAllRead()" style="background:none;border:none;color:var(--red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">Mark all read</button>
-      <button onclick="toggleNotifications()" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:0;line-height:1;">✕</button>
+      <button onclick="toggleShowAll()" id="btn-show-all" style="background:none;border:none;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">Show All</button>
+      <button onclick="markAllRead()" style="background:none;border:none;color:var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">Mark all read</button>
+      <button onclick="toggleNotifications()" style="background:none;border:none;color:var(--fg-3);font-size:1.1rem;cursor:pointer;padding:0;line-height:1;">✕</button>
     </div>
   </div>
 
   <!-- Filter Tabs -->
-  <div style="display:flex;gap:0.5rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);overflow-x:auto;">
-    <button class="notif-tab active" onclick="filterNotifs('all', this)" style="background:var(--red);border:1px solid var(--red);color:#fff;border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">All</button>
-    <button class="notif-tab" onclick="filterNotifs('booking', this)" style="background:#f5f0eb;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">📅 Bookings</button>
-    <button class="notif-tab" onclick="filterNotifs('order', this)" style="background:#f5f0eb;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">📦 Orders</button>
-    <button class="notif-tab" onclick="filterNotifs('unread', this)" style="background:#f5f0eb;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">🔴 Unread</button>
+  <div style="display:flex;gap:0.5rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--line-1);overflow-x:auto;">
+    <button class="notif-tab active" onclick="filterNotifs('all', this)" style="background:var(--brand-red);border:1px solid var(--brand-red);color:#fff;border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">All</button>
+    <button class="notif-tab" onclick="filterNotifs('booking', this)" style="background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-3);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Appointments</button>
+    <button class="notif-tab" onclick="filterNotifs('order', this)" style="background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-3);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Orders</button>
+    <button class="notif-tab" onclick="filterNotifs('unread', this)" style="background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-3);border-radius:20px;padding:0.3em 0.9em;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Unread</button>
   </div>
 
   <div id="notif-list" style="max-height:460px;overflow-y:auto;">
-    <div id="notif-empty" style="text-align:center;padding:2.5rem 1rem;color:var(--muted);">
-      <div style="font-size:2rem;margin-bottom:0.5rem;">🔔</div>
+    <div id="notif-empty" style="text-align:center;padding:2.5rem 1rem;color:var(--fg-3);">
+      <div style="display:flex;justify-content:center;margin-bottom:0.75rem;color:var(--line-2);"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
       <div style="font-size:0.85rem;">No notifications yet.</div>
     </div>
   </div>
-  <div id="notif-footer" style="display:none;padding:0.75rem 1.25rem;border-top:1px solid var(--border);text-align:center;">
-  <span id="notif-showing" style="font-size:0.75rem;color:var(--muted);font-family:'Syne',sans-serif;"></span>
-  <button onclick="toggleShowAll()" id="btn-view-history" style="background:none;border:none;color:var(--red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">View History</button>
+  <div id="notif-footer" style="display:none;padding:0.75rem 1.25rem;border-top:1px solid var(--line-1);text-align:center;">
+  <span id="notif-showing" style="font-size:0.75rem;color:var(--fg-3);font-family:'Syne',sans-serif;"></span>
+  <button onclick="toggleShowAll()" id="btn-view-history" style="background:none;border:none;color:var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;cursor:pointer;padding:0;">View History</button>
 </div>
 </div>
 
@@ -433,33 +569,37 @@
   <section id="sec-overview" class="c-section active">
 
     <div class="hero-banner">
-      <div>
-        <div class="hero-greeting">Welcome back</div>
-        <div class="hero-name">{{ current_user.fullname.split()[0].upper() }} <span>!</span></div>
-        <div class="hero-sub">Manage your bookings, orders, and profile all in one place.</div>
+      <div class="hero-left">
+        <div class="hero-eyebrow">Customer Portal</div>
+        <div class="hero-greeting">Good day,</div>
+        <div class="hero-name">{{ current_user.fullname.split()[0].upper() }}<span>.</span></div>
+        <div class="hero-tagline">
+          <strong>Appointment Scheduling</strong> · <strong>Service Management</strong> · <strong>Parts Ordering</strong>
+        </div>
         <div class="hero-actions">
-          <button class="hero-btn primary" onclick="showSection('book', null)">📅 Book Appointment</button>
-          <button class="hero-btn secondary" onclick="showSection('shop', null)">🛒 Order Parts</button>
+          <button class="hero-btn primary" onclick="showSection('book', null)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+            Book Appointment
+          </button>
+          <button class="hero-btn secondary" onclick="showSection('shop', null)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            Order Parts
+          </button>
         </div>
       </div>
-      <div class="hero-bike">🏍️</div>
-    </div>
-
-    <div class="stat-row">
-      <div class="stat-card red">
-        <div class="stat-icon-wrap red">📅</div>
-        <div class="stat-val">{{ bookings|length }}</div>
-        <div class="stat-lbl">Total Bookings</div>
-      </div>
-      <div class="stat-card blue">
-        <div class="stat-icon-wrap blue">📦</div>
-        <div class="stat-val">{{ orders|length }}</div>
-        <div class="stat-lbl">Total Orders</div>
-      </div>
-      <div class="stat-card green">
-        <div class="stat-icon-wrap green">🏍️</div>
-        <div class="stat-val" style="font-size:1.1rem;padding-top:0.4rem;">{{ current_user.motorcycle_model or '—' }}</div>
-        <div class="stat-lbl">My Motorcycle</div>
+      <div class="hero-stat-panel">
+        <div class="hero-stat-chip">
+          <div class="hero-stat-chip-val">{{ bookings|length }}</div>
+          <div class="hero-stat-chip-key">Appointments</div>
+        </div>
+        <div class="hero-stat-chip">
+          <div class="hero-stat-chip-val">{{ orders|length }}</div>
+          <div class="hero-stat-chip-key">Orders</div>
+        </div>
+        <div class="hero-stat-chip">
+          <div class="hero-stat-chip-val" style="font-size:1rem;padding-top:0.25rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ current_user.motorcycle_model or '—' }}</div>
+          <div class="hero-stat-chip-key">My Vehicle</div>
+        </div>
       </div>
     </div>
 
@@ -468,24 +608,24 @@
     </div>
     <div class="quick-actions">
       <a class="quick-card red" href="#" onclick="showSection('book', null)">
-        <div class="quick-icon red">📅</div>
-        <div><div class="quick-label">Book Appointment</div><div class="quick-sub">Schedule a service for your bike</div></div>
-        <div class="quick-arrow">›</div>
+        <div class="quick-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="10" y1="17" x2="14" y2="17"/></svg></div>
+        <div><div class="quick-label">Book Appointment</div><div class="quick-sub">Schedule a service visit</div></div>
+        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
       <a class="quick-card blue" href="#" onclick="showSection('bookings', null)">
-        <div class="quick-icon blue">📋</div>
+        <div class="quick-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></div>
         <div><div class="quick-label">My Bookings</div><div class="quick-sub">Track all your appointments</div></div>
-        <div class="quick-arrow">›</div>
+        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
       <a class="quick-card green" href="#" onclick="showSection('shop', null)">
-        <div class="quick-icon green">🛒</div>
-        <div><div class="quick-label">Order Parts</div><div class="quick-sub">Browse motorcycle parts & accessories</div></div>
-        <div class="quick-arrow">›</div>
+        <div class="quick-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
+        <div><div class="quick-label">Parts Catalog</div><div class="quick-sub">Browse parts &amp; accessories</div></div>
+        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
       <a class="quick-card orange" href="#" onclick="showSection('orders', null)">
-        <div class="quick-icon orange">📦</div>
+        <div class="quick-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
         <div><div class="quick-label">My Orders</div><div class="quick-sub">Track your parts orders</div></div>
-        <div class="quick-arrow">›</div>
+        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
     </div>
 
@@ -498,7 +638,7 @@
             <thead><tr><th>Service</th><th>Date</th><th>Status</th></tr></thead>
             <tbody>
               {% for b in bookings[:4] %}
-              <tr>
+              <tr data-booking-ov-id="{{ b.id }}">
                 <td>{{ b.service }}</td>
                 <td>{{ b.date.strftime('%b %d') }}</td>
                 <td><span class="badge badge-{{ b.status }}">{{ b.status|replace('_', ' ')|title }}</span></td>
@@ -508,7 +648,7 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state"><div class="empty-icon">📅</div><p>No bookings yet. <a href="#" onclick="showSection('book', null)">Book now!</a></p></div>
+        <div class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings yet. <a href="#" onclick="showSection('book', null)">Book now!</a></p></div>
         {% endif %}
       </div>
 
@@ -520,7 +660,7 @@
             <thead><tr><th>Order #</th><th>Total</th><th>Status</th></tr></thead>
             <tbody>
               {% for o in orders[:4] %}
-              <tr>
+              <tr data-order-ov-id="{{ o.id }}">
                 <td>ORD-{{ '%03d'|format(o.id) }}</td>
                 <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
                 <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
@@ -530,7 +670,7 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state"><div class="empty-icon">📦</div><p>No orders yet. <a href="#" onclick="showSection('shop', null)">Shop now!</a></p></div>
+        <div class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><p>No orders yet. <a href="#" onclick="showSection('shop', null)">Browse the catalog!</a></p></div>
         {% endif %}
       </div>
     </div>
@@ -539,134 +679,172 @@
 
   <!-- ── BOOK ── -->
 <section id="sec-book" class="c-section">
-  <div class="section-head">
+
+  <!-- Section Banner -->
+  <div class="appt-banner">
     <div>
-      <div class="section-title">BOOK AN <span>APPOINTMENT</span></div>
-      <div class="section-sub">Pick dates and services — add multiple bookings before submitting.</div>
+<div class="section-title" style="margin-bottom:0.35rem;">SCHEDULE A <span>SERVICE</span></div>
+      <div class="section-sub">Select a date on the calendar, choose a time slot, then fill in your vehicle and contact details. You can queue multiple appointments before confirming.</div>
+    </div>
+    <div class="appt-steps">
+      <div class="appt-step">
+        <div class="appt-step-num">1</div>
+        <div class="appt-step-lbl">Date &amp; Time</div>
+      </div>
+      <div class="appt-step-conn"></div>
+      <div class="appt-step">
+        <div class="appt-step-num">2</div>
+        <div class="appt-step-lbl">Details</div>
+      </div>
+      <div class="appt-step-conn"></div>
+      <div class="appt-step">
+        <div class="appt-step-num">3</div>
+        <div class="appt-step-lbl">Confirm</div>
+      </div>
     </div>
   </div>
 
   <div class="book-grid">
+
     <!-- LEFT: Calendar -->
-    <div class="card">
-      <div class="card-head">
-        <h5 id="cal-month-label">Month Year</h5>
-        <div style="display:flex;gap:0.5rem;">
-          <button onclick="changeMonth(-1)" style="background:#f5f0eb;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:var(--text);transition:background 0.15s;" onmouseover="this.style.background='#dad5cf'" onmouseout="this.style.background='#f5f0eb'">‹</button>
-          <button onclick="changeMonth(1)"  style="background:#f5f0eb;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.65rem;cursor:pointer;font-size:0.9rem;color:var(--text);transition:background 0.15s;" onmouseover="this.style.background='#dad5cf'" onmouseout="this.style.background='#f5f0eb'">›</button>
-        </div>
+    <div class="appt-cal-card">
+      <div class="appt-cal-header">
+        <button onclick="changeMonth(-1)" class="cal-nav-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span id="cal-month-label" class="cal-month-title">Month Year</span>
+        <button onclick="changeMonth(1)" class="cal-nav-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
-      <div class="card-body" style="padding:1rem;">
-        <div class="cal-legend">
-          <span><span class="cal-legend-dot" style="background:rgba(21,128,61,0.4);border:1px solid rgba(21,128,61,0.5);"></span>Available</span>
-          <span><span class="cal-legend-dot" style="background:rgba(208,0,25,0.3);border:1px solid rgba(208,0,25,0.4);"></span>Fully Booked</span>
-          <span><span class="cal-legend-dot" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);"></span>Holiday / Closed</span>
-          <span><span class="cal-legend-dot" style="background:var(--red);"></span>Selected</span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
+      <div class="appt-cal-body">
+        <div class="cal-weekdays">
           {% for d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}
-          <div style="text-align:center;font-size:0.65rem;font-weight:700;color:var(--muted);font-family:'Syne',sans-serif;padding:4px 0;">{{ d }}</div>
+          <div class="cal-weekday-lbl">{{ d }}</div>
           {% endfor %}
         </div>
         <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
-        <div id="cal-selected-info" style="margin-top:1rem;font-size:0.82rem;color:var(--muted);text-align:center;min-height:20px;"></div>
+        <div id="cal-selected-info" style="margin-top:1rem;font-size:0.8rem;color:var(--brand-red);text-align:center;min-height:20px;font-weight:600;font-family:'Syne',sans-serif;letter-spacing:0.02em;"></div>
+      </div>
+      <div class="cal-legend-bar">
+        <span><span class="cal-legend-dot" style="background:#bbf7d0;border:1px solid #22c55e;"></span>Available</span>
+        <span><span class="cal-legend-dot" style="background:#fecaca;border:1px solid #f87171;"></span>Fully Booked</span>
+        <span><span class="cal-legend-dot" style="background:var(--bg-subtle);border:1px solid var(--line-2);"></span>Past / Closed</span>
+        <span><span class="cal-legend-dot" style="background:var(--brand-red);border:1px solid var(--brand-red);"></span>Selected</span>
       </div>
     </div>
 
     <!-- RIGHT: Booking Form -->
-    <div class="card">
-      <div class="card-head">
+    <div class="appt-form-card">
+      <div class="appt-form-header">
         <h5>Booking Details</h5>
-        <!-- Queue counter badge -->
-        <div id="queue-badge-wrap" style="display:none;background:rgba(208,0,25,0.15);border:1px solid rgba(208,0,25,0.3);border-radius:8px;padding:0.3rem 0.75rem;font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:var(--red);">
+        <div id="queue-badge-wrap" style="display:none;background:var(--brand-red-soft);border:1px solid var(--brand-red-border);border-radius:8px;padding:0.3rem 0.75rem;font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:var(--brand-red);">
           <span id="queue-count">0</span> in queue
         </div>
       </div>
-      <div class="card-body">
-        <!-- Single booking form (NOT a real <form>, we handle via JS) -->
+      <div class="appt-form-body">
         <div id="single-booking-form">
-          <div class="form-group">
-            <label>Selected Date</label>
-            <input type="text" id="selected-date-display" placeholder="Click a date on the calendar" disabled>
-            <input type="hidden" id="selected-date-value">
-          </div>
-          <div class="form-group">
-            <label>Available Time Slots</label>
-            <div id="time-slots-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;min-height:60px;">
-              <div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>
+
+          <!-- Date display chip -->
+          <div class="appt-date-chip">
+            <div class="appt-date-chip-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
-            <input type="hidden" id="selected-time-value">
+            <div class="appt-date-chip-inner">
+              <div class="appt-date-chip-lbl">Selected Date</div>
+              <input type="text" id="selected-date-display" placeholder="Click a date on the calendar" disabled>
+            </div>
           </div>
+          <input type="hidden" id="selected-date-value">
+
+          <!-- Time slots -->
+          <div class="appt-section-label" style="margin-top:0;">Available Time Slots</div>
+          <div id="time-slots-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;min-height:60px;margin-bottom:0.25rem;">
+            <div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>
+          </div>
+          <input type="hidden" id="selected-time-value">
+
+          <!-- Service type -->
+          <div class="appt-section-label">Service Type</div>
           <div class="form-group" style="position:relative;">
-            <label>Service Type</label>
-            <input type="text" id="service-search" placeholder="Search service..." autocomplete="off"
+            <input type="text" id="service-search" placeholder="Search or select a service..." autocomplete="off"
               style="margin-bottom:0.4rem;"
               oninput="filterServices(this.value)"
               onfocus="document.getElementById('service-dropdown').style.display='block'">
             <div id="service-dropdown" style="display:none;position:absolute;z-index:200;left:0;right:0;
-              background:#ffffff;border:1px solid var(--border);border-radius:8px;
+              background:var(--bg-page);border:1px solid var(--line-2);border-radius:8px;
               max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
             </div>
             <input type="hidden" id="service-value">
           </div>
-          <div class="form-group">
-            <label>Motorcycle Model</label>
-            <input type="text" id="moto-model" value="" placeholder="Honda Click 125i">
-          </div>
-          <div class="form-group">
-            <label>Odometer Reading <span style="color:var(--muted);font-size:0.75rem;">(km)</span></label>
-            <input type="number" id="odometer" placeholder="e.g. 12500" min="0" max="999999" style="appearance:textfield;">
+
+          <!-- Vehicle information -->
+          <div class="appt-section-label">Vehicle Information</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Motorcycle Model</label>
+              <input type="text" id="moto-model" value="" placeholder="Honda Click 125i">
+            </div>
+            <div class="form-group">
+              <label>Odometer <span style="color:var(--fg-3);font-size:0.72rem;">(km)</span></label>
+              <input type="number" id="odometer" placeholder="e.g. 12500" min="0" max="999999" style="appearance:textfield;">
+            </div>
           </div>
           <div class="form-group">
             <label>Preferred Mechanic</label>
             <select id="mechanic-select">
               <option value="">-- No preference --</option>
             </select>
-            <div id="mechanic-info" style="display:none;margin-top:0.5rem;padding:0.6rem 0.85rem;background:#f5f0eb;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;color:var(--muted);">
-              🔧 Specialization: <span id="mechanic-spec-display"></span>
+            <div id="mechanic-info" style="display:none;margin-top:0.5rem;padding:0.6rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;font-size:0.78rem;color:var(--fg-3);">
+              Specialization: <span id="mechanic-spec-display"></span>
             </div>
           </div>
           <div class="form-group">
             <label>Additional Notes</label>
-            <textarea id="booking-notes" rows="2" placeholder="Describe your concern..."></textarea>
+            <textarea id="booking-notes" rows="2" placeholder="Describe your concern or any special requests..."></textarea>
           </div>
 
-          <div style="border-top:1px solid var(--border);margin:1.25rem 0 1rem;"></div>
-          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.9rem;">Contact Information</div>
-
-          <div class="form-group">
-            <label>Full Name</label>
-            <input type="text" id="contact-name" placeholder="Juan Dela Cruz"
-              oninput="this.value=this.value.replace(/[^a-zA-Z\s]/g,''); checkBookingReady()" required>
-            <div id="name-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Name must contain letters only.</div>
+          <!-- Contact information -->
+          <div class="appt-section-label">Contact Information</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" id="contact-name" placeholder="Juan Dela Cruz"
+                oninput="this.value=this.value.replace(/[^a-zA-Z\s]/g,''); checkBookingReady()" required>
+              <div id="name-error" style="display:none;color:#ef4444;font-size:0.75rem;margin-top:0.3rem;">Name must contain letters only.</div>
+            </div>
+            <div class="form-group">
+              <label>Mobile Number</label>
+              <input type="tel" id="contact-mobile" placeholder="09XX XXX XXXX"
+                oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11); checkBookingReady()"
+                maxlength="11" required>
+              <div id="mobile-error" style="display:none;color:#ef4444;font-size:0.75rem;margin-top:0.3rem;">Must start with 0 and be exactly 11 digits.</div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Mobile Number</label>
-            <input type="tel" id="contact-mobile" placeholder="09XX XXX XXXX"
-              oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11); checkBookingReady()"
-              maxlength="11" required>
-            <div id="mobile-error" style="display:none;color:#fca5a5;font-size:0.75rem;margin-top:0.3rem;">❌ Must start with 0 and be exactly 11 digits.</div>
-          </div>
 
-          <!-- ADD TO QUEUE button -->
-          <button type="button" class="btn-submit" id="btn-add-queue" disabled onclick="addToBookingQueue()"
-            style="background:rgba(29,78,216,0.85);margin-bottom:0.5rem;">
-            ＋ Add to Queue
-          </button>
-          <!-- CONFIRM ALL button -->
-          <button type="button" class="btn-submit" id="btn-confirm-all" disabled onclick="submitAllBookings()"
-            style="display:none;background:var(--red);">
-            ✅ Confirm All Bookings (<span id="btn-queue-count">0</span>)
-          </button>
+          <!-- Action buttons -->
+          <div class="appt-btn-row">
+            <button type="button" class="btn-submit" id="btn-add-queue" disabled onclick="addToBookingQueue()"
+              style="background:rgba(29,78,216,0.88);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add to Queue
+            </button>
+            <button type="button" class="btn-submit" id="btn-confirm-all" disabled onclick="submitAllBookings()"
+              style="display:none;background:var(--brand-red);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Confirm All Bookings (<span id="btn-queue-count">0</span>)
+            </button>
+          </div>
         </div>
 
         <!-- Booking Queue Panel -->
         <div id="booking-queue-panel" style="display:none;margin-top:1.5rem;">
-          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">📋 Booking Queue</div>
+          <div class="appt-section-label" style="margin-top:0;">Booking Queue</div>
           <div id="booking-queue-list" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
           <button type="button" onclick="submitAllBookings()" id="btn-confirm-all-bottom"
-            style="width:100%;margin-top:1rem;background:var(--red);color:#fff;border:none;padding:0.75rem 1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;cursor:pointer;transition:all 0.2s;display:none;">
-            ✅ Confirm All Bookings
+            style="width:100%;margin-top:1rem;background:var(--brand-red);color:#fff;border:none;padding:0.75rem 1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;cursor:pointer;transition:all 0.2s;display:none;align-items:center;justify-content:center;gap:0.4rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Confirm All Bookings
           </button>
         </div>
 
@@ -676,7 +854,7 @@
 </section>
 
   <!-- ── MY BOOKINGS ── -->
-<section id="sec-bookings" class="c-section" style="padding: 0 1.25rem 4rem;">
+<section id="sec-bookings" class="c-section" style="padding: 1.5rem 1.25rem 4rem;">
   <div class="section-head">
     <div><div class="section-title">MY <span>BOOKINGS</span></div><div class="section-sub">Track all your service appointments.</div></div>
     <a class="section-link" href="#" onclick="showSection('book', null)">+ New Booking</a>
@@ -688,21 +866,21 @@
         <thead><tr><th>#</th><th>Service</th><th>Date & Time</th><th>Motorcycle</th><th>Status</th></tr></thead>
         <tbody>
           {% for b in bookings %}
-          <tr class="booking-row" style="cursor:pointer;" onclick="openBookingDetails({{ b.id }})">
-            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">{{ loop.index }}</span></td>
+          <tr class="booking-row" data-booking-id="{{ b.id }}" style="cursor:pointer;" onclick="openBookingDetails({{ b.id }})">
+            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">{{ loop.index }}</span></td>
             <td>
-              <span style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);">{{ b.service }}</span>
+              <span style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);">{{ b.service }}</span>
             </td>
             <td>
-              <div style="font-size:0.85rem;color:var(--text);">{{ b.date.strftime('%b %d, %Y') }}</div>
-              <div style="font-size:0.75rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }}</div>
+              <div style="font-size:0.85rem;color:var(--fg-1);">{{ b.date.strftime('%b %d, %Y') }}</div>
+              <div style="font-size:0.75rem;color:var(--fg-3);">{{ b.time.strftime('%I:%M %p') }}</div>
             </td>
             <td>
               {% if b.motorcycle_model %}
-              <div style="font-size:0.85rem;color:var(--text);">{{ b.motorcycle_model }}</div>
-              <div style="font-size:0.75rem;color:var(--muted);">{{ b.motorcycle_plate or '—' }}</div>
+              <div style="font-size:0.85rem;color:var(--fg-1);">{{ b.motorcycle_model }}</div>
+              <div style="font-size:0.75rem;color:var(--fg-3);">{{ b.motorcycle_plate or '—' }}</div>
               {% else %}
-              <span style="color:var(--muted);">—</span>
+              <span style="color:var(--fg-3);">—</span>
               {% endif %}
             </td>
             <td><span class="badge badge-{{ b.status }}">{{ b.status|replace('_', ' ')|title }}</span></td>
@@ -712,7 +890,7 @@
       </table>
     </div>
     {% else %}
-    <div class="empty-state"><div class="empty-icon">📅</div><p>No bookings yet. <a href="#" onclick="showSection('book', null)">Book an appointment!</a></p></div>
+    <div class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings yet. <a href="#" onclick="showSection('book', null)">Schedule an appointment!</a></p></div>
     {% endif %}
   </div>
 </section>
@@ -721,22 +899,23 @@
   <section id="sec-shop" class="c-section" style="padding-left: 0.5rem; padding-right: 0.5rem;">
     <div class="section-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
       <div><div class="section-title">ORDER <span>PARTS</span></div><div class="section-sub">Browse available motorcycle parts and accessories.</div></div>
-      <button onclick="openCart()" style="position:relative;display:flex;align-items:center;gap:0.5rem;background:var(--red);border:none;color:#fff;padding:0.55rem 1.1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#a8001a'" onmouseout="this.style.background='var(--red)'">
-        🛒 Cart
-        <span id="cart-badge" style="display:none;position:absolute;top:-7px;right:-7px;background:#fff;color:var(--red);font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:800;border-radius:50%;width:18px;height:18px;align-items:center;justify-content:center;border:2px solid var(--red);">0</span>
+      <button onclick="openCart()" style="position:relative;display:inline-flex;align-items:center;gap:0.5rem;background:var(--brand-red);border:none;color:#fff;padding:0.55rem 1.1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#a8001a'" onmouseout="this.style.background='var(--brand-red)'">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Cart
+        <span id="cart-badge" style="display:none;position:absolute;top:-7px;right:-7px;background:#fff;color:var(--brand-red);font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:800;border-radius:50%;width:18px;height:18px;align-items:center;justify-content:center;border:2px solid var(--brand-red);">0</span>
       </button>
     </div>
 
    <!-- Category Filter Tabs -->
     <div style="margin-bottom:1rem;">
-  <input type="text" id="shop-search" placeholder="🔍 Search products..." oninput="searchProducts()" style="width:100%;background:#ffffff;border:1px solid var(--border);border-radius:10px;padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"  >
+  <input type="text" id="shop-search" placeholder="Search products..." oninput="searchProducts()" style="width:100%;background:var(--bg-page);border:1px solid var(--line-2);border-radius:10px;padding:0.75rem 1rem;color:var(--fg-1);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--brand-red)'" onblur="this.style.borderColor='var(--line-2)'"  >
 </div>
 <div id="cat-tabs" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
       <button class="cat-tab active" onclick="filterProducts('all', this)">All</button>
-      <button class="cat-tab" onclick="filterProducts('tire', this)">🏍️ Tire</button>
-      <button class="cat-tab" onclick="filterProducts('engineoil', this)">🛢️ Engine Oil</button>
-      <button class="cat-tab" onclick="filterProducts('airfilter', this)">💨 Air Filter</button>
-      <button class="cat-tab" onclick="filterProducts('brakeshoe', this)">🔩 Brake Shoe</button>
+      <button class="cat-tab" onclick="filterProducts('tire', this)">Tire</button>
+      <button class="cat-tab" onclick="filterProducts('engineoil', this)">Engine Oil</button>
+      <button class="cat-tab" onclick="filterProducts('airfilter', this)">Air Filter</button>
+      <button class="cat-tab" onclick="filterProducts('brakeshoe', this)">Brake Shoe</button>
     </div>
 
     {% if products %}
@@ -750,24 +929,24 @@
         data-stock="{{ p.stock }}"
         data-description="{{ (p.description or '')|e }}"
         onclick="openProductInfo(this)">
-        <div class="product-icon">🔧</div>
+        <div class="product-icon" style="color:var(--fg-3);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
         <div class="product-name">{{ p.name }}</div>
         <div class="product-cat">{{ p.category }}</div>
         <div class="product-price">₱{{ '%.2f'|format(p.price) }}</div>
         <div class="product-stock">{{ p.stock }} in stock</div>
-        {% if p.description %}<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem;">{{ p.description }}</div>{% endif %}
-        <div style="font-size:0.75rem;color:var(--muted);margin-top:auto;padding-top:0.5rem;">Tap to view details</div>
+        {% if p.description %}<div style="font-size:0.78rem;color:var(--fg-3);margin-bottom:0.5rem;">{{ p.description }}</div>{% endif %}
+        <div style="font-size:0.72rem;color:var(--fg-3);margin-top:auto;padding-top:0.5rem;font-family:'Syne',sans-serif;font-weight:600;letter-spacing:0.04em;">View Details</div>
       </div>
       {% endfor %}
     </div>
-    <div id="no-products" style="display:none;" class="empty-state"><div class="empty-icon">🔧</div><p>No products in this category.</p></div>
+    <div id="no-products" style="display:none;" class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><p>No products in this category.</p></div>
     {% else %}
-    <div class="empty-state"><div class="empty-icon">🔧</div><p>No parts available at the moment. Please check back later.</p></div>
+    <div class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><p>No parts available at the moment. Please check back later.</p></div>
     {% endif %}
   </section>
 
   <!-- ── MY ORDERS ── -->
-<section id="sec-orders" class="c-section" style="padding: 0 1.25rem 4rem;">
+<section id="sec-orders" class="c-section" style="padding: 1.5rem 1.25rem 4rem;">
   <div class="section-head">
     <div><div class="section-title">MY <span>ORDERS</span></div><div class="section-sub">Track your parts and accessories orders.</div></div>
     <a class="section-link" href="#" onclick="showSection('shop', null)">+ Order Parts</a>
@@ -779,16 +958,16 @@
         <thead><tr><th>Order #</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
         <tbody>
           {% for o in orders %}
-          <tr class="order-row" style="cursor:pointer;" onclick="openOrderDetails({{ o.id }})">
-            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--red);">ORD-{{ '%03d'|format(o.id) }}</span></td>
+          <tr class="order-row" data-order-id="{{ o.id }}" style="cursor:pointer;" onclick="openOrderDetails({{ o.id }})">
+            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--brand-red);">ORD-{{ '%03d'|format(o.id) }}</span></td>
             <td>
-              <span style="font-size:0.82rem;color:var(--text);">
+              <span style="font-size:0.82rem;color:var(--fg-1);">
                 {% if o.items|length == 0 %}
-                  <span style="color:var(--muted);">Service Payment</span>
+                  <span style="color:var(--fg-3);">Service Payment</span>
                 {% elif o.items|length == 1 %}
                   {{ o.items[0].product.name }}
                 {% else %}
-                  {{ o.items[0].product.name }} <span style="color:var(--muted);">+{{ o.items|length - 1 }} more</span>
+                  {{ o.items[0].product.name }} <span style="color:var(--fg-3);">+{{ o.items|length - 1 }} more</span>
                 {% endif %}
               </span>
             </td>
@@ -801,7 +980,7 @@
       </table>
     </div>
     {% else %}
-    <div class="empty-state"><div class="empty-icon">📦</div><p>No orders yet. <a href="#" onclick="showSection('shop', null)">Browse our parts!</a></p></div>
+    <div class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><p>No orders yet. <a href="#" onclick="showSection('shop', null)">Browse the catalog!</a></p></div>
     {% endif %}
   </div>
 </section>
@@ -826,11 +1005,11 @@
               </div>
               <div>
                 <input type="file" name="profile_pic" id="picInput" accept="image/*" style="display:none;" onchange="previewPic(this)">
-                <button type="button" class="pic-upload-btn" onclick="document.getElementById('picInput').click()">📷 Choose Photo</button>
+                <button type="button" class="pic-upload-btn" onclick="document.getElementById('picInput').click()" style="display:inline-flex;align-items:center;gap:0.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Choose Photo</button>
               </div>
               <div class="pic-upload-hint">JPG, PNG or GIF · Max 2MB</div>
             </div>
-            <button type="submit" class="btn-submit">💾 Save Picture</button>
+            <button type="submit" class="btn-submit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Picture</button>
           </form>
         </div>
       </div>
@@ -853,7 +1032,7 @@
             <div class="form-group"><label>Address</label><input type="text" name="address" value="{{ current_user.address or '' }}" placeholder="House No., Street, Barangay, City" maxlength="255"></div>
             <div class="form-group"><label>Motorcycle Model</label><input type="text" name="motorcycle_model" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i" maxlength="100"></div>
             <div class="form-group"><label>Email (cannot change)</label><input type="email" value="{{ current_user.email }}" disabled></div>
-            <button type="submit" class="btn-submit">💾 Save Changes</button>
+            <button type="submit" class="btn-submit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Changes</button>
           </form>
         </div>
       </div>
@@ -866,15 +1045,15 @@
 <div class="modal-overlay" id="modal-booking-details">
   <div class="modal-box" style="width:480px;max-width:95vw;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <h5 style="margin:0;">📅 Booking Details</h5>
-      <button onclick="closeModal('modal-booking-details')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+      <h5 style="margin:0;">Booking Details</h5>
+      <button onclick="closeModal('modal-booking-details')" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
     </div>
     
     <!-- Booking Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
       <div>
-        <div id="bd-service" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--text);letter-spacing:0.04em;"></div>
-        <div id="bd-created" style="font-size:0.75rem;color:var(--muted);"></div>
+        <div id="bd-service" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--fg-1);letter-spacing:0.04em;"></div>
+        <div id="bd-created" style="font-size:0.75rem;color:var(--fg-3);"></div>
       </div>
       <div id="bd-status-badge"></div>
     </div>
@@ -882,55 +1061,51 @@
     <!-- Schedule Info -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
       <div style="padding:1rem;background:rgba(208,0,25,0.08);border:1px solid rgba(208,0,25,0.2);border-radius:10px;text-align:center;">
-        <div style="font-size:1.5rem;margin-bottom:0.25rem;">📆</div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Date</div>
-        <div id="bd-date" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;"></div>
+        <div style="margin-bottom:0.25rem;display:flex;justify-content:center;color:var(--brand-red);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Date</div>
+        <div id="bd-date" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:var(--fg-1);"></div>
       </div>
       <div style="padding:1rem;background:rgba(29,78,216,0.08);border:1px solid rgba(29,78,216,0.2);border-radius:10px;text-align:center;">
-        <div style="font-size:1.5rem;margin-bottom:0.25rem;">🕐</div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Time</div>
-        <div id="bd-time" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:#fff;"></div>
+        <div style="margin-bottom:0.25rem;display:flex;justify-content:center;color:#2563eb;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Time</div>
+        <div id="bd-time" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:var(--fg-1);"></div>
       </div>
     </div>
 
     <!-- Motorcycle Info -->
-    <div style="padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">🏍️ Motorcycle Information</div>
+    <div style="padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Motorcycle Information</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Model</div>
-          <div id="bd-model" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
-        </div>
-        <div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Plate Number</div>
-          <div id="bd-plate" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
+          <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">Model</div>
+          <div id="bd-model" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;"></div>
         </div>
         <div id="bd-odo-wrap">
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Odometer</div>
-          <div id="bd-odometer" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
+          <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">Odometer</div>
+          <div id="bd-odometer" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;"></div>
         </div>
       </div>
     </div>
 
     <!-- Mechanic Info -->
-<div id="bd-mechanic-wrap" style="display:none;padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
-  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">🔧 Assigned Mechanic</div>
+<div id="bd-mechanic-wrap" style="display:none;padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Assigned Mechanic</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
     <div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Name</div>
-      <div id="bd-mechanic-name" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
+      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">Name</div>
+      <div id="bd-mechanic-name" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;"></div>
     </div>
     <div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">Specialization</div>
-      <div id="bd-mechanic-spec" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--text);font-size:0.9rem;"></div>
+      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">Specialization</div>
+      <div id="bd-mechanic-spec" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;"></div>
     </div>
   </div>
 </div>
 
     <!-- Notes -->
-    <div id="bd-notes-wrap" style="padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">📝 Notes</div>
-      <div id="bd-notes" style="font-size:0.85rem;color:var(--text);line-height:1.6;"></div>
+    <div id="bd-notes-wrap" style="padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Notes</div>
+      <div id="bd-notes" style="font-size:0.85rem;color:var(--fg-1);line-height:1.6;"></div>
     </div>
 
     <!-- Status Timeline -->
@@ -946,39 +1121,39 @@
 <div class="modal-overlay" id="modal-order-details">
   <div class="modal-box" style="width:520px;max-width:95vw;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <h5 style="margin:0;">📦 Order Details</h5>
-      <button onclick="closeModal('modal-order-details')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+      <h5 style="margin:0;">Order Details</h5>
+      <button onclick="closeModal('modal-order-details')" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
     </div>
     
     <!-- Order Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
       <div>
-        <div id="od-order-num" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;"></div>
-        <div id="od-order-date" style="font-size:0.78rem;color:var(--muted);"></div>
+        <div id="od-order-num" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--brand-red);letter-spacing:0.04em;"></div>
+        <div id="od-order-date" style="font-size:0.78rem;color:var(--fg-3);"></div>
       </div>
       <div id="od-status-badge"></div>
     </div>
 
     <!-- Products List -->
     <div style="margin-bottom:1rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Products Ordered</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Products Ordered</div>
       <div id="od-products-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:240px;overflow-y:auto;"></div>
     </div>
 
     <!-- Order Summary -->
-    <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:1rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Summary</div>
-      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text);margin-bottom:0.4rem;">
+    <div style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Summary</div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--fg-1);margin-bottom:0.4rem;">
         <span>Subtotal</span>
         <span id="od-subtotal"></span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--fg-3);margin-bottom:0.75rem;">
         <span>Shipping</span>
         <span>To be arranged</span>
       </div>
-      <div style="border-top:1px solid var(--border);padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">Total</span>
-        <span id="od-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);"></span>
+      <div style="border-top:1px solid var(--line-1);padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">Total</span>
+        <span id="od-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--brand-red);"></span>
       </div>
     </div>
 
@@ -986,79 +1161,21 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;">
       <div style="display:flex;align-items:center;gap:0.6rem;">
         <span style="font-size:1.1rem;">💳</span>
-        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#4ade80;">Payment Method</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-2);">Payment Method</span>
       </div>
-      <span id="od-payment" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;"></span>
+      <span id="od-payment" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);"></span>
     </div>
 
     <!-- Status Timeline -->
     <div id="od-timeline" style="margin-top:1.25rem;"></div>
 
     <div id="od-confirm-received-wrap" style="display:none;margin-top:1rem;">
-      <button id="od-confirm-received-btn" onclick="confirmOrderReceived()" style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.15);border:1px solid rgba(21,128,61,0.35);border-radius:10px;color:#86efac;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:0.04em;transition:all 0.2s;" onmouseover="this.style.background='rgba(21,128,61,0.25)'" onmouseout="this.style.background='rgba(21,128,61,0.15)'">
-        📦 I Already Received My Order
+      <button id="od-confirm-received-btn" onclick="confirmOrderReceived()" style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.12);border:1px solid rgba(21,128,61,0.3);border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:0.04em;transition:all 0.2s;" onmouseover="this.style.background='rgba(21,128,61,0.22)'" onmouseout="this.style.background='rgba(21,128,61,0.12)'">
+        I Already Received My Order
       </button>
     </div>
 
     <div class="modal-actions" style="margin-top:1rem;">
-      <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order-details')">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ ORDER DETAILS MODAL ═══ -->
-<div class="modal-overlay" id="modal-order-details">
-  <div class="modal-box" style="width:520px;max-width:95vw;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <h5 style="margin:0;">📦 Order Details</h5>
-      <button onclick="closeModal('modal-order-details')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
-    </div>
-    
-    <!-- Order Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
-      <div>
-        <div id="od-order-num" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;"></div>
-        <div id="od-order-date" style="font-size:0.78rem;color:var(--muted);"></div>
-      </div>
-      <div id="od-status-badge"></div>
-    </div>
-
-    <!-- Products List -->
-    <div style="margin-bottom:1rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Products Ordered</div>
-      <div id="od-products-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:240px;overflow-y:auto;"></div>
-    </div>
-
-    <!-- Order Summary -->
-    <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:1rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Summary</div>
-      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text);margin-bottom:0.4rem;">
-        <span>Subtotal</span>
-        <span id="od-subtotal"></span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">
-        <span>Shipping</span>
-        <span>To be arranged</span>
-      </div>
-      <div style="border-top:1px solid var(--border);padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">Total</span>
-        <span id="od-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);"></span>
-      </div>
-    </div>
-
-    <!-- Payment Info -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;">
-      <div style="display:flex;align-items:center;gap:0.6rem;">
-        <span style="font-size:1.1rem;">💳</span>
-        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#4ade80;">Payment Method</span>
-      </div>
-      <span id="od-payment" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;"></span>
-    </div>
-
-    <!-- Status Timeline -->
-    <div id="od-timeline" style="margin-top:1.25rem;"></div>
-
-    <div class="modal-actions" style="margin-top:1.5rem;">
       <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order-details')">Close</button>
     </div>
   </div>
@@ -1070,11 +1187,11 @@
 
     <!-- STEP 1: CART -->
     <div id="step-cart">
-      <h5>🛒 Order Summary</h5>
+      <h5>Order Summary</h5>
       <div id="cart-items-list" style="max-height:300px;overflow-y:auto;margin-bottom:0.75rem;"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-top:1px solid var(--border);">
-        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:var(--muted);">TOTAL</span>
-        <span id="cart-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;"></span>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-top:1px solid var(--line-1);">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:var(--fg-2);">TOTAL</span>
+        <span id="cart-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--fg-1);"></span>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel</button>
@@ -1084,14 +1201,14 @@
 
     <!-- STEP 2: DELIVERY METHOD -->
     <div id="step-shipping" style="display:none;">
-      <h5>🚚 Delivery Method</h5>
+      <h5>Delivery Method</h5>
       
       <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.25rem;">
         <div id="opt-pickup" class="delivery-option selected" onclick="selectDelivery('pickup')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(21,128,61,0.1);border:2px solid var(--green);border-radius:10px;cursor:pointer;transition:all 0.15s;">
-          <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">🏪</div>
+          <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#16a34a;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
           <div style="flex:1;">
-            <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.95rem;">Shop Pickup</div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pick up at MotoTyre North Caloocan</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.95rem;">Shop Pickup</div>
+            <div style="font-size:0.78rem;color:var(--fg-3);margin-top:2px;">Pick up at MotoTyre North Caloocan</div>
             <div style="font-size:0.75rem;color:#86efac;margin-top:4px;">FREE</div>
           </div>
           <div id="check-pickup" style="width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1099,27 +1216,27 @@
           </div>
         </div>
         
-        <div id="opt-ship" class="delivery-option" onclick="selectDelivery('ship')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#ffffff;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;">
-          <div style="width:48px;height:48px;border-radius:10px;background:rgba(29,78,216,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">🚚</div>
+        <div id="opt-ship" class="delivery-option" onclick="selectDelivery('ship')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--bg-page);border:2px solid var(--line-2);border-radius:10px;cursor:pointer;transition:all 0.15s;">
+          <div style="width:48px;height:48px;border-radius:10px;background:rgba(29,78,216,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#2563eb;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
           <div style="flex:1;">
-            <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.95rem;">Ship to Address</div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Deliver to your location</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.95rem;">Ship to Address</div>
+            <div style="font-size:0.78rem;color:var(--fg-3);margin-top:2px;">Deliver to your location</div>
             <div style="font-size:0.75rem;color:#fbbf24;margin-top:4px;">Shipping fee to be calculated</div>
           </div>
-          <div id="check-ship" style="width:22px;height:22px;border-radius:50%;background:transparent;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div id="check-ship" style="width:22px;height:22px;border-radius:50%;background:transparent;border:2px solid var(--line-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <span style="color:#fff;font-size:0.75rem;display:none;">✓</span>
           </div>
         </div>
       </div>
 
       <div id="pickup-info" style="background:rgba(21,128,61,0.08);border:1px solid rgba(21,128,61,0.2);border-radius:10px;padding:1rem;margin-bottom:1rem;">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">📍 Pickup Location</div>
-        <div style="font-size:0.88rem;color:#fff;font-weight:600;margin-bottom:0.25rem;">MotoTyre North Caloocan</div>
-        <div style="font-size:0.82rem;color:var(--muted);line-height:1.5;">Saranay Rd, Barangay 171 Bagumbong,<br>Caloocan City, Metro Manila</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">📍 Pickup Location</div>
+        <div style="font-size:0.88rem;color:var(--fg-1);font-weight:600;margin-bottom:0.25rem;">MotoTyre North Caloocan</div>
+        <div style="font-size:0.82rem;color:var(--fg-3);line-height:1.5;">Saranay Rd, Barangay 171 Bagumbong,<br>Caloocan City, Metro Manila</div>
         <div style="font-size:0.78rem;color:#86efac;margin-top:0.5rem;">📞 0915 269 8366</div>
         <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(21,128,61,0.2);">
-          <div style="font-size:0.75rem;color:var(--muted);">⏰ Operating Hours</div>
-          <div style="font-size:0.82rem;color:#fff;margin-top:0.25rem;">Mon - Sat: 8:00 AM - 7:00 PM</div>
+          <div style="font-size:0.75rem;color:var(--fg-3);">Operating Hours</div>
+          <div style="font-size:0.82rem;color:var(--fg-1);margin-top:0.25rem;">Mon - Sat: 8:00 AM - 7:00 PM</div>
         </div>
       </div>
 
@@ -1166,10 +1283,10 @@
 
   <!-- Cash Option -->
   <div id="opt-cash" onclick="selectPayment('cash')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(21,128,61,0.1);border:2px solid var(--green);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:0.75rem;">
-    <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">💵</div>
+    <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#16a34a;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
     <div style="flex:1;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.95rem;">Cash</div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pay in-store upon pickup</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.95rem;">Cash</div>
+      <div style="font-size:0.78rem;color:var(--fg-3);margin-top:2px;">Pay in-store upon pickup</div>
     </div>
     <div id="check-cash" style="width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
       <span style="color:#fff;font-size:0.75rem;">✓</span>
@@ -1177,25 +1294,25 @@
   </div>
 
   <!-- GCash Option -->
-  <div id="opt-gcash" onclick="selectPayment('gcash')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#ffffff;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:1.25rem;">
-    <div style="width:48px;height:48px;border-radius:10px;background:rgba(0,168,107,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">📱</div>
+  <div id="opt-gcash" onclick="selectPayment('gcash')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--bg-page);border:2px solid var(--line-2);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:1.25rem;">
+    <div style="width:48px;height:48px;border-radius:10px;background:rgba(0,168,107,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#059669;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
     <div style="flex:1;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.95rem;">GCash</div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pay online via GCash</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.95rem;">GCash</div>
+      <div style="font-size:0.78rem;color:var(--fg-3);margin-top:2px;">Pay online via GCash</div>
     </div>
-    <div id="check-gcash" style="width:22px;height:22px;border-radius:50%;background:transparent;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+    <div id="check-gcash" style="width:22px;height:22px;border-radius:50%;background:transparent;border:2px solid var(--line-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
       <span style="color:#fff;font-size:0.75rem;display:none;">✓</span>
     </div>
   </div>
 
-  <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Order Summary</div>
+  <div style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Order Summary</div>
     <div id="pay-items-list" style="margin-bottom:0.5rem;"></div>
-    <div style="display:flex;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Delivery</span><span id="pay-delivery-method"></span></div>
-    <div id="pay-shipping-row" style="display:none;justify-content:space-between;color:var(--muted);margin-bottom:0.4rem;"><span>Shipping Fee</span><span>To be calculated</span></div>
-    <div style="border-top:1px solid var(--border);padding-top:0.75rem;margin-top:0.5rem;display:flex;justify-content:space-between;">
-      <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">Total</span>
-      <span id="pay-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--red);"></span>
+    <div style="display:flex;justify-content:space-between;color:var(--fg-3);margin-bottom:0.4rem;"><span>Delivery</span><span id="pay-delivery-method"></span></div>
+    <div id="pay-shipping-row" style="display:none;justify-content:space-between;color:var(--fg-3);margin-bottom:0.4rem;"><span>Shipping Fee</span><span>To be calculated</span></div>
+    <div style="border-top:1px solid var(--line-1);padding-top:0.75rem;margin-top:0.5rem;display:flex;justify-content:space-between;">
+      <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">Total</span>
+      <span id="pay-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--brand-red);"></span>
     </div>
   </div>
   <div class="modal-actions">
@@ -1206,27 +1323,27 @@
 
     <!-- STEP 4: CONFIRMATION -->
     <div id="step-confirm" style="display:none;">
-      <h5>✅ Confirm Order</h5>
-      <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Items</div>
+      <h5>Confirm Order</h5>
+      <div style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Items</div>
         <div id="conf-items-list" style="margin-bottom:0.5rem;"></div>
-        <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Delivery Method</div>
-        <div id="conf-delivery-info" style="color:var(--text);line-height:1.6;margin-bottom:0.75rem;"></div>
-        <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
+        <div style="border-top:1px solid var(--line-1);margin:0.75rem 0;"></div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Delivery Method</div>
+        <div id="conf-delivery-info" style="color:var(--fg-1);line-height:1.6;margin-bottom:0.75rem;"></div>
+        <div style="border-top:1px solid var(--line-1);margin:0.75rem 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Payment</span>
-          <span style="color:#4ade80;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;" id="conf-payment-display">💵 Cash</span>
+          <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;">Payment</span>
+          <span style="color:#4ade80;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;" id="conf-payment-display">Cash</span>
         </div>
-        <div style="border-top:1px solid var(--border);margin:0.75rem 0;"></div>
+        <div style="border-top:1px solid var(--line-1);margin:0.75rem 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);">Total</span>
-          <span id="conf-total" style="color:var(--red);font-family:'Bebas Neue',sans-serif;font-size:1.3rem;"></span>
+          <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">Total</span>
+          <span id="conf-total" style="color:var(--brand-red);font-family:'Bebas Neue',sans-serif;font-size:1.3rem;"></span>
         </div>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel Order</button>
-        <button type="button" id="confirm-pay-btn" class="btn-submit" style="width:auto;background:#15803d;" onclick="submitCartOrder()">✅ Confirm and Pay</button>
+        <button type="button" id="confirm-pay-btn" class="btn-submit" style="width:auto;background:#15803d;" onclick="submitCartOrder()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Confirm and Pay</button>
       </div>
     </div>
 
@@ -1237,48 +1354,70 @@
 <div class="modal-overlay" id="modal-product-info">
   <div class="modal-box" style="width:460px;max-width:95vw;">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;">
-      <div style="font-size:3rem;line-height:1;" id="pi-icon">🔧</div>
+      <div style="color:var(--fg-3);" id="pi-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
       <button onclick="closeModal('modal-product-info')" style="background:transparent;border:none;color:#6b7280;font-size:1.3rem;cursor:pointer;padding:0.25rem;">✕</button>
     </div>
     <div style="margin-bottom:1.25rem;">
-      <div id="pi-name" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:#fff;margin-bottom:0.4rem;"></div>
-      <div id="pi-cat" style="display:inline-block;background:#f5f0eb;border:1px solid var(--border);border-radius:99px;padding:0.2rem 0.75rem;font-size:0.72rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;"></div>
+      <div id="pi-name" style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--fg-1);margin-bottom:0.4rem;"></div>
+      <div id="pi-cat" style="display:inline-block;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:99px;padding:0.2rem 0.75rem;font-size:0.72rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;"></div>
       <div id="pi-description" style="font-size:0.85rem;color:#9ca3af;line-height:1.6;"></div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:0.9rem 1rem;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.9rem 1rem;margin-bottom:1rem;">
       <div>
-        <div style="font-size:0.7rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Price</div>
-        <div id="pi-price" style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--red);line-height:1.1;"></div>
+        <div style="font-size:0.7rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Price</div>
+        <div id="pi-price" style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--brand-red);line-height:1.1;"></div>
       </div>
       <div style="text-align:right;">
-        <div style="font-size:0.7rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Stock</div>
+        <div style="font-size:0.7rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Stock</div>
         <div id="pi-stock" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:#4ade80;"></div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-      <span style="font-size:0.78rem;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Qty</span>
+      <span style="font-size:0.78rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Qty</span>
       <div style="display:flex;align-items:center;gap:0.5rem;">
-        <button type="button" onclick="changeInfoQty(-1)" style="width:30px;height:30px;border-radius:6px;background:#f5f0eb;border:1px solid var(--border);color:var(--text);font-size:1.1rem;cursor:pointer;">−</button>
-        <input type="number" id="pi-qty" min="1" value="1" style="width:52px;text-align:center;background:#ffffff;border:1px solid var(--border);border-radius:6px;padding:0.35rem;color:var(--text);font-size:0.9rem;" oninput="clampInfoQty()">
-        <button type="button" onclick="changeInfoQty(1)" style="width:30px;height:30px;border-radius:6px;background:#f5f0eb;border:1px solid var(--border);color:var(--text);font-size:1.1rem;cursor:pointer;">+</button>
+        <button type="button" onclick="changeInfoQty(-1)" style="width:30px;height:30px;border-radius:6px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);font-size:1.1rem;cursor:pointer;">−</button>
+        <input type="number" id="pi-qty" min="1" value="1" style="width:52px;text-align:center;background:var(--bg-page);border:1px solid var(--line-2);border-radius:6px;padding:0.35rem;color:var(--fg-1);font-size:0.9rem;" oninput="clampInfoQty()">
+        <button type="button" onclick="changeInfoQty(1)" style="width:30px;height:30px;border-radius:6px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);font-size:1.1rem;cursor:pointer;">+</button>
       </div>
     </div>
     <div class="modal-actions">
       <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-product-info')">Cancel</button>
-      <button type="button" class="btn-submit" style="width:auto;" onclick="addToCartFromInfo()">🛒 Add to Cart</button>
+      <button type="button" class="btn-submit" style="width:auto;" onclick="addToCartFromInfo()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Add to Cart</button>
     </div>
   </div>
 </div>
 
 <!-- ═══ LOGOUT MODAL ═══ -->
 <div class="modal-overlay" id="modal-logout" style="display:none;">
-  <div class="modal-box" style="max-width:380px;text-align:center;">
-    <div style="font-size:2.5rem;margin-bottom:0.75rem;">🚪</div>
-    <h5 style="margin-bottom:0.5rem;">Logging Out</h5>
-    <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:1.5rem;">Are you sure you want to log out of your account?</p>
-    <div class="modal-actions" style="justify-content:center;">
-      <button class="btn-cancel-modal" onclick="document.getElementById('modal-logout').style.display='none'">Cancel</button>
-      <a href="{{ url_for('logout') }}" style="text-decoration:none;padding:0.6rem 1.5rem;background:var(--red);color:#fff;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;">Yes, Logout</a>
+  <div class="modal-box" style="max-width:360px;padding:0;overflow:hidden;">
+    <!-- Red header band -->
+    <div style="background:var(--brand-red);padding:2rem 2rem 1.5rem;text-align:center;position:relative;">
+      <div style="width:56px;height:56px;border-radius:50%;background:#fff;border:2px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--brand-red)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.06em;color:#fff;line-height:1;">Logging Out</div>
+      <div style="font-size:0.78rem;color:rgba(255,255,255,0.75);margin-top:0.3rem;font-family:'DM Sans',sans-serif;">{{ current_user.fullname }}</div>
+    </div>
+    <!-- Body -->
+    <div style="padding:1.5rem 2rem 2rem;text-align:center;">
+      <p style="color:var(--fg-2);font-size:0.88rem;line-height:1.6;margin-bottom:1.5rem;">Are you sure you want to log out?</p>
+      <div style="display:flex;gap:0.75rem;">
+        <button onclick="document.getElementById('modal-logout').style.display='none'"
+          style="flex:1;padding:0.7rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;color:var(--fg-1);cursor:pointer;transition:all 0.15s;"
+          onmouseover="this.style.background='var(--line-1)'" onmouseout="this.style.background='var(--bg-subtle)'">
+          Cancel
+        </button>
+        <a href="{{ url_for('logout') }}"
+          style="flex:1;padding:0.7rem;background:var(--brand-red);border:1px solid var(--brand-red);border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;color:#fff;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:0.4rem;transition:all 0.15s;"
+          onmouseover="this.style.background='#a8001a'" onmouseout="this.style.background='var(--brand-red)'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Yes, Logout
+        </a>
+      </div>
     </div>
   </div>
 </div>
@@ -1302,11 +1441,21 @@
     const hamburger  = document.getElementById('nav-hamburger');
     if (mobileMenu) mobileMenu.classList.remove('open');
     if (hamburger)  hamburger.classList.remove('open');
+    // persist current section so refresh restores it
+    try { localStorage.setItem('dashSection', name); } catch(e) {}
     requestAnimationFrame(() => {
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
     });
   }
+
+  // Restore section on page load
+  (function() {
+    const saved = localStorage.getItem('dashSection');
+    if (saved && document.getElementById('sec-' + saved)) {
+      showSection(saved, null);
+    }
+  })();
 
   function toggleCustomerNav() {
     const menu = document.getElementById('mobile-nav-menu');
@@ -1344,7 +1493,7 @@
       cart.push({ id, name, price, stock, qty: 1, category });
     }
     updateCartBadge();
-    showCartToast('🛒 ' + name + ' added to cart!');
+    showCartToast(name + ' added to cart!');
   }
 
   function updateCartBadge() {
@@ -1369,22 +1518,22 @@
   function renderCartStep() {
     const list = document.getElementById('cart-items-list');
     if (!cart.length) {
-      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Your cart is empty</div>';
+      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--fg-3);">Your cart is empty</div>';
       document.getElementById('cart-total').textContent = '₱0.00';
       return;
     }
     list.innerHTML = cart.map(item => `
-      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:0.5rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:0.5rem;">
         <div style="flex:1;min-width:0;">
-          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
-          <div style="font-size:0.72rem;color:var(--muted);">${item.category} · ₱${item.price.toFixed(2)} each</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+          <div style="font-size:0.72rem;color:var(--fg-3);">${item.category} · ₱${item.price.toFixed(2)} each</div>
         </div>
         <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
-          <button type="button" onclick="updateCartItemQty(${item.id},-1)" style="width:24px;height:24px;border-radius:5px;background:#f5f0eb;border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:0.9rem;">−</button>
-          <span style="min-width:22px;text-align:center;color:#fff;font-size:0.88rem;">${item.qty}</span>
-          <button type="button" onclick="updateCartItemQty(${item.id},1)" style="width:24px;height:24px;border-radius:5px;background:#f5f0eb;border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:0.9rem;">+</button>
+          <button type="button" onclick="updateCartItemQty(${item.id},-1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.9rem;">−</button>
+          <span style="min-width:22px;text-align:center;color:var(--fg-1);font-size:0.88rem;">${item.qty}</span>
+          <button type="button" onclick="updateCartItemQty(${item.id},1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.9rem;">+</button>
         </div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--red);min-width:58px;text-align:right;flex-shrink:0;">₱${(item.price*item.qty).toFixed(2)}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--brand-red);min-width:58px;text-align:right;flex-shrink:0;">₱${(item.price*item.qty).toFixed(2)}</div>
         <button type="button" onclick="removeFromCart(${item.id})" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-size:1rem;padding:0 0.2rem;flex-shrink:0;" title="Remove">✕</button>
       </div>`).join('');
     document.getElementById('cart-total').textContent = '₱' + getCartTotal().toFixed(2);
@@ -1413,7 +1562,7 @@
     if (!t) {
       t = document.createElement('div');
       t.id = 'cart-toast';
-      t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#1c1814;border:1px solid #484340;color:#f5f0eb;padding:0.65rem 1.1rem;border-radius:10px;font-size:0.85rem;font-family:\'DM Sans\',sans-serif;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.25);transition:opacity 0.3s;';
+      t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#1c1814;border:1px solid #484340;color:var(--bg-subtle);padding:0.65rem 1.1rem;border-radius:10px;font-size:0.85rem;font-family:\'DM Sans\',sans-serif;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.25);transition:opacity 0.3s;';
       document.body.appendChild(t);
     }
     t.textContent = msg;
@@ -1451,12 +1600,12 @@
       } else {
         alert(data.error || 'Order failed. Please try again.');
         btn.disabled = false;
-        btn.textContent = '✅ Confirm and Pay';
+        btn.textContent = 'Confirm and Pay';
       }
     } catch(e) {
       alert('Network error. Please try again.');
       btn.disabled = false;
-      btn.textContent = '✅ Confirm and Pay';
+      btn.textContent = 'Confirm and Pay';
     }
   }
 
@@ -1490,10 +1639,10 @@ function selectDelivery(method) {
     checkPickup.style.border = 'none';
     checkPickup.querySelector('span').style.display = 'block';
     
-    optShip.style.background = '#ffffff';
-    optShip.style.borderColor = 'var(--border)';
+    optShip.style.background = 'var(--bg-page)';
+    optShip.style.borderColor = 'var(--line-2)';
     checkShip.style.background = 'transparent';
-    checkShip.style.border = '2px solid var(--border)';
+    checkShip.style.border = '2px solid var(--line-2)';
     checkShip.querySelector('span').style.display = 'none';
     
     pickupInfo.style.display = 'block';
@@ -1505,10 +1654,10 @@ function selectDelivery(method) {
     checkShip.style.border = 'none';
     checkShip.querySelector('span').style.display = 'block';
     
-    optPickup.style.background = '#ffffff';
-    optPickup.style.borderColor = 'var(--border)';
+    optPickup.style.background = 'var(--bg-page)';
+    optPickup.style.borderColor = 'var(--line-2)';
     checkPickup.style.background = 'transparent';
-    checkPickup.style.border = '2px solid var(--border)';
+    checkPickup.style.border = '2px solid var(--line-2)';
     checkPickup.querySelector('span').style.display = 'none';
     
     pickupInfo.style.display = 'none';
@@ -1526,7 +1675,7 @@ function goToShipping() {
     for (const f of fields) {
       if (!document.getElementById(f).value.trim()) {
         document.getElementById(f).focus();
-        document.getElementById(f).style.borderColor = 'var(--red)';
+        document.getElementById(f).style.borderColor = 'var(--brand-red)';
         return;
       }
       document.getElementById(f).style.borderColor = '';
@@ -1536,16 +1685,16 @@ function goToShipping() {
   // Render items list in payment step
   document.getElementById('pay-items-list').innerHTML = cart.map(i =>
     `<div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
-      <span style="color:var(--text);">${i.name} ×${i.qty}</span>
-      <span style="color:var(--text);">₱${(i.price*i.qty).toFixed(2)}</span>
+      <span style="color:var(--fg-1);">${i.name} ×${i.qty}</span>
+      <span style="color:var(--fg-1);">₱${(i.price*i.qty).toFixed(2)}</span>
     </div>`
   ).join('');
   document.getElementById('pay-total').textContent = '₱' + total.toFixed(2);
   if (deliveryMethod === 'pickup') {
-    document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#86efac;">🏪 Shop Pickup (FREE)</span>';
+    document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#86efac;">Shop Pickup (FREE)</span>';
     document.getElementById('pay-shipping-row').style.display = 'none';
   } else {
-    document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#93c5fd;">🚚 Ship to Address</span>';
+    document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#93c5fd;">Ship to Address</span>';
     document.getElementById('pay-shipping-row').style.display = 'flex';
   }
   goToStep('step-payment');
@@ -1555,18 +1704,18 @@ function goToConfirm() {
   const total = getCartTotal();
   document.getElementById('conf-items-list').innerHTML = cart.map(i =>
     `<div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;">
-      <span style="color:var(--text);">${i.name} ×${i.qty}</span>
-      <span style="color:var(--text);">₱${(i.price*i.qty).toFixed(2)}</span>
+      <span style="color:var(--fg-1);">${i.name} ×${i.qty}</span>
+      <span style="color:var(--fg-1);">₱${(i.price*i.qty).toFixed(2)}</span>
     </div>`
   ).join('');
   document.getElementById('conf-total').textContent = '₱' + total.toFixed(2);
-  const paymentLabels = { cash: '💵 Cash', gcash: '📱 GCash' };
-  document.getElementById('conf-payment-display').innerHTML = paymentLabels[selectedPayment] || '💵 Cash';
+  const paymentLabels = { cash: 'Cash', gcash: 'GCash' };
+  document.getElementById('conf-payment-display').innerHTML = paymentLabels[selectedPayment] || 'Cash';
   const deliveryInfo = document.getElementById('conf-delivery-info');
   if (deliveryMethod === 'pickup') {
-    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#86efac;margin-bottom:0.25rem;"><span>🏪</span><span style="font-family:'Syne',sans-serif;font-weight:700;">Shop Pickup</span></div><div style="font-size:0.8rem;color:var(--muted);">MotoTyre North Caloocan<br>Saranay Rd, Brgy. 171 Bagumbong, Caloocan City</div>`;
+    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#86efac;margin-bottom:0.25rem;"><span style="font-family:'Syne',sans-serif;font-weight:700;">Shop Pickup</span></div><div style="font-size:0.8rem;color:var(--fg-3);">MotoTyre North Caloocan<br>Saranay Rd, Brgy. 171 Bagumbong, Caloocan City</div>`;
   } else {
-    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#93c5fd;margin-bottom:0.25rem;"><span>🚚</span><span style="font-family:'Syne',sans-serif;font-weight:700;">Ship to Address</span></div><div style="font-size:0.8rem;color:var(--muted);">${document.getElementById('ship-name').value}<br>${document.getElementById('ship-mobile').value}<br>${document.getElementById('ship-street').value}, ${document.getElementById('ship-city').value},<br>${document.getElementById('ship-province').value} ${document.getElementById('ship-zip').value}</div>`;
+    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#93c5fd;margin-bottom:0.25rem;"><span style="font-family:'Syne',sans-serif;font-weight:700;">Ship to Address</span></div><div style="font-size:0.8rem;color:var(--fg-3);">${document.getElementById('ship-name').value}<br>${document.getElementById('ship-mobile').value}<br>${document.getElementById('ship-street').value}, ${document.getElementById('ship-city').value},<br>${document.getElementById('ship-province').value} ${document.getElementById('ship-zip').value}</div>`;
   }
   goToStep('step-confirm');
 }
@@ -1588,10 +1737,10 @@ function selectPayment(method) {
     checkCash.style.border = 'none';
     checkCash.querySelector('span').style.display = 'block';
 
-    optGcash.style.background = '#ffffff';
-    optGcash.style.borderColor = 'var(--border)';
+    optGcash.style.background = 'var(--bg-page)';
+    optGcash.style.borderColor = 'var(--line-2)';
     checkGcash.style.background = 'transparent';
-    checkGcash.style.border = '2px solid var(--border)';
+    checkGcash.style.border = '2px solid var(--line-2)';
     checkGcash.querySelector('span').style.display = 'none';
   } else {
     optGcash.style.background = 'rgba(0,168,107,0.1)';
@@ -1600,10 +1749,10 @@ function selectPayment(method) {
     checkGcash.style.border = 'none';
     checkGcash.querySelector('span').style.display = 'block';
 
-    optCash.style.background = '#ffffff';
-    optCash.style.borderColor = 'var(--border)';
+    optCash.style.background = 'var(--bg-page)';
+    optCash.style.borderColor = 'var(--line-2)';
     checkCash.style.background = 'transparent';
-    checkCash.style.border = '2px solid var(--border)';
+    checkCash.style.border = '2px solid var(--line-2)';
     checkCash.querySelector('span').style.display = 'none';
   }
 }
@@ -1661,13 +1810,13 @@ function addToBookingQueue() {
   const dateVal   = document.getElementById('selected-date-value').value;
   const timeVal   = document.getElementById('selected-time-value').value;
 
-  if (!dateVal || !timeVal || !service) { showCartToast('⚠️ Please select a date, time and service.'); return; }
+  if (!dateVal || !timeVal || !service) { showCartToast('Please select a date, time and service.'); return; }
   if (!/^[a-zA-Z\s]+$/.test(nameVal) || !nameVal) { document.getElementById('name-error').style.display='block'; return; }
   if (!/^0\d{10}$/.test(mobileVal)) { document.getElementById('mobile-error').style.display='block'; return; }
 
   const dupKey = dateVal + '_' + timeVal;
   if (bookingQueue.some(b => b.date + '_' + b.time === dupKey)) {
-    showCartToast('⚠️ You already queued a booking for that date and time.'); return;
+    showCartToast('You already queued a booking for that date and time.'); return;
   }
 
   const mechSel  = document.getElementById('mechanic-select');
@@ -1692,7 +1841,7 @@ function addToBookingQueue() {
   bookingQueue.push(entry);
   renderBookingQueue();
   resetBookingForm();
-  showCartToast('📅 ' + service + ' added to queue!');
+  showCartToast(service + ' added to queue!');
 }
 
 function renderBookingQueue() {
@@ -1724,14 +1873,14 @@ function renderBookingQueue() {
       padding:0.75rem 1rem;background:rgba(29,78,216,0.08);
       border:1px solid rgba(29,78,216,0.2);border-radius:10px;">
       <div style="flex:1;min-width:0;">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#fff;margin-bottom:0.2rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:var(--fg-1);margin-bottom:0.2rem;">
           ${b.service}
         </div>
-        <div style="font-size:0.75rem;color:var(--muted);">
-          📆 ${b._displayDate} &nbsp;·&nbsp; 🕐 ${b._displayTime}
+        <div style="font-size:0.75rem;color:var(--fg-3);">
+          ${b._displayDate} &nbsp;·&nbsp; ${b._displayTime}
         </div>
-        ${b.mechanic_name ? `<div style="font-size:0.72rem;color:#c4b5fd;margin-top:0.2rem;">🔧 ${b.mechanic_name}</div>` : ''}
-        ${b.notes ? `<div style="font-size:0.72rem;color:#9ca3af;margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">📝 ${b.notes}</div>` : ''}
+        ${b.mechanic_name ? `<div style="font-size:0.72rem;color:#c4b5fd;margin-top:0.2rem;">Mechanic: ${b.mechanic_name}</div>` : ''}
+        ${b.notes ? `<div style="font-size:0.72rem;color:#9ca3af;margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">Note: ${b.notes}</div>` : ''}
       </div>
       <button onclick="removeFromQueue(${i})"
         style="flex-shrink:0;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);
@@ -1761,7 +1910,7 @@ function resetBookingForm() {
   document.getElementById('mechanic-info').style.display = 'none';
   document.getElementById('cal-selected-info').textContent = '';
   document.getElementById('time-slots-wrap').innerHTML   =
-    '<div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
+    '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
   document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
   document.getElementById('btn-add-queue').disabled = true;
   document.getElementById('name-error').style.display   = 'none';
@@ -1770,7 +1919,7 @@ function resetBookingForm() {
 }
 
 async function submitAllBookings() {
-  if (!bookingQueue.length) { showCartToast('⚠️ Queue is empty.'); return; }
+  if (!bookingQueue.length) { showCartToast('Queue is empty.'); return; }
 
   const btnTop = document.getElementById('btn-confirm-all');
   const btnBot = document.getElementById('btn-confirm-all-bottom');
@@ -1785,7 +1934,7 @@ async function submitAllBookings() {
     });
     const data = await res.json();
     if (data.success) {
-      const msg = data.created === 1 ? '✅ 1 booking confirmed!' : `✅ ${data.created} bookings confirmed!`;
+      const msg = data.created === 1 ? '1 booking confirmed!' : `${data.created} bookings confirmed!`;
       showCartToast(msg);
       bookingQueue = [];
       renderBookingQueue();
@@ -1796,13 +1945,13 @@ async function submitAllBookings() {
       setTimeout(() => window.location.reload(), 1200);
     } else {
       alert('Failed: ' + (data.error || (data.errors && data.errors.join('\n')) || 'Unknown error'));
-      btnTop.disabled = false; btnTop.textContent = '✅ Confirm All Bookings';
-      btnBot.disabled = false; btnBot.textContent = '✅ Confirm All Bookings';
+      btnTop.disabled = false; btnTop.textContent = 'Confirm All Bookings';
+      btnBot.disabled = false; btnBot.textContent = 'Confirm All Bookings';
     }
   } catch(e) {
     alert('Network error. Please try again.');
-    btnTop.disabled = false; btnTop.textContent = '✅ Confirm All Bookings';
-    btnBot.disabled = false; btnBot.textContent = '✅ Confirm All Bookings';
+    btnTop.disabled = false; btnTop.textContent = 'Confirm All Bookings';
+    btnBot.disabled = false; btnBot.textContent = 'Confirm All Bookings';
   }
 }
 
@@ -1832,7 +1981,9 @@ async function renderCalendar() {
 
     const isToday = dateObj.getTime() === today.getTime();
     const now = new Date();
-    const pastClosing = isToday && now.getHours() >= 19;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const lastSlotMinutes = 19 * 60; // 7:00 PM
+    const pastClosing = isToday && nowMinutes >= lastSlotMinutes;
     const isQueued = bookingQueue.some(b => b.date === dateStr);
     const holidayName = isHoliday(dateStr);
     const isSunday = dateObj.getDay() === 0;
@@ -1846,7 +1997,7 @@ async function renderCalendar() {
       cell.classList.add('past');
       cell.style.position = 'relative';
       cell.title = 'Closed — Sunday';
-      cell.style.background = '#f5f0eb';
+      cell.style.background = 'var(--bg-subtle)';
       // Small "SUN" label
       cell.innerHTML = `<span>${d}</span><span style="display:block;font-size:0.45rem;color:#ef4444;letter-spacing:0.05em;font-family:'Syne',sans-serif;font-weight:700;margin-top:1px;">SUN</span>`;
     } else if (holidayName) {
@@ -1899,29 +2050,42 @@ function renderTimeSlots(dateStr) {
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const isToday = dateStr === todayStr;
-  const currentHour = now.getHours();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const queuedTimesForDate = bookingQueue.filter(b => b.date === dateStr).map(b => b.time);
 
+  let visibleCount = 0;
+
   ALL_SLOTS.forEach(slot => {
+    const [h, m] = slot.split(':').map(Number);
+    const slotMinutes = h * 60 + m;
+    const isPastSlot = isToday && slotMinutes <= nowMinutes;
+
+    // Hide past slots entirely — don't render them
+    if (isPastSlot) return;
+
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'time-slot-btn'; btn.textContent = SLOT_LABELS[slot];
-    const slotHour = parseInt(slot.split(':')[0]);
-    const isPastSlot = isToday && (slotHour <= currentHour);
     const isQueuedSlot = queuedTimesForDate.includes(slot);
-    if (booked.includes(slot) || isPastSlot) {
+
+    if (booked.includes(slot)) {
       btn.classList.add('booked'); btn.disabled = true;
-      btn.title = isPastSlot ? 'Time has passed' : 'Already booked';
+      btn.title = 'Already booked';
     } else if (isQueuedSlot) {
       btn.classList.add('booked'); btn.disabled = true;
       btn.title = 'Already in your queue';
       btn.textContent = SLOT_LABELS[slot] + ' ✓';
-      btn.style.color = '#93c5fd';
+      btn.style.color = '#2563eb';
       btn.style.opacity = '0.7';
     } else {
       btn.onclick = () => selectTime(slot, btn);
     }
     wrap.appendChild(btn);
+    visibleCount++;
   });
+
+  if (visibleCount === 0) {
+    wrap.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.75rem 0;">No available time slots for this date.</div>';
+  }
 }
 
 function checkBookingReady() {
@@ -1951,7 +2115,7 @@ async function changeMonth(dir) {
   // Cap at December 2026
   if (currentYear > 2026 || (currentYear === 2026 && currentMonth > 11)) {
     currentYear = 2026; currentMonth = 11;
-    showCartToast('⚠️ Bookings are only available up to December 2026.');
+    showCartToast('Bookings are only available up to December 2026.');
     return;
   }
   // Don't go before current month
@@ -1964,7 +2128,7 @@ async function changeMonth(dir) {
   document.getElementById('selected-date-value').value   = '';
   document.getElementById('selected-time-value').value   = '';
   document.getElementById('time-slots-wrap').innerHTML   =
-    '<div style="grid-column:1/-1;color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
+    '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
   document.getElementById('cal-selected-info').textContent = '';
   document.getElementById('btn-add-queue').disabled = true;
   await renderCalendar();
@@ -2039,12 +2203,12 @@ function renderNotifications() {
   }
 
   const icons = {
-    booking:  '📅',
-    order:    '📦',
-    mechanic: '🔧',
-    cost:     '💰',
-    update:   '📢',
-    reminder: '⏰',
+    booking:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    order:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+    mechanic: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+    cost:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    update:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    reminder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
   };
 
   const colorMap = {
@@ -2064,7 +2228,7 @@ function renderNotifications() {
   list.querySelectorAll('.notif-item').forEach(el => el.remove());
 
   toShow.forEach(n => {
-    const icon   = icons[n.type] || '🔔';
+    const icon   = icons[n.type] || icons.update;
     const scheme = colorMap[n.status] || colorMap.default;
     const time   = new Date(n.created_at).toLocaleString('en-PH', {
       month: 'short', day: 'numeric',
@@ -2074,19 +2238,19 @@ function renderNotifications() {
 
     const div = document.createElement('div');
     div.className = 'notif-item';
-    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(208,0,25,0.05)'};transition:background 0.15s;`;
-    div.onmouseover = () => div.style.background = '#f5f0eb';
+    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line-1);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(208,0,25,0.05)'};transition:background 0.15s;`;
+    div.onmouseover = () => div.style.background = 'var(--bg-subtle)';
     div.onmouseout  = () => div.style.background = n.is_read ? 'transparent' : 'rgba(208,0,25,0.05)';
     div.onclick     = () => readNotif(n.id, n);
 
     div.innerHTML = `
-      <div style="width:38px;height:38px;border-radius:10px;background:${scheme.bg};display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">${icon}</div>
+      <div style="width:38px;height:38px;border-radius:10px;background:${scheme.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${scheme.color};">${icon}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:#fff;margin-bottom:0.2rem;display:flex;align-items:center;gap:0.5rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);margin-bottom:0.2rem;display:flex;align-items:center;gap:0.5rem;">
           ${n.title}
-          ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;flex-shrink:0;"></span>' : ''}
+          ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--brand-red);display:inline-block;flex-shrink:0;"></span>' : ''}
         </div>
-        <div style="font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:0.3rem;">${n.message}</div>
+        <div style="font-size:0.78rem;color:var(--fg-3);line-height:1.5;margin-bottom:0.3rem;">${n.message}</div>
         ${n.status ? `<span style="font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.2em 0.55em;border-radius:5px;">${n.status.replace('inprogress','in progress').replace(/_/g,' ')}</span>` : ''}
         <div style="font-size:0.7rem;color:#4b5563;margin-top:0.3rem;">${time}</div>
       </div>
@@ -2108,12 +2272,12 @@ function filterNotifs(filter, btn) {
   activeFilter = filter;
   showAll = false;
   document.querySelectorAll('.notif-tab').forEach(t => {
-    t.style.background = '#f5f0eb';
-    t.style.borderColor = 'var(--border)';
-    t.style.color = 'var(--muted)';
+    t.style.background = 'var(--bg-subtle)';
+    t.style.borderColor = 'var(--line-2)';
+    t.style.color = 'var(--fg-3)';
   });
-  btn.style.background = 'var(--red)';
-  btn.style.borderColor = 'var(--red)';
+  btn.style.background = 'var(--brand-red)';
+  btn.style.borderColor = 'var(--brand-red)';
   btn.style.color = '#fff';
   renderNotifications();
 }
@@ -2173,15 +2337,15 @@ fetch('/api/services')
 function renderServiceDropdown(items) {
   const dd = document.getElementById('service-dropdown');
   if (!items.length) {
-    dd.innerHTML = '<div style="padding:0.6rem 1rem;color:#6b7280;font-size:0.85rem;">No services found</div>';
+    dd.innerHTML = '<div style="padding:0.65rem 1rem;color:#5a544d;font-size:0.85rem;font-family:\'DM Sans\',sans-serif;">No services found</div>';
     return;
   }
   dd.innerHTML = items.map(s =>
     `<div onclick="selectService('${s}')"
-      style="padding:0.6rem 1rem;cursor:pointer;font-size:0.88rem;color:#e5e7eb;
-             transition:background 0.15s;"
-      onmouseover="this.style.background='rgba(208,0,25,0.12)'"
-      onmouseout="this.style.background=''">${s}</div>`
+      style="padding:0.65rem 1rem;cursor:pointer;font-size:0.88rem;color:#1c1814;font-family:'DM Sans',sans-serif;font-weight:500;
+             transition:background 0.15s;border-bottom:1px solid #ebe9e4;"
+      onmouseover="this.style.background='rgba(208,0,25,0.08)';this.style.color='#d00019';"
+      onmouseout="this.style.background='';this.style.color='#1c1814';">${s}</div>`
   ).join('');
 }
 
@@ -2225,7 +2389,7 @@ function validateBookingForm() {
   const nameError = document.getElementById('name-error');
   if (!/^[a-zA-Z\s]+$/.test(name.value.trim()) || name.value.trim() === '') {
     nameError.style.display = 'block';
-    name.style.borderColor = 'var(--red)';
+    name.style.borderColor = 'var(--brand-red)';
     valid = false;
   } else {
     nameError.style.display = 'none';
@@ -2237,7 +2401,7 @@ function validateBookingForm() {
   const mobileError = document.getElementById('mobile-error');
   if (!/^0\d{10}$/.test(mobile.value.trim())) {
     mobileError.style.display = 'block';
-    mobile.style.borderColor = 'var(--red)';
+    mobile.style.borderColor = 'var(--brand-red)';
     valid = false;
   } else {
     mobileError.style.display = 'none';
@@ -2282,16 +2446,14 @@ function openBookingDetails(bookingId) {
   
   // Status badge
   const statusColors = {
-    pending:          { bg: 'rgba(180,83,9,0.2)',   color: '#fbbf24', border: 'rgba(180,83,9,0.3)' },
-    awaiting_payment: { bg: 'rgba(249,115,22,0.2)', color: '#fdba74', border: 'rgba(249,115,22,0.4)' },
-    awaitingpayment:  { bg: 'rgba(249,115,22,0.2)', color: '#fdba74', border: 'rgba(249,115,22,0.4)' },
-    confirmed:        { bg: 'rgba(29,78,216,0.2)',  color: '#93c5fd', border: 'rgba(29,78,216,0.3)' },
-    pending:     { bg: 'rgba(180,83,9,0.2)',   color: '#fbbf24', border: 'rgba(180,83,9,0.3)' },
-    confirmed:   { bg: 'rgba(29,78,216,0.2)',  color: '#93c5fd', border: 'rgba(29,78,216,0.3)' },
-    in_progress: { bg: 'rgba(124,58,237,0.2)', color: '#c4b5fd', border: 'rgba(124,58,237,0.3)' },
-    inprogress:  { bg: 'rgba(124,58,237,0.2)', color: '#c4b5fd', border: 'rgba(124,58,237,0.3)' },
-    completed:   { bg: 'rgba(21,128,61,0.2)',  color: '#86efac', border: 'rgba(21,128,61,0.3)' },
-    cancelled:   { bg: 'rgba(220,38,38,0.15)', color: '#fca5a5', border: 'rgba(220,38,38,0.2)' },
+    pending:          { bg: '#fef9c3', color: '#713f12', border: '#eab308' },
+    awaiting_payment: { bg: '#fff7ed', color: '#9a3412', border: '#f97316' },
+    awaitingpayment:  { bg: '#fff7ed', color: '#9a3412', border: '#f97316' },
+    confirmed:        { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
+    in_progress:      { bg: '#ffedd5', color: '#7c2d12', border: '#f97316' },
+    inprogress:       { bg: '#ffedd5', color: '#7c2d12', border: '#f97316' },
+    completed:        { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
+    cancelled:        { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
   };
   const sc = statusColors[booking.status] || statusColors.pending;
   document.getElementById('bd-status-badge').innerHTML = `
@@ -2305,7 +2467,6 @@ function openBookingDetails(bookingId) {
 
   // Motorcycle info
   document.getElementById('bd-model').textContent = booking.motorcycle_model || '—';
-  document.getElementById('bd-plate').textContent = booking.motorcycle_plate || '—';
 
   // Odometer
   const odoEl = document.getElementById('bd-odo-wrap');
@@ -2339,36 +2500,35 @@ function openBookingDetails(bookingId) {
 
   // Status timeline
   const timeline = document.getElementById('bd-timeline');
-  const steps = ['pending', 'confirmed', 'in_progress', 'completed'];
-  const stepLabels = { pending: 'Pending', confirmed: 'Confirmed', in_progress: 'In Progress', completed: 'Completed' };
-  const stepIcons = { pending: '📝', confirmed: '✅', in_progress: '🔧', completed: '🎉' };
-  
+  const steps = ['confirmed', 'in_progress', 'completed'];
+  const stepLabels = { confirmed: 'Confirmed', in_progress: 'In Progress', completed: 'Completed' };
+  const stepIcons = { confirmed: '', in_progress: '', completed: '' };
+
   // Normalize status
   let normalizedStatus = booking.status.toLowerCase().replace(' ', '_');
   if (normalizedStatus === 'inprogress') normalizedStatus = 'in_progress';
-  
+
   const currentIdx = steps.indexOf(normalizedStatus);
   const isCancelled = booking.status === 'cancelled';
 
   if (isCancelled) {
     timeline.innerHTML = `
       <div style="text-align:center;padding:1rem;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);border-radius:10px;">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem;">❌</div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fca5a5;">Booking Cancelled</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fca5a5;font-size:0.85rem;">Booking Cancelled</div>
       </div>`;
   } else {
     timeline.innerHTML = `
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Booking Progress</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Booking Progress</div>
       <div style="display:flex;justify-content:space-between;position:relative;">
-        <div style="position:absolute;top:14px;left:20px;right:20px;height:2px;background:var(--border);z-index:0;"></div>
+        <div style="position:absolute;top:14px;left:20px;right:20px;height:2px;background:var(--line-2);z-index:0;"></div>
         <div style="position:absolute;top:14px;left:20px;height:2px;background:var(--green);z-index:1;width:${currentIdx >= 0 ? (currentIdx / (steps.length - 1)) * 100 : 0}%;transition:width 0.3s;"></div>
         ${steps.map((step, i) => {
           const done = i <= currentIdx;
           const active = i === currentIdx;
           return `
             <div style="display:flex;flex-direction:column;align-items:center;z-index:2;">
-              <div style="width:28px;height:28px;border-radius:50%;background:${done ? 'var(--green)' : 'var(--card)'};border:2px solid ${done ? 'var(--green)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:0.8rem;${active ? 'box-shadow:0 0 0 4px rgba(21,128,61,0.2);' : ''}">${done ? '✓' : stepIcons[step]}</div>
-              <div style="font-size:0.68rem;color:${done ? '#86efac' : 'var(--muted)'};margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:${active ? '700' : '600'};text-align:center;max-width:60px;">${stepLabels[step]}</div>
+              <div style="width:28px;height:28px;border-radius:50%;background:${done ? 'var(--green)' : 'var(--bg-subtle)'};border:2px solid ${done ? 'var(--green)' : 'var(--line-2)'};display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:${done ? '#fff' : 'var(--fg-2)'};${active ? 'box-shadow:0 0 0 4px rgba(21,128,61,0.2);' : ''}">${done ? '✓' : ''}</div>
+              <div style="font-size:0.68rem;color:${done ? '#14532d' : 'var(--fg-2)'};margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:${active ? '700' : '600'};text-align:center;max-width:60px;">${stepLabels[step]}</div>
             </div>`;
         }).join('')}
       </div>`;
@@ -2385,6 +2545,7 @@ const ordersData = {
     status: '{{ o.status }}',
     total: {{ o.total_amount }},
     payment_method: '{{ o.payment_method or "cash" }}',
+    delivery_method: '{{ o.delivery_method or "pickup" }}',
     created_at: '{{ o.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
     items: [
       {% for item in o.items %}
@@ -2411,13 +2572,13 @@ function openOrderDetails(orderId) {
   
   // Status badge
   const statusColors = {
-    pending:    { bg: 'rgba(180,83,9,0.2)',   color: '#fbbf24', border: 'rgba(180,83,9,0.3)' },
-    confirmed:  { bg: 'rgba(29,78,216,0.2)',  color: '#93c5fd', border: 'rgba(29,78,216,0.3)' },
-    processing: { bg: 'rgba(124,58,237,0.2)', color: '#c4b5fd', border: 'rgba(124,58,237,0.3)' },
-    shipped:    { bg: 'rgba(6,182,212,0.2)',  color: '#67e8f9', border: 'rgba(6,182,212,0.3)' },
-    delivered:  { bg: 'rgba(21,128,61,0.2)',  color: '#86efac', border: 'rgba(21,128,61,0.3)' },
-    completed:  { bg: 'rgba(21,128,61,0.2)',  color: '#86efac', border: 'rgba(21,128,61,0.3)' },
-    cancelled:  { bg: 'rgba(220,38,38,0.15)', color: '#fca5a5', border: 'rgba(220,38,38,0.2)' },
+    pending:    { bg: '#fef9c3', color: '#713f12', border: '#eab308' },
+    confirmed:  { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
+    processing: { bg: '#ede9fe', color: '#4c1d95', border: '#8b5cf6' },
+    shipped:    { bg: '#cffafe', color: '#164e63', border: '#06b6d4' },
+    delivered:  { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
+    completed:  { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
+    cancelled:  { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
   };
   const sc = statusColors[order.status] || statusColors.pending;
   document.getElementById('od-status-badge').innerHTML = `
@@ -2428,15 +2589,15 @@ function openOrderDetails(orderId) {
   // Products list
   const productsList = document.getElementById('od-products-list');
   productsList.innerHTML = order.items.map(item => `
-    <div style="display:flex;align-items:center;gap:0.85rem;padding:0.85rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;">
-      <div style="width:44px;height:44px;border-radius:10px;background:rgba(208,0,25,0.12);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🔧</div>
+    <div style="display:flex;align-items:center;gap:0.85rem;padding:0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;">
+      <div style="width:44px;height:44px;border-radius:10px;background:rgba(208,0,25,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--brand-red);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
       <div style="flex:1;min-width:0;">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.product_name}</div>
-        <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;">${item.category}</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:var(--fg-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.product_name}</div>
+        <div style="font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.04em;">${item.category}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--red);">₱${item.subtotal.toFixed(2)}</div>
-        <div style="font-size:0.72rem;color:var(--muted);">₱${item.unit_price.toFixed(2)} × ${item.quantity}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--brand-red);">₱${item.subtotal.toFixed(2)}</div>
+        <div style="font-size:0.72rem;color:var(--fg-3);">₱${item.unit_price.toFixed(2)} × ${item.quantity}</div>
       </div>
     </div>
   `).join('');
@@ -2446,55 +2607,65 @@ function openOrderDetails(orderId) {
   document.getElementById('od-total').textContent = '₱' + order.total.toFixed(2);
   
   // Payment method
-  const paymentLabels = { cash: '💵 Cash', gcash: '📱 GCash', cod: '🚚 Cash on Delivery' };
-  document.getElementById('od-payment').textContent = paymentLabels[order.payment_method] || '💵 Cash';
+  const paymentLabels = { cash: 'Cash', gcash: 'GCash', cod: 'Cash on Delivery' };
+  document.getElementById('od-payment').textContent = paymentLabels[order.payment_method] || 'Cash';
 
   // Status timeline
   const timeline = document.getElementById('od-timeline');
-  const steps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
-  const stepLabels = { pending: 'Order Placed', confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', delivered: 'Delivered' };
-  const stepIcons = { pending: '📝', confirmed: '✅', processing: '⚙️', shipped: '🚚', delivered: '📦' };
-  
-  const currentIdx = steps.indexOf(order.status);
+  const isPickup = order.delivery_method === 'pickup';
+  const steps      = isPickup
+    ? ['confirmed', 'processing', 'ready_for_pickup', 'completed']
+    : ['confirmed', 'processing', 'shipped', 'delivered'];
+  const stepLabels = isPickup
+    ? { confirmed: 'Confirmed', processing: 'Processing', ready_for_pickup: 'Ready for Pickup', completed: 'Picked Up' }
+    : { confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', delivered: 'Delivered' };
+  const stepIcons = { confirmed: '', processing: '', ready_for_pickup: '', shipped: '', delivered: '', completed: '' };
+
+  // Map backend statuses to pickup step keys
+  let resolvedStatus = order.status;
+  if (isPickup && order.status === 'shipped')   resolvedStatus = 'ready_for_pickup';
+  if (isPickup && order.status === 'delivered') resolvedStatus = 'completed';
+
+  const currentIdx = steps.indexOf(resolvedStatus);
   const isCancelled = order.status === 'cancelled';
   const isCompleted = order.status === 'completed';
 
   if (isCancelled) {
     timeline.innerHTML = `
       <div style="text-align:center;padding:1rem;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);border-radius:10px;">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem;">❌</div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fca5a5;">Order Cancelled</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fca5a5;font-size:0.85rem;">Order Cancelled</div>
       </div>`;
   } else if (isCompleted) {
     timeline.innerHTML = `
       <div style="text-align:center;padding:1rem;background:rgba(21,128,61,0.1);border:1px solid rgba(21,128,61,0.2);border-radius:10px;">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem;">✅</div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#86efac;">Order Completed</div>
-        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem;">Thank you for your purchase!</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#14532d;">Order Completed</div>
+        <div style="font-size:0.78rem;color:var(--fg-2);margin-top:0.25rem;">Thank you for your purchase!</div>
       </div>`;
   } else {
     timeline.innerHTML = `
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Progress</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Progress</div>
       <div style="display:flex;justify-content:space-between;position:relative;">
-        <div style="position:absolute;top:14px;left:20px;right:20px;height:2px;background:var(--border);z-index:0;"></div>
+        <div style="position:absolute;top:14px;left:20px;right:20px;height:2px;background:var(--line-2);z-index:0;"></div>
         <div style="position:absolute;top:14px;left:20px;height:2px;background:var(--green);z-index:1;width:${currentIdx >= 0 ? (currentIdx / (steps.length - 1)) * 100 : 0}%;transition:width 0.3s;"></div>
         ${steps.map((step, i) => {
           const done = i <= currentIdx;
           const active = i === currentIdx;
           return `
             <div style="display:flex;flex-direction:column;align-items:center;z-index:2;">
-              <div style="width:28px;height:28px;border-radius:50%;background:${done ? 'var(--green)' : 'var(--card)'};border:2px solid ${done ? 'var(--green)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:0.8rem;${active ? 'box-shadow:0 0 0 4px rgba(21,128,61,0.2);' : ''}">${done ? '✓' : stepIcons[step]}</div>
-              <div style="font-size:0.68rem;color:${done ? '#86efac' : 'var(--muted)'};margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:${active ? '700' : '600'};text-align:center;">${stepLabels[step]}</div>
+              <div style="width:28px;height:28px;border-radius:50%;background:${done ? 'var(--green)' : 'var(--bg-subtle)'};border:2px solid ${done ? 'var(--green)' : 'var(--line-2)'};display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:${done ? '#fff' : 'var(--fg-2)'};${active ? 'box-shadow:0 0 0 4px rgba(21,128,61,0.2);' : ''}">${done ? '✓' : ''}</div>
+              <div style="font-size:0.68rem;color:${done ? '#14532d' : 'var(--fg-2)'};margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:${active ? '700' : '600'};text-align:center;">${stepLabels[step]}</div>
             </div>`;
         }).join('')}
       </div>`;
   }
 
-  // Mark as received button — only for shipped orders
+  // Confirm button: "shipped" for delivery orders, "shipped" maps to ready_for_pickup for pickup
   const receivedWrap = document.getElementById('od-confirm-received-wrap');
+  const confirmBtn = document.getElementById('od-confirm-received-btn');
   if (order.status === 'shipped') {
     _confirmOrderId = order.id;
     receivedWrap.style.display = 'block';
+    confirmBtn.textContent = isPickup ? 'I Already Picked Up My Order' : 'I Already Received My Order';
   } else {
     _confirmOrderId = null;
     receivedWrap.style.display = 'none';
@@ -2521,13 +2692,13 @@ async function confirmOrderReceived() {
   } catch (e) {
     alert('Could not reach the server. Please check your connection and try again.');
     btn.disabled = false;
-    btn.textContent = '📦 I Already Received My Order';
+    btn.textContent = 'I Already Received My Order';
     return;
   }
   if (!res.ok && res.status !== 400 && res.status !== 403) {
     alert('Server error (' + res.status + '). Please restart the app and try again.');
     btn.disabled = false;
-    btn.textContent = '📦 I Already Received My Order';
+    btn.textContent = 'I Already Received My Order';
     return;
   }
   let data;
@@ -2536,7 +2707,7 @@ async function confirmOrderReceived() {
   } catch (e) {
     alert('Unexpected server response. Please restart the app and try again.');
     btn.disabled = false;
-    btn.textContent = '📦 I Already Received My Order';
+    btn.textContent = 'I Already Received My Order';
     return;
   }
   if (data.success) {
@@ -2547,7 +2718,7 @@ async function confirmOrderReceived() {
   } else {
     alert(data.message || 'Something went wrong.');
     btn.disabled = false;
-    btn.textContent = '📦 I Already Received My Order';
+    btn.textContent = 'I Already Received My Order';
   }
 }
 
@@ -2598,7 +2769,7 @@ function addToCartFromInfo() {
   if (existing) {
     const newQty = existing.qty + qty;
     if (newQty > currentProductInfo.stock) {
-      showCartToast('⚠️ Not enough stock for ' + currentProductInfo.name);
+      showCartToast('Not enough stock for ' + currentProductInfo.name);
       return;
     }
     existing.qty = newQty;
@@ -2614,7 +2785,7 @@ function addToCartFromInfo() {
   }
 
   updateCartBadge();
-  showCartToast('🛒 ' + currentProductInfo.name + ' added to cart!');
+  showCartToast(currentProductInfo.name + ' added to cart!');
   closeModal('modal-product-info');
 }
 
@@ -2655,6 +2826,91 @@ document.getElementById('mechanic-select').addEventListener('change', function()
 
 // Load mechanics on page load
 loadMechanics();
+
+/* ══ REALTIME POLLING ══ */
+(function() {
+  const POLL_MS = 20000;
+
+  function badgeText(status) {
+    return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+  function bookingBadgeClass(status) { return 'badge badge-' + status; }
+  function orderBadgeClass(status)   { return 'badge badge-' + status.replace(/_/g, ''); }
+
+  function showToast(msg, type) {
+    const accent = type === 'booking' ? 'var(--brand-red)' : '#2563eb';
+    const t = document.createElement('div');
+    t.style.cssText = `position:fixed;bottom:1.75rem;left:50%;transform:translateX(-50%);
+      background:var(--bg-page);border:1px solid var(--line-2);border-left:3px solid ${accent};
+      border-radius:10px;padding:0.7rem 1.1rem;font-family:'Syne',sans-serif;font-size:0.82rem;
+      color:var(--fg-1);box-shadow:0 4px 20px rgba(28,24,20,0.25);z-index:9999;
+      animation:fadeUp 0.2s ease both;white-space:nowrap;transition:opacity 0.4s;`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; }, 3500);
+    setTimeout(() => t.remove(), 4000);
+  }
+
+  function updateBadge(el, cls, text) {
+    if (!el) return;
+    el.className = cls;
+    el.textContent = text;
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch('/api/customer/poll');
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // ── Bookings ──
+      data.bookings.forEach(b => {
+        const known = bookingsData[b.id];
+        if (!known || known.status === b.status) return;
+        known.status = b.status;
+        const label = badgeText(b.status);
+        const cls   = bookingBadgeClass(b.status);
+        // Update full bookings table row
+        const row = document.querySelector(`tr[data-booking-id="${b.id}"]`);
+        if (row) updateBadge(row.querySelector('.badge'), cls, label);
+        // Update overview recent bookings row
+        const ovRow = document.querySelector(`tr[data-booking-ov-id="${b.id}"]`);
+        if (ovRow) updateBadge(ovRow.querySelector('.badge'), cls, label);
+        showToast('Booking status updated to ' + label, 'booking');
+      });
+
+      // ── Orders ──
+      data.orders.forEach(o => {
+        const known = ordersData[o.id];
+        if (!known || known.status === o.status) return;
+        known.status = o.status;
+        const label = badgeText(o.status);
+        const cls   = orderBadgeClass(o.status);
+        // Update full orders table row
+        const row = document.querySelector(`tr[data-order-id="${o.id}"]`);
+        if (row) updateBadge(row.querySelector('.badge'), cls, label);
+        // Update overview recent orders row
+        const ovRow = document.querySelector(`tr[data-order-ov-id="${o.id}"]`);
+        if (ovRow) updateBadge(ovRow.querySelector('.badge'), cls, label);
+        showToast('ORD-' + String(o.id).padStart(3,'0') + ' updated to ' + label, 'order');
+      });
+
+      // ── Notification bell ──
+      const bellBadge = document.getElementById('notif-badge');
+      if (bellBadge) {
+        if (data.unread_notifications > 0) {
+          bellBadge.textContent = data.unread_notifications;
+          bellBadge.style.display = 'flex';
+        } else {
+          bellBadge.style.display = 'none';
+        }
+      }
+    } catch(e) {}
+  }
+
+  // First poll after 20 s, then every 20 s
+  setTimeout(() => { poll(); setInterval(poll, POLL_MS); }, POLL_MS);
+})();
 
 </script>
 

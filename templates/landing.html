@@ -230,9 +230,9 @@
     .feedback-success h4{font-family:var(--font-display);font-size:1.8rem;letter-spacing:0.04em;color:var(--fg-1)}
 
     /* ── CTA (dark) ── */
-    .cta-section{padding:clamp(80px,10vw,128px) clamp(20px,4vw,48px);background:var(--bg-ink);position:relative;overflow:hidden}
-    .cta-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.18;filter:grayscale(20%)}
-    .cta-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(28,24,20,0.96) 0%,rgba(28,24,20,0.78) 50%,rgba(28,24,20,0.92) 100%)}
+    .cta-section{padding:clamp(80px,10vw,128px) clamp(20px,4vw,48px);background:#000000;position:relative;overflow:hidden}
+    .cta-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.38;filter:grayscale(15%)}
+    .cta-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.92) 0%,rgba(0,0,0,0.68) 50%,rgba(0,0,0,0.85) 100%)}
     .cta-inner{position:relative;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1.2fr 0.8fr;gap:48px;align-items:center}
     .cta-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(208,0,25,0.15);border:1px solid rgba(208,0,25,0.35);color:#ff9a82;padding:6px 14px;border-radius:999px;font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:24px}
     .cta-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);animation:pulse 1.5s infinite;flex-shrink:0}
@@ -606,74 +606,6 @@
   </div>
 </section>
 
-<!-- TESTIMONIALS -->
-<section class="section section-light">
-  <div class="inner">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">RIDER VOICES</div>
-        <h2>WHAT RIDERS <span class="accent">ARE SAYING</span></h2>
-        <p>Real feedback from real customers. We're not perfect — but we own up to it.</p>
-      </div>
-    </div>
-    <div class="testi-grid">
-      <div class="testi-card">
-        <div class="testi-stars">
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-        </div>
-        <i data-lucide="quote" style="width:28px;height:28px;color:var(--line-2)"></i>
-        <p class="testi-text">"Brought my Click here after a bad tune-up somewhere else. They diagnosed the issue in 10 minutes and fixed it the same day. Honest pricing."</p>
-        <div class="testi-footer">
-          <div class="testi-avatar">MS</div>
-          <div>
-            <div class="testi-name">Mark S.</div>
-            <div class="testi-meta">Honda Click 125i · 2 weeks ago</div>
-          </div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-        </div>
-        <i data-lucide="quote" style="width:28px;height:28px;color:var(--line-2)"></i>
-        <p class="testi-text">"Sulit yung IRC tires nila. Maliit lang yung shop pero malinis at maaga magbukas. Mga mechanic friendly at marunong. Solid."</p>
-        <div class="testi-footer">
-          <div class="testi-avatar">LR</div>
-          <div>
-            <div class="testi-name">Lara R.</div>
-            <div class="testi-meta">Yamaha Mio Sporty · 1 month ago</div>
-          </div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-        </div>
-        <i data-lucide="quote" style="width:28px;height:28px;color:var(--line-2)"></i>
-        <p class="testi-text">"Online booking actually works — text confirmation in 5 min, bike was ready an hour before estimated time. Will come back."</p>
-        <div class="testi-footer">
-          <div class="testi-avatar">PR</div>
-          <div>
-            <div class="testi-name">Paolo R.</div>
-            <div class="testi-meta">Yamaha NMAX · 3 weeks ago</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- CONTACT -->
 <section class="section section-panel" id="contact">
@@ -801,12 +733,8 @@
         <span class="hours-time">8:00 AM — 7:00 PM</span>
       </div>
       <div class="hours-row">
-        <span class="hours-day">SATURDAY</span>
-        <span class="hours-time">8:00 AM — 6:00 PM</span>
-      </div>
-      <div class="hours-row">
-        <span class="hours-day">SUNDAY</span>
-        <span class="hours-time">9:00 AM — 4:00 PM</span>
+        <span class="hours-day">SATURDAY — SUNDAY</span>
+        <span class="hours-time" style="color:rgba(255,255,255,0.4);">CLOSED</span>
       </div>
     </div>
   </div>

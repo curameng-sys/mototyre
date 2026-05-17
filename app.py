@@ -1071,6 +1071,22 @@ def delete_notification(nid):
     return jsonify({'success': True})
 
 
+@app.route('/api/customer/poll')
+@login_required
+def customer_poll():
+    bookings = Booking.query.filter_by(user_id=current_user.id)\
+        .order_by(Booking.created_at.desc()).all()
+    orders = Order.query.filter_by(user_id=current_user.id)\
+        .order_by(Order.created_at.desc()).all()
+    unread_count = Notification.query.filter_by(
+        user_id=current_user.id, is_read=False).count()
+    return jsonify({
+        'bookings': [{'id': b.id, 'status': b.status} for b in bookings],
+        'orders':   [{'id': o.id, 'status': o.status} for o in orders],
+        'unread_notifications': unread_count
+    })
+
+
 # ── Order confirm received ────────────────────────────────────────────────────
 
 @app.route('/customer/order/<int:oid>/confirm-received', methods=['POST'])
