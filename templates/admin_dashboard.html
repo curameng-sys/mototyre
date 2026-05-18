@@ -6,7 +6,7 @@
   <title>Admin Dashboard – Mototyre Moto Shop</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
 
     :root {
       --sidebar-bg: #111827;
@@ -19,13 +19,13 @@
       --blue: #3b82f6;
       --green: #16a34a;
       --warning: #f59e0b;
-      --muted: #6b7280;
+      --muted: #4b5563;
       --border: #e5e7eb;
       --text: #111827;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; color: var(--text); }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--ink); color: var(--text); font-size: 14px; line-height: 1.5; }
+    body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--ink); color: var(--text); font-size: 14px; line-height: 1.5; }
 
     /* ── SIDEBAR EXCEPTIONS (keep white text) ── */
     .sidebar, .sidebar *, .mobile-topbar, .mobile-topbar * { color: revert; }
@@ -53,9 +53,9 @@
       display: flex; align-items: center; gap: 0.5rem;
       padding: 1.1rem 1rem 1rem;
       border-bottom: 1px solid var(--sidebar-border);
-      font-family: 'Inter', sans-serif;
-      font-size: 1rem; font-weight: 800;
-      letter-spacing: -0.01em; color: #ffffff;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.35rem; font-weight: 400;
+      letter-spacing: 0.04em; color: #ffffff;
       white-space: nowrap;
     }
     .sidebar-logo span { color: var(--red); }
@@ -76,28 +76,28 @@
       font-size: 0.78rem; outline: none; font-family: inherit;
       transition: border-color 0.15s;
     }
-    .sidebar-search input::placeholder { color: #4b5563; }
+    .sidebar-search input::placeholder { color: #6b7280; }
     .sidebar-search input:focus { border-color: rgba(255,255,255,0.25); color: #e5e7eb; }
 
     /* Section labels */
     .sidebar-label {
       padding: 0.9rem 1rem 0.3rem;
-      font-size: 0.65rem; font-weight: 600;
+      font-size: 0.68rem; font-weight: 600;
       letter-spacing: 0.08em; text-transform: uppercase;
-      color: #4b5563;
+      color: #6b7280;
     }
 
     /* Nav links */
     .sidebar a {
       display: flex; align-items: center; gap: 0.6rem;
       padding: 0.5rem 0.75rem; margin: 0.1rem 0.5rem;
-      color: #9ca3af; text-decoration: none;
-      font-size: 0.82rem; font-weight: 500;
+      color: #c4c9d4; text-decoration: none;
+      font-size: 0.84rem; font-weight: 500;
       border-radius: 7px; transition: all 0.15s;
     }
     .sidebar a .nav-icon { font-size: 0.95rem; width: 1.1rem; flex-shrink: 0; text-align: center; }
     .sidebar a:hover { color: #f3f4f6; background: var(--sidebar-hover); }
-    .sidebar a.active { color: #ffffff; background: var(--sidebar-active); font-weight: 600; }
+    .sidebar a.active { color: #ffffff; background: rgba(208,0,25,0.16); border-left: 2px solid var(--red); padding-left: calc(0.75rem - 2px); font-weight: 600; }
 
     /* User profile at bottom */
     .sidebar-bottom {
@@ -120,7 +120,7 @@
       flex-shrink: 0; overflow: hidden;
     }
     .greeting-name { font-size: 0.82rem; font-weight: 600; color: #f3f4f6; line-height: 1.2; }
-    .greeting-role { font-size: 0.68rem; color: #6b7280; }
+    .greeting-role { font-size: 0.7rem; color: #9ca3af; }
 
     /* ═══════════════════════════════════════
        MAIN CONTENT
@@ -132,9 +132,9 @@
     /* Page header row */
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; }
     .page-header-left {}
-    .page-title { font-size: 1.5rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; line-height: 1.2; }
+    .page-title { font-size: 2.1rem; font-weight: 400; color: var(--text); letter-spacing: 0.03em; line-height: 1.1; font-family: 'Bebas Neue', sans-serif; }
     .page-title .accent { color: var(--red); }
-    .page-sub { color: var(--muted); font-size: 0.78rem; margin-top: 0.2rem; }
+    .page-sub { color: var(--muted); font-size: 0.82rem; margin-top: 0.2rem; }
     .page-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
 
     /* ═══════════════════════════════════════
@@ -143,19 +143,27 @@
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
     .stat-card {
       background: var(--card); border: 1px solid var(--border);
-      border-radius: 10px; padding: 1.25rem;
+      border-radius: 10px; padding: 1.25rem 1.35rem;
       position: relative; overflow: hidden;
-      transition: box-shadow 0.15s;
+      transition: box-shadow 0.2s, transform 0.2s;
+      border-left: 3px solid transparent;
     }
-    .stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
-    .stat-card.red::before { background: var(--red); }
-    .stat-card.blue::before { background: var(--blue); }
-    .stat-card.green::before { background: var(--green); }
-    .stat-card.orange::before { background: var(--warning); }
-    .stat-icon { font-size: 1.25rem; margin-bottom: 0.6rem; }
-    .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--text); line-height: 1; }
-    .stat-label { color: var(--muted); font-size: 0.72rem; margin-top: 0.3rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .stat-card.red { border-left-color: var(--red); }
+    .stat-card.blue { border-left-color: var(--blue); }
+    .stat-card.green { border-left-color: var(--green); }
+    .stat-card.orange { border-left-color: var(--warning); }
+    .stat-icon {
+      width: 40px; height: 40px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 0.875rem;
+    }
+    .stat-card.red .stat-icon { background: rgba(208,0,25,0.08); color: var(--red); }
+    .stat-card.blue .stat-icon { background: rgba(59,130,246,0.08); color: var(--blue); }
+    .stat-card.green .stat-icon { background: rgba(22,163,74,0.08); color: var(--green); }
+    .stat-card.orange .stat-icon { background: rgba(245,158,11,0.08); color: var(--warning); }
+    .stat-value { font-size: 2.1rem; font-weight: 400; color: var(--text); line-height: 1; font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.03em; }
+    .stat-label { color: var(--muted); font-size: 0.75rem; margin-top: 0.35rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 
     /* ═══════════════════════════════════════
        CARDS
@@ -168,10 +176,10 @@
     /* ═══════════════════════════════════════
        TABLES
     ═══════════════════════════════════════ */
-    .table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     .table th {
       text-align: left; padding: 0.65rem 0.875rem;
-      font-size: 0.68rem; font-weight: 600;
+      font-size: 0.72rem; font-weight: 600;
       text-transform: uppercase; letter-spacing: 0.06em;
       color: var(--muted); border-bottom: 1px solid var(--border);
       background: #f9fafb; white-space: nowrap;
@@ -184,7 +192,7 @@
     /* ═══════════════════════════════════════
        BADGES / STATUS CHIPS
     ═══════════════════════════════════════ */
-    .badge { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.02em; }
+    .badge { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.02em; }
     .badge-awaitingpayment { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
     .badge-pending         { background: #fefce8; color: #854d0e; border: 1px solid #fde047; }
     .badge-confirmed       { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
@@ -282,7 +290,7 @@
     .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
     .chart-bar-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
     .chart-bar-item { display: flex; align-items: center; gap: 0.65rem; font-size: 0.78rem; }
-    .chart-bar-item .bar-label { width: 75px; color: var(--muted); text-align: right; font-size: 0.7rem; }
+    .chart-bar-item .bar-label { width: 75px; color: var(--muted); text-align: right; font-size: 0.73rem; }
     .chart-bar-track { flex: 1; background: #f3f4f6; border-radius: 99px; height: 6px; overflow: hidden; }
     .chart-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; width: 0; }
     .chart-bar-item .bar-val { width: 36px; font-weight: 600; color: var(--text); font-size: 0.72rem; }
@@ -311,7 +319,7 @@
     .modal-box { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; animation: fadeUp 0.2s ease both; box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
     .modal-box h5 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 1.25rem; letter-spacing: -0.01em; }
     .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-group label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.06em; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem 0.875rem; border: 1px solid var(--border); border-radius: 7px; font-size: 0.875rem; font-family: inherit; color: var(--text); background: #fff; outline: none; transition: border-color 0.15s; }
     .form-group input::placeholder, .form-group textarea::placeholder { color: var(--muted); }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--text); box-shadow: 0 0 0 3px rgba(17,24,39,0.06); }
@@ -418,28 +426,28 @@
     </div>
 
     <div class="sidebar-label">Overview</div>
-    <a href="#" class="active" onclick="showSection('dashboard', this)"><span class="nav-icon">📊</span> Dashboard</a>
+    <a href="#" class="active" onclick="showSection('dashboard', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></span> Dashboard</a>
     <div class="sidebar-label">Management</div>
-    <a href="#" onclick="showSection('bookings', this)"><span class="nav-icon">📅</span> Bookings</a>
-    <a href="#" onclick="showSection('orders', this)"><span class="nav-icon">📦</span> Orders</a>
-    <a href="#" onclick="showSection('products', this)"><span class="nav-icon">🔧</span> Products</a>
-    <a href="#" onclick="showSection('users', this)"><span class="nav-icon">👥</span> Users</a>
-    <a href="#" onclick="showSection('mechanics', this)"><span class="nav-icon">🔩</span> Mechanics</a>
-    <a href="#" onclick="showSection('services', this)"><span class="nav-icon">🛠️</span> Services</a>
-    <a href="{{ url_for('quotations_list') }}"><span class="nav-icon">🖥️</span> Quotations</a>
-    <a href="{{ url_for('job_orders') }}"><span class="nav-icon">📋</span> Job Orders</a>
-    <a href="{{ url_for('payments') }}"><span class="nav-icon">💳</span> Payments</a>
-    <a href="{{ url_for('walk_in') }}"><span class="nav-icon">🏍️</span> Walk-In</a>
-    <a href="#" onclick="showSection('parts', this)"><span class="nav-icon">🛒</span> Parts Purchase</a>
-    <a href="#" onclick="showSection('transactions', this)"><span class="nav-icon">📋</span> Transactions</a>
+    <a href="#" onclick="showSection('bookings', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Bookings</a>
+    <a href="#" onclick="showSection('orders', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> Orders</a>
+    <a href="#" onclick="showSection('products', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span> Products</a>
+    <a href="#" onclick="showSection('users', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Users</a>
+    <a href="#" onclick="showSection('mechanics', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Mechanics</a>
+    <a href="#" onclick="showSection('services', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span> Services</a>
+    <a href="{{ url_for('quotations_list') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Quotations</a>
+    <a href="{{ url_for('job_orders') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span> Job Orders</a>
+    <a href="{{ url_for('payments') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Payments</a>
+    <a href="{{ url_for('walk_in') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Walk-In</a>
+    <a href="#" onclick="showSection('parts', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span> Parts Purchase</a>
+    <a href="#" onclick="showSection('transactions', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Transactions</a>
     <div class="sidebar-label">Analytics</div>
-    <a href="#" onclick="showSection('reports', this)"><span class="nav-icon">📈</span> Reports & Sales</a>
-    <a href="#" onclick="showSection('archive', this)"><span class="nav-icon">🗃️</span> Archive</a>
+    <a href="#" onclick="showSection('reports', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Reports & Sales</a>
+    <a href="#" onclick="showSection('archive', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span> Archive</a>
 
     <div class="sidebar-bottom">
       <div class="sidebar-label" style="padding-top:0;">Account</div>
-      <a href="#" onclick="showSection('settings', this)"><span class="nav-icon">⚙️</span> Settings</a>
-      <a href="#" onclick="document.getElementById('modal-logout').style.display='flex'"><span class="nav-icon">🚪</span> Logout</a>
+      <a href="#" onclick="showSection('settings', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span> Settings</a>
+      <a href="#" onclick="document.getElementById('modal-logout').style.display='flex'"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Logout</a>
       <div class="sidebar-greeting" style="margin-top:0.5rem;">
         <div class="avatar">
           {% if current_user.profile_pic %}
@@ -453,7 +461,7 @@
           <div class="greeting-role">Administrator</div>
         </div>
         <div style="margin-left:auto;cursor:pointer;position:relative;" onclick="toggleAdminNotifications(event)" title="Notifications">
-          <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.85rem;transition:all 0.15s;">🔔</div>
+          <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#9ca3af;transition:all 0.15s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
           <span id="admin-notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:#d00019;color:#fff;font-size:0.6rem;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center;border:2px solid var(--sidebar-bg);">0</span>
         </div>
       </div>
@@ -472,10 +480,22 @@
         </div>
       </div>
       <div class="stats-grid">
-        <div class="stat-card red"><div class="stat-icon">📅</div><div class="stat-value">{{ total_bookings }}</div><div class="stat-label">Total Bookings</div></div>
-        <div class="stat-card blue"><div class="stat-icon">📦</div><div class="stat-value">{{ total_orders }}</div><div class="stat-label">Total Orders</div></div>
-        <div class="stat-card green"><div class="stat-icon">💰</div><div class="stat-value">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div></div>
-        <div class="stat-card orange"><div class="stat-icon">👥</div><div class="stat-value">{{ total_users }}</div><div class="stat-label">Registered Users</div></div>
+        <div class="stat-card red">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="stat-value">{{ total_bookings }}</div><div class="stat-label">Total Bookings</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+          <div class="stat-value">{{ total_orders }}</div><div class="stat-label">Total Orders</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-value">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-value">{{ total_users }}</div><div class="stat-label">Registered Users</div>
+        </div>
       </div>
       <div class="charts-grid">
         <div class="card">
@@ -527,7 +547,7 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state"><div class="ei">📅</div><p>No bookings yet.</p></div>
+        <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings yet.</p></div>
         {% endif %}
       </div>
     </section>
@@ -544,21 +564,21 @@
       <!-- Status Tabs -->
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
         <button class="bk-tab active" onclick="switchBookingTab('confirmed', this)">
-          ✅ Confirmed <span class="bk-tab-count">{{ booking_status_counts.get('confirmed', 0) }}</span>
+          Confirmed <span class="bk-tab-count">{{ booking_status_counts.get('confirmed', 0) }}</span>
         </button>
         <button class="bk-tab" onclick="switchBookingTab('inprogress', this)">
-          🔧 In Progress <span class="bk-tab-count">{{ booking_status_counts.get('in_progress', 0) + booking_status_counts.get('inprogress', 0) }}</span>
+          In Progress <span class="bk-tab-count">{{ booking_status_counts.get('in_progress', 0) + booking_status_counts.get('inprogress', 0) }}</span>
         </button>
         <button class="bk-tab" onclick="switchBookingTab('completed', this)">
-          🎉 Completed <span class="bk-tab-count">{{ booking_status_counts.get('completed', 0) }}</span>
+          Completed <span class="bk-tab-count">{{ booking_status_counts.get('completed', 0) }}</span>
         </button>
         <button class="bk-tab" onclick="switchBookingTab('cancelled', this)">
-          ✖ Cancelled <span class="bk-tab-count">{{ booking_status_counts.get('cancelled', 0) }}</span>
+          Cancelled <span class="bk-tab-count">{{ booking_status_counts.get('cancelled', 0) }}</span>
         </button>
       </div>
 
       <div class="filter-bar">
-        <input type="text" placeholder="🔍 Search customer or service..." oninput="filterBookingsSearch(this.value)">
+        <input type="text" placeholder="Search customer or service..." oninput="filterBookingsSearch(this.value)">
       </div>
 
       <div class="card">
@@ -656,19 +676,19 @@
                   </td>
                   <td>
                     {% if b.payment_method == 'gcash' %}
-                      <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">💳 GCash</span>
+                      <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">GCash</span>
                     {% else %}
-                      <span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">💵 Cash</span>
+                      <span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">Cash</span>
                     {% endif %}
                   </td>
                   <td onclick="event.stopPropagation()">
                     {% if is_done %}
-                      <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;padding:0.25rem 0.6rem;border-radius:6px;">✔ Done</span>
+                      <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;padding:0.25rem 0.6rem;border-radius:6px;">Done</span>
                     {% elif is_cancelled %}
-                      <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:0.25rem 0.6rem;border-radius:6px;">✖ Cancelled</span>
+                      <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:0.25rem 0.6rem;border-radius:6px;">Cancelled</span>
                     {% else %}
                       {% if b.status == 'in_progress' %}
-                        <div style="font-size:0.7rem;color:#d97706;font-weight:600;">💳 Collect via Billing</div>
+                        <div style="font-size:0.7rem;color:#d97706;font-weight:600;">Collect via Billing</div>
                       {% elif b.status == 'confirmed' %}
                         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
                           <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form" id="start-service-form-{{ b.id }}">
@@ -677,7 +697,7 @@
                           </form>
                           <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form" id="cancel-booking-form-{{ b.id }}">
                             <input type="hidden" name="status" value="cancelled">
-                            <button type="button" onclick="openCancelBookingModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">✖ Cancel</button>
+                            <button type="button" onclick="openCancelBookingModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">Cancel</button>
                           </form>
                         </div>
                       {% endif %}
@@ -688,7 +708,7 @@
                     {% set min_days = 30 if b.status == 'completed' else 7 %}
                     {% if b.status in ['completed', 'cancelled'] and age >= min_days %}
                       <form method="POST" action="{{ url_for('archive_booking', bid=b.id) }}" onsubmit="return confirm('Archive Booking #{{ b.id }}?')">
-                        <button type="submit" style="background:#f5f0eb;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:inherit;font-weight:700;cursor:pointer;">🗃️ Archive</button>
+                        <button type="submit" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:inherit;font-weight:700;cursor:pointer;">Archive</button>
                       </form>
                     {% elif b.status not in ['completed', 'cancelled'] %}
                       <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">Not eligible</span>
@@ -702,7 +722,7 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state"><div class="ei">📅</div><p>No bookings found.</p></div>
+        <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings found.</p></div>
         {% endif %}
       </div>
     </section>
@@ -716,7 +736,7 @@
         </div>
       </div>
       <div class="filter-bar">
-        <input type="text" placeholder="🔍 Search customer or product..." oninput="filterTable('orders-table', this.value)">
+        <input type="text" placeholder="Search customer or product..." oninput="filterTable('orders-table', this.value)">
         <select onchange="filterTableByCol('orders-table', 4, this.value)">
           <option value="">All Status</option>
           <option>pending</option>
@@ -775,9 +795,9 @@
                 <td style="white-space:nowrap;">{{ o.created_at.strftime('%b %d, %Y') }}</td>
                 <td>
                   {% if o.delivery_method == 'ship' %}
-                    <span class="badge" style="background:rgba(6,182,212,0.15);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);">🚚 Ship</span>
+                    <span class="badge" style="background:rgba(6,182,212,0.15);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);">Ship</span>
                   {% else %}
-                    <span class="badge" style="background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;">🏪 Pickup</span>
+                    <span class="badge" style="background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;">Pickup</span>
                   {% endif %}
                 </td>
                 <td>
@@ -807,7 +827,7 @@
                 {% set min_days = 30 if o.status == 'completed' else 7 %}
                 {% if o.status in ['completed', 'cancelled'] and age >= min_days %}
                   <form method="POST" action="{{ url_for('archive_order', oid=o.id) }}" onsubmit="return confirm('Archive ORD-{{ '%03d'|format(o.id) }}?')">
-                    <button type="submit" style="background:#f5f0eb;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:inherit;font-weight:700;cursor:pointer;">🗃️ Archive</button>
+                    <button type="submit" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:inherit;font-weight:700;cursor:pointer;">Archive</button>
                   </form>
                 {% elif o.status not in ['completed', 'cancelled'] %}
                   <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">Not eligible</span>
@@ -822,7 +842,7 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state"><div class="ei">📦</div><p>No orders found.</p></div>
+        <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg></div><p>No orders found.</p></div>
         {% endif %}
       </div>
     </section>
@@ -836,11 +856,11 @@
         </div>
         <div class="page-actions">
           <button class="btn-primary-custom" onclick="openModal('modal-add-product')">+ Add Product</button>
-          <button class="btn-primary-custom" onclick="openModal('modal-import-csv')">📂 Import CSV</button>
+          <button class="btn-primary-custom" onclick="openModal('modal-import-csv')">Import CSV</button>
         </div>
       </div>
       <div class="filter-bar">
-        <input type="text" placeholder="🔍 Search product..." oninput="filterProducts(this.value)" id="products-search-input">
+        <input type="text" placeholder="Search product..." oninput="filterProducts(this.value)" id="products-search-input">
       </div>
       <div class="card">
         {% if all_products %}
@@ -868,7 +888,7 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state"><div class="ei">🔧</div><p>No products yet.</p></div>
+        <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><p>No products yet.</p></div>
         {% endif %}
       </div>
       <div id="products-pagination" style="display:flex;align-items:center;justify-content:center;gap:0.4rem;flex-wrap:wrap;margin-top:1rem;"></div>
@@ -883,7 +903,7 @@
         </div>
       </div>
       <div class="filter-bar">
-        <input type="text" placeholder="🔍 Search name or email..." oninput="filterTable('users-table', this.value)">
+        <input type="text" placeholder="Search name or email..." oninput="filterTable('users-table', this.value)">
         <select onchange="filterTableByCol('users-table', 5, this.value)">
           <option value="">All Roles</option>
           <option>customer</option><option>staff</option><option>admin</option>
@@ -907,7 +927,7 @@
                 <td>
                   {% if u.role != 'admin' and u.id != current_user.id %}
                   <form method="POST" action="{{ url_for('delete_user', uid=u.id) }}" onsubmit="return confirm('Delete {{ u.fullname|e }}?')">
-                    <button type="submit" class="btn-action-delete">🗑️ Delete</button>
+                    <button type="submit" class="btn-action-delete">Delete</button>
                   </form>
                   {% else %}
                   <span style="color:var(--muted);font-size:0.75rem;">—</span>
@@ -919,7 +939,7 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state"><div class="ei">👥</div><p>No users found.</p></div>
+        <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><p>No users found.</p></div>
         {% endif %}
       </div>
     </section>
@@ -951,7 +971,7 @@
             <td><span class="badge badge-{{ 'completed' if m.status == 'available' else 'cancelled' }}">{{ m.status }}</span></td>
             <td>
               <form method="POST" action="{{ url_for('delete_mechanic', mid=m.id) }}" onsubmit="return confirm('Delete {{ m.name }}?')">
-                <button type="submit" class="btn-action-delete">🗑️ Delete</button>
+                <button type="submit" class="btn-action-delete">Delete</button>
               </form>
             </td>
           </tr>
@@ -960,7 +980,7 @@
       </table>
     </div>
     {% else %}
-    <div class="empty-state"><div class="ei">🔧</div><p>No mechanics yet. Add one!</p></div>
+    <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><p>No mechanics yet. Add one!</p></div>
     {% endif %}
   </div>
 </section>
@@ -994,18 +1014,18 @@
               {% endif %}
             </td>
             <td>
-              <button onclick="openEditService({{ s.id }}, '{{ s.name|e }}', '{{ (s.description or '')|e }}', {{ s.price or 0 }})" class="btn-action-edit">✏️ Edit</button>
+              <button onclick="openEditService({{ s.id }}, '{{ s.name|e }}', '{{ (s.description or '')|e }}', {{ s.price or 0 }})" class="btn-action-edit">Edit</button>
             </td>
             <td>
               <form method="POST" action="{{ url_for('toggle_service', sid=s.id) }}">
                 <button type="submit" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;padding:0.25rem 0.7rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">
-                  {{ '🔴 Deactivate' if s.is_active else '🟢 Activate' }}
+                  {{ 'Deactivate' if s.is_active else 'Activate' }}
                 </button>
               </form>
             </td>
             <td>
               <form method="POST" action="{{ url_for('delete_service', sid=s.id) }}" onsubmit="return confirm('Delete service {{ s.name|e }}? This cannot be undone.')">
-                <button type="submit" class="btn-action-delete">🗑️ Delete</button>
+                <button type="submit" class="btn-action-delete">Delete</button>
               </form>
             </td>
           </tr>
@@ -1014,7 +1034,7 @@
       </table>
     </div>
     {% else %}
-    <div class="empty-state"><div class="ei">🛠️</div><p>No services yet. Add one!</p></div>
+    <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><p>No services yet. Add one!</p></div>
     {% endif %}
   </div>
 </section>
@@ -1028,7 +1048,7 @@
         </div>
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-        <div style="font-family:inherit;font-weight:700;font-size:0.88rem;color:var(--text);margin-right:0.5rem;">📄 Generate Report</div>
+        <div style="font-family:inherit;font-weight:700;font-size:0.88rem;color:var(--text);margin-right:0.5rem;">Generate Report</div>
         <form method="POST" action="{{ url_for('generate_report') }}" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
           <div style="display:flex;align-items:center;gap:0.5rem;">
             <label style="font-size:0.78rem;color:var(--muted);font-family:inherit;font-weight:600;">From</label>
@@ -1038,14 +1058,26 @@
             <label style="font-size:0.78rem;color:var(--muted);font-family:inherit;font-weight:600;">To</label>
             <input type="date" name="date_to" required style="padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#ffffff;color:var(--text);font-size:0.82rem;outline:none;">
           </div>
-          <button type="submit" class="btn-primary-custom">⬇️ Download PDF</button>
+          <button type="submit" class="btn-primary-custom">Download PDF</button>
         </form>
       </div>
       <div class="stats-grid">
-        <div class="stat-card red"><div class="stat-icon">💵</div><div class="stat-value">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div></div>
-        <div class="stat-card blue"><div class="stat-icon">🔧</div><div class="stat-value">{{ booking_status_counts.get('completed', 0) }}</div><div class="stat-label">Services Completed</div></div>
-        <div class="stat-card green"><div class="stat-icon">📦</div><div class="stat-value">{{ order_status_counts.get('completed', 0) }}</div><div class="stat-label">Orders Fulfilled</div></div>
-        <div class="stat-card orange"><div class="stat-icon">👥</div><div class="stat-value">{{ total_users }}</div><div class="stat-label">Total Customers</div></div>
+        <div class="stat-card red">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-value">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+          <div class="stat-value">{{ booking_status_counts.get('completed', 0) }}</div><div class="stat-label">Services Completed</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+          <div class="stat-value">{{ order_status_counts.get('completed', 0) }}</div><div class="stat-label">Orders Fulfilled</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-value">{{ total_users }}</div><div class="stat-label">Total Customers</div>
+        </div>
       </div>
       <div class="charts-grid">
         <div class="card">
@@ -1080,7 +1112,7 @@
               {% endfor %}
             </div>
             {% else %}
-            <div class="empty-state"><div class="ei">📊</div><p>No booking data yet.</p></div>
+            <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No booking data yet.</p></div>
             {% endif %}
           </div>
         </div>
@@ -1105,7 +1137,7 @@
           </table>
         </div>
         {% else %}
-        <div class="empty-state"><div class="ei">💳</div><p>No transactions yet.</p></div>
+        <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><p>No transactions yet.</p></div>
         {% endif %}
       </div>
     </section>
@@ -1172,11 +1204,11 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
                   <button id="parts-btn-cash" onclick="setPartsPayment('cash')"
                     style="padding:0.5rem;border-radius:8px;border:2px solid var(--red);background:var(--red);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">
-                    💵 Cash
+                    Cash
                   </button>
                   <button id="parts-btn-gcash" onclick="setPartsPayment('gcash')"
                     style="padding:0.5rem;border-radius:8px;border:2px solid var(--border);background:#ffffff;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">
-                    📱 GCash
+                    GCash
                   </button>
                 </div>
               </div>
@@ -1184,7 +1216,7 @@
               <!-- Process button -->
               <button onclick="processPartsTxn()" id="parts-process-btn"
                 style="width:100%;padding:0.7rem;border:none;border-radius:8px;background:var(--green);color:#fff;font-family:inherit;font-weight:700;font-size:0.92rem;cursor:pointer;letter-spacing:0.02em;">
-                ✅ Process Transaction
+                Process Transaction
               </button>
             </div>
           </div>
@@ -1195,7 +1227,7 @@
       <div id="parts-receipt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
         <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:420px;padding:2rem;position:relative;">
           <div style="text-align:center;margin-bottom:1.25rem;">
-            <div style="font-size:2rem;margin-bottom:0.4rem;">✅</div>
+            <div style="margin-bottom:0.5rem;color:var(--green);"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
             <div style="font-size:1.25rem;font-weight:700;color:var(--text);letter-spacing:-0.01em;">Transaction Complete</div>
             <div id="receipt-order-ref" style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;"></div>
           </div>
@@ -1210,7 +1242,7 @@
           <div id="receipt-payment" style="text-align:center;font-size:0.78rem;color:var(--muted);margin-bottom:1rem;"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;">
             <button onclick="document.getElementById('parts-receipt-modal').style.display='none'"
-              style="padding:0.6rem;border-radius:8px;border:1px solid var(--border);background:#f5f0eb;color:var(--text);font-size:0.85rem;cursor:pointer;font-family:inherit;font-weight:600;">
+              style="padding:0.6rem;border-radius:8px;border:1px solid var(--border);background:#f3f4f6;color:var(--text);font-size:0.85rem;cursor:pointer;font-family:inherit;font-weight:600;">
               Close
             </button>
             <button onclick="newPartsTxn()"
@@ -1251,18 +1283,18 @@
           <option value="month">This Month</option>
         </select>
         <input type="text" id="txn-search" placeholder="Search customer, ID…" oninput="filterTxns()">
-        <button onclick="loadTxns()" style="padding:.55rem 1rem;border:1px solid var(--border);border-radius:8px;background:#f5f0eb;color:var(--text);cursor:pointer;font-size:.875rem;font-family:'DM Sans',sans-serif;">↻ Refresh</button>
+        <button onclick="loadTxns()" style="padding:.55rem 1rem;border:1px solid var(--border);border-radius:8px;background:#f3f4f6;color:var(--text);cursor:pointer;font-size:.875rem;font-family:'DM Sans',sans-serif;">↻ Refresh</button>
       </div>
 
 
       <!-- Table -->
       <div class="card">
         <div class="card-head">
-          <h5>📋 All Transactions</h5>
+          <h5>All Transactions</h5>
           <span id="txn-count" style="font-size:.75rem;color:var(--muted);font-family:inherit;font-weight:700;"></span>
         </div>
         <div id="txn-table-wrap">
-          <div class="empty-state"><div class="ei">📋</div><p>Loading transactions…</p></div>
+          <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><p>Loading transactions…</p></div>
         </div>
       </div>
     </section>
@@ -1278,16 +1310,16 @@
 
   <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
     <div>
-      <div style="font-weight:700;font-size:0.95rem;color:var(--text);margin-bottom:0.25rem;">🗃️ Bulk Archive</div>
+      <div style="font-weight:700;font-size:0.95rem;color:var(--text);margin-bottom:0.25rem;">Bulk Archive</div>
       <div style="font-size:0.8rem;color:var(--muted);">Automatically archive all completed & cancelled records older than 30 days.</div>
     </div>
     <form method="POST" action="{{ url_for('archive_all_old') }}" onsubmit="return confirm('Archive completed records older than 30 days and cancelled records older than 7 days?')">
-      <button type="submit" class="btn-primary-custom">🗃️ Archive All Old Records</button>
+      <button type="submit" class="btn-primary-custom">Archive All Old Records</button>
     </form>
   </div>
 
   <div class="card">
-    <div class="card-head"><h5>📦 Archived Orders</h5></div>
+    <div class="card-head"><h5>Archived Orders</h5></div>
     {% if archived_orders %}
     <div style="overflow-x:auto;">
       <table class="table">
@@ -1311,12 +1343,12 @@
       </table>
     </div>
     {% else %}
-    <div class="empty-state"><div class="ei">📦</div><p>No archived orders.</p></div>
+    <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div><p>No archived orders.</p></div>
     {% endif %}
   </div>
 
   <div class="card">
-    <div class="card-head"><h5>📅 Archived Bookings</h5></div>
+    <div class="card-head"><h5>Archived Bookings</h5></div>
     {% if archived_bookings %}
     <div style="overflow-x:auto;">
       <table class="table">
@@ -1340,7 +1372,7 @@
       </table>
     </div>
     {% else %}
-    <div class="empty-state"><div class="ei">📅</div><p>No archived bookings.</p></div>
+    <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div><p>No archived bookings.</p></div>
     {% endif %}
   </div>
 </section>
@@ -1368,11 +1400,11 @@
                 </div>
                 <div>
                   <input type="file" name="profile_pic" id="picInput" accept="image/*" style="display:none;" onchange="previewPic(this)">
-                  <button type="button" class="pic-upload-btn" onclick="document.getElementById('picInput').click()">📷 Choose Photo</button>
+                  <button type="button" class="pic-upload-btn" onclick="document.getElementById('picInput').click()">Choose Photo</button>
                 </div>
                 <div class="pic-upload-hint">JPG, PNG or GIF · Max 2MB</div>
               </div>
-              <button type="submit" class="btn-primary-custom">💾 Save Picture</button>
+              <button type="submit" class="btn-primary-custom">Save Picture</button>
             </form>
           </div>
         </div>
@@ -1383,7 +1415,7 @@
               <div class="form-group"><label>Full Name</label><input type="text" name="fullname" value="{{ current_user.fullname }}" required oninput="this.value=this.value.replace(/[0-9]/g,'')"></div>
               <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" value="{{ current_user.phone }}" required maxlength="11" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)"></div>
               <div class="form-group"><label>Email (cannot change)</label><input type="email" value="{{ current_user.email }}" disabled></div>
-              <button type="submit" class="btn-primary-custom">💾 Save Changes</button>
+              <button type="submit" class="btn-primary-custom">Save Changes</button>
             </form>
           </div>
         </div>
@@ -1395,62 +1427,73 @@
 
 <!-- BOOKING DETAILS MODAL -->
 <div class="modal-overlay" id="modal-booking-details">
-  <div class="modal-box" style="width:560px;max-width:95vw;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <h5 style="margin:0;">📅 Booking Details</h5>
-      <button onclick="closeModal('modal-booking-details')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;">✕</button>
+  <div class="modal-box" style="width:580px;max-width:95vw;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:1rem;">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="bd-id"></div>
+        <div style="margin-top:0.5rem;" id="bd-status"></div>
+      </div>
+      <button onclick="closeModal('modal-booking-details')" style="width:30px;height:30px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:0.9rem;flex-shrink:0;font-family:inherit;">✕</button>
     </div>
 
-    <!-- Header: ID + status -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1rem;background:#f5f0eb;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;">
-      <div style="font-weight:800;font-family:inherit;font-size:1.4rem;color:#d00019;letter-spacing:0.04em;" id="bd-id"></div>
-      <div id="bd-status"></div>
-    </div>
-
-    <!-- Contact Person -->
-    <div style="margin-bottom:0.75rem;">
-      <div style="font-family:inherit;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Contact Person</div>
-      <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;">
-        <div style="font-weight:700;color:var(--text);font-size:0.9rem;" id="bd-contact-name"></div>
+    <!-- Contact Person + Motorcycle -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.85rem 1rem;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">Contact Person</div>
+        <div style="font-weight:700;color:var(--text);font-size:0.9rem;line-height:1.3;" id="bd-contact-name"></div>
         <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem;" id="bd-contact-mobile"></div>
+      </div>
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.85rem 1rem;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">Motorcycle</div>
+        <div style="font-weight:700;color:var(--text);font-size:0.9rem;line-height:1.3;" id="bd-moto"></div>
+        <div id="bd-odo-wrap" style="display:none;font-size:0.8rem;color:var(--muted);margin-top:0.2rem;">Odometer: <span id="bd-odometer"></span></div>
       </div>
     </div>
 
-    <!-- Services List -->
-    <div style="margin-bottom:0.75rem;">
-      <div style="font-family:inherit;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Services Booked</div>
-      <div id="bd-services-list" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+    <!-- Date / Time / Mechanic -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;text-align:center;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Date</div>
+        <div style="font-size:0.88rem;color:var(--text);font-weight:600;" id="bd-date"></div>
+      </div>
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;text-align:center;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Time</div>
+        <div style="font-size:0.88rem;color:var(--text);font-weight:600;" id="bd-time"></div>
+      </div>
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;text-align:center;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Mechanic</div>
+        <div style="font-size:0.82rem;color:var(--text);font-weight:600;" id="bd-mechanic"></div>
+      </div>
     </div>
 
-    <!-- Date, Moto, Mechanic -->
-    <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.75rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
-      <div><div style="font-size:0.7rem;color:var(--muted);">Date</div><div style="font-size:0.85rem;color:var(--text);font-weight:600;" id="bd-date"></div></div>
-      <div><div style="font-size:0.7rem;color:var(--muted);">Time</div><div style="font-size:0.85rem;color:var(--text);font-weight:600;" id="bd-time"></div></div>
-      <div><div style="font-size:0.7rem;color:var(--muted);">Motorcycle</div><div style="font-size:0.85rem;color:var(--text);font-weight:600;" id="bd-moto"></div></div>
-      <div><div style="font-size:0.7rem;color:var(--muted);">Mechanic</div><div style="font-size:0.85rem;color:var(--text);font-weight:600;" id="bd-mechanic"></div></div>
-      <div id="bd-odo-wrap" style="display:none;"><div style="font-size:0.7rem;color:var(--muted);">Odometer</div><div style="font-size:0.85rem;color:var(--text);font-weight:600;" id="bd-odometer"></div></div>
+    <!-- Services -->
+    <div style="margin-bottom:0.75rem;">
+      <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;">Services Booked</div>
+      <div id="bd-services-list" style="display:flex;flex-direction:column;gap:0.45rem;"></div>
     </div>
 
     <!-- Payment & Total -->
-    <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;">
-      <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(0,168,107,0.08);border:1px solid rgba(0,168,107,0.2);border-radius:8px;">
-        <span style="font-weight:600;font-size:0.82rem;color:var(--green);">💳 Payment</span>
-        <span style="font-weight:600;font-size:0.82rem;color:var(--text);" id="bd-payment"></span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;">
+        <span style="font-weight:600;font-size:0.82rem;color:#15803d;">Payment</span>
+        <span style="font-weight:700;font-size:0.88rem;color:var(--text);" id="bd-payment"></span>
       </div>
-      <div id="bd-total-wrap" style="flex:1;display:none;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(208,0,25,0.08);border:1px solid rgba(208,0,25,0.2);border-radius:8px;">
-        <span style="font-weight:600;font-size:0.82rem;color:var(--red);">💵 Total</span>
-        <span style="font-weight:700;font-size:0.95rem;color:var(--text);" id="bd-total"></span>
+      <div id="bd-total-wrap" style="display:none;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.18);border-radius:9px;">
+        <span style="font-weight:600;font-size:0.82rem;color:var(--red);">Total</span>
+        <span style="font-weight:800;font-size:1.05rem;color:var(--text);" id="bd-total"></span>
       </div>
     </div>
 
     <!-- Notes -->
     <div id="bd-notes-wrap" style="display:none;margin-bottom:1rem;">
-      <div style="font-family:inherit;font-weight:700;font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Notes</div>
-      <div style="background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.2);border-radius:10px;padding:0.85rem 1rem;font-size:0.85rem;color:#92600a;line-height:1.6;" id="bd-notes"></div>
+      <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;">Notes</div>
+      <div style="background:#fefce8;border:1px solid #fde047;border-radius:9px;padding:0.85rem 1rem;font-size:0.85rem;color:#854d0e;line-height:1.6;" id="bd-notes"></div>
     </div>
 
-    <div style="text-align:right;">
-      <button onclick="closeModal('modal-booking-details')" style="background:#f5f0eb;border:1px solid var(--border);color:var(--muted);padding:0.55rem 1.25rem;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.82rem;cursor:pointer;">Close</button>
+    <div class="modal-actions">
+      <button onclick="closeModal('modal-booking-details')" class="btn-cancel">Close</button>
     </div>
   </div>
 </div>
@@ -1458,7 +1501,7 @@
 <!-- ADD SERVICE MODAL -->
 <div class="modal-overlay" id="modal-add-service">
   <div class="modal-box">
-    <h5>🛠️ Add New Service</h5>
+    <h5>Add New Service</h5>
     <form method="POST" action="{{ url_for('add_service') }}">
       <div class="form-group">
         <label>Service Name</label>
@@ -1483,7 +1526,7 @@
 <!-- EDIT SERVICE MODAL -->
 <div class="modal-overlay" id="modal-edit-service">
   <div class="modal-box">
-    <h5>✏️ Edit Service</h5>
+    <h5>Edit Service</h5>
     <form method="POST" id="edit-service-form" action="">
       <div class="form-group">
         <label>Service Name</label>
@@ -1508,7 +1551,7 @@
 <!-- ADD STAFF MODAL -->
 <div class="modal-overlay" id="modal-add-staff">
   <div class="modal-box">
-    <h5>👤 Add Staff Account</h5>
+    <h5>Add Staff Account</h5>
     <form method="POST" action="{{ url_for('add_staff') }}" onsubmit="return validateAdminProfileForm(this)">
       <div class="form-group"><label>Full Name</label><input type="text" name="fullname" placeholder="e.g. Juan dela Cruz" required oninput="this.value=this.value.replace(/[0-9]/g,'')"></div>
       <div class="form-group"><label>Email Address</label><input type="email" name="email" placeholder="staff@mototyre.com" required></div>
@@ -1525,7 +1568,7 @@
 <!-- ADD PRODUCT MODAL -->
 <div class="modal-overlay" id="modal-add-product">
   <div class="modal-box">
-    <h5>🔧 Add New Product</h5>
+    <h5>Add New Product</h5>
     <form method="POST" action="{{ url_for('add_product') }}">
       <div class="form-group"><label>Product Name</label><input type="text" name="name" placeholder="e.g. IRC MB99 Front Tire" required></div>
       <div class="form-group">
@@ -1552,9 +1595,9 @@
 <div class="modal-overlay" id="modal-edit-product">
   <div class="modal-box">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <h5 style="margin:0;">✏️ Edit Product</h5>
+      <h5 style="margin:0;">Edit Product</h5>
       <form method="POST" id="delete-product-form" action="" onsubmit="return confirm('Are you sure you want to delete this product?')">
-        <button type="submit" class="btn-action-delete">🗑️ Delete Product</button>
+        <button type="submit" class="btn-action-delete">Delete Product</button>
       </form>
     </div>
     <form method="POST" id="edit-product-form" action="">
@@ -1573,7 +1616,7 @@
       <div class="form-group"><label>Description (optional)</label><textarea name="description" id="edit-product-desc" rows="2"></textarea></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-product')">Cancel</button>
-        <button type="submit" class="btn-primary-custom">💾 Save Changes</button>
+        <button type="submit" class="btn-primary-custom">Save Changes</button>
       </div>
     </form>
   </div>
@@ -1582,14 +1625,14 @@
 <!-- CSV IMPORT MODAL -->
 <div class="modal-overlay" id="modal-import-csv">
   <div class="modal-box" style="width:540px;">
-    <h5>📂 Import Products via CSV</h5>
+    <h5>Import Products via CSV</h5>
     <div id="csv-step-upload">
       <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Upload a <strong style="color:var(--text);">.csv</strong> file with columns: name, category, price, stock, description</p>
       <div style="margin-bottom:1rem;">
-        <button onclick="downloadCsvTemplate()" style="background:#f5f0eb;border:1px dashed var(--border);color:var(--muted);padding:0.5rem 1rem;border-radius:8px;font-size:0.8rem;cursor:pointer;">⬇️ Download CSV Template</button>
+        <button onclick="downloadCsvTemplate()" style="background:#f3f4f6;border:1px dashed var(--border);color:var(--muted);padding:0.5rem 1rem;border-radius:8px;font-size:0.8rem;cursor:pointer;">Download CSV Template</button>
       </div>
       <div id="csv-dropzone" style="border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:rgba(0,0,0,0.02);" onclick="document.getElementById('csv-file-input').click()" ondragover="csvDragOver(event)" ondragleave="csvDragLeave(event)" ondrop="csvDrop(event)">
-        <div style="font-size:2rem;margin-bottom:0.5rem;">📄</div>
+        <div style="font-size:2rem;margin-bottom:0.5rem;color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
         <div style="color:var(--text);font-size:0.9rem;font-weight:600;">Click to browse or drag & drop</div>
         <div style="color:var(--muted);font-size:0.75rem;margin-top:0.25rem;">.csv files only</div>
         <input type="file" id="csv-file-input" accept=".csv" style="display:none;" onchange="csvFileSelected(this)">
@@ -1608,7 +1651,7 @@
       </div>
       <div style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:1.25rem;">
         <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
-          <thead><tr style="position:sticky;top:0;background:#f5f0eb;">
+          <thead><tr style="position:sticky;top:0;background:#f3f4f6;">
             <th style="text-align:left;padding:0.5rem 0.75rem;color:var(--muted);border-bottom:1px solid var(--border);">Name</th>
             <th style="text-align:left;padding:0.5rem 0.75rem;color:var(--muted);border-bottom:1px solid var(--border);">Category</th>
             <th style="text-align:left;padding:0.5rem 0.75rem;color:var(--muted);border-bottom:1px solid var(--border);">Price</th>
@@ -1621,11 +1664,11 @@
       <div id="csv-import-error" style="display:none;margin-bottom:1rem;padding:0.6rem 1rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.82rem;color:#b91c1c;"></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-import-csv')">Cancel</button>
-        <button type="button" class="btn-primary-custom" id="csv-import-btn" onclick="csvSubmitImport()">✅ Import All</button>
+        <button type="button" class="btn-primary-custom" id="csv-import-btn" onclick="csvSubmitImport()">Import All</button>
       </div>
     </div>
     <div id="csv-step-success" style="display:none;text-align:center;padding:1.5rem 0;">
-      <div style="font-size:3rem;margin-bottom:0.75rem;">✅</div>
+      <div style="margin-bottom:0.75rem;color:var(--green);"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
       <div style="font-size:1.25rem;font-weight:700;color:var(--text);" id="csv-success-msg"></div>
       <div style="color:var(--muted);font-size:0.85rem;margin-top:0.4rem;">Products have been added to your inventory.</div>
       <div class="modal-actions" style="justify-content:center;margin-top:1.5rem;">
@@ -1637,45 +1680,61 @@
 
 <!-- ORDER DETAIL MODAL -->
 <div class="modal-overlay" id="modal-order-detail">
-  <div class="modal-box" style="width:520px;">
-    <h5>📦 <span id="od-title">Order Details</span></h5>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
-      <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:8px;padding:0.75rem;">
-        <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:inherit;font-weight:700;margin-bottom:0.3rem;">Customer</div>
-        <div style="color:var(--text);font-weight:600;font-size:0.88rem;" id="od-customer"></div>
-        <div style="color:var(--muted);font-size:0.75rem;margin-top:0.15rem;" id="od-email"></div>
-        <div style="color:var(--muted);font-size:0.75rem;" id="od-phone"></div>
+  <div class="modal-box" style="width:540px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:1rem;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="od-title">Order Details</div>
+      <button onclick="closeModal('modal-order-detail')" style="width:30px;height:30px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:0.9rem;flex-shrink:0;font-family:inherit;">✕</button>
+    </div>
+
+    <!-- Customer + Motorcycle -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.85rem 1rem;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">Customer</div>
+        <div style="color:var(--text);font-weight:700;font-size:0.9rem;line-height:1.3;" id="od-customer"></div>
+        <div style="color:var(--muted);font-size:0.78rem;margin-top:0.2rem;" id="od-email"></div>
+        <div style="color:var(--muted);font-size:0.78rem;" id="od-phone"></div>
       </div>
-      <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:8px;padding:0.75rem;">
-        <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:inherit;font-weight:700;margin-bottom:0.3rem;">Motorcycle</div>
-        <div style="color:var(--text);font-size:0.85rem;font-weight:600;" id="od-moto-model"></div>
-        <div style="color:var(--muted);font-size:0.75rem;" id="od-moto-plate"></div>
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.85rem 1rem;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">Motorcycle</div>
+        <div style="color:var(--text);font-size:0.9rem;font-weight:700;line-height:1.3;" id="od-moto-model"></div>
+        <div style="color:var(--muted);font-size:0.78rem;margin-top:0.2rem;" id="od-moto-plate"></div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
-      <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:8px;padding:0.75rem;text-align:center;">
-        <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:inherit;font-weight:700;">Status</div>
-        <div style="margin-top:0.4rem;" id="od-status"></div>
+
+    <!-- Status / Payment / Date -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;text-align:center;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Status</div>
+        <div id="od-status"></div>
       </div>
-      <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:8px;padding:0.75rem;text-align:center;">
-        <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:inherit;font-weight:700;">Payment</div>
-        <div style="margin-top:0.4rem;" id="od-payment"></div>
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;text-align:center;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Payment</div>
+        <div id="od-payment"></div>
       </div>
-      <div style="background:#f5f0eb;border:1px solid var(--border);border-radius:8px;padding:0.75rem;text-align:center;">
-        <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:inherit;font-weight:700;">Date</div>
-        <div style="color:var(--text);font-size:0.8rem;font-weight:500;margin-top:0.4rem;" id="od-date"></div>
+      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;text-align:center;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Date</div>
+        <div style="color:var(--text);font-size:0.82rem;font-weight:600;" id="od-date"></div>
       </div>
     </div>
-    <div id="od-ship-wrap" style="display:none;margin-bottom:1.25rem;">
-      <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:inherit;font-weight:700;margin-bottom:0.4rem;">Ship To Address</div>
-      <div id="od-ship-address" style="background:#f9fafb;border:1px solid var(--border);border-radius:8px;padding:0.75rem;color:var(--text);font-size:0.82rem;white-space:pre-line;"></div>
+
+    <!-- Ship Address -->
+    <div id="od-ship-wrap" style="display:none;margin-bottom:0.75rem;">
+      <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">Ship To Address</div>
+      <div id="od-ship-address" style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;color:var(--text);font-size:0.82rem;white-space:pre-line;"></div>
     </div>
-    <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:inherit;font-weight:700;margin-bottom:0.5rem;">Order Items</div>
-    <div id="od-items" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1rem;"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.2);border-radius:8px;">
-      <span style="font-weight:700;font-size:0.85rem;color:var(--text);">Total</span>
-      <span style="font-weight:800;font-family:inherit;font-size:1.5rem;color:var(--red);letter-spacing:0.03em;" id="od-total"></span>
+
+    <!-- Items -->
+    <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;">Order Items</div>
+    <div id="od-items" style="border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:0.75rem;"></div>
+
+    <!-- Total -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.85rem 1rem;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.18);border-radius:9px;">
+      <span style="font-weight:700;font-size:0.88rem;color:var(--text);">Total</span>
+      <span style="font-weight:800;font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.03em;" id="od-total"></span>
     </div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('modal-order-detail')">Close</button>
     </div>
@@ -1685,7 +1744,7 @@
 <!-- ADD MECHANIC MODAL -->
 <div class="modal-overlay" id="modal-add-mechanic">
   <div class="modal-box">
-    <h5>🔧 Add Mechanic</h5>
+    <h5>Add Mechanic</h5>
     <form method="POST" action="{{ url_for('add_mechanic') }}">
       <div class="form-group">
         <label>Full Name</label>
@@ -1714,7 +1773,7 @@
 <!-- START SERVICE CONFIRMATION MODAL -->
 <div class="modal-overlay" id="modal-start-service" style="display:none;">
   <div class="modal-box" style="max-width:400px;text-align:center;">
-    <div style="font-size:2.5rem;margin-bottom:0.75rem;">🔧</div>
+    <div style="margin-bottom:0.75rem;color:var(--warning);"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
     <h5 style="margin-bottom:0.25rem;">Start Service</h5>
     <p style="color:var(--muted);font-size:0.875rem;margin-bottom:0.4rem;">You are about to start the service for:</p>
     <p id="modal-ss-customer" style="color:var(--text);font-weight:700;font-size:1rem;margin-bottom:0.25rem;"></p>
@@ -1730,7 +1789,7 @@
 <!-- CANCEL BOOKING CONFIRMATION MODAL -->
 <div class="modal-overlay" id="modal-cancel-booking" style="display:none;">
   <div class="modal-box" style="max-width:400px;text-align:center;">
-    <div style="font-size:2.5rem;margin-bottom:0.75rem;">❌</div>
+    <div style="margin-bottom:0.75rem;color:var(--red);"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
     <h5 style="margin-bottom:0.25rem;">Cancel Booking</h5>
     <p style="color:var(--muted);font-size:0.875rem;margin-bottom:0.4rem;">You are about to cancel the booking of:</p>
     <p id="modal-cb-customer" style="color:var(--text);font-weight:700;font-size:1rem;margin-bottom:0.25rem;"></p>
@@ -1738,14 +1797,14 @@
     <p style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;">This action <strong style="color:var(--red);">cannot be undone</strong>. The customer will be notified.</p>
     <div class="modal-actions" style="justify-content:center;">
       <button class="btn-cancel" onclick="document.getElementById('modal-cancel-booking').style.display='none'">Go Back</button>
-      <button onclick="confirmCancelBooking()" style="padding:0.6rem 1.5rem;background:rgba(208,0,25,0.85);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">✖ Yes, Cancel</button>
+      <button onclick="confirmCancelBooking()" style="padding:0.6rem 1.5rem;background:rgba(208,0,25,0.85);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">Yes, Cancel</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-logout" style="display:none;">
   <div class="modal-box" style="max-width:380px;text-align:center;">
-    <div style="font-size:2.5rem;margin-bottom:0.75rem;">🚪</div>
+    <div style="margin-bottom:0.75rem;color:var(--red);"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
     <h5 style="margin-bottom:0.5rem;">Logging Out</h5>
     <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:1.5rem;">Are you sure you want to log out?</p>
     <div class="modal-actions" style="justify-content:center;">
@@ -1758,7 +1817,7 @@
 <!-- NOTE MODAL -->
 <div class="modal-overlay" id="modal-note">
   <div class="modal-box" style="max-width:400px;">
-    <h5>💬 Customer Note</h5>
+    <h5>Customer Note</h5>
     <div id="modal-note-text" style="color:#d1d5db;font-size:0.9rem;line-height:1.7;white-space:pre-wrap;background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.2);border-radius:8px;padding:1rem;"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('modal-note')">Close</button>
@@ -1788,12 +1847,12 @@
     const ids       = d.ids.split(',');
 
     const statusColors = {
-      pending:     { bg:'rgba(180,83,9,0.2)',   color:'#fbbf24', border:'rgba(180,83,9,0.3)' },
-      confirmed:   { bg:'rgba(29,78,216,0.2)',  color:'#93c5fd', border:'rgba(29,78,216,0.3)' },
-      in_progress: { bg:'rgba(234,179,8,0.2)',  color:'#fde047', border:'rgba(234,179,8,0.4)' },
-      inprogress:  { bg:'rgba(234,179,8,0.2)',  color:'#fde047', border:'rgba(234,179,8,0.4)' },
-      completed:   { bg:'rgba(21,128,61,0.2)',  color:'#86efac', border:'rgba(21,128,61,0.3)' },
-      cancelled:   { bg:'rgba(220,38,38,0.15)', color:'#fca5a5', border:'rgba(220,38,38,0.2)' },
+      pending:     { bg:'#fefce8', color:'#854d0e', border:'#fde047' },
+      confirmed:   { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe' },
+      in_progress: { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },
+      inprogress:  { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },
+      completed:   { bg:'#f0fdf4', color:'#15803d', border:'#bbf7d0' },
+      cancelled:   { bg:'#fef2f2', color:'#b91c1c', border:'#fecaca' },
     };
 
     // Header ID — show range if multiple
@@ -1808,8 +1867,8 @@
       `<span style="font-family:inherit;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.35em 0.85em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${d.status.replace('_',' ')}</span>`;
 
     // Contact
-    document.getElementById('bd-contact-name').textContent   = '👤 ' + (d.contactName   || d.customer);
-    document.getElementById('bd-contact-mobile').textContent = '📞 ' + (d.contactMobile || d.phone);
+    document.getElementById('bd-contact-name').textContent   = d.contactName   || d.customer;
+    document.getElementById('bd-contact-mobile').textContent = d.contactMobile || d.phone;
 
     // Services list — one card per service
     const servicesList = document.getElementById('bd-services-list');
@@ -1821,7 +1880,7 @@
       card.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:#f9fafb;border:1px solid var(--border);border-radius:10px;';
       card.innerHTML = `
         <div style="display:flex;align-items:center;gap:0.75rem;">
-          <div style="width:32px;height:32px;border-radius:8px;background:rgba(208,0,25,0.1);display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">🔧</div>
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(208,0,25,0.1);display:flex;align-items:center;justify-content:center;color:var(--red);flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
           <div>
             <div style="font-weight:700;color:var(--text);font-size:0.88rem;">${svc}</div>
             <div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">BKG-${String(ids[i] || ids[0]).padStart(3,'0')}</div>
@@ -1849,7 +1908,7 @@
     }
 
     // Payment
-    document.getElementById('bd-payment').textContent = d.payment === 'gcash' ? '📱 GCash' : '💵 Cash';
+    document.getElementById('bd-payment').textContent = d.payment === 'gcash' ? 'GCash' : 'Cash';
 
     // Total
     const totalAmount = parseFloat(d.totalAmount || 0);
@@ -2156,11 +2215,11 @@
     const nameEl  = document.getElementById('csv-file-name');
     const btn     = document.getElementById('csv-preview-btn');
     errorEl.style.display = 'none';
-    if (!file.name.match(/\.csv$/i)) { errorEl.textContent = '❌ Only .csv files are accepted.'; errorEl.style.display = 'block'; return; }
+    if (!file.name.match(/\.csv$/i)) { errorEl.textContent = 'Only .csv files are accepted.'; errorEl.style.display = 'block'; return; }
     const reader = new FileReader();
     reader.onload = function(e) {
       const lines = e.target.result.trim().split('\n').filter(l => l.trim());
-      if (lines.length < 2) { errorEl.textContent = '❌ File appears empty.'; errorEl.style.display = 'block'; return; }
+      if (lines.length < 2) { errorEl.textContent = 'File appears empty.'; errorEl.style.display = 'block'; return; }
       const headers  = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim().replace(/\s+/g, '_'));
       const nameIdx  = headers.findIndex(h => h.includes('item_description') || h.includes('name'));
       const catIdx   = headers.findIndex(h => h.includes('category'));
@@ -2168,7 +2227,7 @@
       const stockIdx = headers.findIndex(h => h.includes('beginning_qty') || h.includes('stock'));
       const descIdx  = headers.findIndex(h => h.includes('description') || h.includes('brand'));
       const barIdx   = headers.findIndex(h => h.includes('barcode'));
-      if (nameIdx === -1 || priceIdx === -1) { errorEl.textContent = '❌ Could not find name/price columns.'; errorEl.style.display = 'block'; return; }
+      if (nameIdx === -1 || priceIdx === -1) { errorEl.textContent = 'Could not find name/price columns.'; errorEl.style.display = 'block'; return; }
       csvParsedRows = lines.slice(1).map(line => {
         const cols = parseCSVLine(line);
         return {
@@ -2180,7 +2239,7 @@
           description: descIdx !== -1 ? (cols[descIdx]  || '').trim().replace(/^"|"$/g, '') : '',
         };
       }).filter(row => row.name);
-      nameEl.textContent = '📄 ' + file.name + ' — ' + csvParsedRows.length + ' rows found';
+      nameEl.textContent = file.name + ' — ' + csvParsedRows.length + ' rows found';
       nameEl.style.display = 'block';
       btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
     };
@@ -2217,14 +2276,14 @@
     const importBtn = document.getElementById('csv-import-btn');
     if (validCount === 0) {
       importBtn.disabled = true; importBtn.style.opacity = '0.5';
-      document.getElementById('csv-import-error').textContent = '❌ No valid rows to import.';
+      document.getElementById('csv-import-error').textContent = 'No valid rows to import.';
       document.getElementById('csv-import-error').style.display = 'block';
     } else {
       importBtn.disabled = false; importBtn.style.opacity = '1';
-      importBtn.textContent = '✅ Import ' + validCount + ' Product' + (validCount > 1 ? 's' : '');
+      importBtn.textContent = 'Import ' + validCount + ' Product' + (validCount > 1 ? 's' : '');
       if (validCount > 500) {
-        importBtn.textContent = '✅ Import First 500 Products';
-        document.getElementById('csv-import-error').textContent = '⚠️ Only first 500 products will be imported.';
+        importBtn.textContent = 'Import First 500 Products';
+        document.getElementById('csv-import-error').textContent = 'Only first 500 products will be imported.';
         document.getElementById('csv-import-error').style.display = 'block';
         document.getElementById('csv-import-error').style.background = 'rgba(234,179,8,0.1)';
         document.getElementById('csv-import-error').style.borderColor = 'rgba(234,179,8,0.3)';
@@ -2256,15 +2315,15 @@
         document.getElementById('csv-step-success').style.display = 'block';
         document.getElementById('csv-success-msg').textContent = data.count + ' PRODUCT' + (data.count > 1 ? 'S' : '') + ' IMPORTED!';
       } else {
-        document.getElementById('csv-import-error').textContent = '❌ ' + (data.error || 'Import failed.');
+        document.getElementById('csv-import-error').textContent = data.error || 'Import failed.';
         document.getElementById('csv-import-error').style.display = 'block';
-        btn.disabled = false; btn.textContent = '✅ Import All';
+        btn.disabled = false; btn.textContent = 'Import All';
       }
     })
     .catch(err => {
-      document.getElementById('csv-import-error').textContent = '❌ Server error: ' + err.message;
+      document.getElementById('csv-import-error').textContent = 'Server error: ' + err.message;
       document.getElementById('csv-import-error').style.display = 'block';
-      btn.disabled = false; btn.textContent = '✅ Import All';
+      btn.disabled = false; btn.textContent = 'Import All';
     });
   }
 
@@ -2286,7 +2345,7 @@
     document.getElementById('od-email').textContent = email;
     document.getElementById('od-phone').textContent = phone;
     document.getElementById('od-moto-model').textContent = motoModel || '—';
-    document.getElementById('od-moto-plate').textContent = motoPlate ? '🏍️ ' + motoPlate : '';
+    document.getElementById('od-moto-plate').textContent = motoPlate || '';
     document.getElementById('od-date').textContent = dateStr;
     document.getElementById('od-total').textContent = '₱' + total.toFixed(2);
 
@@ -2299,9 +2358,9 @@
       '<span class="badge ' + (statusColors[status] || 'badge-pending') + '">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span>';
 
     if (payment === 'gcash') {
-      document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">💳 GCash</span>';
+      document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">GCash</span>';
     } else {
-      document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">💵 Cash</span>';
+      document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">Cash</span>';
     }
 
     const shipData = orderShipData[id] || {};
@@ -2348,7 +2407,7 @@
   </div>
   <div id="admin-notif-list" style="max-height:460px;overflow-y:auto;">
     <div id="admin-notif-empty" style="text-align:center;padding:2.5rem 1rem;color:#6b7280;">
-      <div style="font-size:2rem;margin-bottom:0.5rem;">🔔</div>
+      <div style="margin-bottom:0.5rem;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
       <div style="font-size:0.85rem;">No notifications yet.</div>
     </div>
   </div>
@@ -2392,10 +2451,10 @@ function renderAdminNotifications() {
   }
   empty.style.display = 'none';
 
-  const icons = { booking: '📅', order: '📦', update: '📢', reminder: '⏰' };
+  const icons = { booking: '●', order: '●', update: '●', reminder: '●' };
 
   adminNotifications.slice(0, 10).forEach(n => {
-    const icon = icons[n.type] || '🔔';
+    const icon = icons[n.type] || '●';
     const time = new Date(n.created_at).toLocaleString('en-PH', {
       month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
     });
@@ -2505,7 +2564,7 @@ document.addEventListener('submit', function(e) {
         const tds = [...row.querySelectorAll('td')]; if (tds[2]) tds[2].classList.add('bk-svc-done');
       } else if (newStatus === 'cancelled') {
         row.classList.add('booking-cancelled'); row.classList.remove('booking-done');
-        form.closest('td').innerHTML = '<span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:0.25rem 0.6rem;border-radius:6px;">✖ Cancelled</span>';
+        form.closest('td').innerHTML = '<span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:0.25rem 0.6rem;border-radius:6px;">Cancelled</span>';
       } else {
         row.classList.remove('booking-done', 'booking-cancelled');
         // Narrow the select options to reflect the new valid transitions
@@ -2684,7 +2743,7 @@ function processPartsTxn() {
   .then(r => r.json())
   .then(data => {
     btn.disabled = false;
-    btn.textContent = '✅ Process Transaction';
+    btn.textContent = 'Process Transaction';
     if (!data.success) { showToast(data.error || 'Transaction failed.', 'error'); return; }
     _showPartsReceipt(data.order_id, cartSnapshot, total);
     clearPartsCart();
@@ -2692,7 +2751,7 @@ function processPartsTxn() {
   })
   .catch(() => {
     btn.disabled = false;
-    btn.textContent = '✅ Process Transaction';
+    btn.textContent = 'Process Transaction';
     showToast('Network error. Please try again.', 'error');
   });
 }
@@ -2700,9 +2759,9 @@ function processPartsTxn() {
 function _showPartsReceipt(orderId, items, total) {
   const customerName = document.getElementById('parts-customer').value.trim() || 'Walk-in Customer';
   document.getElementById('receipt-order-ref').textContent  = orderId ? `Order ORD-${String(orderId).padStart(3,'0')}` : 'In-Store Sale';
-  document.getElementById('receipt-customer').textContent   = '👤 ' + customerName;
+  document.getElementById('receipt-customer').textContent   = customerName;
   document.getElementById('receipt-total').textContent      = '₱' + total.toLocaleString('en-PH', {minimumFractionDigits:2});
-  document.getElementById('receipt-payment').textContent    = _partsPayment === 'cash' ? '💵 Paid via Cash' : '📱 Paid via GCash';
+  document.getElementById('receipt-payment').textContent    = _partsPayment === 'cash' ? 'Paid via Cash' : 'Paid via GCash';
   document.getElementById('receipt-items').innerHTML = items.map(i =>
     `<div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
       <span>${i.name} × ${i.qty}</span>
@@ -2729,7 +2788,7 @@ async function loadTxns() {
     filterTxns();
   } catch(e) {
     document.getElementById('txn-table-wrap').innerHTML =
-      '<div class="empty-state"><div class="ei">⚠️</div><p>Could not load transactions.</p></div>';
+      '<div class="empty-state"><p>Could not load transactions.</p></div>';
   }
 }
 
@@ -2738,10 +2797,15 @@ function _renderTxnStats(data) {
   const byType  = {};
   data.forEach(t => { byType[t.type] = (byType[t.type] || 0) + 1; });
   const colors  = {'Job Order':'blue','Sale':'green','Online':'orange'};
-  const icons   = {'Job Order':'🔩','Sale':'🛒','Online':'📦'};
-  let html = `<div class="stat-card blue"><div class="stat-icon">💰</div><div class="stat-value">₱${total.toLocaleString('en-PH',{minimumFractionDigits:2})}</div><div class="stat-label">Total Revenue</div></div>`;
+  const svgIcons = {
+    'Job Order': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    'Sale': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
+    'Online': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'
+  };
+  const revSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+  let html = `<div class="stat-card blue"><div class="stat-icon">${revSvg}</div><div class="stat-value">₱${total.toLocaleString('en-PH',{minimumFractionDigits:2})}</div><div class="stat-label">Total Revenue</div></div>`;
   ['Job Order','Sale','Online'].forEach(type => {
-    html += `<div class="stat-card ${colors[type]}"><div class="stat-icon">${icons[type]}</div><div class="stat-value">${byType[type]||0}</div><div class="stat-label">${type} Transactions</div></div>`;
+    html += `<div class="stat-card ${colors[type]}"><div class="stat-icon">${svgIcons[type]}</div><div class="stat-value">${byType[type]||0}</div><div class="stat-label">${type} Transactions</div></div>`;
   });
   document.getElementById('txn-stats').innerHTML = html;
 }
@@ -2787,7 +2851,7 @@ function filterTxns() {
 
   if (!filtered.length) {
     document.getElementById('txn-table-wrap').innerHTML =
-      '<div class="empty-state"><div class="ei">📋</div><p>No transactions found.</p></div>';
+      '<div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><p>No transactions found.</p></div>';
     return;
   }
 

@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quotations – MotoTyre Admin</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-    :root{--ink:#0c0d0f;--panel:#111215;--surface:#16181d;--card:#1a1d23;--red:#d00019;--blue:#2563eb;--green:#16a34a;--muted:#6b7280;--border:rgba(255,255,255,0.07);--text:#e5e7eb;--orange:#f59e0b;}
+    :root{--ink:#f3f4f6;--panel:#111827;--surface:#f9fafb;--card:#ffffff;--red:#d00019;--blue:#2563eb;--green:#16a34a;--muted:#6b7280;--border:#e5e7eb;--text:#111827;--orange:#f59e0b;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     body{min-height:100vh;font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);}
 
@@ -24,63 +23,63 @@
     .btn-secondary:hover{border-color:var(--red);color:#fff;background:rgba(208,0,25,.08);}
 
     .main{padding:1.5rem 2rem;max-width:1200px;margin:0 auto;}
-    .page-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;color:#fff;margin-bottom:.25rem;}
+    .page-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;color:#111827;margin-bottom:.25rem;}
     .page-sub{font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;}
 
     /* FILTER TABS */
     .filter-tabs{display:flex;gap:.4rem;margin-bottom:1.25rem;}
-    .ftab{padding:.4rem 1rem;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:all .15s;}
-    .ftab:hover{border-color:rgba(255,255,255,.2);color:#fff;}
+    .ftab{padding:.4rem 1rem;border-radius:8px;background:#fff;border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:all .15s;}
+    .ftab:hover{border-color:#9ca3af;color:#374151;}
     .ftab.active{background:var(--red);border-color:var(--red);color:#fff;}
 
     /* TABLE */
-    .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+    .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);}
     table{width:100%;border-collapse:collapse;}
-    thead th{padding:.8rem 1.1rem;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--panel);border-bottom:1px solid var(--border);white-space:nowrap;}
+    thead th{padding:.8rem 1.1rem;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--surface);border-bottom:1px solid var(--border);white-space:nowrap;}
     tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
     tbody tr:last-child{border-bottom:none;}
-    tbody tr:hover{background:rgba(255,255,255,.02);}
+    tbody tr:hover{background:rgba(0,0,0,.02);}
     td{padding:.85rem 1.1rem;font-size:.85rem;color:var(--text);vertical-align:middle;}
 
-    .ref-code{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;color:#fff;}
-    .cust-name{font-weight:600;color:#fff;}
+    .ref-code{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;color:#111827;}
+    .cust-name{font-weight:600;color:#111827;}
     .moto-info{font-size:.75rem;color:var(--muted);margin-top:.1rem;}
 
     /* STATUS BADGES */
     .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;border-radius:99px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
-    .badge-pending{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);}
-    .badge-accepted{background:rgba(22,163,74,.15);color:#86efac;border:1px solid rgba(22,163,74,.3);}
-    .badge-rejected{background:rgba(107,114,128,.15);color:#9ca3af;border:1px solid rgba(107,114,128,.3);}
+    .badge-pending{background:rgba(245,158,11,.12);color:#b45309;border:1px solid rgba(245,158,11,.3);}
+    .badge-accepted{background:rgba(22,163,74,.1);color:#15803d;border:1px solid rgba(22,163,74,.25);}
+    .badge-rejected{background:rgba(107,114,128,.1);color:#4b5563;border:1px solid rgba(107,114,128,.25);}
 
-    .amount{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.03em;color:#fff;}
+    .amount{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.03em;color:#111827;}
     .date-cell{font-size:.78rem;color:var(--muted);}
 
     /* ACTIONS */
     .action-btns{display:flex;gap:.4rem;flex-wrap:wrap;}
     .act-btn{padding:.3rem .65rem;border-radius:6px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;}
-    .act-view{background:rgba(255,255,255,.04);border-color:var(--border);color:var(--muted);}
-    .act-view:hover{border-color:rgba(255,255,255,.2);color:#fff;}
-    .act-convert{background:rgba(22,163,74,.12);border-color:rgba(22,163,74,.3);color:#86efac;}
-    .act-convert:hover{background:rgba(22,163,74,.2);color:#fff;}
-    .act-reject{background:rgba(208,0,25,.08);border-color:rgba(208,0,25,.2);color:#fca5a5;}
-    .act-reject:hover{background:rgba(208,0,25,.18);color:#fff;}
+    .act-view{background:#f9fafb;border-color:var(--border);color:var(--muted);}
+    .act-view:hover{border-color:#9ca3af;color:#374151;}
+    .act-convert{background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.25);color:#15803d;}
+    .act-convert:hover{background:rgba(22,163,74,.15);color:#166534;}
+    .act-reject{background:rgba(208,0,25,.06);border-color:rgba(208,0,25,.2);color:#b91c1c;}
+    .act-reject:hover{background:rgba(208,0,25,.12);color:#991b1b;}
 
     /* EXPANDED ITEMS */
     .items-row{display:none;}
     .items-row.open{display:table-row;}
-    .items-inner{padding:1rem 1.1rem;background:rgba(255,255,255,.02);}
+    .items-inner{padding:1rem 1.1rem;background:#f9fafb;}
     .item-line{display:flex;align-items:center;gap:.5rem;padding:.35rem 0;border-bottom:1px solid var(--border);font-size:.82rem;}
     .item-line:last-child{border-bottom:none;}
     .item-icon{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;}
-    .item-icon.product{background:rgba(208,0,25,.12);color:var(--red);}
-    .item-icon.service{background:rgba(37,99,235,.12);color:#93c5fd;}
-    .item-name{flex:1;color:#e5e7eb;}
+    .item-icon.product{background:rgba(208,0,25,.1);color:var(--red);}
+    .item-icon.service{background:rgba(37,99,235,.1);color:#2563eb;}
+    .item-name{flex:1;color:#374151;}
     .item-qty{color:var(--muted);font-size:.75rem;}
-    .item-price{font-family:'Syne',sans-serif;font-weight:700;color:#fff;}
+    .item-price{font-family:'Syne',sans-serif;font-weight:700;color:#111827;}
 
     /* EMPTY STATE */
     .empty-state{text-align:center;padding:4rem 2rem;color:var(--muted);}
-    .empty-state i{font-size:3rem;opacity:.2;display:block;margin-bottom:1rem;}
+    .empty-state svg{opacity:.2;display:block;margin:0 auto 1rem;}
     .empty-state p{font-size:.9rem;}
 
     /* FLASH MESSAGES */
@@ -91,7 +90,7 @@
 
     /* TOAST */
     .toast-wrap{position:fixed;top:70px;right:1.25rem;z-index:2000;display:flex;flex-direction:column;gap:.4rem;}
-    .toast{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:8px;padding:.7rem 1rem;font-family:'DM Sans',sans-serif;font-size:.82rem;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:toastIn .25s ease;min-width:180px;}
+    .toast{background:#1f2937;border:1px solid #374151;border-left:3px solid var(--green);border-radius:8px;padding:.7rem 1rem;font-family:'DM Sans',sans-serif;font-size:.82rem;color:#e5e7eb;box-shadow:0 4px 20px rgba(0,0,0,.25);animation:toastIn .25s ease;min-width:180px;}
     .toast.error{border-left-color:var(--red);}
     @keyframes toastIn{from{opacity:0;transform:translateX(12px);}to{opacity:1;transform:translateX(0);}}
   </style>
@@ -101,8 +100,8 @@
 <header class="topbar">
   <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">Quotations</span></div>
   <div class="topbar-right">
-    <a href="{{ url_for('quotation_new') }}" class="btn-action btn-primary"><i class="fas fa-plus"></i> New Quotation</a>
-    <a href="{{ url_for('admin_dashboard') }}" class="btn-action btn-secondary"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    <a href="{{ url_for('quotation_new') }}" class="btn-action btn-primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Quotation</a>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-action btn-secondary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Dashboard</a>
   </div>
 </header>
 
@@ -157,13 +156,13 @@
           </td>
           <td>
             <button class="act-btn act-view" onclick="toggleItems({{ q.id }})">
-              {{ q.items|length }} item(s) <i class="fas fa-chevron-down" style="font-size:.6rem;"></i>
+              {{ q.items|length }} item(s) <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
           </td>
           <td><span class="amount">₱{{ '%.2f'|format(q.total_amount) }}</span></td>
           <td>
             <span class="badge badge-{{ q.status }}">
-              {% if q.status == 'pending' %}<i class="fas fa-clock"></i>{% elif q.status == 'accepted' %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-times"></i>{% endif %}
+              {% if q.status == 'pending' %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{% elif q.status == 'accepted' %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{% else %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{% endif %}
               {{ q.status|capitalize }}
             </span>
           </td>
@@ -172,9 +171,9 @@
             <div class="action-btns">
               {% if q.status == 'pending' %}
               <form method="POST" action="{{ url_for('convert_quotation', qid=q.id) }}" onsubmit="return confirm('Convert QUO-{{ '%03d'|format(q.id) }} to a Job Order? Customer has confirmed.');">
-                <button type="submit" class="act-btn act-convert"><i class="fas fa-arrow-right"></i> Convert to JO</button>
+                <button type="submit" class="act-btn act-convert"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> Convert to JO</button>
               </form>
-              <button class="act-btn act-reject" onclick="rejectQuote({{ q.id }}, this)"><i class="fas fa-times"></i> Reject</button>
+              <button class="act-btn act-reject" onclick="rejectQuote({{ q.id }}, this)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject</button>
               {% else %}
               <span style="font-size:.75rem;color:var(--muted);">—</span>
               {% endif %}
@@ -184,11 +183,11 @@
         <tr class="items-row" id="items-row-{{ q.id }}">
           <td colspan="7">
             <div class="items-inner">
-              {% if q.notes %}<div style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;padding:.5rem .75rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid var(--border);">{{ q.notes }}</div>{% endif %}
+              {% if q.notes %}<div style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;padding:.5rem .75rem;background:#fff;border-radius:6px;border-left:3px solid var(--border);">{{ q.notes }}</div>{% endif %}
               {% for item in q.items %}
               <div class="item-line">
                 <div class="item-icon {{ item.item_type }}">
-                  <i class="fas {{ 'fa-box' if item.item_type == 'product' else 'fa-wrench' }}"></i>
+                  {% if item.item_type == 'product' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>{% else %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>{% endif %}
                 </div>
                 <span class="item-name">{{ item.name }}</span>
                 <span class="item-qty">x{{ item.quantity }}</span>
@@ -203,7 +202,7 @@
     </table>
     {% else %}
     <div class="empty-state">
-      <i class="fas fa-file-invoice"></i>
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       <p>No quotations found.<br><a href="{{ url_for('quotation_new') }}" style="color:var(--red);">Create the first one</a>.</p>
     </div>
     {% endif %}
