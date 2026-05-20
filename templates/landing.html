@@ -15,19 +15,19 @@
       --bg-panel:  #ffffff;
       --bg-subtle: #f5f4f2;
       --bg-ink:    #1c1814;
-      --fg-1:      #1c1814;
-      --fg-2:      #5a544d;
-      --fg-3:      #908980;
-      --brand-red:        #e8401c;
-      --brand-red-hover:  #c73418;
-      --brand-red-soft:   rgba(232,64,28,0.10);
-      --brand-red-border: rgba(232,64,28,0.25);
+      --fg-1:      #111111;
+      --fg-2:      #2d2926;
+      --fg-3:      #5a544d;
+      --brand-red:        #d00019;
+      --brand-red-hover:  #a8001a;
+      --brand-red-soft:   rgba(208,0,25,0.10);
+      --brand-red-border: rgba(208,0,25,0.25);
       --line-1: #ebe9e4;
       --line-2: #d6d3cd;
-      --shadow-1: 0 1px 2px rgba(28,24,20,0.04);
-      --shadow-2: 0 4px 16px rgba(28,24,20,0.06);
-      --shadow-3: 0 12px 32px rgba(28,24,20,0.10);
-      --shadow-red: 0 8px 24px rgba(232,64,28,0.18);
+      --shadow-1: 0 2px 6px rgba(28,24,20,0.18);
+      --shadow-2: 0 6px 24px rgba(28,24,20,0.32);
+      --shadow-3: 0 16px 48px rgba(28,24,20,0.45);
+      --shadow-red: 0 8px 24px rgba(208,0,25,0.18);
       --font-display: 'Bebas Neue','Oswald',sans-serif;
       --font-body:    'DM Sans',system-ui,sans-serif;
       --font-label:   'Syne','DM Sans',sans-serif;
@@ -35,6 +35,7 @@
       --ease: cubic-bezier(.2,.7,.2,1);
     }
     html,body{background:var(--bg-page);color:var(--fg-1);font-family:var(--font-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    body{padding-top:72px}
     a{color:inherit;text-decoration:none}
     button{font-family:inherit;cursor:pointer}
 
@@ -42,12 +43,13 @@
     @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
 
     /* ── NAV ── */
-    .nav-bar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-1);padding:0 clamp(20px,4vw,48px);height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .nav-bar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-1);padding:0 clamp(20px,4vw,48px);height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
     .nav-logo{font-family:var(--font-display);font-size:26px;letter-spacing:0.06em;color:var(--fg-1);line-height:1;user-select:none}
     .nav-logo span{color:var(--brand-red)}
     .nav-links{display:flex;gap:4px;flex:1;justify-content:center;overflow:hidden}
     .nav-links a{display:inline-flex;align-items:center;padding:8px 13px;border-radius:10px;font-family:var(--font-label);font-weight:700;font-size:12px;letter-spacing:0.05em;color:var(--fg-2);white-space:nowrap;transition:all 120ms var(--ease);border:1px solid transparent}
     .nav-links a:hover{background:var(--bg-subtle);color:var(--fg-1)}
+    .nav-links a.active{color:var(--brand-red);background:var(--brand-red-soft);border-color:var(--brand-red-border)}
     .nav-links a.nav-cta{background:var(--brand-red);color:#fff;border-color:var(--brand-red);padding:9px 18px}
     .nav-links a.nav-cta:hover{background:var(--brand-red-hover);box-shadow:var(--shadow-red)}
     .nav-toggle{display:none;background:none;border:none;padding:8px;color:var(--fg-1);align-items:center;justify-content:center}
@@ -57,8 +59,8 @@
     /* ── BUTTONS ── */
     .btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--brand-red);color:#fff;padding:14px 28px;border-radius:12px;font-family:var(--font-body);font-weight:700;font-size:16px;border:1px solid var(--brand-red);white-space:nowrap;transition:all 120ms var(--ease)}
     .btn-primary:hover{background:var(--brand-red-hover);box-shadow:var(--shadow-red);color:#fff}
-    .btn-ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--fg-2);padding:14px 28px;border-radius:12px;font-family:var(--font-body);font-weight:600;font-size:16px;border:none;white-space:nowrap;transition:all 120ms var(--ease)}
-    .btn-ghost:hover{background:var(--bg-subtle);color:var(--fg-1)}
+    .btn-ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--fg-2);padding:14px 28px;border-radius:12px;font-family:var(--font-body);font-weight:600;font-size:16px;border:1px solid var(--line-2);white-space:nowrap;transition:all 120ms var(--ease)}
+    .btn-ghost:hover{background:var(--fg-1);color:#fff;border-color:var(--fg-1)}
 
     /* ── HERO ── */
     .hero{position:relative;min-height:clamp(560px,78vh,760px);overflow:hidden;background:var(--fg-1)}
@@ -67,7 +69,7 @@
     .hero-num{position:absolute;font-family:var(--font-display);line-height:1;letter-spacing:-0.02em;color:transparent;pointer-events:none;user-select:none}
     .hero-num-left{font-size:clamp(18rem,32vw,30rem);left:clamp(-2vw,-1vw,0);top:50%;transform:translateY(-50%);-webkit-text-stroke:1px rgba(28,24,20,0.08);z-index:1}
     .hero-num-right{font-size:clamp(20rem,38vw,36rem);right:-3vw;top:52%;transform:translateY(-50%);-webkit-text-stroke:1px var(--line-1);z-index:0}
-    .hero-content-wrap{position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:clamp(60px,10vw,112px) clamp(20px,4vw,48px) clamp(80px,10vw,128px);min-height:inherit;display:flex;align-items:center}
+    .hero-content-wrap{position:relative;z-index:2;width:100%;padding:clamp(60px,10vw,112px) clamp(20px,4vw,48px) clamp(80px,10vw,128px) clamp(48px,6vw,120px);min-height:inherit;display:flex;align-items:center;justify-content:flex-start}
     .hero-content{max-width:640px}
     .hero-tag{display:inline-flex;align-items:center;gap:8px;background:var(--brand-red-soft);border:1px solid var(--brand-red-border);color:var(--brand-red);padding:6px 14px;border-radius:999px;font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:28px}
     .hero-tag-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);animation:pulse 1.5s infinite;flex-shrink:0}
@@ -97,8 +99,8 @@
 
     /* ── SHARED SECTION ── */
     .section{padding:clamp(64px,8vw,96px) clamp(20px,4vw,48px)}
-    .section-light{background:var(--bg-page)}
-    .section-panel{background:var(--bg-panel);border-top:1px solid var(--line-1);border-bottom:1px solid var(--line-1)}
+    .section-light{background:var(--bg-page);border-top:1px solid var(--line-1);border-bottom:1px solid var(--line-1)}
+    .section-panel{background:#f3f4f6;border-top:1px solid var(--line-1);border-bottom:1px solid var(--line-1)}
     .inner{max-width:1280px;margin:0 auto}
     .eyebrow{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--brand-red)}
     .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:32px;flex-wrap:wrap}
@@ -132,7 +134,7 @@
     .services-featured{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px;margin-bottom:16px}
     .svc-featured{background:var(--fg-1);color:#fff;border-radius:16px;padding:32px;display:flex;flex-direction:column;justify-content:space-between;gap:32px;position:relative;overflow:hidden;min-height:280px}
     .svc-featured-bg{position:absolute;right:-40px;bottom:-40px;opacity:0.18;pointer-events:none;color:var(--brand-red)}
-    .svc-hot-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(232,64,28,0.18);color:#ffb19a;padding:4px 12px;border-radius:999px;font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:16px}
+    .svc-hot-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(208,0,25,0.18);color:#ffb19a;padding:4px 12px;border-radius:999px;font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:16px}
     .svc-featured-title{font-family:var(--font-display);font-size:44px;letter-spacing:0.03em;line-height:1;margin:0}
     .svc-featured-title .accent{color:var(--brand-red)}
     .svc-featured-desc{font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,0.75);line-height:1.6;max-width:340px;margin:0 0 16px}
@@ -140,8 +142,8 @@
     .svc-price-from{font-family:var(--font-label);font-size:11px;color:rgba(255,255,255,0.5)}
     .svc-price{font-family:var(--font-display);font-size:32px;letter-spacing:0.02em;color:#fff}
 
-    .service-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:10px;transition:all 160ms var(--ease)}
-    .service-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-2)}
+    .service-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:10px;transition:all 160ms var(--ease);box-shadow:var(--shadow-2)}
+    .service-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-3)}
     .service-card.hidden{display:none}
     .svc-icon{width:44px;height:44px;border-radius:10px;background:var(--brand-red-soft);color:var(--brand-red);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
     .svc-name{font-family:var(--font-display);font-size:22px;letter-spacing:0.04em;color:var(--fg-1)}
@@ -157,8 +159,8 @@
 
     /* ── PRODUCTS ── */
     .products-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-    .product-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:all 160ms var(--ease)}
-    .product-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-2)}
+    .product-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:all 160ms var(--ease);box-shadow:var(--shadow-2)}
+    .product-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-3)}
     .product-img{height:110px;background:var(--bg-subtle);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--fg-3);margin-bottom:4px}
     .product-cat{font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--fg-3)}
     .product-name{font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--fg-1);line-height:1.3}
@@ -187,20 +189,20 @@
 
     /* ── CONTACT ── */
     .contact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
-    .contact-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;gap:16px;transition:all 160ms var(--ease)}
-    .contact-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-2)}
+    .contact-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;gap:16px;transition:all 160ms var(--ease);box-shadow:var(--shadow-2)}
+    .contact-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-3)}
     .contact-icon{width:44px;height:44px;border-radius:10px;background:var(--brand-red-soft);color:var(--brand-red);display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .contact-lbl{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--brand-red)}
     .contact-val{font-family:var(--font-body);font-size:15px;color:var(--fg-1);margin-top:4px;line-height:1.55}
 
     /* ── FEEDBACK ── */
     .feedback-wrap{max-width:720px;margin:0 auto}
-    .feedback-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:32px}
+    .feedback-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:32px;box-shadow:var(--shadow-2)}
     .form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .form-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
     .form-label{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-2)}
     .form-input,.form-select,.form-textarea{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:10px;padding:11px 14px;font-family:var(--font-body);font-size:14px;color:var(--fg-1);outline:none;width:100%;transition:border-color 120ms var(--ease),box-shadow 120ms var(--ease)}
-    .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(232,64,28,0.10)}
+    .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--brand-red);box-shadow:0 0 0 3px rgba(208,0,25,0.10)}
     .form-input::placeholder,.form-textarea::placeholder{color:var(--fg-3)}
     .form-textarea{resize:vertical;min-height:80px}
     .form-select{appearance:none;cursor:pointer}
@@ -217,7 +219,7 @@
     .cta-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.18;filter:grayscale(20%)}
     .cta-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(28,24,20,0.96) 0%,rgba(28,24,20,0.78) 50%,rgba(28,24,20,0.92) 100%)}
     .cta-inner{position:relative;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1.2fr 0.8fr;gap:48px;align-items:center}
-    .cta-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(232,64,28,0.15);border:1px solid rgba(232,64,28,0.35);color:#ff9a82;padding:6px 14px;border-radius:999px;font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:24px}
+    .cta-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(208,0,25,0.15);border:1px solid rgba(208,0,25,0.35);color:#ff9a82;padding:6px 14px;border-radius:999px;font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:24px}
     .cta-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);animation:pulse 1.5s infinite;flex-shrink:0}
     .cta-section h2{font-family:var(--font-display);font-size:clamp(2.75rem,6vw,5.5rem);line-height:0.92;letter-spacing:0.02em;margin:0 0 24px;color:#fff;text-transform:uppercase}
     .cta-section h2 .accent{color:var(--brand-red)}
@@ -275,6 +277,7 @@
     <i data-lucide="menu" style="width:22px;height:22px"></i>
   </button>
   <div class="nav-links" id="navLinks">
+    <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">Home</a>
     <a href="#about">About</a>
     <a href="#products">Products</a>
     <a href="#services">Services</a>
@@ -290,8 +293,6 @@
 <section class="hero">
   <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="" aria-hidden="true" class="hero-bg-img">
   <div class="hero-scrim" aria-hidden="true"></div>
-  <div class="hero-num hero-num-left" aria-hidden="true">01</div>
-  <div class="hero-num hero-num-right" aria-hidden="true">01</div>
 
   <div class="hero-content-wrap">
     <div class="hero-content">
@@ -314,10 +315,6 @@
         <a href="{{ url_for('register') }}" class="btn-primary">
           Book Service Now <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
         </a>
-        <a href="#how" class="btn-ghost">
-          <i data-lucide="play-circle" style="width:18px;height:18px"></i>
-          How it works
-        </a>
       </div>
       <div class="hero-trust">
         <div class="hero-trust-item">
@@ -337,21 +334,6 @@
   </div>
 
   <!-- Floating badges -->
-  <div class="hero-badge hero-badge-top">
-    <div class="badge-label">
-      <i data-lucide="users" style="width:13px;height:13px;color:var(--brand-red)"></i>
-      HAPPY RIDERS
-    </div>
-    <div class="badge-num">500+</div>
-    <div class="badge-sub">and counting</div>
-  </div>
-  <div class="hero-badge hero-badge-bottom">
-    <div class="badge-label">
-      <i data-lucide="map-pin" style="width:14px;height:14px;color:var(--brand-red)"></i>
-      SHOP LOCATION
-    </div>
-    <div class="badge-loc">BAGUMBONG, CALOOCAN</div>
-  </div>
 </section>
 
 <!-- TICKER -->
@@ -409,9 +391,6 @@
         <div class="eyebrow">WHAT WE OFFER</div>
         <h2>OUR <span class="accent">SERVICES</span></h2>
         <p>From routine maintenance to full tire replacements — we keep your motorcycle running at its best.</p>
-      </div>
-      <div class="section-action">
-        <a href="{{ url_for('login') }}">View all 18 services <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
       </div>
     </div>
 
@@ -611,7 +590,7 @@
 </section>
 
 <!-- CONTACT -->
-<section class="section section-panel" id="contact">
+<section class="section section-light" id="contact">
   <div class="inner">
     <div class="section-head">
       <div>
@@ -647,7 +626,7 @@
 </section>
 
 <!-- FEEDBACK -->
-<section class="section section-light" id="feedback">
+<section class="section section-panel" id="feedback">
   <div class="feedback-wrap">
     <div style="text-align:center;margin-bottom:32px;">
       <div class="eyebrow">SHARE YOUR THOUGHTS</div>
@@ -709,40 +688,6 @@
 </section>
 
 <!-- CTA (dark) -->
-<section class="cta-section">
-  <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="" aria-hidden="true" class="cta-bg-img">
-  <div class="cta-scrim" aria-hidden="true"></div>
-  <div class="cta-inner">
-    <div>
-      <div class="cta-badge">
-        <span class="cta-badge-dot"></span>
-        Open today · 8AM — 7PM
-      </div>
-      <h2>READY TO<br><span class="accent">RIDE BETTER?</span></h2>
-      <p>Book online in 60 seconds, walk in any day of the week, or DM us on Facebook. Same shop, same mechanics, same prices — promise.</p>
-      <div class="cta-btns">
-        <a href="{{ url_for('register') }}" class="btn-primary">
-          Create Free Account <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
-        </a>
-      </div>
-    </div>
-    <div class="hours-card">
-      <div class="hours-header">
-        <i data-lucide="clock" style="width:16px;height:16px;color:var(--brand-red)"></i>
-        <span class="hours-lbl">SHOP HOURS</span>
-      </div>
-      <div class="hours-row">
-        <span class="hours-day">MON — SAT</span>
-        <span class="hours-time">8:00 AM — 7:00 PM</span>
-      </div>
-      <div class="hours-row">
-        <span class="hours-day">SUNDAY</span>
-        <span class="hours-time" style="color:rgba(255,255,255,0.4)">CLOSED</span>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- FOOTER -->
 <footer class="footer">
   <div class="footer-left">
@@ -750,6 +695,7 @@
     <span class="footer-copy">© <span id="footer-year"></span> MotoTyres North Caloocan. All rights reserved.</span>
   </div>
   <div class="footer-links">
+    <a href="/">Home</a>
     <a href="#about">About</a>
     <a href="#products">Products</a>
     <a href="#services">Services</a>
@@ -797,6 +743,37 @@
       const target = document.querySelector(a.getAttribute('href'));
       if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
     });
+  });
+
+  // Scrollspy
+  const navAnchors = document.querySelectorAll('.nav-links a[href^="#"]');
+  const homeLink = document.querySelector('.nav-links a[href="#"]');
+  const spySections = [...navAnchors].filter(a => a.getAttribute('href') !== '#').map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean).sort((a,b) => a.offsetTop - b.offsetTop);
+  function clearActive() { navAnchors.forEach(a => a.classList.remove('active')); }
+  function setActive(id) { navAnchors.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id)); }
+  let ticking = false, locked = false, lockTimer = null;
+  function runSpy() {
+    const threshold = 82;
+    const nearBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight - 60;
+    if (nearBottom) { setActive(spySections[spySections.length - 1].id); ticking = false; return; }
+    let active = null;
+    spySections.forEach(s => { if (s.getBoundingClientRect().top <= threshold) active = s; });
+    if (active) { setActive(active.id); } else { clearActive(); if (homeLink) homeLink.classList.add('active'); }
+    ticking = false;
+  }
+  window.addEventListener('scroll', () => {
+    if (locked || ticking) return;
+    ticking = true;
+    requestAnimationFrame(runSpy);
+  }, { passive: true });
+  navAnchors.forEach(a => {
+    if (a.getAttribute('href').startsWith('#')) {
+      a.addEventListener('click', () => {
+        locked = true;
+        clearTimeout(lockTimer);
+        lockTimer = setTimeout(() => { locked = false; runSpy(); }, 200);
+      });
+    }
   });
 
   // Services pagination
