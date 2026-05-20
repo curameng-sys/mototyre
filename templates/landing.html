@@ -40,7 +40,6 @@
 
     @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
     @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
-    @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-33.333%)}}
 
     /* ── NAV ── */
     .nav-bar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-1);padding:0 clamp(20px,4vw,48px);height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
@@ -95,11 +94,6 @@
     .badge-loc{font-family:var(--font-display);font-size:18px;letter-spacing:0.04em;margin-top:4px;white-space:nowrap;color:#fff}
 
     /* ── TICKER ── */
-    .ticker{background:var(--fg-1);padding:16px 0;overflow:hidden}
-    .ticker-inner{display:flex;gap:48px;white-space:nowrap;animation:ticker 38s linear infinite}
-    .ticker-item{display:inline-flex;align-items:center;gap:48px;flex-shrink:0}
-    .ticker-text{font-family:var(--font-display);font-size:22px;letter-spacing:0.08em;color:#fff}
-    .ticker-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-red);flex-shrink:0}
 
     /* ── SHARED SECTION ── */
     .section{padding:clamp(64px,8vw,96px) clamp(20px,4vw,48px)}
@@ -152,7 +146,7 @@
     .svc-icon{width:44px;height:44px;border-radius:10px;background:var(--brand-red-soft);color:var(--brand-red);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
     .svc-name{font-family:var(--font-display);font-size:22px;letter-spacing:0.04em;color:var(--fg-1)}
     .svc-desc{font-family:var(--font-body);font-size:14px;color:var(--fg-2);line-height:1.55}
-    .services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+    .services-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
 
     /* Pagination */
     .pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:32px;flex-wrap:wrap}
@@ -260,6 +254,7 @@
       .about-img-wrap{display:none}
       .about-stats{grid-template-columns:repeat(2,1fr)}
       .services-featured{grid-template-columns:1fr}
+      .services-grid{grid-template-columns:repeat(2,1fr)}
       .cta-inner{grid-template-columns:1fr}
       .hours-card{display:none}
       .hero-badge-top,.hero-badge-bottom{display:none}
@@ -360,10 +355,6 @@
 </section>
 
 <!-- TICKER -->
-<div class="ticker">
-  <div class="ticker-inner" id="tickerInner"></div>
-</div>
-
 <!-- ABOUT -->
 <section class="section section-light" id="about">
   <div class="inner">
@@ -421,36 +412,6 @@
       </div>
       <div class="section-action">
         <a href="{{ url_for('login') }}">View all 18 services <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
-      </div>
-    </div>
-
-    <!-- Featured row -->
-    <div class="services-featured">
-      <div class="svc-featured">
-        <i data-lucide="circle-dot" class="svc-featured-bg" style="width:220px;height:220px"></i>
-        <div style="position:relative">
-          <div class="svc-hot-tag">
-            <i data-lucide="flame" style="width:11px;height:11px"></i> MOST BOOKED
-          </div>
-          <h3 class="svc-featured-title">TIRE<br><span class="accent">FITTING</span></h3>
-        </div>
-        <div style="position:relative">
-          <p class="svc-featured-desc">IRC, Pirelli, FDR. Pro install with proper balancing — under 45 minutes, no appointments needed.</p>
-          <div class="svc-price-row">
-            <span class="svc-price-from">FROM</span>
-            <span class="svc-price">₱350</span>
-          </div>
-        </div>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="droplet" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">OIL CHANGE</div>
-        <p class="svc-desc">Fresh engine oil and filter replacement to keep your engine smooth and well-protected.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="settings-2" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">TUNE-UP</div>
-        <p class="svc-desc">Spark plug replacement, air filter check, and full engine performance tuning.</p>
       </div>
     </div>
 
@@ -569,7 +530,7 @@
         <p>Quality motorcycle parts, tires, and accessories — hand-picked for durability, performance, and rider safety.</p>
       </div>
       <div class="section-action">
-        <a href="{{ url_for('login') }}">View All <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        <a href="{{ url_for('products') }}">View All <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
       </div>
     </div>
     <div class="products-grid">
@@ -643,75 +604,6 @@
           <div class="step-num">STEP 04</div>
           <div class="step-title">WE GOT YOU</div>
           <p class="step-desc">Show up on time and our mechanics will take care of the rest.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- TESTIMONIALS -->
-<section class="section section-light">
-  <div class="inner">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">RIDER VOICES</div>
-        <h2>WHAT RIDERS <span class="accent">ARE SAYING</span></h2>
-        <p>Real feedback from real customers. We're not perfect — but we own up to it.</p>
-      </div>
-    </div>
-    <div class="testi-grid">
-      <div class="testi-card">
-        <div class="testi-stars">
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-        </div>
-        <i data-lucide="quote" style="width:28px;height:28px;color:var(--line-2)"></i>
-        <p class="testi-text">"Brought my Click here after a bad tune-up somewhere else. They diagnosed the issue in 10 minutes and fixed it the same day. Honest pricing."</p>
-        <div class="testi-footer">
-          <div class="testi-avatar">MS</div>
-          <div>
-            <div class="testi-name">Mark S.</div>
-            <div class="testi-meta">Honda Click 125i · 2 weeks ago</div>
-          </div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-        </div>
-        <i data-lucide="quote" style="width:28px;height:28px;color:var(--line-2)"></i>
-        <p class="testi-text">"Sulit yung IRC tires nila. Maliit lang yung shop pero malinis at maaga magbukas. Mga mechanic friendly at marunong. Solid."</p>
-        <div class="testi-footer">
-          <div class="testi-avatar">LR</div>
-          <div>
-            <div class="testi-name">Lara R.</div>
-            <div class="testi-meta">Yamaha Mio Sporty · 1 month ago</div>
-          </div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-          <i data-lucide="star" style="width:16px;height:16px;color:var(--brand-red)"></i>
-        </div>
-        <i data-lucide="quote" style="width:28px;height:28px;color:var(--line-2)"></i>
-        <p class="testi-text">"Online booking actually works — text confirmation in 5 min, bike was ready an hour before estimated time. Will come back."</p>
-        <div class="testi-footer">
-          <div class="testi-avatar">PR</div>
-          <div>
-            <div class="testi-name">Paolo R.</div>
-            <div class="testi-meta">Yamaha NMAX · 3 weeks ago</div>
-          </div>
         </div>
       </div>
     </div>
@@ -832,9 +724,6 @@
         <a href="{{ url_for('register') }}" class="btn-primary">
           Create Free Account <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
         </a>
-        <a href="tel:09152698366" class="btn-cta-phone">
-          <i data-lucide="phone" style="width:18px;height:18px"></i> 0915 269 8366
-        </a>
       </div>
     </div>
     <div class="hours-card">
@@ -843,16 +732,12 @@
         <span class="hours-lbl">SHOP HOURS</span>
       </div>
       <div class="hours-row">
-        <span class="hours-day">MON — FRI</span>
+        <span class="hours-day">MON — SAT</span>
         <span class="hours-time">8:00 AM — 7:00 PM</span>
       </div>
       <div class="hours-row">
-        <span class="hours-day">SATURDAY</span>
-        <span class="hours-time">8:00 AM — 6:00 PM</span>
-      </div>
-      <div class="hours-row">
         <span class="hours-day">SUNDAY</span>
-        <span class="hours-time">9:00 AM — 4:00 PM</span>
+        <span class="hours-time" style="color:rgba(255,255,255,0.4)">CLOSED</span>
       </div>
     </div>
   </div>
@@ -879,15 +764,6 @@
 <script>
   lucide.createIcons();
   document.getElementById('footer-year').textContent = new Date().getFullYear();
-
-  // Ticker
-  const tickerItems = ['TIRE FITTING','OIL CHANGE','TUNE-UP','ECU REMAPPING','BRAKE SERVICE','CVT CLEANING','FULL OVERHAUL','THROTTLE BODY CLEANING','SUSPENSION TUNING','BATTERY REPLACEMENT'];
-  const tInner = document.getElementById('tickerInner');
-  for (let i = 0; i < 3; i++) {
-    tickerItems.forEach(t => {
-      tInner.innerHTML += `<span class="ticker-item"><span class="ticker-text">${t}</span><span class="ticker-dot"></span></span>`;
-    });
-  }
 
   // Feedback
   function submitFeedback() {
