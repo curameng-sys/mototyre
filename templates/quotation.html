@@ -250,10 +250,6 @@
           <label class="field-label">Motorcycle Model</label>
           <input class="field-inp" id="moto-model" placeholder="Honda Click 150i">
         </div>
-        <div>
-          <label class="field-label">Plate Number</label>
-          <input class="field-inp" id="moto-plate" placeholder="ABC 1234">
-        </div>
       </div>
     </div>
 
@@ -428,7 +424,6 @@
     document.getElementById('cust-name').value  = '';
     document.getElementById('cust-phone').value = '';
     document.getElementById('moto-model').value = '';
-    document.getElementById('moto-plate').value = '';
     document.getElementById('notes').value      = '';
     renderItems();
   }
@@ -445,7 +440,7 @@
       customer_name:    name,
       customer_phone:   document.getElementById('cust-phone').value.trim(),
       motorcycle_model: document.getElementById('moto-model').value.trim(),
-      motorcycle_plate: document.getElementById('moto-plate').value.trim(),
+      motorcycle_plate: '',
       notes:            document.getElementById('notes').value.trim(),
       items:            items.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price }))
     };
@@ -457,7 +452,7 @@
         const total = items.reduce((s,i) => s + i.unit_price * i.quantity, 0);
         document.getElementById('modal-ref').textContent      = data.ref;
         document.getElementById('modal-customer').textContent = name;
-        document.getElementById('modal-moto').textContent     = (document.getElementById('moto-model').value.trim() || '—') + (document.getElementById('moto-plate').value.trim() ? ` · ${document.getElementById('moto-plate').value.trim()}` : '');
+        document.getElementById('modal-moto').textContent     = document.getElementById('moto-model').value.trim() || '—';
         document.getElementById('modal-items').textContent    = items.reduce((s,i)=>s+i.quantity,0) + ' item(s)';
         document.getElementById('modal-total').textContent    = `₱${total.toFixed(2)}`;
         document.getElementById('success-modal').classList.add('open');
