@@ -757,12 +757,13 @@
       </div>
       <div class="filter-bar">
         <input type="text" placeholder="Search customer or product..." oninput="filterTable('orders-table', this.value)">
-        <select onchange="filterTableByCol('orders-table', 4, this.value)">
+        <select onchange="filterTableByCol('orders-table', 3, this.value)">
           <option value="">All Status</option>
           <option>pending</option>
           <option>confirmed</option>
           <option>processing</option>
           <option>shipped</option>
+          <option>ready for pickup</option>
           <option>delivered</option>
           <option>completed</option>
           <option>cancelled</option>
@@ -811,7 +812,13 @@
                     <span style="color:var(--muted);font-size:0.75rem;">No items</span>
                   {% endif %}
                 </td>
-                <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
+                <td>
+                  {% if o.delivery_method != 'ship' and o.status == 'shipped' %}
+                    <span class="badge badge-shipped">Ready For Pickup</span>
+                  {% else %}
+                    <span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span>
+                  {% endif %}
+                </td>
                 <td style="white-space:nowrap;">{{ o.created_at.strftime('%b %d, %Y') }}</td>
                 <td>
                   {% if o.delivery_method == 'ship' %}
@@ -833,12 +840,37 @@
                       <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
                       <option value="delivered"  {% if o.status=='delivered' %}selected{% endif %}>Delivered</option>
                       <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                    {% elif (o.payment_method or '')|lower == 'gcash' %}
+                      {# GCash pick-up: prepaid, so completed can be set here #}
+                      {% if o.status == 'shipped' %}
+                        <option value="shipped" selected>Ready to Pick Up</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      {% else %}
+                        <option value="{{ o.status }}" selected>{{ o.status|replace('_',' ')|title }}</option>
+                        <option value="shipped">Ready to Pick Up</option>
+                        <option value="cancelled">Cancelled</option>
+                      {% endif %}
                     {% else %}
-                      <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
-                      <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                      {# Cash pick-up: paid at the counter on the Billing page #}
+                      {% if o.status == 'confirmed' %}
+                        <option value="confirmed" selected>Confirmed</option>
+                        <option value="shipped">Ready to Pick Up</option>
+                        <option value="cancelled">Cancelled</option>
+                      {% elif o.status == 'shipped' %}
+                        <option value="shipped" selected>Ready to Pick Up</option>
+                        <option value="cancelled">Cancelled</option>
+                      {% else %}
+                        <option value="{{ o.status }}" selected>{{ o.status|replace('_',' ')|title }}</option>
+                        <option value="confirmed">Confirm Order</option>
+                        <option value="cancelled">Cancelled</option>
+                      {% endif %}
                     {% endif %}
                   </select>
                   <button type="submit">Save</button>
+                  {% if o.delivery_method != 'ship' and (o.payment_method or '')|lower != 'gcash' and o.status == 'shipped' %}
+                    <span style="font-size:0.62rem;color:var(--muted);white-space:nowrap;">Complete on Billing page</span>
+                  {% endif %}
                 </form>
                 {% endif %}
               </td>
@@ -2375,8 +2407,12 @@
       shipped: 'badge-shipped', delivered: 'badge-delivered',
       completed: 'badge-completed', cancelled: 'badge-cancelled'
     };
+    const odIsPickup = ((orderShipData[id] || {}).delivery || 'pickup') !== 'ship';
+    const odStatusLabel = (odIsPickup && status === 'shipped')
+      ? 'Ready For Pickup'
+      : status.charAt(0).toUpperCase() + status.slice(1);
     document.getElementById('od-status').innerHTML =
-      '<span class="badge ' + (statusColors[status] || 'badge-pending') + '">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span>';
+      '<span class="badge ' + (statusColors[status] || 'badge-pending') + '">' + odStatusLabel + '</span>';
 
     if (payment === 'gcash') {
       document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">GCash</span>';
@@ -2555,6 +2591,17 @@ document.addEventListener('submit', function(e) {
   e.preventDefault();
   const sel = form.querySelector('select[name="status"]');
   const newStatus = sel ? sel.value : '';
+  const isOrderForm = /\/order\/\d+\/status/.test(form.action);
+  let orderFlow = null;   // 'ship' | 'gcashpickup' | 'cashpickup'
+  if (isOrderForm) {
+    const m = form.action.match(/\/order\/(\d+)\/status/);
+    let meta = {};
+    try { meta = (JSON.parse(document.getElementById('order-ship-data').textContent))[m[1]] || {}; } catch (e) {}
+    const pickup = (meta.delivery || 'pickup') !== 'ship';
+    const gcash  = (meta.payment  || '').toLowerCase() === 'gcash';
+    orderFlow = !pickup ? 'ship' : (gcash ? 'gcashpickup' : 'cashpickup');
+  }
+  const isPickupFlow = orderFlow === 'gcashpickup' || orderFlow === 'cashpickup';
   const btn = form.querySelector('button[type="submit"]');
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
 
@@ -2574,7 +2621,9 @@ document.addEventListener('submit', function(e) {
         if (badge && [...badge.classList].some(c => c.startsWith('badge-'))) {
           const cls = _STATUS_BADGE[newStatus] || 'badge-pending';
           badge.className = 'badge ' + cls;
-          badge.textContent = newStatus.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+          badge.textContent = (isPickupFlow && newStatus === 'shipped')
+            ? 'Ready For Pickup'
+            : newStatus.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
         }
       });
       row.dataset.status = newStatus;
@@ -2589,12 +2638,24 @@ document.addEventListener('submit', function(e) {
       } else {
         row.classList.remove('booking-done', 'booking-cancelled');
         // Narrow the select options to reflect the new valid transitions
-        const nextOptions = {
+        const ORDER_NEXT = {
+          gcashpickup: {
+            confirmed: [['confirmed','Confirmed'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
+            shipped:   [['shipped','Ready to Pick Up'],['completed','Completed'],['cancelled','Cancelled']]
+          },
+          cashpickup: {
+            pending:          [['pending','Pending'],['confirmed','Confirm Order'],['cancelled','Cancelled']],
+            awaiting_payment: [['awaiting_payment','Awaiting Payment'],['confirmed','Confirm Order'],['cancelled','Cancelled']],
+            confirmed:        [['confirmed','Confirmed'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
+            shipped:          [['shipped','Ready to Pick Up'],['cancelled','Cancelled']]
+          }
+        };
+        const nextOptions = isOrderForm ? (ORDER_NEXT[orderFlow] || {}) : {
           confirmed:   [['in_progress','In Progress'],['cancelled','Cancelled']],
           in_progress: [['completed','Completed'],['cancelled','Cancelled']]
         };
         if (sel && nextOptions[newStatus]) {
-          sel.innerHTML = nextOptions[newStatus].map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+          sel.innerHTML = nextOptions[newStatus].map(([v,l]) => `<option value="${v}"${v===newStatus?' selected':''}>${l}</option>`).join('');
         }
         if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
       }

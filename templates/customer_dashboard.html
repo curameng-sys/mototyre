@@ -676,7 +676,13 @@
               <tr data-order-ov-id="{{ o.id }}">
                 <td>ORD-{{ '%03d'|format(o.id) }}</td>
                 <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
-                <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
+                <td>
+              {% if o.delivery_method != 'ship' and o.status == 'shipped' %}
+                <span class="badge badge-shipped">Ready For Pickup</span>
+              {% else %}
+                <span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span>
+              {% endif %}
+            </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -986,7 +992,13 @@
             </td>
             <td><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
             <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
-            <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
+            <td>
+              {% if o.delivery_method != 'ship' and o.status == 'shipped' %}
+                <span class="badge badge-shipped">Ready For Pickup</span>
+              {% else %}
+                <span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -2594,9 +2606,11 @@ function openOrderDetails(orderId) {
     cancelled:  { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
   };
   const sc = statusColors[order.status] || statusColors.pending;
+  const isPickupOrder = (order.delivery_method || 'pickup') !== 'ship';
+  const statusLabel = (isPickupOrder && order.status === 'shipped') ? 'ready for pickup' : order.status.replace('_', ' ');
   document.getElementById('od-status-badge').innerHTML = `
     <span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.4em 0.9em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
-      ${order.status.replace('_', ' ')}
+      ${statusLabel}
     </span>`;
 
   // Products list
@@ -2672,10 +2686,12 @@ function openOrderDetails(orderId) {
       </div>`;
   }
 
-  // Confirm button: "shipped" for delivery orders, "shipped" maps to ready_for_pickup for pickup
+  // Confirm button: "shipped" for delivery orders, "shipped" maps to ready_for_pickup for pickup.
+  // Cash pick-up orders are completed by staff at the counter, so no self-confirm button.
   const receivedWrap = document.getElementById('od-confirm-received-wrap');
   const confirmBtn = document.getElementById('od-confirm-received-btn');
-  if (order.status === 'shipped') {
+  const isCashPickup = order.payment_method === 'cash' && isPickup;
+  if (order.status === 'shipped' && !isCashPickup) {
     _confirmOrderId = order.id;
     receivedWrap.style.display = 'block';
     confirmBtn.textContent = isPickup ? 'I Already Picked Up My Order' : 'I Already Received My Order';
@@ -2897,7 +2913,8 @@ loadMechanics();
         const known = ordersData[o.id];
         if (!known || known.status === o.status) return;
         known.status = o.status;
-        const label = badgeText(o.status);
+        const isPickupOrder = (known.delivery_method || 'pickup') !== 'ship';
+        const label = (isPickupOrder && o.status === 'shipped') ? 'Ready For Pickup' : badgeText(o.status);
         const cls   = orderBadgeClass(o.status);
         // Update full orders table row
         const row = document.querySelector(`tr[data-order-id="${o.id}"]`);

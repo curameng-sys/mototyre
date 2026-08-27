@@ -284,7 +284,7 @@
             <div class="sub">{% for item in o.items[:2] %}{{ item.product.name if item.product else 'Unknown' }} ×{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}{% if o.items|length > 2 %} +{{ o.items|length - 2 }} more{% endif %}</div>
           </td>
           <td><span class="amount">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
-          <td><span class="badge b-pending">{{ o.status|title }}</span></td>
+          <td><span class="badge b-pending">{{ 'Ready For Pickup' if o.status == 'shipped' else o.status|replace('_',' ')|title }}</span></td>
           <td>
             <button class="btn-collect btn-collect-ord"
               data-type="order"

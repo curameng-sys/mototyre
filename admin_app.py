@@ -4,7 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
-from sqlalchemy import func
+from sqlalchemy import func, and_, not_
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -559,14 +559,21 @@ def require_admin_or_staff(f):
 @require_admin_or_staff
 def admin_dashboard():
     cleanup_abandoned_gcash_orders()
-    _order_rev   = db.session.query(func.sum(Order.total_amount)).filter(Order.status.notin_(["cancelled", "awaiting_payment"])).scalar() or 0
+    # Cash pick-up orders are only paid at the counter (Billing page), so they count as
+    # revenue only once completed — same treatment as awaiting_payment.
+    _order_rev   = db.session.query(func.sum(Order.total_amount)).filter(
+        Order.status.notin_(["cancelled", "awaiting_payment"]),
+        not_(and_(Order.payment_method == "cash", Order.delivery_method == "pickup", Order.status != "completed")),
+    ).scalar() or 0
     _booking_rev = db.session.query(func.sum(Booking.total_amount)).filter(Booking.status == "completed").scalar() or 0
     _jo_rev      = db.session.query(func.sum(Payment.amount)).scalar() or 0
     _total_rev   = _order_rev + _booking_rev + _jo_rev
     all_orders      = Order.query.filter_by(is_archived=False).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
     archived_orders = Order.query.filter_by(is_archived=True).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
     order_ship_json = json.dumps({
-        str(o.id): {'delivery': str(o.delivery_method or 'pickup'), 'address': str(o.ship_address or '')}
+        str(o.id): {'delivery': str(o.delivery_method or 'pickup'),
+                    'address': str(o.ship_address or ''),
+                    'payment': str(o.payment_method or 'cash')}
         for o in all_orders + archived_orders
     })
     return render_template('admin_dashboard.html',
@@ -627,9 +634,40 @@ def update_booking_status(bid):
 def update_order_status(oid):
     order = Order.query.get_or_404(oid)
     new_status = validate_order_status(clean_str(request.form.get('status', ''), max_len=20))
-    if new_status == 'completed' and order.payment_method == 'cash' and order.delivery_method == 'pickup':
-        flash('Cash pick-up orders can only be completed via the Quotation page.', 'danger')
+    _pay = (order.payment_method or '').lower()
+    _is_pickup = order.delivery_method != 'ship'
+
+    if new_status == 'completed' and _pay == 'cash' and _is_pickup:
+        msg = 'Cash pick-up orders are completed on the Billing page when the customer pays at the counter.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg}), 400
+        flash(msg, 'danger')
         return redirect(url_for('admin_dashboard'))
+
+    # Pick-up orders follow a fixed sequence.
+    #   GCash (prepaid):  confirmed -> shipped (ready for pickup) -> completed
+    #   Cash  (pay at counter): pending/awaiting_payment -> confirmed -> shipped (ready for pickup)
+    #                           (completed happens on the Billing page)
+    if _is_pickup:
+        if _pay == 'gcash':
+            allowed_next = {
+                'confirmed': {'shipped', 'cancelled'},
+                'shipped':   {'completed', 'cancelled'},
+            }
+        else:
+            allowed_next = {
+                'pending':          {'confirmed', 'cancelled'},
+                'awaiting_payment': {'confirmed', 'cancelled'},
+                'confirmed':        {'shipped', 'cancelled'},
+                'shipped':          {'cancelled'},
+            }
+        if order.status in allowed_next and new_status != order.status and new_status not in allowed_next[order.status]:
+            msg = 'Invalid status change for this order.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': msg}), 400
+            flash(msg, 'danger')
+            return redirect(url_for('admin_dashboard'))
+
     if new_status == 'cancelled' and order.status != 'cancelled':
         for item in OrderItem.query.filter_by(order_id=order.id).all():
             product = Product.query.get(item.product_id)
@@ -637,10 +675,16 @@ def update_order_status(oid):
                 product.stock += item.quantity
     order.status = new_status
     db.session.commit()
+    is_pickup = order.delivery_method != 'ship'
+    shipped_msg = (
+        ('Order Ready for Pickup! 📦', f'Your order ORD-{order.id:03d} is ready for pickup at MotoTyre North Caloocan.')
+        if is_pickup else
+        ('Order Out for Delivery!', f'Your order ORD-{order.id:03d} is on its way!')
+    )
     messages = {
         'confirmed':  ('Order Confirmed!',        f'Your order ORD-{order.id:03d} is confirmed and being prepared.'),
         'processing': ('Order Processing',        f'Your order ORD-{order.id:03d} is being processed.'),
-        'shipped':    ('Order Out for Delivery!', f'Your order ORD-{order.id:03d} is on its way!'),
+        'shipped':    shipped_msg,
         'delivered':  ('Order Delivered!',        f'Your order ORD-{order.id:03d} has been delivered.'),
         'completed':  ('Order Completed!',        f'Your order ORD-{order.id:03d} has been completed. Thank you!'),
         'cancelled':  ('Order Cancelled',         f'Your order ORD-{order.id:03d} has been cancelled.'),
@@ -1143,7 +1187,7 @@ def payments():
         pending_orders = Order.query.filter(
             Order.payment_method == 'cash',
             Order.delivery_method == 'pickup',
-            Order.status.in_(['pending', 'awaiting_payment']),
+            Order.status.in_(['pending', 'awaiting_payment', 'confirmed', 'shipped']),
             Order.walkin_customer_id == None,
             Order.is_archived == False
         ).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
@@ -1995,7 +2039,11 @@ def generate_report():
         Booking.date >= d_from, Booking.date <= d_to
     ).order_by(Booking.date.desc()).all()
 
-    total_revenue      = sum(o.total_amount for o in orders if o.status not in ['cancelled', 'awaiting_payment'])
+    total_revenue      = sum(
+        o.total_amount for o in orders
+        if o.status not in ['cancelled', 'awaiting_payment']
+        and not (o.payment_method == 'cash' and o.delivery_method == 'pickup' and o.status != 'completed')
+    )
     total_orders       = len(orders)
     total_bookings     = len(bookings)
     completed_orders   = sum(1 for o in orders if o.status == 'completed')

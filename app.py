@@ -17,6 +17,7 @@ from io import BytesIO
 from security import clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_otp_purpose
 from gmail_helper import send_gmail_html as _send_gmail, send_otp_email
 import os, uuid, random, string, base64, requests
+from urllib.parse import quote
 import pymysql
 import threading
 
@@ -58,7 +59,22 @@ PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
 BASE_URL = "https://ninja-portion-recycler.ngrok-free.dev"
 
-def create_gcash_payment(amount, description, order_id=None, booking_id=None):
+# Hosts the customer is allowed to be redirected back to after payment.
+ALLOWED_RETURN_ORIGINS = [
+    "http://127.0.0.1:5000",
+    "http://localhost:5000",
+    "https://ninja-portion-recycler.ngrok-free.dev",
+]
+
+def safe_return_origin(origin):
+    """Return a whitelisted origin for the post-payment redirect, or a safe default."""
+    if origin:
+        origin = origin.rstrip("/")
+        if origin in ALLOWED_RETURN_ORIGINS:
+            return origin
+    return "http://127.0.0.1:5000"
+
+def create_gcash_payment(amount, description, order_id=None, booking_id=None, origin=None):
     headers = {
         "Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}",
         "Content-Type": "application/json"
@@ -76,8 +92,8 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None):
                     }
                 ],
                 "payment_method_types": ["gcash"],
-                "success_url": f"{BASE_URL}/payment/success?order_id={order_id or ''}&booking_id={booking_id or ''}&checkout_id={{CHECKOUT_SESSION_ID}}",
-                "cancel_url": f"{BASE_URL}/payment/failed?order_id={order_id or ''}&booking_id={booking_id or ''}"
+                "success_url": f"{BASE_URL}/payment/success?order_id={order_id or ''}&booking_id={booking_id or ''}&origin={quote(safe_return_origin(origin), safe='')}&checkout_id={{CHECKOUT_SESSION_ID}}",
+                "cancel_url": f"{BASE_URL}/payment/failed?order_id={order_id or ''}&booking_id={booking_id or ''}&origin={quote(safe_return_origin(origin), safe='')}"
             }
         }
     }
@@ -882,7 +898,7 @@ def cart_checkout():
 
     if payment_method.lower() == 'gcash':
         desc   = f"MotoTyre Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
-        result = create_gcash_payment(amount=total, description=desc[:100], order_id=order.id)
+        result = create_gcash_payment(amount=total, description=desc[:100], order_id=order.id, origin=request.host_url)
         if result['success']:
             return jsonify({'success': True, 'gcash': True, 'checkout_url': result['checkout_url']})
         return jsonify({'success': False, 'error': 'Could not create GCash payment'}), 500
@@ -923,9 +939,9 @@ def place_order():
 
     if payment_method.lower() == 'gcash':
         order_status = 'awaiting_payment'
-    elif delivery_method == 'pickup':
-        order_status = 'awaiting_payment'
     else:
+        # Cash orders (pickup or ship) start as pending — payment is collected later
+        # (at the counter via the Billing page for pickup).
         order_status = 'pending'
 
     order = Order(
@@ -949,7 +965,7 @@ def place_order():
 
     if payment_method.lower() == 'gcash':
         description = f"MotoTyre Order #{order.id:03d}: {product.name} x{quantity}"
-        result = create_gcash_payment(amount=total, description=description, order_id=order.id)
+        result = create_gcash_payment(amount=total, description=description, order_id=order.id, origin=request.host_url)
         if result["success"]:
             return redirect(result["checkout_url"])
         else:
@@ -1097,6 +1113,9 @@ def confirm_order_received(oid):
         return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
     if order.status != 'shipped':
         return jsonify({'success': False, 'message': 'Order is not in shipped status.'}), 400
+    if order.payment_method == 'cash' and order.delivery_method == 'pickup':
+        return jsonify({'success': False,
+                        'message': 'Please settle the cash payment at the counter — staff will mark this order complete.'}), 400
     order.status = 'completed'
     db.session.commit()
     send_notification(current_user.id, 'Order Received!',
@@ -1123,7 +1142,7 @@ def pay_order(oid):
         return redirect(url_for('customer_dashboard'))
     items_desc  = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
     description = f"MotoTyre Order #{order.id:03d}: {items_desc[:100]}"
-    result = create_gcash_payment(amount=order.total_amount, description=description, order_id=order.id)
+    result = create_gcash_payment(amount=order.total_amount, description=description, order_id=order.id, origin=request.host_url)
     if result["success"]:
         order.payment_method = 'gcash'
         db.session.commit()
@@ -1156,7 +1175,7 @@ def pay_booking(bid):
             amount = price
             break
     description = f"MotoTyre Booking #{booking.id}: {booking.service}"
-    result = create_gcash_payment(amount=amount, description=description, booking_id=booking.id)
+    result = create_gcash_payment(amount=amount, description=description, booking_id=booking.id, origin=request.host_url)
     if result["success"]:
         booking.payment_method = 'gcash'
         db.session.commit()
@@ -1206,7 +1225,7 @@ def payment_success():
         except Exception as e:
             print(f"[payment/success] booking error: {e}")
 
-    return redirect('http://127.0.0.1:5000/customer/dashboard')
+    return redirect(safe_return_origin(request.args.get('origin')) + '/customer/dashboard')
 
 
 @app.route('/payment/failed')
@@ -1247,7 +1266,7 @@ def payment_failed():
                 db.session.commit()
         except:
             db.session.rollback()
-    return redirect('http://127.0.0.1:5000/customer/dashboard')
+    return redirect(safe_return_origin(request.args.get('origin')) + '/customer/dashboard')
 
 
 @app.route('/webhook/paymongo', methods=['POST'])
