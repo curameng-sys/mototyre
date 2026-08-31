@@ -57,13 +57,13 @@ OTP_EXPIRY_MINS = 2
 # ── PayMongo config ──────────────────────────────────────────────────────────
 PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
-BASE_URL = "https://ninja-portion-recycler.ngrok-free.dev"
+BASE_URL = os.getenv("BASE_URL", "https://h4fjzg66-5000.jpe1.devtunnels.ms")
 
 # Hosts the customer is allowed to be redirected back to after payment.
 ALLOWED_RETURN_ORIGINS = [
     "http://127.0.0.1:5000",
     "http://localhost:5000",
-    "https://ninja-portion-recycler.ngrok-free.dev",
+    "https://h4fjzg66-5000.jpe1.devtunnels.ms",
 ]
 
 def safe_return_origin(origin):

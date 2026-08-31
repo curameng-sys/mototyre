@@ -49,7 +49,7 @@ OTP_EXPIRY_MINS  = 2
 
 PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
-BASE_URL = "https://ninja-portion-recycler.ngrok-free.dev"
+BASE_URL = os.getenv("BASE_URL", "https://h4fjzg66-5000.jpe1.devtunnels.ms")
 
 def create_gcash_payment(amount, description, order_id=None, booking_id=None):
     headers = {
