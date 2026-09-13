@@ -295,6 +295,7 @@ class Booking(db.Model):
     contact_mobile = db.Column(db.String(20))
     odometer       = db.Column(db.Integer)
     is_archived    = db.Column(db.Boolean, default=False)
+    booking_batch  = db.Column(db.String(36), nullable=True)
 
 
 class Mechanic(db.Model):
@@ -796,6 +797,11 @@ def book_multiple_services():
 
     created = []
     errors  = []
+    booking_summaries = []
+    # Only bookings submitted together as a batch of 2+ get a shared batch id, so the
+    # admin's Manage Booking page compresses them into one row — single bookings never
+    # get grouped with anything else, even ones made later the same day.
+    batch_id = str(uuid.uuid4()) if len(data['bookings']) > 1 else None
 
     for idx, b in enumerate(data['bookings']):
         try:
@@ -828,6 +834,7 @@ def book_multiple_services():
             contact_name=clean_str(b.get('contact_name', ''), max_len=100),
             contact_mobile=clean_str(b.get('contact_mobile', ''), max_len=13),
             odometer=int(odo_raw) if odo_raw.isdigit() else None,
+            booking_batch=batch_id,
         )
         mechanic_id = b.get('mechanic_id', '')
         if mechanic_id:
@@ -839,16 +846,33 @@ def book_multiple_services():
         db.session.add(booking)
         db.session.flush()
         created.append(booking.id)
-
-        send_notification(
-            current_user.id, 'Booking Confirmed! ✅',
-            f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} '
-            f'at {booking.time.strftime("%I:%M %p")} is confirmed. Please arrive 15 minutes early.',
-            type='booking', status='confirmed'
-        )
+        booking_summaries.append({
+            'service': service,
+            'date':    booking.date.strftime('%b %d, %Y'),
+            'time':    booking.time.strftime('%I:%M %p'),
+        })
 
     if created:
         db.session.commit()
+
+        # One combined notification instead of one per booking, so a multi-service
+        # queue doesn't stack several near-identical notifications for the customer.
+        if len(booking_summaries) == 1:
+            s = booking_summaries[0]
+            send_notification(
+                current_user.id, 'Booking Confirmed! ✅',
+                f"Your {s['service']} appointment on {s['date']} at {s['time']} is confirmed. "
+                f"Please arrive 15 minutes early.",
+                type='booking', status='confirmed'
+            )
+        else:
+            lines = '\n'.join(f"• {s['service']} — {s['date']} at {s['time']}" for s in booking_summaries)
+            send_notification(
+                current_user.id, f'{len(booking_summaries)} Bookings Confirmed! ✅',
+                f"Your appointments are confirmed:\n{lines}\nPlease arrive 15 minutes early for each.",
+                type='booking', status='confirmed'
+            )
+
         for admin in User.query.filter_by(role='admin').all():
             send_notification(
                 admin.id, f'{len(created)} New Booking(s) Confirmed',
@@ -1033,14 +1057,29 @@ def get_booked_slots():
 @app.route('/api/mechanics')
 @login_required
 def get_mechanics():
-    active_statuses = ('pending', 'confirmed', 'in_progress', 'inprogress')
-    busy_names = {
-        b.mechanic_name for b in Booking.query.filter(
-            Booking.mechanic_name.isnot(None),
-            Booking.status.in_(active_statuses)
-        ).all()
-    }
     mechanics = Mechanic.query.filter_by(status='available').order_by(Mechanic.name).all()
+
+    # Only exclude a mechanic if they already have a non-cancelled booking at the
+    # exact date/time the customer is currently picking — not for every booking
+    # they've ever had, which would hide them from all future slots forever.
+    busy_names = set()
+    date_str = request.args.get('date', '').strip()
+    time_str = request.args.get('time', '').strip()
+    if date_str and time_str:
+        try:
+            slot_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            slot_time = datetime.strptime(time_str, '%H:%M').time()
+            busy_names = {
+                b.mechanic_name for b in Booking.query.filter(
+                    Booking.mechanic_name.isnot(None),
+                    Booking.date == slot_date,
+                    Booking.time == slot_time,
+                    Booking.status != 'cancelled'
+                ).all()
+            }
+        except ValueError:
+            pass
+
     return jsonify([
         {'id': m.id, 'name': m.name, 'specialization': m.specialization}
         for m in mechanics if m.name not in busy_names
@@ -1344,6 +1383,7 @@ with app.app_context():
         "ALTER TABLE user ADD COLUMN motorcycle_model VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN profile_pic VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN booking_batch VARCHAR(36) DEFAULT NULL",
     ]:
         try:
             from sqlalchemy import text as _t

@@ -176,6 +176,7 @@ class Booking(db.Model):
     is_archived     = db.Column(db.Boolean, default=False)
     total_amount    = db.Column(db.Float, default=0)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
+    booking_batch   = db.Column(db.String(36), nullable=True)
 
 
 class Mechanic(db.Model):
@@ -581,7 +582,7 @@ def admin_dashboard():
         total_orders=Order.query.count(),
         total_users=User.query.count(),
         total_revenue=f'{_total_rev:,.2f}',
-        booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).group_by(Booking.status).all()),
+        booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).filter(Booking.is_archived == False).group_by(Booking.status).all()),
         order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
         top_services=db.session.query(Booking.service, func.count(Booking.id).label('count')).group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all(),
         new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
@@ -608,6 +609,12 @@ def update_booking_status(bid):
     new_status = validate_booking_status(clean_str(request.form.get('status', ''), max_len=20))
     if new_status == 'completed':
         flash('Bookings can only be completed via the Billing page.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    if new_status in ('in_progress', 'inprogress') and datetime.combine(booking.date, booking.time) > ph_now():
+        msg = f'This booking is scheduled for {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} — it cannot be started before then.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg}), 400
+        flash(msg, 'danger')
         return redirect(url_for('admin_dashboard'))
     booking.status = new_status
     db.session.commit()
@@ -1775,7 +1782,9 @@ def walkin_checkout():
             ))
             product.stock -= item['quantity']
 
-    # Services
+    # Services — multiple services in one walk-in transaction share a batch id so
+    # Manage Booking compresses them into a single row.
+    batch_id = str(uuid.uuid4()) if len(services) > 1 else None
     for svc in services:
         svc_price = float(svc.get('price', 0))
         svc_qty   = int(svc.get('qty', 1))
@@ -1794,7 +1803,8 @@ def walkin_checkout():
             total_amount=svc_price * svc_qty,
             mechanic_name=mechanic_name,
             mechanic_specialization=mechanic_spec,
-            walkin_customer_id=walkin_customer.id
+            walkin_customer_id=walkin_customer.id,
+            booking_batch=batch_id
         )
         db.session.add(booking)
         db.session.flush()
@@ -2032,6 +2042,8 @@ def generate_report():
         flash('Invalid date range.', 'danger')
         return redirect(url_for('admin_dashboard'))
 
+    from collections import defaultdict
+
     orders = Order.query.filter(
         func.date(Order.created_at) >= d_from, func.date(Order.created_at) <= d_to
     ).order_by(Order.created_at.desc()).all()
@@ -2039,14 +2051,71 @@ def generate_report():
         Booking.date >= d_from, Booking.date <= d_to
     ).order_by(Booking.date.desc()).all()
 
-    total_revenue      = sum(
-        o.total_amount for o in orders
-        if o.status not in ['cancelled', 'awaiting_payment']
-        and not (o.payment_method == 'cash' and o.delivery_method == 'pickup' and o.status != 'completed')
-    )
+    def order_counts_as_revenue(o):
+        return (o.status not in ('cancelled', 'awaiting_payment')
+                and not (o.payment_method == 'cash' and o.delivery_method == 'pickup' and o.status != 'completed'))
+
+    # Total Revenue mirrors the dashboard's definition (orders + completed bookings +
+    # job-order payments) — previously this only summed orders, so it never matched
+    # the "Total Revenue" figure shown on the Reports & Sales page above it.
+    order_revenue = sum(o.total_amount for o in orders if order_counts_as_revenue(o))
+    booking_revenue = sum(b.total_amount or 0 for b in bookings if b.status == 'completed')
+    job_order_revenue = db.session.query(func.sum(Payment.amount)).filter(
+        func.date(Payment.paid_at) >= d_from, func.date(Payment.paid_at) <= d_to
+    ).scalar() or 0
+
+    total_revenue      = order_revenue + booking_revenue + job_order_revenue
     total_orders       = len(orders)
     total_bookings     = len(bookings)
     completed_orders   = sum(1 for o in orders if o.status == 'completed')
+    completed_bookings = sum(1 for b in bookings if b.status == 'completed')
+    cancelled_orders   = sum(1 for o in orders if o.status == 'cancelled')
+    cancelled_bookings = sum(1 for b in bookings if b.status == 'cancelled')
+
+    # Orders / bookings broken down by status, each with the revenue actually
+    # attributable to that status (so admin can see e.g. how much is still sitting
+    # in "shipped" vs already banked as "completed").
+    order_status_rows = defaultdict(lambda: [0, 0.0])
+    for o in orders:
+        order_status_rows[o.status][0] += 1
+        if order_counts_as_revenue(o):
+            order_status_rows[o.status][1] += o.total_amount
+
+    booking_status_rows = defaultdict(int)
+    for b in bookings:
+        booking_status_rows[b.status] += 1
+
+    # Top-selling products — only from orders that weren't cancelled, since a
+    # cancelled order was never actually sold.
+    product_sales = defaultdict(lambda: [0, 0.0])
+    for o in orders:
+        if o.status == 'cancelled':
+            continue
+        for item in o.items:
+            pname = item.product.name if item.product else 'Unknown Product'
+            product_sales[pname][0] += item.quantity
+            product_sales[pname][1] += item.quantity * item.unit_price
+    top_products = sorted(product_sales.items(), key=lambda kv: kv[1][1], reverse=True)[:8]
+
+    # Top services booked — only non-cancelled bookings; revenue only from completed ones.
+    service_bookings = defaultdict(lambda: [0, 0.0])
+    for b in bookings:
+        if b.status == 'cancelled':
+            continue
+        service_bookings[b.service][0] += 1
+        if b.status == 'completed':
+            service_bookings[b.service][1] += (b.total_amount or 0)
+    top_services = sorted(service_bookings.items(), key=lambda kv: kv[1][0], reverse=True)[:8]
+
+    # Payment method split, orders only (cash vs GCash) — non-cancelled orders.
+    payment_split = defaultdict(lambda: [0, 0.0])
+    for o in orders:
+        if o.status == 'cancelled':
+            continue
+        method = (o.payment_method or 'cash').upper()
+        payment_split[method][0] += 1
+        if order_counts_as_revenue(o):
+            payment_split[method][1] += o.total_amount
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
@@ -2058,11 +2127,40 @@ def generate_report():
     MUTED = colors.HexColor('#6b7280')
     styles = getSampleStyleSheet()
 
-    def style(name, **kwargs): return ParagraphStyle(name, **kwargs)
+    def style(name, **kwargs):
+        # ParagraphStyle defaults leading to 12pt regardless of fontSize, so a large
+        # fontSize (e.g. the 24pt title) with no leading override gets a line height
+        # far shorter than the text itself, and the next paragraph renders on top of it.
+        kwargs.setdefault('leading', kwargs.get('fontSize', 10) * 1.25)
+        return ParagraphStyle(name, **kwargs)
     title_style   = style('T', fontSize=24, fontName='Helvetica-Bold', textColor=RED, spaceAfter=2)
     sub_style     = style('S', fontSize=10, fontName='Helvetica', textColor=MUTED, spaceAfter=4)
     heading_style = style('H', fontSize=12, fontName='Helvetica-Bold', textColor=DARK, spaceBefore=14, spaceAfter=6)
     small_style   = style('SM', fontSize=8, fontName='Helvetica', textColor=MUTED)
+
+    def section_table(headers, rows, col_widths, align_right_cols=(), bold_last_row=False):
+        t = Table([headers] + rows, colWidths=col_widths, repeatRows=1)
+        cmds = [
+            ('BACKGROUND', (0,0), (-1,0), DARK), ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), ('FONTSIZE', (0,0), (-1,0), 8.5),
+            ('FONTNAME', (0,1), (-1,-1), 'Helvetica'), ('FONTSIZE', (0,1), (-1,-1), 8.5),
+            ('TEXTCOLOR', (0,1), (-1,-1), DARK),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT]),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 5), ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 8), ('RIGHTPADDING', (0,0), (-1,-1), 8),
+        ]
+        for c in align_right_cols:
+            cmds.append(('ALIGN', (c,0), (c,-1), 'RIGHT'))
+        if bold_last_row and rows:
+            cmds += [
+                ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+                ('BACKGROUND', (0,-1), (-1,-1), LIGHT),
+                ('TEXTCOLOR', (0,-1), (-1,-1), RED),
+            ]
+        t.setStyle(TableStyle(cmds))
+        return t
 
     story.append(Paragraph('MOTOTYRE MOTO SHOP', title_style))
     story.append(Paragraph('Sales & Operations Report', style('ST', fontSize=13, fontName='Helvetica-Bold', textColor=DARK, spaceAfter=2)))
@@ -2082,10 +2180,84 @@ def generate_report():
         ('BACKGROUND', (0,1), (-1,1), LIGHT), ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
         ('FONTSIZE', (0,1), (-1,1), 14), ('TEXTCOLOR', (0,1), (0,1), RED),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('ROWHEIGHT', (0,0), (-1,-1), 28), ('GRID', (0,0), (-1,-1), 0.5, colors.white),
+        ('TOPPADDING', (0,0), (-1,-1), 8), ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.white),
     ]))
     story.append(st)
-    story.append(Spacer(1, 16))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        f'Completed Bookings: <b>{completed_bookings}</b> &nbsp;&nbsp;|&nbsp;&nbsp; '
+        f'Cancelled Orders: <b>{cancelled_orders}</b> &nbsp;&nbsp;|&nbsp;&nbsp; '
+        f'Cancelled Bookings: <b>{cancelled_bookings}</b>',
+        sub_style
+    ))
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph('REVENUE BREAKDOWN', heading_style))
+    story.append(section_table(
+        ['Source', 'Amount'],
+        [
+            ['Product Sales (Orders)', f'P{order_revenue:,.2f}'],
+            ['Service Bookings (Completed)', f'P{booking_revenue:,.2f}'],
+            ['Job Orders / Walk-ins', f'P{job_order_revenue:,.2f}'],
+            ['TOTAL REVENUE', f'P{total_revenue:,.2f}'],
+        ],
+        [W*0.65, W*0.35], align_right_cols=(1,), bold_last_row=True
+    ))
+
+    story.append(Paragraph('ORDERS BY STATUS', heading_style))
+    order_rows_sorted = sorted(order_status_rows.items())
+    if order_rows_sorted:
+        story.append(section_table(
+            ['Status', 'Count', 'Revenue'],
+            [[s.replace('_', ' ').title(), str(c), f'P{r:,.2f}'] for s, (c, r) in order_rows_sorted],
+            [W*0.4, W*0.25, W*0.35], align_right_cols=(1, 2)
+        ))
+    else:
+        story.append(Paragraph('No orders in this period.', sub_style))
+
+    story.append(Paragraph('BOOKINGS BY STATUS', heading_style))
+    booking_rows_sorted = sorted(booking_status_rows.items())
+    if booking_rows_sorted:
+        story.append(section_table(
+            ['Status', 'Count'],
+            [[s.replace('_', ' ').title(), str(c)] for s, c in booking_rows_sorted],
+            [W*0.7, W*0.3], align_right_cols=(1,)
+        ))
+    else:
+        story.append(Paragraph('No bookings in this period.', sub_style))
+
+    story.append(Paragraph('TOP-SELLING PRODUCTS', heading_style))
+    if top_products:
+        story.append(section_table(
+            ['Product', 'Qty Sold', 'Revenue'],
+            [[name, str(int(q)), f'P{rev:,.2f}'] for name, (q, rev) in top_products],
+            [W*0.5, W*0.2, W*0.3], align_right_cols=(1, 2)
+        ))
+    else:
+        story.append(Paragraph('No product sales in this period.', sub_style))
+
+    story.append(Paragraph('TOP SERVICES BOOKED', heading_style))
+    if top_services:
+        story.append(section_table(
+            ['Service', 'Bookings', 'Revenue (Completed)'],
+            [[name, str(cnt), f'P{rev:,.2f}'] for name, (cnt, rev) in top_services],
+            [W*0.45, W*0.2, W*0.35], align_right_cols=(1, 2)
+        ))
+    else:
+        story.append(Paragraph('No bookings in this period.', sub_style))
+
+    story.append(Paragraph('PAYMENT METHOD BREAKDOWN (ORDERS)', heading_style))
+    if payment_split:
+        story.append(section_table(
+            ['Method', 'Orders', 'Revenue'],
+            [[method, str(c), f'P{r:,.2f}'] for method, (c, r) in sorted(payment_split.items())],
+            [W*0.4, W*0.25, W*0.35], align_right_cols=(1, 2)
+        ))
+    else:
+        story.append(Paragraph('No orders in this period.', sub_style))
+
+    story.append(Spacer(1, 10))
     story.append(HRFlowable(width=W, thickness=1, color=MUTED, spaceAfter=6))
     story.append(Paragraph('This report was automatically generated by MotoTyre Admin Dashboard.', small_style))
 
@@ -2205,6 +2377,7 @@ with admin_app.app_context():
     for _stmt in [
         "ALTER TABLE booking ADD COLUMN walkin_customer_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN walkin_customer_id INT DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN booking_batch VARCHAR(36) DEFAULT NULL",
     ]:
         try:
             from sqlalchemy import text as _tmig

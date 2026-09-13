@@ -848,18 +848,13 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add to Queue
             </button>
-            <button type="button" class="btn-submit" id="btn-confirm-all" disabled onclick="submitAllBookings()"
-              style="display:none;background:var(--brand-red);">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              Confirm All Bookings (<span id="btn-queue-count">0</span>)
-            </button>
           </div>
         </div>
 
         <!-- Booking Queue Panel -->
         <div id="booking-queue-panel" style="display:none;margin-top:1.5rem;">
           <div class="appt-section-label" style="margin-top:0;">Booking Queue</div>
-          <div id="booking-queue-list" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+          <div id="booking-queue-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:320px;overflow-y:auto;padding-right:0.35rem;"></div>
           <button type="button" onclick="submitAllBookings()" id="btn-confirm-all-bottom"
             style="width:100%;margin-top:1rem;background:var(--brand-red);color:#fff;border:none;padding:0.75rem 1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;cursor:pointer;transition:all 0.2s;display:none;align-items:center;justify-content:center;gap:0.4rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -1596,6 +1591,33 @@
     t._timeout = setTimeout(() => { t.style.opacity = '0'; }, 2500);
   }
 
+  function showBookingSuccessPopup(message) {
+    let p = document.getElementById('booking-success-popup');
+    if (!p) {
+      p = document.createElement('div');
+      p.id = 'booking-success-popup';
+      p.style.cssText = 'position:fixed;top:1.5rem;left:50%;transform:translateX(-50%) translateY(-24px);display:flex;align-items:center;gap:0.75rem;background:#ffffff;border:1px solid rgba(21,128,61,0.25);border-left:4px solid var(--green);color:#14532d;padding:0.9rem 1.25rem;border-radius:12px;font-family:\'Syne\',sans-serif;font-size:0.85rem;font-weight:700;z-index:10000;box-shadow:0 12px 32px rgba(0,0,0,0.18);opacity:0;transition:opacity 0.25s ease,transform 0.25s ease;max-width:90vw;';
+      p.innerHTML = `
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="color:#fff;font-size:0.85rem;">✓</span>
+        </div>
+        <span id="booking-success-popup-text"></span>`;
+      document.body.appendChild(p);
+    }
+    p.querySelector('#booking-success-popup-text').textContent = message;
+    clearTimeout(p._timeout);
+    p.style.opacity = '0';
+    p.style.transform = 'translateX(-50%) translateY(-24px)';
+    requestAnimationFrame(() => {
+      p.style.opacity = '1';
+      p.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    p._timeout = setTimeout(() => {
+      p.style.opacity = '0';
+      p.style.transform = 'translateX(-50%) translateY(-24px)';
+    }, 3200);
+  }
+
   async function submitCartOrder() {
     const btn = document.getElementById('confirm-pay-btn');
     btn.disabled = true;
@@ -1874,24 +1896,19 @@ function renderBookingQueue() {
   const list   = document.getElementById('booking-queue-list');
   const badge  = document.getElementById('queue-badge-wrap');
   const count  = document.getElementById('queue-count');
-  const btnTop = document.getElementById('btn-confirm-all');
   const btnBot = document.getElementById('btn-confirm-all-bottom');
-  const btnCnt = document.getElementById('btn-queue-count');
 
   if (!bookingQueue.length) {
     panel.style.display  = 'none';
     badge.style.display  = 'none';
-    btnTop.style.display = 'none';
     btnBot.style.display = 'none';
     return;
   }
 
   panel.style.display  = 'block';
   badge.style.display  = 'block';
-  btnTop.style.display = 'block';
   btnBot.style.display = 'block';
   count.textContent    = bookingQueue.length;
-  if (btnCnt) btnCnt.textContent = bookingQueue.length;
 
   list.innerHTML = bookingQueue.map((b, i) => `
     <div style="display:flex;align-items:center;justify-content:space-between;
@@ -1946,9 +1963,7 @@ function resetBookingForm() {
 async function submitAllBookings() {
   if (!bookingQueue.length) { showCartToast('Queue is empty.'); return; }
 
-  const btnTop = document.getElementById('btn-confirm-all');
   const btnBot = document.getElementById('btn-confirm-all-bottom');
-  btnTop.disabled = true; btnTop.textContent = 'Submitting…';
   btnBot.disabled = true; btnBot.textContent = 'Submitting…';
 
   try {
@@ -1959,23 +1974,21 @@ async function submitAllBookings() {
     });
     const data = await res.json();
     if (data.success) {
-      const msg = data.created === 1 ? '1 booking confirmed!' : `${data.created} bookings confirmed!`;
-      showCartToast(msg);
+      const msg = data.created === 1 ? 'Your booking has been confirmed!' : `${data.created} bookings have been confirmed!`;
+      showBookingSuccessPopup(msg);
       bookingQueue = [];
       renderBookingQueue();
       resetBookingForm();
       if (data.errors && data.errors.length) {
         setTimeout(() => alert('Some bookings had issues:\n' + data.errors.join('\n')), 800);
       }
-      setTimeout(() => window.location.reload(), 1200);
+      setTimeout(() => window.location.reload(), 3000);
     } else {
       alert('Failed: ' + (data.error || (data.errors && data.errors.join('\n')) || 'Unknown error'));
-      btnTop.disabled = false; btnTop.textContent = 'Confirm All Bookings';
       btnBot.disabled = false; btnBot.textContent = 'Confirm All Bookings';
     }
   } catch(e) {
     alert('Network error. Please try again.');
-    btnTop.disabled = false; btnTop.textContent = 'Confirm All Bookings';
     btnBot.disabled = false; btnBot.textContent = 'Confirm All Bookings';
   }
 }
@@ -2066,6 +2079,7 @@ function selectDate(dateStr, day, cell) {
   document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
   cell.classList.add('selected');
   renderTimeSlots(dateStr);
+  loadMechanics();
 }
 
 function renderTimeSlots(dateStr) {
@@ -2130,6 +2144,7 @@ function selectTime(slot, btn) {
   document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected-slot'));
   btn.classList.add('selected-slot');
   checkBookingReady();
+  loadMechanics(selectedDate, selectedTime);
 }
 
 async function changeMonth(dir) {
@@ -2275,7 +2290,7 @@ function renderNotifications() {
           ${n.title}
           ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--brand-red);display:inline-block;flex-shrink:0;"></span>' : ''}
         </div>
-        <div style="font-size:0.78rem;color:var(--fg-3);line-height:1.5;margin-bottom:0.3rem;">${n.message}</div>
+        <div style="font-size:0.78rem;color:var(--fg-3);line-height:1.5;margin-bottom:0.3rem;white-space:pre-line;">${n.message}</div>
         ${n.status ? `<span style="font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.2em 0.55em;border-radius:5px;">${n.status.replace('inprogress','in progress').replace(/_/g,' ')}</span>` : ''}
         <div style="font-size:0.7rem;color:#4b5563;margin-top:0.3rem;">${time}</div>
       </div>
@@ -2821,11 +2836,13 @@ function addToCartFromInfo() {
 // Sa pinakadulo ng <script>, pagkatapos ng renderCalendar();
 
 // ── MECHANICS LOADER ──
-async function loadMechanics() {
+async function loadMechanics(date, time) {
   try {
-    const res = await fetch('/api/mechanics');
+    const qs = (date && time) ? `?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}` : '';
+    const res = await fetch('/api/mechanics' + qs);
     const mechanics = await res.json();
     const sel = document.getElementById('mechanic-select');
+    const prevValue = sel.value;
     sel.innerHTML = '<option value="">-- No preference --</option>';
     mechanics.forEach(m => {
       const opt = document.createElement('option');
@@ -2834,6 +2851,7 @@ async function loadMechanics() {
       opt.dataset.spec = m.specialization;
       sel.appendChild(opt);
     });
+    if (prevValue && [...sel.options].some(o => o.value === prevValue)) sel.value = prevValue;
   } catch(e) {
     console.error('Failed to load mechanics', e);
   }

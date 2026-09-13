@@ -119,6 +119,9 @@
     .bill-input{width:100%;padding:.5rem .85rem;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;font-family:'DM Sans',sans-serif;font-size:.85rem;outline:none;margin-bottom:.65rem;}
     .bill-input:focus{border-color:var(--green);}
     .bill-input::placeholder{color:#9ca3af;}
+    .bill-input.field-invalid{border-color:#dc2626;}
+    .bill-field-error{display:flex;align-items:center;gap:.35rem;color:#dc2626;font-size:.75rem;font-family:'DM Sans',sans-serif;margin:-.4rem 0 .65rem;}
+    .bill-error-banner{display:flex;align-items:center;gap:.5rem;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:.8rem;font-family:'DM Sans',sans-serif;padding:.6rem .85rem;border-radius:8px;margin-bottom:.85rem;}
     .bill-foot{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.65rem;}
     .btn-cancel-bill{flex:1;padding:.6rem;border-radius:8px;border:1px solid var(--border);background:#f9fafb;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;cursor:pointer;transition:all .15s;}
     .btn-cancel-bill:hover{color:#374151;border-color:#9ca3af;}
@@ -398,6 +401,9 @@
       <button class="bill-close" onclick="closeBillingModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="bill-body">
+      <!-- General/server error -->
+      <div class="bill-error-banner" id="bill-error-banner" style="display:none;"></div>
+
       <!-- Customer info -->
       <div class="bill-info" id="bill-modal-info"></div>
 
@@ -414,6 +420,7 @@
       <div id="bill-amount-wrap" style="display:none;margin-bottom:.75rem;">
         <div class="bill-section-label">Amount to collect</div>
         <input type="number" id="bill-amount-input" class="bill-input" placeholder="Enter amount" min="0" step="0.01">
+        <div class="bill-field-error" id="bill-amount-error" style="display:none;">Please enter the amount to collect.</div>
       </div>
 
       <!-- Payment method -->
@@ -426,7 +433,8 @@
       <!-- GCash ref -->
       <div id="gcash-ref-wrap" style="display:none;">
         <div class="bill-section-label">GCash Reference No.</div>
-        <input type="text" id="bill-gcash-ref" class="bill-input" placeholder="e.g. 1234567890">
+        <input type="text" id="bill-gcash-ref" class="bill-input" placeholder="e.g. 1234567890" inputmode="numeric" maxlength="20" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        <div class="bill-field-error" id="bill-ref-error" style="display:none;">Please enter the GCash reference number.</div>
       </div>
     </div>
     <div class="bill-foot">
@@ -497,6 +505,7 @@ function openBillingModal(el) {
 
   selectPayMethod('cash');
   document.getElementById('bill-gcash-ref').value = '';
+  hideBillErrors();
   document.getElementById('bill-submit-btn').disabled = false;
   document.getElementById('bill-submit-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Mark as Paid';
   document.getElementById('bill-overlay').classList.add('open');
@@ -514,19 +523,55 @@ function selectPayMethod(m) {
   cash.className  = 'pay-opt' + (m === 'cash'  ? ' active-cash'  : '');
   gcash.className = 'pay-opt' + (m === 'gcash' ? ' active-gcash' : '');
   gcashWrap.style.display = m === 'gcash' ? '' : 'none';
+  hideBillErrors();
 }
+
+function hideBillErrors() {
+  document.getElementById('bill-error-banner').style.display = 'none';
+  document.getElementById('bill-ref-error').style.display = 'none';
+  document.getElementById('bill-amount-error').style.display = 'none';
+  document.getElementById('bill-gcash-ref').classList.remove('field-invalid');
+  document.getElementById('bill-amount-input').classList.remove('field-invalid');
+}
+
+function showBillFieldError(fieldId, errorId) {
+  const field = document.getElementById(fieldId);
+  field.classList.add('field-invalid');
+  document.getElementById(errorId).style.display = 'flex';
+  field.focus();
+}
+
+function showBillBannerError(msg) {
+  const banner = document.getElementById('bill-error-banner');
+  banner.textContent = msg;
+  banner.style.display = 'flex';
+}
+
+document.getElementById('bill-gcash-ref').addEventListener('input', function() {
+  this.classList.remove('field-invalid');
+  document.getElementById('bill-ref-error').style.display = 'none';
+});
+document.getElementById('bill-amount-input').addEventListener('input', function() {
+  this.classList.remove('field-invalid');
+  document.getElementById('bill-amount-error').style.display = 'none';
+});
 
 async function submitBilling() {
   const btn = document.getElementById('bill-submit-btn');
   const ref = document.getElementById('bill-gcash-ref').value.trim();
+  hideBillErrors();
   if (_payMethod === 'gcash' && !ref) {
-    alert('Please enter the GCash reference number.'); return;
+    showBillFieldError('bill-gcash-ref', 'bill-ref-error');
+    return;
   }
 
   let amount = _bill.amount || _bill.items.reduce((s, i) => s + i.price * i.qty, 0);
   if (_bill.type === 'booking' && amount === 0) {
     const inp = parseFloat(document.getElementById('bill-amount-input').value);
-    if (!inp || inp <= 0) { alert('Please enter the amount to collect.'); return; }
+    if (!inp || inp <= 0) {
+      showBillFieldError('bill-amount-input', 'bill-amount-error');
+      return;
+    }
     amount = inp;
   }
 
@@ -562,12 +607,12 @@ async function submitBilling() {
       document.getElementById('s-method').textContent = _payMethod === 'cash' ? 'Cash' : `GCash${ref ? ' · Ref: ' + ref : ''}`;
       document.getElementById('success-overlay').classList.add('open');
     } else {
-      alert(data.error || 'Something went wrong. Please try again.');
+      showBillBannerError(data.error || 'Something went wrong. Please try again.');
       btn.disabled = false;
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Mark as Paid';
     }
   } catch(e) {
-    alert('Network error. Please try again.');
+    showBillBannerError('Network error. Please try again.');
     btn.disabled = false;
     btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Mark as Paid';
   }

@@ -618,10 +618,13 @@
               </tr>
             </thead>
             <tbody>
-              {# Group bookings by customer + date #}
+              {# Group bookings by their shared booking_batch (set only when 2+ bookings
+                 were submitted together — customer queue or walk-in multi-service).
+                 A single booking always gets its own unique key, so it never merges
+                 with any other booking, even one made later the same day. #}
               {% set ns = namespace(seen=[], groups={}) %}
               {% for b in all_bookings %}
-                {% set key = (b.customer.fullname if not b.walkin_customer_id else (b.contact_name or 'Walk-In')) + '|' + b.date.strftime('%Y-%m-%d') %}
+                {% set key = b.booking_batch if b.booking_batch else ('single-' + b.id|string) %}
                 {% if key not in ns.seen %}
                   {% set _ = ns.seen.append(key) %}
                 {% endif %}
@@ -630,7 +633,7 @@
               {% for group_key in ns.seen %}
                 {% set group_bookings = [] %}
                 {% for b in all_bookings %}
-                  {% set key = (b.customer.fullname if not b.walkin_customer_id else (b.contact_name or 'Walk-In')) + '|' + b.date.strftime('%Y-%m-%d') %}
+                  {% set key = b.booking_batch if b.booking_batch else ('single-' + b.id|string) %}
                   {% if key == group_key %}
                     {% set _ = group_bookings.append(b) %}
                   {% endif %}
@@ -641,6 +644,14 @@
                 {% set service_names = group_bookings | map(attribute='service') | list %}
                 {% set all_statuses = group_bookings | map(attribute='status') | list %}
                 {% set display_status = b.status %}
+                {% set service_dates = [] %}
+                {% set service_times = [] %}
+                {% for gb in group_bookings %}
+                  {% set _ = service_dates.append(gb.date.strftime('%b %d, %Y')) %}
+                  {% set _ = service_times.append(gb.time.strftime('%I:%M %p')) %}
+                {% endfor %}
+                {% set all_same_slot = (service_dates | unique | list | length == 1) and (service_times | unique | list | length == 1) %}
+                {% set all_same_status = (all_statuses | unique | list | length == 1) %}
 
                 <tr class="{% if is_done %}booking-done{% elif is_cancelled %}booking-cancelled{% endif %}"
                     style="cursor:pointer;"
@@ -655,6 +666,8 @@
                     data-moto-plate="{{ (b.motorcycle_plate or '')|e }}"
                     data-services="{{ service_names | join('|||') | e }}"
                     data-statuses="{{ all_statuses | join('|||') | e }}"
+                    data-dates="{{ service_dates | join('|||') | e }}"
+                    data-times="{{ service_times | join('|||') | e }}"
                     data-date="{{ b.date.strftime('%b %d, %Y') }}"
                     data-time="{{ b.time.strftime('%I:%M %p') }}"
                     data-status="{{ display_status }}"
@@ -684,14 +697,19 @@
                     {% endif %}
                   </td>
                   <td>
-                    <div>{{ b.date.strftime('%b %d, %Y') }}</div>
-                    <div style="font-size:0.72rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }}</div>
+                    {% if all_same_slot %}
+                      <div>{{ b.date.strftime('%b %d, %Y') }}</div>
+                      <div style="font-size:0.72rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }}</div>
+                    {% else %}
+                      <div style="font-size:0.78rem;color:var(--muted);font-style:italic;">Multiple dates/times</div>
+                      <div style="font-size:0.72rem;color:var(--muted);">click to view</div>
+                    {% endif %}
                   </td>
                   <td>
-                    {% if group_bookings|length > 1 %}
-                      <span style="font-size:0.7rem;color:var(--muted);">Multiple</span>
-                    {% else %}
+                    {% if all_same_status %}
                       <span class="badge badge-{{ b.status|replace('_','') }}">{{ b.status|replace('_',' ')|title }}</span>
+                    {% else %}
+                      <span style="font-size:0.7rem;color:var(--muted);">Mixed statuses</span>
                     {% endif %}
                   </td>
                   <td>
@@ -706,20 +724,33 @@
                       <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;padding:0.25rem 0.6rem;border-radius:6px;">Done</span>
                     {% elif is_cancelled %}
                       <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:0.25rem 0.6rem;border-radius:6px;">Cancelled</span>
+                    {% elif group_bookings|length > 1 %}
+                      {# Each service in a batch can be on its own date/time and needs its own
+                         Start/Cancel — done per-service inside the details modal, not here,
+                         so starting one never silently drags the others along with it. #}
+                      <span style="font-size:0.7rem;color:var(--muted);font-style:italic;">Click row to manage each service</span>
                     {% else %}
                       {% if b.status == 'in_progress' %}
                         <div style="font-size:0.7rem;color:#d97706;font-weight:600;">Collect via Billing</div>
                       {% elif b.status == 'confirmed' %}
-                        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+                        {% set not_yet_due = (b.date, b.time) > (today, now.time()) %}
+                        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
                           <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form" id="start-service-form-{{ b.id }}">
                             <input type="hidden" name="status" value="in_progress">
-                            <button type="button" onclick="openStartServiceModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start</button>
+                            {% if not_yet_due %}
+                              <button type="button" disabled title="Cannot start before {{ b.date.strftime('%b %d, %Y') }} {{ b.time.strftime('%I:%M %p') }}" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button>
+                            {% else %}
+                              <button type="button" onclick="openStartServiceModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start</button>
+                            {% endif %}
                           </form>
                           <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form" id="cancel-booking-form-{{ b.id }}">
                             <input type="hidden" name="status" value="cancelled">
                             <button type="button" onclick="openCancelBookingModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">Cancel</button>
                           </form>
                         </div>
+                        {% if not_yet_due %}
+                          <div style="font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">Starts {{ b.date.strftime('%b %d') }}, {{ b.time.strftime('%I:%M %p') }}</div>
+                        {% endif %}
                       {% endif %}
                     {% endif %}
                   </td>
@@ -1898,6 +1929,8 @@
     const services  = d.services.split('|||');
     const statuses  = d.statuses.split('|||');
     const ids       = d.ids.split(',');
+    const svcDates  = (d.dates || '').split('|||');
+    const svcTimes  = (d.times || '').split('|||');
 
     const statusColors = {
       pending:     { bg:'#fefce8', color:'#854d0e', border:'#fde047' },
@@ -1923,29 +1956,65 @@
     document.getElementById('bd-contact-name').textContent   = d.contactName   || d.customer;
     document.getElementById('bd-contact-mobile').textContent = d.contactMobile || d.phone;
 
-    // Services list — one card per service
+    // Services list — one card per service, each with its own Start/Cancel so
+    // acting on one booking in a batch never affects the others (they can be on
+    // different dates/times even though they were queued together).
     const servicesList = document.getElementById('bd-services-list');
     servicesList.innerHTML = '';
     services.forEach((svc, i) => {
       const st   = (statuses[i] || 'pending').replace('-','_');
       const sc2  = statusColors[st] || statusColors.pending;
+      const bid  = ids[i] || ids[0];
       const card = document.createElement('div');
-      card.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:#f9fafb;border:1px solid var(--border);border-radius:10px;';
+      card.style.cssText = 'display:flex;flex-direction:column;gap:0.6rem;padding:0.75rem 1rem;background:#f9fafb;border:1px solid var(--border);border-radius:10px;';
+
+      let actionHtml = '';
+      if (st === 'in_progress') {
+        actionHtml = `<div style="font-size:0.7rem;color:#d97706;font-weight:600;">Collect via Billing</div>`;
+      } else if (st === 'confirmed') {
+        const schedDT   = new Date(`${svcDates[i] || d.date} ${svcTimes[i] || d.time}`);
+        const notYetDue = !isNaN(schedDT) && schedDT > new Date();
+        const startBtnHtml = notYetDue
+          ? `<button type="button" disabled title="Cannot start before ${svcDates[i] || d.date} ${svcTimes[i] || d.time}" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button>`
+          : `<button type="button" class="bd-svc-start-btn" data-bid="${bid}" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start</button>`;
+        actionHtml = `
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+            <form method="POST" action="/booking/${bid}/status" class="status-form" id="start-service-form-${bid}">
+              <input type="hidden" name="status" value="in_progress">
+            </form>
+            <form method="POST" action="/booking/${bid}/status" class="status-form" id="cancel-booking-form-${bid}">
+              <input type="hidden" name="status" value="cancelled">
+            </form>
+            ${startBtnHtml}
+            <button type="button" class="bd-svc-cancel-btn" data-bid="${bid}" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">Cancel</button>
+            ${notYetDue ? `<div style="width:100%;font-size:0.65rem;color:var(--muted);">Starts ${svcDates[i] || d.date}, ${svcTimes[i] || d.time}</div>` : ''}
+          </div>`;
+      }
+
       card.innerHTML = `
-        <div style="display:flex;align-items:center;gap:0.75rem;">
-          <div style="width:32px;height:32px;border-radius:8px;background:rgba(208,0,25,0.1);display:flex;align-items:center;justify-content:center;color:var(--red);flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
-          <div>
-            <div style="font-weight:700;color:var(--text);font-size:0.88rem;">${svc}</div>
-            <div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">BKG-${String(ids[i] || ids[0]).padStart(3,'0')}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(208,0,25,0.1);display:flex;align-items:center;justify-content:center;color:var(--red);flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+            <div>
+              <div style="font-weight:700;color:var(--text);font-size:0.88rem;">${svc}</div>
+              <div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">BKG-${String(bid).padStart(3,'0')} &middot; ${svcDates[i] || d.date} at ${svcTimes[i] || d.time}</div>
+            </div>
           </div>
+          <span style="font-family:inherit;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.25em 0.65em;border-radius:6px;background:${sc2.bg};color:${sc2.color};border:1px solid ${sc2.border};">${st.replace('_',' ')}</span>
         </div>
-        <span style="font-family:inherit;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.25em 0.65em;border-radius:6px;background:${sc2.bg};color:${sc2.color};border:1px solid ${sc2.border};">${st.replace('_',' ')}</span>`;
+        ${actionHtml}`;
       servicesList.appendChild(card);
+
+      const startBtn = card.querySelector('.bd-svc-start-btn');
+      if (startBtn) startBtn.addEventListener('click', () => openStartServiceModal(bid, d.customer, svc));
+      const cancelBtn = card.querySelector('.bd-svc-cancel-btn');
+      if (cancelBtn) cancelBtn.addEventListener('click', () => openCancelBookingModal(bid, d.customer, svc));
     });
 
-    // Date, moto, mechanic
-    document.getElementById('bd-date').textContent = d.date;
-    document.getElementById('bd-time').textContent = d.time;
+    // Date, moto, mechanic — show "Multiple" when the batch spans different slots
+    const sameSlot = svcDates.every(x => x === svcDates[0]) && svcTimes.every(x => x === svcTimes[0]);
+    document.getElementById('bd-date').textContent = sameSlot ? d.date : 'Multiple dates';
+    document.getElementById('bd-time').textContent = sameSlot ? d.time : 'See services below';
     const moto = [d.motoModel, d.motoPlate].filter(Boolean).join(' — ');
     document.getElementById('bd-moto').textContent = moto || '—';
     const mech = d.mechanic ? (d.mechanic + (d.mechanicSpec ? ' · ' + d.mechanicSpec : '')) : '—';
@@ -2171,9 +2240,11 @@
   function applyBookingTabFilter(search) {
     const q = (search !== undefined ? search : document.querySelector('#sec-bookings input[type=text]').value).toLowerCase();
     document.querySelectorAll('#bookings-table tbody tr').forEach(row => {
-      const cell = row.cells[4];
-      const cellText = cell ? cell.textContent.toLowerCase().replace(/\s+/g, '') : '';
-      const matchesTab = cellText.includes(_activeBookingTab);
+      // Match against the underlying status data, not the displayed text — a grouped
+      // row shows "Mixed statuses"/one badge in the cell, which won't reliably contain
+      // the tab keyword. A grouped row matches a tab if ANY booking in it has that status.
+      const rawStatuses = (row.dataset.statuses || row.dataset.status || '').split('|||');
+      const matchesTab = rawStatuses.some(s => s.replace(/[_\s]+/g, '').toLowerCase().includes(_activeBookingTab));
       const matchesSearch = !q || row.textContent.toLowerCase().includes(q);
       row.style.display = (matchesTab && matchesSearch) ? '' : 'none';
     });
