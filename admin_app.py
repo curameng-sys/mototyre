@@ -17,7 +17,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from io import BytesIO
-from security import clean_str, clean_float, is_valid_email, validate_booking_status, validate_order_status
+from security import clean_str, clean_int, clean_float, is_valid_email, validate_booking_status, validate_order_status
+from order_notifications import order_status_message, with_stamp, shipping_destination
+from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDAY_INTAKE_MIN,
+    compute_finish_time, mechanic_origin_note, compute_finish_minutes, all_slot_starts,
+    SHOP_CLOSE_MIN, mechanic_overlaps, minutes_to_ampm, hhmm_to_minutes, minutes_to_hhmm,
+    validate_booking)
 import json
 import os, uuid, random, string, base64, requests
 import threading
@@ -138,6 +143,8 @@ class User(db.Model, UserMixin):
     motorcycle_model = db.Column(db.String(100))
     profile_pic      = db.Column(db.String(255))
     email_verified   = db.Column(db.Boolean, default=False)
+    account_status   = db.Column(db.String(20), default='active')   # active | deactivated | banned
+    is_flagged       = db.Column(db.Boolean, default=False)
     bookings         = db.relationship('Booking', backref='customer', lazy=True)
     orders           = db.relationship('Order', backref='customer', lazy=True)
 
@@ -158,7 +165,7 @@ class OTPRecord(db.Model):
 class Booking(db.Model):
     id               = db.Column(db.Integer, primary_key=True)
     user_id          = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    service          = db.Column(db.String(100), nullable=False)
+    service          = db.Column(db.String(300), nullable=False)  # combined names, comma-separated
     date             = db.Column(db.Date, nullable=False)
     time             = db.Column(db.Time, nullable=False)
     motorcycle_model = db.Column(db.String(100))
@@ -168,8 +175,10 @@ class Booking(db.Model):
     payment_method   = db.Column(db.String(20), default='cash')
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     reminder_sent    = db.Column(db.Boolean, default=False)
-    mechanic_name           = db.Column(db.String(100))
-    mechanic_specialization = db.Column(db.String(100))
+    assigned_mechanic_name           = db.Column(db.String(100))  # who is actually doing the work — shop changes this freely
+    assigned_mechanic_specialization = db.Column(db.String(100))
+    preferred_mechanic_name           = db.Column(db.String(100))  # who the customer asked for, or None — never overwritten after booking creation
+    preferred_mechanic_specialization = db.Column(db.String(100))
     contact_name    = db.Column(db.String(100))
     contact_mobile  = db.Column(db.String(20))
     odometer        = db.Column(db.Integer)
@@ -177,6 +186,9 @@ class Booking(db.Model):
     total_amount    = db.Column(db.Float, default=0)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
     booking_batch   = db.Column(db.String(36), nullable=True)
+    duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
+    end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
+    is_multiday      = db.Column(db.Boolean, default=False)
 
 
 class Mechanic(db.Model):
@@ -227,6 +239,9 @@ class Service(db.Model):
     description = db.Column(db.String(200), default='')
     price       = db.Column(db.Float, default=0.0)
     is_active   = db.Column(db.Boolean, default=True)
+    duration_minutes = db.Column(db.Integer, default=60)      # estimated job length
+    is_multiday      = db.Column(db.Boolean, default=False)   # e.g. Full/Top Overhaul
+    duration_label   = db.Column(db.String(30))                # override text, e.g. "3-5 days"
     created_at  = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -329,6 +344,30 @@ def ph_now():
 def send_notification(user_id, title, message, type='update', status=None):
     db.session.add(Notification(user_id=user_id, title=title, message=message, type=type, status=status))
     db.session.commit()
+
+
+def booking_service_price(service_str):
+    """Sum the catalog price for every service in a booking's (possibly combined,
+    comma-separated) service string — a plain name lookup misses combo bookings."""
+    names = split_service_names(service_str)
+    if not names:
+        return 0
+    found = {s.name: s.price for s in Service.query.filter(Service.name.in_(names), Service.is_active == True).all()}
+    return sum(found.get(n, 0) for n in names)
+
+
+def booking_finish_time(b):
+    """A booking's finish time, break-aware. Prefers the value stored at creation
+    time; falls back to computing it via the SAME shared helper the customer-side
+    booking flow uses, for legacy bookings made before duration tracking existed —
+    so the admin view and the customer view can never disagree."""
+    if b.end_time:
+        return b.end_time
+    return compute_finish_time(b.time, b.duration_minutes or DEFAULT_DURATION_MIN)
+
+
+admin_app.jinja_env.globals['booking_finish_time'] = booking_finish_time
+
 
 def _generate_otp(length=6):
     return "".join(random.choices(string.digits, k=length))
@@ -635,6 +674,246 @@ def update_booking_status(bid):
     return redirect(url_for('admin_dashboard'))
 
 
+@admin_app.route('/booking/<int:bid>/assign-mechanic', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def assign_booking_mechanic(bid):
+    """Set or change who's actually doing a booking. Goes through the same
+    shared routine everything else does — a mechanic can't be assigned here
+    unless they're on today's on-duty roster and free for the whole window
+    (turnover buffer included); an admin picking someone can't create the
+    exact clash the customer-side flow would have refused. preferred_mechanic_*
+    is never touched here — it's the customer's original ask, permanent.
+
+    Whether the customer gets told is decided by the GAP between the two:
+      - no preference on file            -> the shop moves the job freely, silently.
+      - assigned matches the preference  -> the customer got what they asked
+                                             for; nothing to say.
+      - assigned differs from a stated
+        preference                       -> a promise was broken; notify + email.
+    That's evaluated fresh against the preference every time, not against
+    whoever was assigned a moment ago — so it fires on EVERY change that
+    leaves the booking not matching what was promised, not just the first."""
+    booking = Booking.query.get_or_404(bid)
+    mechanic_id = clean_str(request.form.get('mechanic_id', ''), max_len=10)
+
+    def fail(msg):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg}), 400
+        flash(msg, 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    old_name = booking.assigned_mechanic_name
+    if mechanic_id:
+        mechanic = Mechanic.query.get(int(mechanic_id)) if mechanic_id.isdigit() else None
+        if not mechanic:
+            return fail('Mechanic not found.')
+        start_min = booking.time.hour * 60 + booking.time.minute
+        duration  = booking.duration_minutes or DEFAULT_DURATION_MIN
+        # The booking's own date/time isn't changing, so the shop-queue slot
+        # and the fixed grid were already validated when it was made — only
+        # the mechanic dimension is new information here.
+        ok, error = _check_admin_booking_request(
+            booking.date, start_min, duration, exclude_id=booking.id,
+            mechanic_name=mechanic.name, require_slot_grid=False, check_shop_queue=False,
+        )
+        if not ok:
+            return fail(error)
+        new_name, new_spec = mechanic.name, mechanic.specialization
+    else:
+        new_name, new_spec = None, None
+
+    booking.assigned_mechanic_name = new_name
+    booking.assigned_mechanic_specialization = new_spec
+    db.session.commit()
+
+    changed      = new_name != old_name
+    had_promise  = bool(booking.preferred_mechanic_name)
+    broke_promise = had_promise and new_name != booking.preferred_mechanic_name
+    if changed and broke_promise and not booking.walkin_customer_id:
+        time_str = booking.time.strftime('%I:%M %p')
+        date_str = booking.date.strftime('%b %d, %Y')
+        # Same phrasing helper the initial booking confirmation email uses, so
+        # the reason given never reads differently between the two messages.
+        origin = mechanic_origin_note(new_name, booking.preferred_mechanic_name)
+        who = f'{new_name} is now assigned to your job ({origin})' if new_name else \
+              f'Your job no longer has a specific mechanic assigned ({booking.preferred_mechanic_name} was not free at this time)'
+        msg = (f'Your {booking.service} appointment on {date_str} at {time_str}: {who}. '
+               f'Your appointment time has not changed.')
+        send_notification(booking.user_id, 'Mechanic Reassigned', msg, type='booking', status=booking.status)
+        customer = User.query.get(booking.user_id)
+        if customer and customer.email:
+            html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+              <p>Hi {customer.fullname},</p>
+              <p>Your <strong>{booking.service}</strong> appointment on <strong>{date_str} at {time_str}</strong>: {who}.</p>
+              <p><strong>Your appointment time has not changed.</strong></p>
+              <p>— MotoTyre North Caloocan</p>
+            </div>"""
+            _send_gmail(customer.email, 'Your mechanic has been reassigned — MotoTyre', html)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'mechanic_name': new_name})
+    flash('Mechanic updated.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+def _gather_intervals(query):
+    """[(start_min, end_min)] for every Booking row a query returns."""
+    result = []
+    for b in query.all():
+        b_start = b.time.hour * 60 + b.time.minute
+        result.append((b_start, compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)))
+    return result
+
+
+def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, exclude_id=None,
+                                  mechanic_name=None, require_slot_grid=True, check_shop_queue=True):
+    """THE call every admin-side action that touches a booking's schedule makes
+    before committing — a reschedule (date/time change) and a mechanic
+    reassignment (mechanic change) alike. This gathers what
+    service_duration.validate_booking() needs and hands it the actual
+    decision — the exact same routine the customer-side booking flow uses, so
+    an admin action can never end up enforcing a looser rule than a customer
+    would hit. The admin UI only pre-filters what it *offers*; this is what
+    actually decides."""
+    shop_intervals, daily_count = [], 0
+    if check_shop_queue:
+        q = Booking.query.filter(Booking.date == booking_date, Booking.status != 'cancelled')
+        if exclude_id:
+            q = q.filter(Booking.id != exclude_id)
+        shop_intervals = _gather_intervals(q)
+        daily_count = len(shop_intervals)
+
+    mechanic_status = None
+    mechanic_intervals = None
+    if mechanic_name:
+        mechanic = Mechanic.query.filter_by(name=mechanic_name).first()
+        mechanic_status = mechanic.status if mechanic else None
+        mq = Booking.query.filter(
+            Booking.assigned_mechanic_name == mechanic_name,
+            Booking.date == booking_date,
+            Booking.status != 'cancelled',
+        )
+        if exclude_id:
+            mq = mq.filter(Booking.id != exclude_id)
+        mechanic_intervals = _gather_intervals(mq)
+
+    return validate_booking(
+        start_minutes, duration_minutes, shop_intervals, daily_count,
+        require_slot_grid=require_slot_grid,
+        mechanic_name=mechanic_name, mechanic_status=mechanic_status, mechanic_intervals=mechanic_intervals,
+    )
+
+
+@admin_app.route('/booking/<int:bid>/reschedule', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def reschedule_booking(bid):
+    """Move a booking to a new date/time. Goes through the exact same shared
+    routine the customer-side booking flow uses — valid slot, fits before
+    closing, no shop conflict, and if a mechanic is assigned, still free for
+    the new window (turnover buffer included) — a reschedule can never quietly
+    create a conflict that didn't exist before. The customer is told either
+    way it can succeed: this route only ever produces a booking that's sound."""
+    booking  = Booking.query.get_or_404(bid)
+    date_str = clean_str(request.form.get('date', ''), max_len=10)
+    time_str = clean_str(request.form.get('time', ''), max_len=5)
+
+    def fail(msg):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg}), 400
+        flash(msg, 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    try:
+        new_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        new_time = datetime.strptime(time_str, '%H:%M').time()
+    except ValueError:
+        return fail('Invalid date or time.')
+
+    if datetime.combine(new_date, new_time) <= ph_now():
+        return fail('Cannot reschedule to a past or current time.')
+
+    duration  = booking.duration_minutes or DEFAULT_DURATION_MIN
+    start_min = new_time.hour * 60 + new_time.minute
+
+    ok, error = _check_admin_booking_request(
+        new_date, start_min, duration, exclude_id=booking.id,
+        mechanic_name=booking.assigned_mechanic_name,
+    )
+    if not ok:
+        return fail(error)
+
+    old_date_str = booking.date.strftime('%b %d, %Y')
+    old_time_str = booking.time.strftime('%I:%M %p')
+
+    booking.date      = new_date
+    booking.time      = new_time
+    booking.end_time  = compute_finish_time(new_time, duration)
+    db.session.commit()
+
+    new_date_str = booking.date.strftime('%b %d, %Y')
+    new_time_str = booking.time.strftime('%I:%M %p')
+    msg = (f'Your {booking.service} appointment has been moved from {old_date_str} at {old_time_str} '
+           f'to {new_date_str} at {new_time_str}.')
+    send_notification(booking.user_id, 'Appointment Rescheduled', msg, type='booking', status=booking.status)
+    if not booking.walkin_customer_id:
+        customer = User.query.get(booking.user_id)
+        if customer and customer.email:
+            html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+              <p>Hi {customer.fullname},</p>
+              <p>Your <strong>{booking.service}</strong> appointment has been moved:</p>
+              <p>From <strong>{old_date_str} at {old_time_str}</strong><br>
+                 To &nbsp;&nbsp;<strong>{new_date_str} at {new_time_str}</strong></p>
+              <p>— MotoTyre North Caloocan</p>
+            </div>"""
+            _send_gmail(customer.email, 'Your appointment has been rescheduled — MotoTyre', html)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'date': new_date_str, 'time': new_time_str})
+    flash('Booking rescheduled.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@admin_app.route('/api/day-schedule')
+@login_required
+@require_admin_or_staff
+def api_day_schedule():
+    """Every non-cancelled booking on one date, in order, with its computed
+    time window — the 'what does this do to the day' canvas admin sees before
+    and after any change (reschedule, reassignment, status update)."""
+    date_str = request.args.get('date', '').strip()
+    try:
+        the_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    bookings = Booking.query.filter(
+        Booking.date == the_date, Booking.status != 'cancelled'
+    ).order_by(Booking.time).all()
+
+    rows = []
+    for b in bookings:
+        start_min = b.time.hour * 60 + b.time.minute
+        end_min   = compute_finish_minutes(start_min, b.duration_minutes or DEFAULT_DURATION_MIN)
+        customer_name = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else '—')
+        rows.append({
+            'id': b.id,
+            'time': minutes_to_hhmm(start_min), 'time_label': minutes_to_ampm(start_min),
+            'end_time': minutes_to_hhmm(end_min), 'end_label': minutes_to_ampm(end_min),
+            'service': b.service,
+            'customer': customer_name,
+            'status': b.status,
+            'assigned_mechanic': b.assigned_mechanic_name,
+            'preferred_mechanic': b.preferred_mechanic_name,
+            'is_multiday': bool(b.is_multiday),
+            'is_walkin': bool(b.walkin_customer_id),
+        })
+    return jsonify({'date': date_str, 'bookings': rows})
+
+
 @admin_app.route('/order/<int:oid>/status', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -650,6 +929,30 @@ def update_order_status(oid):
             return jsonify({'success': False, 'error': msg}), 400
         flash(msg, 'danger')
         return redirect(url_for('admin_dashboard'))
+
+    if new_status == 'completed' and not _is_pickup:
+        msg = 'Ship-to-address orders are completed when the customer confirms receipt on their dashboard — only they know it actually arrived.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg}), 400
+        flash(msg, 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    # Ship-to-address orders: staff can move it up to "shipped" (on the way); only the
+    # customer's own receipt confirmation can complete it from there — see the check above.
+    if not _is_pickup:
+        ship_allowed_next = {
+            'pending':          {'confirmed', 'cancelled'},
+            'awaiting_payment': {'confirmed', 'cancelled'},
+            'confirmed':        {'processing', 'shipped', 'cancelled'},
+            'processing':       {'shipped', 'cancelled'},
+            'shipped':          {'cancelled'},
+        }
+        if order.status in ship_allowed_next and new_status != order.status and new_status not in ship_allowed_next[order.status]:
+            msg = 'Invalid status change for this order.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': msg}), 400
+            flash(msg, 'danger')
+            return redirect(url_for('admin_dashboard'))
 
     # Pick-up orders follow a fixed sequence.
     #   GCash (prepaid):  confirmed -> shipped (ready for pickup) -> completed
@@ -680,24 +983,18 @@ def update_order_status(oid):
             product = Product.query.get(item.product_id)
             if product:
                 product.stock += item.quantity
+    prev_status  = order.status
     order.status = new_status
     db.session.commit()
-    is_pickup = order.delivery_method != 'ship'
-    shipped_msg = (
-        ('Order Ready for Pickup! 📦', f'Your order ORD-{order.id:03d} is ready for pickup at MotoTyre North Caloocan.')
-        if is_pickup else
-        ('Order Out for Delivery!', f'Your order ORD-{order.id:03d} is on its way!')
-    )
-    messages = {
-        'confirmed':  ('Order Confirmed!',        f'Your order ORD-{order.id:03d} is confirmed and being prepared.'),
-        'processing': ('Order Processing',        f'Your order ORD-{order.id:03d} is being processed.'),
-        'shipped':    shipped_msg,
-        'delivered':  ('Order Delivered!',        f'Your order ORD-{order.id:03d} has been delivered.'),
-        'completed':  ('Order Completed!',        f'Your order ORD-{order.id:03d} has been completed. Thank you!'),
-        'cancelled':  ('Order Cancelled',         f'Your order ORD-{order.id:03d} has been cancelled.'),
-    }
-    if new_status in messages:
-        title, msg = messages[new_status]
+    # Every tracking step gets a customer notification stamped with the exact time
+    # of the update — ship-to-address orders get delivery-specific wording. Re-saving
+    # the same status is a no-op so the customer isn't notified twice for one step.
+    notice = order_status_message(new_status, order.id,
+                                  delivery_method=order.delivery_method,
+                                  ship_address=order.ship_address,
+                                  when=ph_now()) if new_status != prev_status else None
+    if notice:
+        title, msg = notice
         send_notification(order.user_id, title, msg, type='order', status=new_status)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'new_status': new_status, 'message': 'Order status updated!'})
@@ -707,6 +1004,17 @@ def update_order_status(oid):
 
 # Service routes
 
+def _parse_duration_fields(form):
+    """(duration_minutes, is_multiday, duration_label) from the Add/Edit Service form."""
+    is_multiday = form.get('is_multiday') == 'on'
+    if is_multiday:
+        label = clean_str(form.get('duration_label', ''), max_len=30) or '3–5 days'
+        return MULTIDAY_INTAKE_MIN, True, label
+    minutes = clean_int(form.get('duration_minutes', DEFAULT_DURATION_MIN),
+                        default=DEFAULT_DURATION_MIN, min_val=1, max_val=1440)
+    return minutes, False, None
+
+
 @admin_app.route('/service/add', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -714,13 +1022,16 @@ def add_service():
     name  = clean_str(request.form.get('name', ''), max_len=100)
     desc  = clean_str(request.form.get('description', ''), max_len=500)
     price = clean_float(request.form.get('price', 0), default=0.0, min_val=0.0)
+    duration_minutes, is_multiday, duration_label = _parse_duration_fields(request.form)
     if not name:
         flash('Service name is required.', 'danger')
         return redirect(url_for('admin_dashboard'))
     if Service.query.filter_by(name=name).first():
         flash(f'Service "{name}" already exists.', 'warning')
         return redirect(url_for('admin_dashboard'))
-    db.session.add(Service(name=name, description=desc, price=price))
+    db.session.add(Service(name=name, description=desc, price=price,
+                           duration_minutes=duration_minutes, is_multiday=is_multiday,
+                           duration_label=duration_label))
     db.session.commit()
     flash(f'Service "{name}" added.', 'success')
     return redirect(url_for('admin_dashboard'))
@@ -746,6 +1057,7 @@ def edit_service(sid):
     name  = clean_str(request.form.get('name', ''), max_len=100)
     desc  = clean_str(request.form.get('description', ''), max_len=500)
     price = clean_float(request.form.get('price', 0), default=0.0, min_val=0.0)
+    duration_minutes, is_multiday, duration_label = _parse_duration_fields(request.form)
     if not name:
         flash('Service name is required.', 'danger')
         return redirect(url_for('admin_dashboard'))
@@ -756,6 +1068,9 @@ def edit_service(sid):
     svc.name = name
     svc.description = desc
     svc.price = price
+    svc.duration_minutes = duration_minutes
+    svc.is_multiday = is_multiday
+    svc.duration_label = duration_label
     db.session.commit()
     flash(f'Service updated to "{name}".', 'success')
     return redirect(url_for('admin_dashboard'))
@@ -903,6 +1218,71 @@ def delete_user(uid):
     db.session.delete(user)
     db.session.commit()
     flash(f'User "{name}" deleted successfully.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+ALLOWED_USER_ACTIONS = {'deactivate', 'reactivate', 'ban', 'flag'}
+
+
+@admin_app.route('/user/<int:uid>/manage', methods=['POST'])
+@login_required
+def manage_user(uid):
+    if current_user.role != 'admin':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    user = User.query.get_or_404(uid)
+    if user.id == current_user.id:
+        flash('You cannot manage your own account.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    if user.role == 'admin':
+        flash('Admin accounts cannot be managed here.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    action = clean_str(request.form.get('action', ''), max_len=20)
+    if action not in ALLOWED_USER_ACTIONS:
+        flash('Invalid action.', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    if action == 'deactivate':
+        user.account_status = 'deactivated'
+        flash(f'{user.fullname} has been deactivated and can no longer log in.', 'success')
+
+    elif action == 'reactivate':
+        user.account_status = 'active'
+        db.session.commit()
+        send_notification(
+            user.id, 'Account Restored ✅',
+            'Your account access has been restored. You can log in, book appointments, '
+            'and place orders again.',
+            type='account', status='active')
+        flash(f"{user.fullname}'s account has been reactivated.", 'success')
+        return redirect(url_for('admin_dashboard'))
+
+    elif action == 'ban':
+        user.account_status = 'banned'
+        db.session.commit()
+        send_notification(
+            user.id, '🚫 Account Banned',
+            'Your account has been banned due to a violation of MotoTyre\'s policies. '
+            'You are no longer allowed to book appointments or place orders. '
+            'If you believe this is a mistake, please contact our support team.',
+            type='account', status='banned')
+        flash(f'{user.fullname} has been banned.', 'success')
+        return redirect(url_for('admin_dashboard'))
+
+    elif action == 'flag':
+        user.is_flagged = True
+        db.session.commit()
+        send_notification(
+            user.id, '⚠️ Account Warning',
+            'Your account has been flagged for performing actions that violate MotoTyre\'s '
+            'terms of service. Please review our policies — repeated violations may lead to '
+            'your account being suspended or banned.',
+            type='account', status='flagged')
+        flash(f'{user.fullname} has been red-flagged.', 'success')
+        return redirect(url_for('admin_dashboard'))
+
+    db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
 
@@ -1283,9 +1663,8 @@ def payment_submit(joid):
 @require_admin_or_staff
 def booking_payment_process(bid):
     booking = Booking.query.get_or_404(bid)
-    # Get service price
-    svc = Service.query.filter_by(name=booking.service, is_active=True).first()
-    service_price = svc.price if svc else 0
+    # Sums every service in a combo booking — a plain name match would miss those.
+    service_price = booking_service_price(booking.service)
     return render_template('booking_payment_process.html', booking=booking, service_price=service_price)
 
 
@@ -1603,7 +1982,7 @@ def walkin_customer_history(cid):
             'description': b.service,
             'amount': b.total_amount or 0,
             'status': b.status,
-            'mechanic': b.mechanic_name or '—'
+            'mechanic': b.assigned_mechanic_name or '—'
         })
     for o in orders:
         items_desc = ', '.join(f"{oi.product.name} x{oi.quantity}" for oi in o.items if oi.product)
@@ -1739,14 +2118,32 @@ def walkin_checkout():
         db.session.add(walkin_customer)
         db.session.flush()
 
-    # Mechanic info
+    # Mechanic info — a walk-in is immediate, not a future slot reservation, so
+    # the fixed hourly grid and the shop-queue check don't apply, but the
+    # mechanic still has to actually be on today's on-duty roster, and not
+    # already mid-job on a scheduled appointment that overlaps right now —
+    # same shared routine, narrowed to what a walk-in can actually be checked
+    # against. Duration is looked up from the service catalog when it matches
+    # a known service name; unmatched or custom line items fall back to a
+    # conservative default rather than skipping the check outright.
     mechanic_name = None
     mechanic_spec = None
     if mechanic_id:
         mechanic = Mechanic.query.get(int(mechanic_id))
-        if mechanic:
-            mechanic_name = mechanic.name
-            mechanic_spec = mechanic.specialization
+        if not mechanic:
+            return jsonify({'success': False, 'error': 'Mechanic not found.'}), 400
+        svc_names = [s.get('name', '') for s in services if s.get('name')]
+        catalog = {s.name: s.duration_minutes for s in Service.query.filter(Service.name.in_(svc_names)).all()}
+        walkin_duration = sum(catalog.get(n, DEFAULT_DURATION_MIN) for n in svc_names) or DEFAULT_DURATION_MIN
+        now_min = ph_now().hour * 60 + ph_now().minute
+        ok, error = _check_admin_booking_request(
+            date.today(), now_min, walkin_duration, mechanic_name=mechanic.name,
+            require_slot_grid=False, check_shop_queue=False,
+        )
+        if not ok:
+            return jsonify({'success': False, 'error': error}), 400
+        mechanic_name = mechanic.name
+        mechanic_spec = mechanic.specialization
 
     order_id    = None
     booking_ids = []
@@ -1801,8 +2198,10 @@ def walkin_checkout():
             status=booking_status,
             payment_method=payment_method if action == 'complete' else 'cash',
             total_amount=svc_price * svc_qty,
-            mechanic_name=mechanic_name,
-            mechanic_specialization=mechanic_spec,
+            assigned_mechanic_name=mechanic_name,
+            assigned_mechanic_specialization=mechanic_spec,
+            preferred_mechanic_name=mechanic_name,
+            preferred_mechanic_specialization=mechanic_spec,
             walkin_customer_id=walkin_customer.id,
             booking_batch=batch_id
         )
@@ -1847,10 +2246,9 @@ def pos_customer_items(cid: int):
     ).order_by(Booking.created_at.desc()).all()
     bookings_data = []
     for b in pending_bookings:
-        svc = Service.query.filter_by(name=b.service, is_active=True).first()
         bookings_data.append({
             'booking_id': b.id, 'service': b.service,
-            'price': svc.price if svc else 0,
+            'price': booking_service_price(b.service),
             'date': b.date.strftime('%Y-%m-%d'), 'time': b.time.strftime('%H:%M'),
             'status': b.status, 'created_at': b.created_at.isoformat()
         })
@@ -1889,10 +2287,10 @@ def walkin_receipt():
     grand_total = svc_total + parts_total
 
     mechanic_name = ''
-    if bookings and bookings[0].mechanic_name:
-        mechanic_name = bookings[0].mechanic_name
-        if bookings[0].mechanic_specialization:
-            mechanic_name += f' · {bookings[0].mechanic_specialization}'
+    if bookings and bookings[0].assigned_mechanic_name:
+        mechanic_name = bookings[0].assigned_mechanic_name
+        if bookings[0].assigned_mechanic_specialization:
+            mechanic_name += f' · {bookings[0].assigned_mechanic_specialization}'
 
     # --- Build PDF ---
     W = 3.5 * inch

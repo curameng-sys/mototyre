@@ -207,6 +207,8 @@
     .badge-admin           { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
     .badge-staff           { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
     .badge-customer        { background: #f9fafb; color: #374151; border: 1px solid #e5e7eb; }
+    .badge-deactivated     { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
+    .badge-banned          { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
     /* ═══════════════════════════════════════
        STATUS FILTER TABS
@@ -449,6 +451,7 @@
     <a href="#" class="active" onclick="showSection('dashboard', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></span> Dashboard</a>
     <div class="sidebar-label">Management</div>
     <a href="#" onclick="showSection('bookings', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Bookings</a>
+    <a href="#" onclick="showSection('day-schedule', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Day Schedule</a>
     <a href="#" onclick="showSection('orders', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> Orders</a>
     <a href="#" onclick="showSection('products', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span> Products</a>
     <a href="#" onclick="showSection('users', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Users</a>
@@ -672,8 +675,9 @@
                     data-time="{{ b.time.strftime('%I:%M %p') }}"
                     data-status="{{ display_status }}"
                     data-payment="{{ b.payment_method or 'cash' }}"
-                    data-mechanic="{{ (b.mechanic_name or '')|e }}"
-                    data-mechanic-spec="{{ (b.mechanic_specialization or '')|e }}"
+                    data-mechanic="{{ (b.assigned_mechanic_name or '')|e }}"
+                    data-mechanic-spec="{{ (b.assigned_mechanic_specialization or '')|e }}"
+                    data-preferred-mechanic="{{ (b.preferred_mechanic_name or '')|e }}"
                     data-notes="{{ (b.notes or '')|e }}"
                     data-odometer="{{ b.odometer if b.odometer else '' }}"
                     data-total-amount="{{ group_bookings | sum(attribute='total_amount') }}"
@@ -699,7 +703,11 @@
                   <td>
                     {% if all_same_slot %}
                       <div>{{ b.date.strftime('%b %d, %Y') }}</div>
-                      <div style="font-size:0.72rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }}</div>
+                      {% if b.is_multiday %}
+                      <div style="font-size:0.72rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }} drop-off — Est. 3–5 working days</div>
+                      {% else %}
+                      <div style="font-size:0.72rem;color:var(--muted);">{{ b.time.strftime('%I:%M %p') }} – {{ booking_finish_time(b).strftime('%I:%M %p') }}</div>
+                      {% endif %}
                     {% else %}
                       <div style="font-size:0.78rem;color:var(--muted);font-style:italic;">Multiple dates/times</div>
                       <div style="font-size:0.72rem;color:var(--muted);">click to view</div>
@@ -777,6 +785,64 @@
         {% endif %}
       </div>
     </section>
+
+    <!-- DAY SCHEDULE -->
+    <section id="sec-day-schedule" class="page-section">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Day <span class="accent">Schedule</span></div>
+          <div class="page-sub">What the day actually looks like — check this before rescheduling or reassigning anything.</div>
+        </div>
+      </div>
+
+      <div class="filter-bar" style="align-items:center;flex-wrap:wrap;">
+        <button type="button" onclick="shiftDaySchedule(-1)" class="btn-cancel" style="padding:0.45rem 0.8rem;">‹ Prev</button>
+        <input type="date" id="day-schedule-date" onchange="loadDaySchedule()" style="padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+        <button type="button" onclick="shiftDaySchedule(1)" class="btn-cancel" style="padding:0.45rem 0.8rem;">Next ›</button>
+        <button type="button" onclick="jumpToToday()" class="btn-primary-custom" style="padding:0.5rem 1rem;">Today</button>
+      </div>
+
+      <div class="card">
+        <div id="day-schedule-body">
+          <div class="empty-state"><p>Loading…</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESCHEDULE MODAL -->
+    <div class="modal-overlay" id="modal-reschedule">
+      <div class="modal-box">
+        <h5>Reschedule Appointment</h5>
+        <div id="reschedule-summary" style="font-size:0.82rem;color:var(--muted);margin-bottom:0.85rem;line-height:1.5;"></div>
+        <form id="reschedule-form" onsubmit="return submitReschedule(event)">
+          <div class="form-group">
+            <label>New Date</label>
+            <input type="date" id="reschedule-date" required>
+          </div>
+          <div class="form-group">
+            <label>New Time</label>
+            <select id="reschedule-time" required>
+              <option value="">Select a time…</option>
+              <option value="08:00">8:00 AM</option>
+              <option value="09:00">9:00 AM</option>
+              <option value="10:00">10:00 AM</option>
+              <option value="11:00">11:00 AM</option>
+              <option value="13:00">1:00 PM</option>
+              <option value="14:00">2:00 PM</option>
+              <option value="15:00">3:00 PM</option>
+              <option value="16:00">4:00 PM</option>
+              <option value="17:00">5:00 PM</option>
+              <option value="18:00">6:00 PM</option>
+            </select>
+          </div>
+          <div id="reschedule-error" style="display:none;color:#b91c1c;font-size:0.8rem;margin-bottom:0.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.6rem 0.8rem;"></div>
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeModal('modal-reschedule')">Cancel</button>
+            <button type="submit" class="btn-primary-custom" id="reschedule-submit-btn">Confirm Reschedule</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- ORDERS -->
     <section id="sec-orders" class="page-section">
@@ -865,11 +931,12 @@
                 <form method="POST" action="{{ url_for('update_order_status', oid=o.id) }}" class="status-form">
                   <select name="status">
                     {% if o.delivery_method == 'ship' %}
+                      {# Ship-to-address: staff can move it up to "Shipped" (on the way) — only the
+                         customer's own receipt confirmation on their dashboard completes it from there. #}
                       <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
                       <option value="confirmed"  {% if o.status=='confirmed' %}selected{% endif %}>Confirmed</option>
                       <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
                       <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
-                      <option value="delivered"  {% if o.status=='delivered' %}selected{% endif %}>Delivered</option>
                       <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     {% elif (o.payment_method or '')|lower == 'gcash' %}
                       {# GCash pick-up: prepaid, so completed can be set here #}
@@ -1006,12 +1073,30 @@
                 <td>{{ u.email }}</td>
                 <td>{{ u.phone }}</td>
                 <td>{{ u.motorcycle_model or '—' }}</td>
-                <td><span class="badge badge-{{ u.role }}">{{ u.role|title }}</span></td>
+                <td>
+                  <span class="badge badge-{{ u.role }}">{{ u.role|title }}</span>
+                  {% if u.account_status == 'banned' %}
+                  <span class="badge badge-banned" style="margin-left:0.3rem;">Banned</span>
+                  {% elif u.account_status == 'deactivated' %}
+                  <span class="badge badge-deactivated" style="margin-left:0.3rem;">Deactivated</span>
+                  {% endif %}
+                  {% if u.is_flagged %}
+                  <span title="Red-flagged for inappropriate actions" style="margin-left:0.3rem;">🚩</span>
+                  {% endif %}
+                </td>
                 <td>
                   {% if u.role != 'admin' and u.id != current_user.id %}
-                  <form method="POST" action="{{ url_for('delete_user', uid=u.id) }}" onsubmit="return confirm('Delete {{ u.fullname|e }}?')">
-                    <button type="submit" class="btn-action-delete">Delete</button>
-                  </form>
+                  <div style="display:flex;gap:0.4rem;align-items:center;">
+                    <button type="button" class="btn-action-edit"
+                            data-uid="{{ u.id }}"
+                            data-status="{{ u.account_status or 'active' }}"
+                            data-flagged="{{ 'true' if u.is_flagged else 'false' }}"
+                            data-fullname="{{ u.fullname }}"
+                            onclick="toggleUserMenu(event, this)">Manage ▾</button>
+                    <form method="POST" action="{{ url_for('delete_user', uid=u.id) }}" onsubmit="return confirm('Delete {{ u.fullname|e }}?')">
+                      <button type="submit" class="btn-action-delete">Delete</button>
+                    </form>
+                  </div>
                   {% else %}
                   <span style="color:var(--muted);font-size:0.75rem;">—</span>
                   {% endif %}
@@ -1026,6 +1111,9 @@
         {% endif %}
       </div>
     </section>
+
+    <!-- Fixed dropdown menu for the Users "Manage" action, repositioned/repopulated by JS -->
+    <div id="user-manage-menu" style="display:none;position:fixed;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.15);z-index:1200;min-width:190px;overflow:hidden;"></div>
 
     <!-- MECHANICS -->
 <section id="sec-mechanics" class="page-section">
@@ -1083,12 +1171,13 @@
     {% if all_services %}
     <div style="overflow-x:auto;">
       <table class="table">
-        <thead><tr><th>#</th><th>Service Name</th><th>Status</th><th>Edit</th><th>Toggle</th><th>Delete</th></tr></thead>
+        <thead><tr><th>#</th><th>Service Name</th><th>Est. Duration</th><th>Status</th><th>Edit</th><th>Toggle</th><th>Delete</th></tr></thead>
         <tbody>
           {% for s in all_services %}
           <tr>
             <td>{{ loop.index }}</td>
             <td style="font-weight:600;color:var(--text);">{{ s.name }}</td>
+            <td>{{ s.duration_label if s.is_multiday else ((s.duration_minutes or 60) ~ ' min') }}</td>
             <td>
               {% if s.is_active %}
                 <span class="badge badge-completed">Active</span>
@@ -1097,7 +1186,7 @@
               {% endif %}
             </td>
             <td>
-              <button onclick="openEditService({{ s.id }}, '{{ s.name|e }}', '{{ (s.description or '')|e }}', {{ s.price or 0 }})" class="btn-action-edit">Edit</button>
+              <button onclick="openEditService({{ s.id }}, '{{ s.name|e }}', '{{ (s.description or '')|e }}', {{ s.price or 0 }}, {{ s.duration_minutes or 60 }}, {{ 1 if s.is_multiday else 0 }}, '{{ (s.duration_label or '')|e }}')" class="btn-action-edit">Edit</button>
             </td>
             <td>
               <form method="POST" action="{{ url_for('toggle_service', sid=s.id) }}">
@@ -1549,6 +1638,13 @@
       <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;text-align:center;">
         <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Mechanic</div>
         <div style="font-size:0.82rem;color:var(--text);font-weight:600;" id="bd-mechanic"></div>
+        <div style="display:flex;gap:0.35rem;margin-top:0.4rem;">
+          <select id="bd-mechanic-reassign" style="flex:1;font-size:0.72rem;padding:0.25rem;">
+            <option value="">Shop decides</option>
+          </select>
+          <button type="button" onclick="saveMechanicReassign()" style="font-size:0.72rem;padding:0.25rem 0.5rem;background:#1f2937;color:#fff;border:none;border-radius:5px;cursor:pointer;">Save</button>
+        </div>
+        <div id="bd-preferred-mechanic" style="display:none;margin-top:0.35rem;font-size:0.68rem;color:var(--muted);"></div>
       </div>
     </div>
 
@@ -1599,6 +1695,20 @@
         <label>Price (₱)</label>
         <input type="number" name="price" placeholder="0.00" min="0" step="0.01" value="0">
       </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:400;">
+          <input type="checkbox" name="is_multiday" id="add-service-multiday" onchange="toggleServiceDurationFields('add')" style="width:auto;">
+          Multi-day job (e.g. Full/Top Overhaul)
+        </label>
+      </div>
+      <div class="form-group" id="add-service-duration-wrap">
+        <label>Estimated Duration (minutes)</label>
+        <input type="number" name="duration_minutes" id="add-service-duration" min="1" max="1440" value="60" placeholder="e.g. 15">
+      </div>
+      <div class="form-group" id="add-service-label-wrap" style="display:none;">
+        <label>Estimated Duration (text) <span style="color:var(--muted);font-weight:400;">e.g. "3-5 days"</span></label>
+        <input type="text" name="duration_label" id="add-service-duration-label" placeholder="3-5 days">
+      </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-add-service')">Cancel</button>
         <button type="submit" class="btn-primary-custom">Add Service</button>
@@ -1623,6 +1733,20 @@
       <div class="form-group">
         <label>Price (₱)</label>
         <input type="number" name="price" id="edit-service-price" min="0" step="0.01" value="0">
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:400;">
+          <input type="checkbox" name="is_multiday" id="edit-service-multiday" onchange="toggleServiceDurationFields('edit')" style="width:auto;">
+          Multi-day job (e.g. Full/Top Overhaul)
+        </label>
+      </div>
+      <div class="form-group" id="edit-service-duration-wrap">
+        <label>Estimated Duration (minutes)</label>
+        <input type="number" name="duration_minutes" id="edit-service-duration" min="1" max="1440" value="60">
+      </div>
+      <div class="form-group" id="edit-service-label-wrap" style="display:none;">
+        <label>Estimated Duration (text) <span style="color:var(--muted);font-weight:400;">e.g. "3-5 days"</span></label>
+        <input type="text" name="duration_label" id="edit-service-duration-label" placeholder="3-5 days">
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-service')">Cancel</button>
@@ -1922,6 +2046,159 @@
     sessionStorage.setItem('adminSection', name);
     if (name === 'parts') loadPartsProducts();
     if (name === 'transactions') loadTxns();
+    if (name === 'day-schedule') loadDaySchedule();
+  }
+
+  let _currentBookingGroupIds = [];
+
+  async function populateMechanicReassign(currentName) {
+    const sel = document.getElementById('bd-mechanic-reassign');
+    sel.innerHTML = '<option value="">Shop decides</option>';
+    try {
+      const res = await fetch('/api/mechanics');
+      const mechanics = await res.json();
+      mechanics.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name + ' — ' + m.specialization;
+        if (m.name === currentName) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    } catch (e) { /* leave just "Shop decides" if this fails */ }
+  }
+
+  async function saveMechanicReassign() {
+    const mechanicId = document.getElementById('bd-mechanic-reassign').value;
+    if (!_currentBookingGroupIds.length) return;
+    try {
+      for (const bid of _currentBookingGroupIds) {
+        await fetch(`/booking/${bid}/assign-mechanic`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+          body: `mechanic_id=${encodeURIComponent(mechanicId)}`,
+        });
+      }
+      window.location.reload();
+    } catch (e) {
+      alert('Could not update the mechanic. Please try again.');
+    }
+  }
+
+  // ── DAY SCHEDULE ──
+  const STATUS_COLORS = {
+    pending:     { bg:'#fefce8', color:'#854d0e', border:'#fde047' },
+    confirmed:   { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe' },
+    in_progress: { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },
+    inprogress:  { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },
+    awaiting_payment: { bg:'#faf5ff', color:'#6d28d9', border:'#ddd6fe' },
+    completed:   { bg:'#f0fdf4', color:'#15803d', border:'#bbf7d0' },
+    cancelled:   { bg:'#fef2f2', color:'#b91c1c', border:'#fecaca' },
+  };
+
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function jumpToToday() {
+    document.getElementById('day-schedule-date').value = todayISO();
+    loadDaySchedule();
+  }
+
+  function shiftDaySchedule(days) {
+    const input = document.getElementById('day-schedule-date');
+    const current = input.value ? new Date(input.value + 'T00:00:00') : new Date();
+    current.setDate(current.getDate() + days);
+    input.value = `${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,'0')}-${String(current.getDate()).padStart(2,'0')}`;
+    loadDaySchedule();
+  }
+
+  async function loadDaySchedule() {
+    const dateInput = document.getElementById('day-schedule-date');
+    if (!dateInput.value) dateInput.value = todayISO();
+    const body = document.getElementById('day-schedule-body');
+    body.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
+
+    let data;
+    try {
+      const res = await fetch(`/api/day-schedule?date=${dateInput.value}`);
+      data = await res.json();
+    } catch (e) {
+      body.innerHTML = '<div class="empty-state"><p>Could not load the schedule.</p></div>';
+      return;
+    }
+
+    if (!data.bookings || !data.bookings.length) {
+      body.innerHTML = '<div class="empty-state"><div class="ei">📅</div><p>Nothing booked this day.</p></div>';
+      return;
+    }
+
+    body.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table class="table">
+          <thead><tr><th>Time</th><th>Customer</th><th>Service</th><th>Mechanic</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            ${data.bookings.map(b => {
+              const sc = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
+              const when = b.is_multiday ? `${b.time_label} drop-off` : `${b.time_label} – ${b.end_label}`;
+              const mech = b.assigned_mechanic
+                ? b.assigned_mechanic + (b.preferred_mechanic && b.preferred_mechanic !== b.assigned_mechanic ? ' <span style="color:#b45309;">(not their pick)</span>' : '')
+                : '<span style="color:var(--muted);">Shop decides</span>';
+              const canReschedule = !['completed', 'cancelled'].includes(b.status);
+              return `
+                <tr>
+                  <td style="white-space:nowrap;font-weight:600;">${when}</td>
+                  <td>${b.customer}${b.is_walkin ? ' <span style="font-size:0.62rem;font-weight:600;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;padding:0.1rem 0.4rem;border-radius:4px;">Walk-In</span>' : ''}</td>
+                  <td>${b.service}</td>
+                  <td>${mech}</td>
+                  <td><span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${b.status.replace(/_/g,' ')}</span></td>
+                  <td>${canReschedule ? `<button type="button" class="btn-action-edit" onclick='openRescheduleModal(${b.id}, ${JSON.stringify(b.service)}, ${JSON.stringify(b.customer)}, ${JSON.stringify(when)})'>Reschedule</button>` : '—'}</td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  let _rescheduleBookingId = null;
+
+  function openRescheduleModal(bid, service, customer, when) {
+    _rescheduleBookingId = bid;
+    document.getElementById('reschedule-summary').innerHTML =
+      `<strong>${customer}</strong> — ${service}<br>Currently: ${when}`;
+    document.getElementById('reschedule-date').value = document.getElementById('day-schedule-date').value;
+    document.getElementById('reschedule-time').value = '';
+    document.getElementById('reschedule-error').style.display = 'none';
+    openModal('modal-reschedule');
+  }
+
+  async function submitReschedule(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('reschedule-error');
+    const btn = document.getElementById('reschedule-submit-btn');
+    errEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Rescheduling…';
+    try {
+      const res = await fetch(`/booking/${_rescheduleBookingId}/reschedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: `date=${encodeURIComponent(document.getElementById('reschedule-date').value)}`
+            + `&time=${encodeURIComponent(document.getElementById('reschedule-time').value)}`,
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeModal('modal-reschedule');
+        loadDaySchedule();
+      } else {
+        errEl.textContent = data.error || 'Could not reschedule this booking.';
+        errEl.style.display = 'block';
+      }
+    } catch (e2) {
+      errEl.textContent = 'Network error — please try again.';
+      errEl.style.display = 'block';
+    }
+    btn.disabled = false; btn.textContent = 'Confirm Reschedule';
+    return false;
   }
 
   function openGroupedBookingDetails(row) {
@@ -2019,6 +2296,21 @@
     document.getElementById('bd-moto').textContent = moto || '—';
     const mech = d.mechanic ? (d.mechanic + (d.mechanicSpec ? ' · ' + d.mechanicSpec : '')) : '—';
     document.getElementById('bd-mechanic').textContent = mech;
+    _currentBookingGroupIds = ids;
+    populateMechanicReassign(d.mechanic || '');
+
+    // What the customer originally asked for — this never changes, even if the
+    // shop has since reassigned the job to someone else.
+    const preferredWrap = document.getElementById('bd-preferred-mechanic');
+    if (d.preferredMechanic && d.preferredMechanic !== d.mechanic) {
+      preferredWrap.textContent = `Customer originally requested: ${d.preferredMechanic}`;
+      preferredWrap.style.display = 'block';
+    } else if (d.preferredMechanic) {
+      preferredWrap.textContent = `Customer requested this mechanic.`;
+      preferredWrap.style.display = 'block';
+    } else {
+      preferredWrap.style.display = 'none';
+    }
 
     // Odometer
     const odoWrap = document.getElementById('bd-odo-wrap');
@@ -2054,12 +2346,22 @@
     openModal('modal-booking-details');
   }
 
-  function openEditService(id, name, description, price) {
-    document.getElementById('edit-service-name').value        = name;
-    document.getElementById('edit-service-description').value = description || '';
-    document.getElementById('edit-service-price').value       = price || 0;
-    document.getElementById('edit-service-form').action       = '/service/' + id + '/edit';
+  function openEditService(id, name, description, price, durationMinutes, isMultiday, durationLabel) {
+    document.getElementById('edit-service-name').value          = name;
+    document.getElementById('edit-service-description').value   = description || '';
+    document.getElementById('edit-service-price').value         = price || 0;
+    document.getElementById('edit-service-duration').value      = durationMinutes || 60;
+    document.getElementById('edit-service-multiday').checked    = !!isMultiday;
+    document.getElementById('edit-service-duration-label').value = durationLabel || '';
+    document.getElementById('edit-service-form').action         = '/service/' + id + '/edit';
+    toggleServiceDurationFields('edit');
     openModal('modal-edit-service');
+  }
+
+  function toggleServiceDurationFields(prefix) {
+    const isMultiday = document.getElementById(prefix + '-service-multiday').checked;
+    document.getElementById(prefix + '-service-duration-wrap').style.display = isMultiday ? 'none' : 'block';
+    document.getElementById(prefix + '-service-label-wrap').style.display    = isMultiday ? 'block' : 'none';
   }
 
   function validateAdminProfileForm(form) {
@@ -2124,6 +2426,100 @@
   function closeModal(id) {
     document.getElementById(id).classList.remove('open');
   }
+
+  // ── User "Manage" dropdown (Deactivate / Red Flag / Banned) ──
+  let _userMenuUid = null;
+
+  function toggleUserMenu(event, btn) {
+    event.stopPropagation();
+    const menu = document.getElementById('user-manage-menu');
+    const uid  = btn.dataset.uid;
+    if (_userMenuUid === uid && menu.style.display === 'block') {
+      closeUserMenu();
+      return;
+    }
+    _userMenuUid = uid;
+
+    const status   = btn.dataset.status;
+    const flagged  = btn.dataset.flagged === 'true';
+    const fullname = btn.dataset.fullname;
+
+    const rect = btn.getBoundingClientRect();
+    const menuWidth = 200;
+    let left = rect.left;
+    if (left + menuWidth > window.innerWidth - 8) left = Math.max(8, window.innerWidth - menuWidth - 8);
+    menu.style.left = left + 'px';
+    menu.style.top  = (rect.bottom + 6) + 'px';
+
+    const actions = [];
+    if (status === 'banned') {
+      actions.push({ label: 'Reactivate', action: 'reactivate', danger: false,
+        confirmMsg: `Reactivate ${fullname}'s account? They will be able to book and order again.` });
+    } else if (status === 'deactivated') {
+      actions.push({ label: 'Reactivate', action: 'reactivate', danger: false,
+        confirmMsg: `Reactivate ${fullname}'s account?` });
+      actions.push({ label: 'Banned', action: 'ban', danger: true,
+        confirmMsg: `Ban ${fullname}? They will no longer be able to book appointments or place orders.` });
+    } else {
+      actions.push({ label: 'Deactivate', action: 'deactivate', danger: false,
+        confirmMsg: `Deactivate ${fullname}'s account? They won't be able to log in until reactivated.` });
+      actions.push({ label: 'Banned', action: 'ban', danger: true,
+        confirmMsg: `Ban ${fullname}? They will no longer be able to book appointments or place orders.` });
+    }
+    actions.push({ label: flagged ? 'Red Flag User (again)' : 'Red Flag User', action: 'flag', danger: true,
+      confirmMsg: `Red flag ${fullname} for inappropriate actions? They will be notified with a warning.` });
+
+    menu.innerHTML = '';
+    actions.forEach((a, i) => {
+      if (i > 0) {
+        const sep = document.createElement('div');
+        sep.style.cssText = 'height:1px;background:#f0f0f0;';
+        menu.appendChild(sep);
+      }
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.textContent = a.label;
+      item.style.cssText = 'display:block;width:100%;text-align:left;background:none;border:none;'
+        + 'padding:0.65rem 0.95rem;font-size:0.8rem;font-weight:600;cursor:pointer;'
+        + (a.danger ? 'color:#b91c1c;' : 'color:#111827;');
+      item.onmouseover = () => { item.style.background = '#f9fafb'; };
+      item.onmouseout  = () => { item.style.background = 'none'; };
+      item.onclick = function(e) {
+        e.stopPropagation();
+        if (!confirm(a.confirmMsg)) return;
+        submitUserAction(uid, a.action);
+      };
+      menu.appendChild(item);
+    });
+
+    menu.style.display = 'block';
+  }
+
+  function submitUserAction(uid, action) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/user/' + uid + '/manage';
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = 'action';
+    input.value = action;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  function closeUserMenu() {
+    const menu = document.getElementById('user-manage-menu');
+    if (menu) menu.style.display = 'none';
+    _userMenuUid = null;
+  }
+
+  document.addEventListener('click', function(e) {
+    const menu = document.getElementById('user-manage-menu');
+    if (menu && menu.style.display === 'block' && !menu.contains(e.target) && !e.target.closest('.btn-action-edit[data-uid]')) {
+      closeUserMenu();
+    }
+  });
 
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', function(e) {

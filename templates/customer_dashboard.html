@@ -271,10 +271,46 @@
     .cal-day.past { background: var(--bg-subtle); border-color: var(--line-1); color: #9ca3af !important; font-weight: 600; }
     .cal-day.fully-booked { background: #fecaca; border-color: #f87171; color: #7f1d1d !important; font-weight: 700; }
     .cal-day.selected { background: var(--brand-red) !important; border-color: var(--brand-red) !important; color: #ffffff !important; font-weight: 800; }
-    .time-slot-btn { background: var(--bg-subtle); border: 1px solid var(--line-2); color: var(--fg-1); border-radius: 8px; padding: 0.5rem 0.25rem; font-size: 0.78rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .time-slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 0.55rem; min-height: 60px; margin-bottom: 0.25rem; }
+    .time-slot-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; background: var(--bg-subtle); border: 1.5px solid var(--line-2); color: var(--fg-1); border-radius: 10px; padding: 0.65rem 0.4rem; min-height: 58px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
     .time-slot-btn:hover:not(:disabled) { background: var(--brand-red-soft); border-color: var(--brand-red-border); color: var(--brand-red); }
-    .time-slot-btn.booked { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
-    .time-slot-btn.selected-slot { background: var(--brand-red); border-color: var(--brand-red); color: #fff; font-weight: 600; }
+    .time-slot-btn .slot-start { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.05rem; line-height: 1.1; }
+    .time-slot-btn .slot-sub { font-size: 0.68rem; color: var(--fg-3); line-height: 1.2; }
+    .time-slot-btn .slot-sub.slot-done { color: var(--green); font-weight: 700; }
+    .time-slot-btn.booked { opacity: 0.35; cursor: not-allowed; }
+    .time-slot-btn.booked .slot-start { text-decoration: line-through; }
+    .time-slot-btn.booked .slot-sub.slot-done { color: var(--fg-3); font-weight: 400; }
+    .time-slot-btn.selected-slot { background: rgba(208,0,25,0.1); border-color: var(--brand-red); color: var(--brand-red); }
+
+    .mech-toggle-card { display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; background: var(--bg-subtle); border: 1.5px solid var(--line-2); border-radius: 10px; padding: 0.6rem 0.8rem; cursor: pointer; transition: all 0.15s; text-align: left; font-family: 'DM Sans', sans-serif; }
+    .mech-toggle-card:hover { border-color: var(--brand-red-border); }
+    .mech-toggle-card .mech-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; color: var(--fg-1); }
+    .mech-toggle-card .mech-card-sub { font-size: 0.68rem; color: var(--fg-3); }
+    .mech-toggle-card.active { background: rgba(208,0,25,0.1); border-color: var(--brand-red); }
+    .mech-toggle-card.active .mech-card-title { color: var(--brand-red); }
+
+    .mech-picker-item { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.5rem 0.7rem; border: 1.5px solid var(--line-2); border-radius: 8px; cursor: pointer; background: var(--bg-page); transition: all 0.15s; }
+    .mech-picker-item:hover:not(.disabled) { border-color: var(--brand-red-border); }
+    .mech-picker-item .mp-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; color: var(--fg-1); }
+    .mech-picker-item .mp-note { font-size: 0.7rem; color: var(--fg-3); }
+    .mech-picker-item.selected { background: rgba(208,0,25,0.1); border-color: var(--brand-red); }
+    .mech-picker-item.selected .mp-name { color: var(--brand-red); }
+    .mech-picker-item.recommended .mp-note { color: var(--green); font-weight: 600; }
+    .mech-picker-item.disabled { opacity: 0.45; cursor: not-allowed; }
+    .mech-picker-item.disabled .mp-note { color: #b91c1c; }
+
+    .mech-recommend-panel { margin-bottom: 0.55rem; padding: 0.65rem 0.8rem; border-radius: 8px; border: 1px solid; }
+    .mech-recommend-panel .mrp-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+    .mech-recommend-panel .mrp-body { font-size: 0.8rem; color: var(--fg-1); line-height: 1.5; }
+    .mech-recommend-panel .mrp-btn { margin-top: 0.5rem; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.72rem; padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; border: none; }
+    .mech-recommend-panel.good  { background: rgba(21,128,61,0.08); border-color: rgba(21,128,61,0.25); }
+    .mech-recommend-panel.good  .mrp-title { color: var(--green); }
+    .mech-recommend-panel.good  .mrp-btn { background: var(--green); color: #fff; }
+    .mech-recommend-panel.warn  { background: rgba(217,119,6,0.1); border-color: rgba(217,119,6,0.3); }
+    .mech-recommend-panel.warn  .mrp-title { color: #b45309; }
+    .mech-recommend-panel.warn  .mrp-btn { background: #b45309; color: #fff; }
+    .mech-recommend-panel.neutral { background: var(--bg-subtle); border-color: var(--line-2); }
+    .mech-recommend-panel.neutral .mrp-title { color: var(--fg-2); }
 
     /* ── SETTINGS ── */
     .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
@@ -778,23 +814,27 @@
 
           <!-- Time slots -->
           <div class="appt-section-label" style="margin-top:0;">Available Time Slots</div>
-          <div id="time-slots-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;min-height:60px;margin-bottom:0.25rem;">
-            <div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>
+          <div id="time-slots-wrap" class="time-slots-grid">
+            <div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Choose your services first — time slots are built around how long the work actually takes.</div>
           </div>
           <input type="hidden" id="selected-time-value">
 
           <!-- Service type -->
-          <div class="appt-section-label">Service Type</div>
-          <div class="form-group" style="position:relative;">
-            <input type="text" id="service-search" placeholder="Search or select a service..." autocomplete="off"
+          <div class="appt-section-label">Service Type <span style="color:var(--fg-3);font-weight:400;font-size:0.72rem;text-transform:none;letter-spacing:0;">(select one or more)</span></div>
+          <div class="form-group">
+            <input type="text" id="service-search" placeholder="Search services..." autocomplete="off"
               style="margin-bottom:0.4rem;"
-              oninput="filterServices(this.value)"
-              onfocus="document.getElementById('service-dropdown').style.display='block'">
-            <div id="service-dropdown" style="display:none;position:absolute;z-index:200;left:0;right:0;
-              background:var(--bg-page);border:1px solid var(--line-2);border-radius:8px;
-              max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);">
+              oninput="filterServiceChecklist(this.value)">
+            <div id="service-checklist" style="max-height:220px;overflow-y:auto;border:1px solid var(--line-2);border-radius:8px;background:var(--bg-page);">
             </div>
-            <input type="hidden" id="service-value">
+            <div id="service-summary" style="display:none;margin-top:0.5rem;padding:0.55rem 0.75rem;background:rgba(29,78,216,0.08);border:1px solid rgba(29,78,216,0.2);border-radius:8px;font-size:0.78rem;color:var(--fg-2);">
+              <span id="service-summary-count"></span>
+              <div style="margin-top:0.15rem;font-family:'Syne',sans-serif;">
+                <span id="service-summary-label" style="font-weight:700;color:var(--fg-1);"></span>
+                <span id="service-summary-text" style="font-weight:700;color:var(--brand-red);"></span>
+              </div>
+            </div>
+            <div id="service-multiday-note" style="display:none;margin-top:0.4rem;font-size:0.72rem;color:#c2410c;"></div>
           </div>
 
           <!-- Vehicle information -->
@@ -810,12 +850,47 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Preferred Mechanic</label>
-            <select id="mechanic-select">
-              <option value="">-- No preference --</option>
-            </select>
-            <div id="mechanic-info" style="display:none;margin-top:0.5rem;padding:0.6rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;font-size:0.78rem;color:var(--fg-3);">
-              Specialization: <span id="mechanic-spec-display"></span>
+            <label>Mechanic</label>
+            <div style="font-size:0.75rem;color:var(--fg-3);margin-bottom:0.5rem;">Name who you want, or leave it to the shop — both are fine.</div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem;">
+              <button type="button" id="mech-card-shop" class="mech-toggle-card" onclick="setMechanicMode('shop')">
+                <span class="mech-card-title">Let the Shop Assign</span>
+                <span class="mech-card-sub">We'll pick someone available</span>
+              </button>
+              <button type="button" id="mech-card-choose" class="mech-toggle-card" onclick="setMechanicMode('choose')">
+                <span class="mech-card-title">I'll Choose</span>
+                <span class="mech-card-sub">Name who you want</span>
+              </button>
+            </div>
+
+            <!-- "Let the Shop Assign" panel — nothing to fill in, just a live preview -->
+            <div id="mech-panel-shop">
+              <div style="padding:0.65rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;font-size:0.82rem;color:var(--fg-1);">
+                <span id="mech-next-in-line-text">Pick a date and time to see who's next.</span>
+              </div>
+              <div style="font-size:0.7rem;color:var(--fg-3);margin-top:0.4rem;line-height:1.4;">
+                Nothing else to fill in. If the shop has to hand your bike to someone else, your appointment time stays the same and you'll get an email.
+              </div>
+            </div>
+
+            <!-- "I'll Choose" panel — recommendation + full on-duty picker -->
+            <div id="mech-panel-choose" style="display:none;">
+              <div id="mech-recommend-panel" class="mech-recommend-panel" style="display:none;"></div>
+              <div id="mech-picker-list" style="display:flex;flex-direction:column;gap:0.4rem;max-height:260px;overflow-y:auto;padding-right:0.2rem;"></div>
+
+              <!-- Shown once a specific mechanic is chosen -->
+              <div id="mech-profile-card" style="display:none;margin-top:0.6rem;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;">
+                <div style="display:flex;align-items:center;gap:0.6rem;">
+                  <div id="mp-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--brand-red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;flex-shrink:0;"></div>
+                  <div>
+                    <div id="mp-name" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.86rem;color:var(--fg-1);"></div>
+                    <div id="mp-spec" style="font-size:0.72rem;color:var(--fg-3);"></div>
+                  </div>
+                </div>
+                <div id="mp-services" style="margin-top:0.5rem;font-size:0.76rem;color:var(--fg-2);"></div>
+                <div id="mp-specialist-line" style="margin-top:0.4rem;font-size:0.76rem;"></div>
+              </div>
             </div>
           </div>
           <div class="form-group">
@@ -844,9 +919,12 @@
           <!-- Action buttons -->
           <div class="appt-btn-row">
             <button type="button" class="btn-submit" id="btn-add-queue" disabled onclick="addToBookingQueue()"
-              style="background:rgba(29,78,216,0.88);">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add to Queue
+              style="background:rgba(29,78,216,0.88);flex-direction:column;gap:0.15rem;padding-top:0.6rem;padding-bottom:0.6rem;">
+              <span style="display:flex;align-items:center;gap:0.4rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span id="btn-add-queue-title">Add to Queue</span>
+              </span>
+              <span id="btn-add-queue-sub" style="font-size:0.68rem;font-weight:600;opacity:0.85;display:none;"></span>
             </button>
           </div>
         </div>
@@ -1109,8 +1187,8 @@
 
     <!-- Mechanic Info -->
 <div id="bd-mechanic-wrap" style="display:none;padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
-  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Assigned Mechanic</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Mechanic</div>
+  <div id="bd-mechanic-named" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
     <div>
       <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">Name</div>
       <div id="bd-mechanic-name" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;"></div>
@@ -1120,6 +1198,7 @@
       <div id="bd-mechanic-spec" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;"></div>
     </div>
   </div>
+  <div id="bd-mechanic-shop" style="display:none;font-size:0.85rem;color:var(--fg-1);">No specific mechanic requested — the shop will assign whoever's available.</div>
 </div>
 
     <!-- Notes -->
@@ -1847,33 +1926,86 @@ function isHoliday(dateStr) {
   return holidays[dateStr] || null;
 }
 
+// A "working day" is any day the shop is actually open — same rule the calendar
+// itself uses to grey out a date (Sunday, or a PH holiday).
+function isWorkingDay(dateObj) {
+  const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
+  return dateObj.getDay() !== 0 && !isHoliday(dateStr);
+}
+
+// Steps forward `days` working days from `startDate` (a Date, e.g. the drop-off
+// date) and returns the resulting Date — used to turn "3-5 working days" into
+// real calendar dates for a multi-day job's estimated release window.
+function addWorkingDays(startDate, days) {
+  const d = new Date(startDate.getTime());
+  let counted = 0;
+  while (counted < days) {
+    d.setDate(d.getDate() + 1);
+    if (isWorkingDay(d)) counted++;
+  }
+  return d;
+}
+
+const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function formatShortDate(d) {
+  return `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+// "2026-09-16" -> "ready Sep 19 to Sep 21" for a 3-5 working day turnaround.
+function multidayReadyWindow(dropOffDateStr, minDays, maxDays) {
+  const dropOff = new Date(dropOffDateStr + 'T00:00:00');
+  const from = addWorkingDays(dropOff, minDays || 3);
+  const to   = addWorkingDays(dropOff, maxDays || 5);
+  return `ready ${formatShortDate(from)} to ${formatShortDate(to)}`;
+}
+
 // ── BOOKING QUEUE ──
 let bookingQueue = [];
+
+function intervalsOverlap(aStart, aEnd, bStart, bEnd) { return aStart < bEnd && bStart < aEnd; }
+function hhmmToMinutes(hhmm) { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; }
+function minutesToAmpmJS(m) {
+  let h = Math.floor(m / 60), mm = m % 60;
+  const period = h < 12 ? 'AM' : 'PM';
+  let h12 = h % 12; if (h12 === 0) h12 = 12;
+  return `${h12}:${String(mm).padStart(2, '0')} ${period}`;
+}
 
 function addToBookingQueue() {
   const nameVal   = document.getElementById('contact-name').value.trim();
   const mobileVal = document.getElementById('contact-mobile').value.trim();
-  const service   = document.getElementById('service-value').value.trim();
   const dateVal   = document.getElementById('selected-date-value').value;
   const timeVal   = document.getElementById('selected-time-value').value;
 
-  if (!dateVal || !timeVal || !service) { showCartToast('Please select a date, time and service.'); return; }
+  if (!dateVal || !timeVal || !selectedServiceNames.length) { showCartToast('Please select a date, time and at least one service.'); return; }
   if (!/^[a-zA-Z\s]+$/.test(nameVal) || !nameVal) { document.getElementById('name-error').style.display='block'; return; }
   if (!/^0\d{10}$/.test(mobileVal)) { document.getElementById('mobile-error').style.display='block'; return; }
 
-  const dupKey = dateVal + '_' + timeVal;
-  if (bookingQueue.some(b => b.date + '_' + b.time === dupKey)) {
-    showCartToast('You already queued a booking for that date and time.'); return;
+  const startMin = hhmmToMinutes(timeVal);
+  const duration = currentJobDuration || 60;
+  const endMin   = startMin + duration;
+  const overlapsQueued = bookingQueue.some(b => b.date === dateVal &&
+    intervalsOverlap(startMin, endMin, hhmmToMinutes(b.time), hhmmToMinutes(b.time) + (b.duration_minutes || 60)));
+  if (overlapsQueued) {
+    showCartToast('That time overlaps a booking already in your queue.'); return;
   }
 
-  const mechSel  = document.getElementById('mechanic-select');
-  const mechId   = mechSel.value || '';
-  const mechName = mechId ? mechSel.options[mechSel.selectedIndex].text.split(' — ')[0] : '';
+  // "Let the Shop Assign" never sends a mechanic_id, even though a name was
+  // previewed — that preview isn't a stored preference. "I'll Choose" sends
+  // whichever roster entry is selected, or none if "no one in particular".
+  const mechId   = (mechanicMode === 'choose' && selectedMechanicId) ? String(selectedMechanicId) : '';
+  const mechObj  = mechId ? mechanicsRoster.find(m => String(m.id) === mechId) : null;
+  const mechName = mechObj ? mechObj.name : '';
+  const serviceDisplay = selectedServiceNames.join(', ');
 
   const entry = {
     date:             dateVal,
     time:             timeVal,
-    service:          service,
+    services:         [...selectedServiceNames],
+    service_display:  serviceDisplay,
+    duration_minutes: duration,
+    is_multiday:      !!currentJobIsMultiday,
+    duration_label:   currentJobDurationLabel || '',
     motorcycle_model: document.getElementById('moto-model').value,
     odometer:         document.getElementById('odometer').value,
     mechanic_id:      mechId,
@@ -1882,13 +2014,15 @@ function addToBookingQueue() {
     contact_name:     nameVal,
     contact_mobile:   mobileVal,
     _displayDate:     document.getElementById('selected-date-display').value,
-    _displayTime:     SLOT_LABELS[timeVal] || timeVal,
+    _displayTime:     currentJobIsMultiday
+                        ? `${minutesToAmpmJS(startMin)} drop off — ${currentJobReadyWindow}`
+                        : `${minutesToAmpmJS(startMin)} – ${minutesToAmpmJS(endMin)}`,
   };
 
   bookingQueue.push(entry);
   renderBookingQueue();
   resetBookingForm();
-  showCartToast(service + ' added to queue!');
+  showCartToast(serviceDisplay + ' added to queue!');
 }
 
 function renderBookingQueue() {
@@ -1916,12 +2050,12 @@ function renderBookingQueue() {
       border:1px solid rgba(29,78,216,0.2);border-radius:10px;">
       <div style="flex:1;min-width:0;">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:var(--fg-1);margin-bottom:0.2rem;">
-          ${b.service}
+          ${b.service_display || b.service}
         </div>
         <div style="font-size:0.75rem;color:var(--fg-3);">
           ${b._displayDate} &nbsp;·&nbsp; ${b._displayTime}
         </div>
-        ${b.mechanic_name ? `<div style="font-size:0.72rem;color:#c4b5fd;margin-top:0.2rem;">Mechanic: ${b.mechanic_name}</div>` : ''}
+        <div style="font-size:0.72rem;color:#c4b5fd;margin-top:0.2rem;">Mechanic: ${b.mechanic_name || 'Shop will assign'}</div>
         ${b.notes ? `<div style="font-size:0.72rem;color:#9ca3af;margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">Note: ${b.notes}</div>` : ''}
       </div>
       <button onclick="removeFromQueue(${i})"
@@ -1940,19 +2074,21 @@ function removeFromQueue(idx) {
 }
 
 function resetBookingForm() {
-  selectedDate = null; selectedTime = null;
+  selectedDate = null; selectedTime = null; selectedEndLabel = '';
+  selectedServiceNames = [];
+  currentJobDuration = 60; currentJobIsMultiday = false; currentJobDurationLabel = ''; currentJobReadyWindow = '';
   document.getElementById('selected-date-display').value = '';
   document.getElementById('selected-date-value').value   = '';
   document.getElementById('selected-time-value').value   = '';
   document.getElementById('service-search').value        = '';
-  document.getElementById('service-value').value         = '';
+  renderServiceChecklist(SERVICES_DATA);
+  updateServiceSummary();
   document.getElementById('booking-notes').value         = '';
   document.getElementById('odometer').value              = '';
-  document.getElementById('mechanic-select').value       = '';
-  document.getElementById('mechanic-info').style.display = 'none';
+  selectedMechanicId = '';
+  setMechanicMode('shop');
   document.getElementById('cal-selected-info').textContent = '';
-  document.getElementById('time-slots-wrap').innerHTML   =
-    '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
+  updateTimeSlotsPlaceholder();
   document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
   document.getElementById('btn-add-queue').disabled = true;
   document.getElementById('name-error').style.display   = 'none';
@@ -2082,69 +2218,154 @@ function selectDate(dateStr, day, cell) {
   loadMechanics();
 }
 
-function renderTimeSlots(dateStr) {
-  const booked = bookedData[dateStr] || [];
-  const wrap = document.getElementById('time-slots-wrap');
-  wrap.innerHTML = '';
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const isToday = dateStr === todayStr;
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const queuedTimesForDate = bookingQueue.filter(b => b.date === dateStr).map(b => b.time);
+// Estimated length of the job currently being configured — computed server-side
+// (from the selected services) so the slot grid always reflects real durations.
+let currentJobDuration = 60, currentJobIsMultiday = false, currentJobDurationLabel = '', currentJobReadyWindow = '';
 
+async function renderTimeSlots(dateStr) {
+  const wrap = document.getElementById('time-slots-wrap');
+
+  if (!selectedServiceNames.length) {
+    wrap.innerHTML = timeSlotsPlaceholderHTML();
+    return;
+  }
+  wrap.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Loading available times…</div>';
+
+  let data;
+  try {
+    const servicesParam = encodeURIComponent(selectedServiceNames.join(','));
+    const res = await fetch(`/api/time-slots?date=${dateStr}&services=${servicesParam}`);
+    data = await res.json();
+  } catch (e) {
+    wrap.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Could not load time slots. Please try again.</div>';
+    return;
+  }
+  // A newer request may have started (date/service changed again while this was
+  // in flight) — bail if this response no longer matches the current selection.
+  if (dateStr !== selectedDate) return;
+
+  currentJobDuration      = data.total_minutes || 60;
+  currentJobIsMultiday    = !!data.is_multiday;
+  currentJobDurationLabel = data.duration_label || '';
+  // Drop-off jobs read a real release-date window, not a finish time — computed
+  // once per date (every hour that day shares the same drop-off date).
+  currentJobReadyWindow = currentJobIsMultiday
+    ? multidayReadyWindow(dateStr, data.min_days, data.max_days)
+    : '';
+
+  const queuedIntervals = bookingQueue.filter(b => b.date === dateStr)
+    .map(b => [hhmmToMinutes(b.time), hhmmToMinutes(b.time) + (b.duration_minutes || 60)]);
+
+  wrap.innerHTML = '';
   let visibleCount = 0;
 
-  ALL_SLOTS.forEach(slot => {
-    const [h, m] = slot.split(':').map(Number);
-    const slotMinutes = h * 60 + m;
-    const isPastSlot = isToday && slotMinutes <= nowMinutes;
-
-    // Hide past slots entirely — don't render them
-    if (isPastSlot) return;
+  (data.slots || []).forEach(slot => {
+    const startMin = hhmmToMinutes(slot.time);
+    const endMin   = hhmmToMinutes(slot.end_time);
+    // Server says a slot works, but it can still collide with something the
+    // customer already queued in this browser (the server doesn't know about
+    // that yet) — that takes priority as the more specific, more current reason.
+    const queuedConflict = slot.available &&
+      queuedIntervals.some(([qs, qe]) => intervalsOverlap(startMin, endMin, qs, qe));
+    const isAvailable = slot.available && !queuedConflict;
 
     const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'time-slot-btn'; btn.textContent = SLOT_LABELS[slot];
-    const isQueuedSlot = queuedTimesForDate.includes(slot);
+    btn.type = 'button'; btn.className = 'time-slot-btn';
 
-    if (booked.includes(slot)) {
-      btn.classList.add('booked'); btn.disabled = true;
-      btn.title = 'Already booked';
-    } else if (isQueuedSlot) {
-      btn.classList.add('booked'); btn.disabled = true;
-      btn.title = 'Already in your queue';
-      btn.textContent = SLOT_LABELS[slot] + ' ✓';
-      btn.style.color = '#2563eb';
-      btn.style.opacity = '0.7';
+    let subClass, subLine;
+    if (isAvailable) {
+      // The finish time is the real computed end — it already accounts for the
+      // 12:00-12:30 lunch break for any job that runs through it (see
+      // service_duration.compute_finish_minutes, the single source of this value).
+      subClass = currentJobIsMultiday ? 'slot-sub' : 'slot-sub slot-done';
+      subLine  = currentJobIsMultiday ? `Drop off — ${currentJobReadyWindow}` : `Done by ${slot.end_label}`;
     } else {
-      btn.onclick = () => selectTime(slot, btn);
+      subClass = 'slot-sub';
+      subLine  = queuedConflict ? 'Already in your queue' : slotReasonText(slot.reason);
+    }
+    btn.innerHTML = `<span class="slot-start">${slot.label}</span><span class="${subClass}">${subLine}</span>`;
+
+    if (!isAvailable) {
+      btn.classList.add('booked'); btn.disabled = true;
+      btn.title = subLine;
+    } else {
+      btn.onclick = () => selectTime(slot.time, btn, slot.end_label);
     }
     wrap.appendChild(btn);
     visibleCount++;
   });
 
   if (visibleCount === 0) {
-    wrap.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.75rem 0;">No available time slots for this date.</div>';
+    wrap.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.75rem 0;">No time slots to show for this date.</div>';
   }
+}
+
+// Plain-language reason a slot card is disabled — matches how the customer
+// would actually describe it, not the internal status code.
+function slotReasonText(reason) {
+  if (reason === 'past') return 'Already past';
+  if (reason === 'too_long') return `Needs ${formatShopTime(currentJobDuration)} — closes 6:30 PM`;
+  if (reason === 'booked') {
+    return (mechanicMode === 'choose' && selectedMechanicId) ? 'No mechanic free then' : 'Fully booked';
+  }
+  return 'Not available';
 }
 
 function checkBookingReady() {
   const name      = document.getElementById('contact-name').value.trim();
   const mobile    = document.getElementById('contact-mobile').value.trim();
   const hasTime   = !!document.getElementById('selected-time-value').value;
-  const hasService = !!document.getElementById('service-value').value;
+  const hasService = selectedServiceNames.length > 0;
   const nameOk    = /^[a-zA-Z\s]+$/.test(name) && name !== '';
   const mobileOk  = /^0\d{10}$/.test(mobile);
 
   document.getElementById('btn-add-queue').disabled = !(hasTime && hasService && nameOk && mobileOk);
+  updateConfirmButtonText();
 }
 
-function selectTime(slot, btn) {
+// "Confirm 10:00 AM – 10:40 AM" with the outcome beside it — "40m with Bong
+// Espiritu (your choice)" or "(shop assigned)". Reflects exactly what
+// addToBookingQueue() is about to record, so there's no surprise at submit.
+function updateConfirmButtonText() {
+  const titleEl = document.getElementById('btn-add-queue-title');
+  const subEl   = document.getElementById('btn-add-queue-sub');
+  if (!titleEl || !subEl) return;
+
+  if (!selectedDate || !selectedTime || !selectedServiceNames.length) {
+    titleEl.textContent = 'Add to Queue';
+    subEl.style.display = 'none';
+    return;
+  }
+
+  const startLabel = minutesToAmpmJS(hhmmToMinutes(selectedTime));
+  titleEl.textContent = currentJobIsMultiday
+    ? `Confirm ${startLabel} Drop-off`
+    : (selectedEndLabel ? `Confirm ${startLabel} – ${selectedEndLabel}` : `Confirm ${startLabel}`);
+
+  let mechName = null, originTag = '';
+  if (mechanicMode === 'choose' && selectedMechanicId) {
+    const m = mechanicsRoster.find(x => String(x.id) === String(selectedMechanicId));
+    if (m) { mechName = m.name; originTag = 'your choice'; }
+  } else {
+    const free = mechanicsRoster.find(m => !m.busy);
+    if (free) { mechName = free.name; originTag = 'shop assigned'; }
+  }
+
+  const durationText = currentJobIsMultiday ? (currentJobDurationLabel || '') : formatShopTime(currentJobDuration);
+  subEl.textContent = mechName
+    ? `${durationText} with ${mechName} (${originTag})`
+    : `${durationText} — shop will assign a mechanic`;
+  subEl.style.display = 'block';
+}
+
+function selectTime(slot, btn, endLabel) {
   selectedTime = slot;
+  selectedEndLabel = endLabel || '';
   document.getElementById('selected-time-value').value = slot;
   document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected-slot'));
   btn.classList.add('selected-slot');
   checkBookingReady();
-  loadMechanics(selectedDate, selectedTime);
+  loadMechanics(selectedDate, selectedTime, currentJobDuration);
 }
 
 async function changeMonth(dir) {
@@ -2167,10 +2388,10 @@ async function changeMonth(dir) {
   document.getElementById('selected-date-display').value = '';
   document.getElementById('selected-date-value').value   = '';
   document.getElementById('selected-time-value').value   = '';
-  document.getElementById('time-slots-wrap').innerHTML   =
-    '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Please select a date first.</div>';
+  updateTimeSlotsPlaceholder();
   document.getElementById('cal-selected-info').textContent = '';
   document.getElementById('btn-add-queue').disabled = true;
+  updateConfirmButtonText();
   await renderCalendar();
 }
 
@@ -2364,62 +2585,161 @@ document.addEventListener('click', function(e) {
 });
 
 
-// ── SERVICE SEARCH DROPDOWN ──
-let SERVICE_LIST = [];
+// ── SERVICE CHECKLIST (multi-select, duration-aware) ──
+let SERVICES_DATA = [];
+let selectedServiceNames = [];
 
 fetch('/api/services')
   .then(r => r.json())
   .then(data => {
-    SERVICE_LIST = data.map(s => s.name);
+    SERVICES_DATA = data;
+    renderServiceChecklist(SERVICES_DATA);
   })
   .catch(() => {});
 
-function renderServiceDropdown(items) {
-  const dd = document.getElementById('service-dropdown');
+function currentServiceFilterItems() {
+  const q = (document.getElementById('service-search').value || '').trim().toLowerCase();
+  return q ? SERVICES_DATA.filter(s => s.name.toLowerCase().includes(q)) : SERVICES_DATA;
+}
+
+function renderServiceChecklist(items) {
+  const wrap = document.getElementById('service-checklist');
+  wrap.innerHTML = '';
   if (!items.length) {
-    dd.innerHTML = '<div style="padding:0.65rem 1rem;color:#5a544d;font-size:0.85rem;font-family:\'DM Sans\',sans-serif;">No services found</div>';
+    wrap.innerHTML = '<div style="padding:0.65rem 1rem;color:var(--fg-3);font-size:0.85rem;">No services found</div>';
     return;
   }
-  dd.innerHTML = items.map(s =>
-    `<div onclick="selectService('${s}')"
-      style="padding:0.65rem 1rem;cursor:pointer;font-size:0.88rem;color:#1c1814;font-family:'DM Sans',sans-serif;font-weight:500;
-             transition:background 0.15s;border-bottom:1px solid #ebe9e4;"
-      onmouseover="this.style.background='rgba(208,0,25,0.08)';this.style.color='#d00019';"
-      onmouseout="this.style.background='';this.style.color='#1c1814';">${s}</div>`
-  ).join('');
+  items.forEach(s => {
+    const checked = selectedServiceNames.includes(s.name);
+    const label = document.createElement('label');
+    // Border is always 1.5px so a pick never shifts the row layout — only its
+    // color/fill changes, which is what makes a selected row pop at a glance.
+    label.style.cssText = 'display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.85rem;'
+      + 'cursor:pointer;font-size:0.85rem;color:var(--fg-1);margin:2px;border-radius:8px;'
+      + 'transition:background 0.15s,border-color 0.15s;'
+      + (checked
+          ? 'background:rgba(208,0,25,0.1);border:1.5px solid var(--brand-red);'
+          : 'background:transparent;border:1.5px solid transparent;border-bottom:1.5px solid var(--line-1);border-radius:0;');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = checked;
+    cb.onchange = () => toggleServiceSelection(s.name, cb.checked);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.style.flex = '1';
+    nameSpan.textContent = s.name;
+
+    const durSpan = document.createElement('span');
+    durSpan.style.cssText = 'font-size:0.72rem;color:var(--fg-3);white-space:nowrap;';
+    durSpan.textContent = s.duration_label;
+
+    label.appendChild(cb);
+    label.appendChild(nameSpan);
+    label.appendChild(durSpan);
+    wrap.appendChild(label);
+  });
 }
 
-function filterServices(q) {
-  const dd = document.getElementById('service-dropdown');
-  dd.style.display = 'block';
-  const filtered = SERVICE_LIST.filter(s => s.toLowerCase().includes(q.toLowerCase()));
-  renderServiceDropdown(filtered);
+function filterServiceChecklist() {
+  renderServiceChecklist(currentServiceFilterItems());
 }
 
-function selectService(name) {
-  document.getElementById('service-search').value = name;
-  document.getElementById('service-value').value  = name;
-  document.getElementById('service-dropdown').style.display = 'none';
+function toggleServiceSelection(name, isChecked) {
+  // A multi-day service (Full/Top Overhaul) combines freely with anything else —
+  // the other picks just ride along during the visit at no extra shop time.
+  if (isChecked) {
+    selectedServiceNames = [...selectedServiceNames, name];
+  } else {
+    selectedServiceNames = selectedServiceNames.filter(n => n !== name);
+  }
+  renderServiceChecklist(currentServiceFilterItems());
+  updateServiceSummary();
   checkBookingReady();
+  // Duration changed — the slot grid (and any already-chosen time) needs recomputing,
+  // or if no date is picked yet, the "choose a date" placeholder needs to reflect it.
+  if (selectedDate) {
+    selectedTime = null;
+    document.getElementById('selected-time-value').value = '';
+    renderTimeSlots(selectedDate);
+  } else {
+    updateTimeSlotsPlaceholder();
+  }
 }
 
-document.addEventListener('click', function(e) {
-  const wrap = document.getElementById('service-search')?.closest('.form-group');
-  if (wrap && !wrap.contains(e.target)) {
-    document.getElementById('service-dropdown').style.display = 'none';
+function formatDurationJS(minutes) {
+  // Mirrors service_duration.format_duration(): '15 min', '1 hour', '1.5 hours', '4 hours'.
+  if (!minutes || minutes <= 0) return '';
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes % 60 === 0) {
+    const h = minutes / 60;
+    return h === 1 ? '1 hour' : `${h} hours`;
   }
-});
+  const hoursStr = (minutes / 60).toFixed(1).replace(/\.?0+$/, '');
+  return `${hoursStr} hours`;
+}
 
-// Show full list on focus
-document.addEventListener('DOMContentLoaded', function() {
-  const input = document.getElementById('service-search');
-  if (input) {
-    input.addEventListener('focus', () => {
-      renderServiceDropdown(SERVICE_LIST);
-      document.getElementById('service-dropdown').style.display = 'block';
-    });
+// Compact "40m" / "1h 15m" / "4h" style — for the running total under the list.
+// Distinct from formatDurationJS() ("40 min" / "1 hour 15 mins"), used beside each
+// service name in the list itself.
+function formatShopTime(minutes) {
+  if (!minutes || minutes <= 0) return '0m';
+  const h = Math.floor(minutes / 60), m = minutes % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
+
+// The time-slots panel before a date is picked: guides the customer to tick
+// services first, then names the actual shop time those picks add up to.
+function timeSlotsPlaceholderHTML() {
+  const style = 'grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;';
+  if (!selectedServiceNames.length) {
+    return `<div style="${style}">Choose your services first — time slots are built around how long the work actually takes.</div>`;
   }
-});
+  const chosen = SERVICES_DATA.filter(s => selectedServiceNames.includes(s.name));
+  const multiday = chosen.find(s => s.is_multiday);
+  const forText = multiday
+    ? `the ${formatShopTime(multiday.duration_minutes || 30)} drop-off intake`
+    : `${formatShopTime(chosen.reduce((sum, s) => sum + (s.duration_minutes || 60), 0))} of shop time`;
+  return `<div style="${style}">Choose a date to see open times for ${forText}.</div>`;
+}
+
+function updateTimeSlotsPlaceholder() {
+  if (selectedDate) return; // once a date is picked, renderTimeSlots() owns this panel
+  document.getElementById('time-slots-wrap').innerHTML = timeSlotsPlaceholderHTML();
+}
+
+function updateServiceSummary() {
+  const box   = document.getElementById('service-summary');
+  const count = document.getElementById('service-summary-count');
+  const label = document.getElementById('service-summary-label');
+  const text  = document.getElementById('service-summary-text');
+  const note  = document.getElementById('service-multiday-note');
+  if (!selectedServiceNames.length) {
+    box.style.display = 'none';
+    note.style.display = 'none';
+    return;
+  }
+  const chosen = SERVICES_DATA.filter(s => selectedServiceNames.includes(s.name));
+  const multiday = chosen.find(s => s.is_multiday);
+  box.style.display = 'block';
+  count.textContent = `${selectedServiceNames.length} service${selectedServiceNames.length > 1 ? 's' : ''} selected`;
+  if (multiday) {
+    label.textContent = 'Estimated completion:';
+    text.textContent  = multiday.duration_label;
+    const otherCount = selectedServiceNames.length - 1;
+    note.textContent = otherCount > 0
+      ? `${otherCount} other service${otherCount > 1 ? 's' : ''} you ticked will be handled during this visit at no extra shop time — the drop-off still only reserves a 30-minute intake slot.`
+      : 'Drop-off only reserves a 30-minute intake slot — the actual work happens over the estimated days above.';
+    note.style.display = 'block';
+  } else {
+    const total = chosen.reduce((sum, s) => sum + (s.duration_minutes || 60), 0);
+    label.textContent = 'Estimated shop time:';
+    text.textContent  = formatShopTime(total);
+    note.style.display = 'none';
+  }
+}
 
 function validateBookingForm() {
   let valid = true;
@@ -2464,13 +2784,16 @@ const bookingsData = {
     service: '{{ b.service|e }}',
     status: '{{ b.status }}',
     date: '{{ b.date.strftime("%B %d, %Y") }}',
+    date_iso: '{{ b.date.strftime("%Y-%m-%d") }}',
     time: '{{ b.time.strftime("%I:%M %p") }}',
+    end_time: {{ ("'" + b.end_time.strftime("%I:%M %p") + "'") if b.end_time else 'null' }},
+    is_multiday: {{ 'true' if b.is_multiday else 'false' }},
     motorcycle_model: '{{ b.motorcycle_model|e if b.motorcycle_model else "" }}',
     motorcycle_plate: '{{ b.motorcycle_plate|e if b.motorcycle_plate else "" }}',
     odometer: {{ b.odometer if b.odometer else 'null' }},
     notes: '{{ b.notes|e if b.notes else "" }}',
-    mechanic_name: '{{ b.mechanic_name|e if b.mechanic_name else "" }}',
-    mechanic_spec: '{{ b.mechanic_specialization|e if b.mechanic_specialization else "" }}',
+    mechanic_name: '{{ b.assigned_mechanic_name|e if b.assigned_mechanic_name else "" }}',
+    mechanic_spec: '{{ b.assigned_mechanic_specialization|e if b.assigned_mechanic_specialization else "" }}',
     created_at: '{{ b.created_at.strftime("%b %d, %Y at %I:%M %p") }}'
   }{% if not loop.last %},{% endif %}
   {% endfor %}
@@ -2503,7 +2826,9 @@ function openBookingDetails(bookingId) {
 
   // Date & Time
   document.getElementById('bd-date').textContent = booking.date;
-  document.getElementById('bd-time').textContent = booking.time;
+  document.getElementById('bd-time').textContent = booking.is_multiday
+    ? `${booking.time} drop off — ${multidayReadyWindow(booking.date_iso)}`
+    : (booking.end_time ? `${booking.time} – ${booking.end_time}` : booking.time);
 
   // Motorcycle info
   document.getElementById('bd-model').textContent = booking.motorcycle_model || '—';
@@ -2519,14 +2844,19 @@ function openBookingDetails(bookingId) {
     }
   }
 
-  // Mechanic info
-  const mechanicWrap = document.getElementById('bd-mechanic-wrap');
+  // Mechanic info — always shown, either path: a name was picked, or the shop
+  // was left to assign one. Neither reads as the "nothing to see here" case.
+  document.getElementById('bd-mechanic-wrap').style.display = 'block';
+  const namedWrap = document.getElementById('bd-mechanic-named');
+  const shopWrap  = document.getElementById('bd-mechanic-shop');
   if (booking.mechanic_name) {
-    mechanicWrap.style.display = 'block';
+    namedWrap.style.display = 'grid';
+    shopWrap.style.display  = 'none';
     document.getElementById('bd-mechanic-name').textContent = booking.mechanic_name;
     document.getElementById('bd-mechanic-spec').textContent = booking.mechanic_spec || '—';
   } else {
-    mechanicWrap.style.display = 'none';
+    namedWrap.style.display = 'none';
+    shopWrap.style.display  = 'block';
   }
 
   // Notes
@@ -2703,13 +3033,16 @@ function openOrderDetails(orderId) {
 
   // Confirm button: "shipped" for delivery orders, "shipped" maps to ready_for_pickup for pickup.
   // Cash pick-up orders are completed by staff at the counter, so no self-confirm button.
+  // Ship-to-address orders are only ever marked delivered by the customer — staff/admin
+  // can't know a parcel actually arrived, so there's no equivalent button on their end.
   const receivedWrap = document.getElementById('od-confirm-received-wrap');
   const confirmBtn = document.getElementById('od-confirm-received-btn');
   const isCashPickup = order.payment_method === 'cash' && isPickup;
   if (order.status === 'shipped' && !isCashPickup) {
     _confirmOrderId = order.id;
+    _confirmOrderLabel = isPickup ? 'I Already Picked Up My Order' : 'Mark as Delivered';
     receivedWrap.style.display = 'block';
-    confirmBtn.textContent = isPickup ? 'I Already Picked Up My Order' : 'I Already Received My Order';
+    confirmBtn.textContent = _confirmOrderLabel;
   } else {
     _confirmOrderId = null;
     receivedWrap.style.display = 'none';
@@ -2719,6 +3052,7 @@ function openOrderDetails(orderId) {
 }
 
 let _confirmOrderId = null;
+let _confirmOrderLabel = 'I Already Received My Order';
 
 async function confirmOrderReceived() {
   const btn = document.getElementById('od-confirm-received-btn');
@@ -2736,13 +3070,13 @@ async function confirmOrderReceived() {
   } catch (e) {
     alert('Could not reach the server. Please check your connection and try again.');
     btn.disabled = false;
-    btn.textContent = 'I Already Received My Order';
+    btn.textContent = _confirmOrderLabel;
     return;
   }
   if (!res.ok && res.status !== 400 && res.status !== 403) {
     alert('Server error (' + res.status + '). Please restart the app and try again.');
     btn.disabled = false;
-    btn.textContent = 'I Already Received My Order';
+    btn.textContent = _confirmOrderLabel;
     return;
   }
   let data;
@@ -2751,7 +3085,7 @@ async function confirmOrderReceived() {
   } catch (e) {
     alert('Unexpected server response. Please restart the app and try again.');
     btn.disabled = false;
-    btn.textContent = 'I Already Received My Order';
+    btn.textContent = _confirmOrderLabel;
     return;
   }
   if (data.success) {
@@ -2762,7 +3096,7 @@ async function confirmOrderReceived() {
   } else {
     alert(data.message || 'Something went wrong.');
     btn.disabled = false;
-    btn.textContent = 'I Already Received My Order';
+    btn.textContent = _confirmOrderLabel;
   }
 }
 
@@ -2835,43 +3169,286 @@ function addToCartFromInfo() {
 
 // Sa pinakadulo ng <script>, pagkatapos ng renderCalendar();
 
-// ── MECHANICS LOADER ──
-async function loadMechanics(date, time) {
+// ── MECHANIC: two first-class paths ──
+// 'shop': nothing to fill in — shows a live "next in line" preview, but stores
+//         no preference (the actual assignment happens later, at confirmation).
+// 'choose': a recommendation panel + a full on-duty picker (busy ones disabled,
+//           not hidden, so the customer sees the whole crew and why).
+let mechanicMode = 'shop';
+let selectedMechanicId = '';   // '' = "no one in particular" while in 'choose' mode too
+let mechanicsRoster = [];      // last /api/mechanics response: [{id,name,specialization,busy}]
+let selectedEndLabel = '';     // end label of the currently selected slot, e.g. "10:40 AM"
+
+function setMechanicMode(mode) {
+  mechanicMode = mode;
+  document.getElementById('mech-card-shop').classList.toggle('active', mode === 'shop');
+  document.getElementById('mech-card-choose').classList.toggle('active', mode === 'choose');
+  document.getElementById('mech-panel-shop').style.display   = mode === 'shop'   ? 'block' : 'none';
+  document.getElementById('mech-panel-choose').style.display = mode === 'choose' ? 'block' : 'none';
+  renderMechanicPanels();
+}
+
+async function loadMechanics(date, time, duration) {
   try {
-    const qs = (date && time) ? `?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}` : '';
+    const qs = (date && time)
+      ? `?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}&duration=${duration || currentJobDuration || 60}`
+      : '';
     const res = await fetch('/api/mechanics' + qs);
-    const mechanics = await res.json();
-    const sel = document.getElementById('mechanic-select');
-    const prevValue = sel.value;
-    sel.innerHTML = '<option value="">-- No preference --</option>';
-    mechanics.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      opt.textContent = m.name + ' — ' + m.specialization;
-      opt.dataset.spec = m.specialization;
-      sel.appendChild(opt);
-    });
-    if (prevValue && [...sel.options].some(o => o.value === prevValue)) sel.value = prevValue;
+    mechanicsRoster = await res.json();
+    if (selectedMechanicId && !mechanicsRoster.some(m => String(m.id) === String(selectedMechanicId))) {
+      selectedMechanicId = '';
+    }
+    renderMechanicPanels();
   } catch(e) {
     console.error('Failed to load mechanics', e);
   }
 }
 
-// Show mechanic info when a mechanic is selected
-document.getElementById('mechanic-select').addEventListener('change', function() {
-  const infoDiv = document.getElementById('mechanic-info');
-  const specSpan = document.getElementById('mechanic-spec-display');
-  const sel = this;
-  if (sel.value && sel.selectedOptions[0]) {
-    const spec = sel.selectedOptions[0].dataset.spec || '—';
-    specSpan.textContent = spec;
-    infoDiv.style.display = 'block';
-  } else {
-    infoDiv.style.display = 'none';
+function renderMechanicPanels() {
+  renderNextInLine();
+  renderRecommendationPanel();
+  renderMechanicPickerList();
+  renderMechanicProfileCard();
+  updateConfirmButtonText();
+}
+
+// "Let the Shop Assign" — a live, informational preview only. It is never sent
+// as the booking's mechanic_id: the actual assignment happens at confirmation
+// time, and the shop stays free to change who does the job later.
+function renderNextInLine() {
+  const el = document.getElementById('mech-next-in-line-text');
+  if (!selectedDate || !selectedTime) {
+    el.textContent = "Pick a date and time to see who's next.";
+    return;
   }
-});
+  const free = mechanicsRoster.find(m => !m.busy);
+  if (!free) {
+    el.textContent = "The whole crew is booked for that window — the shop will still take your job and sort out the assignment.";
+    return;
+  }
+  const startLabel = minutesToAmpmJS(hhmmToMinutes(selectedTime));
+  const windowText = selectedEndLabel ? `${startLabel} – ${selectedEndLabel}` : startLabel;
+  el.innerHTML = `<strong>${free.name}</strong> · ${free.specialization}, next available for ${windowText}`;
+}
+
+// Loose keyword match between a mechanic's specialization and the customer's
+// selected services — e.g. specialization "Brakes" matches "Brake Cleaning"
+// and "Brake Pad Replacement". Returns the matching service names.
+// Trims a trailing "s" so "Brakes" (a specialization category) still matches
+// "Brake Cleaning" / "Brake Pad Replacement" (singular in the service names).
+function singularize(word) {
+  return word.length > 4 && word.endsWith('s') ? word.slice(0, -1) : word;
+}
+
+function specializationMatches(mechanic, serviceNames) {
+  const spec = (mechanic.specialization || '').toLowerCase().trim();
+  if (!spec) return [];
+  const specWords = spec.split(/\s+/).filter(w => w.length > 3).map(singularize);
+  return serviceNames.filter(name => {
+    const n = name.toLowerCase();
+    if (n.includes(spec)) return true;
+    const nWords = n.split(/\s+/).map(singularize);
+    return specWords.some(sw => nWords.some(nw => nw.includes(sw) || sw.includes(nw)));
+  });
+}
+
+function serviceDurationMinutes(name) {
+  const svc = SERVICES_DATA.find(s => s.name === name);
+  return svc ? (svc.duration_minutes || 0) : 0;
+}
+
+// Scored by how much of the customer's booked shop TIME a mechanic's
+// specialization covers — not by how many services happen to match. Covering
+// one 4-hour General Rewiring outweighs covering three 10-minute Diagnostics.
+function mechanicCoverage(mechanic) {
+  const matches = specializationMatches(mechanic, selectedServiceNames);
+  const coveredMinutes = matches.reduce((sum, name) => sum + serviceDurationMinutes(name), 0);
+  const share = currentJobDuration > 0 ? Math.min(1, coveredMinutes / currentJobDuration) : 0;
+  return { matches, coveredMinutes, share };
+}
+
+function bestMechanicRecommendation() {
+  let best = null, bestCoverage = null;
+  mechanicsRoster.filter(m => !m.busy).forEach(m => {
+    const coverage = mechanicCoverage(m);
+    if (coverage.share > 0 && (!bestCoverage || coverage.share > bestCoverage.share)) {
+      best = m; bestCoverage = coverage;
+    }
+  });
+  return best ? { mechanic: best, ...bestCoverage } : null;
+}
+
+function buildMechanicPickerItem({ id, name, note, disabled, selected, recommended }) {
+  const div = document.createElement('div');
+  div.className = 'mech-picker-item'
+    + (disabled ? ' disabled' : '') + (selected ? ' selected' : '') + (recommended ? ' recommended' : '');
+  const nameEl = document.createElement('div');
+  nameEl.className = 'mp-name';
+  nameEl.textContent = name;
+  div.appendChild(nameEl);
+  if (note) {
+    const noteEl = document.createElement('div');
+    noteEl.className = 'mp-note';
+    noteEl.textContent = note;
+    div.appendChild(noteEl);
+  }
+  if (!disabled) {
+    div.onclick = () => chooseMechanic(id);
+  }
+  return div;
+}
+
+// Any change to who's picked touches all three pieces below it: the picker
+// list's own selected state, the recommendation panel's tone, and the profile
+// card. One entry point keeps them from drifting out of sync.
+function chooseMechanic(id) {
+  selectedMechanicId = id;
+  renderRecommendationPanel();
+  renderMechanicPickerList();
+  renderMechanicProfileCard();
+  updateConfirmButtonText();
+}
+
+function renderMechanicPickerList() {
+  const list = document.getElementById('mech-picker-list');
+  list.innerHTML = '';
+
+  const rec = bestMechanicRecommendation();
+
+  // Always first: drops the pick back to shop assignment without leaving this card.
+  list.appendChild(buildMechanicPickerItem({
+    id: '', name: 'No one in particular', note: 'Same as letting the shop decide',
+    disabled: false, selected: !selectedMechanicId,
+  }));
+
+  mechanicsRoster.forEach(m => {
+    let note = '';
+    const isRecommended = !!rec && rec.mechanic.id === m.id;
+    if (m.busy) {
+      note = 'busy at this time';
+    } else {
+      const coverage = mechanicCoverage(m);
+      const pct = Math.round(coverage.share * 100);
+      if (isRecommended) {
+        note = `recommended — covers ${pct}% of this job`;
+      } else if (coverage.matches.length) {
+        note = `specialist for ${coverage.matches.join(' and ').toLowerCase()} (${pct}%)`;
+      }
+    }
+    list.appendChild(buildMechanicPickerItem({
+      id: m.id, name: `${m.name} — ${m.specialization}`, note, disabled: m.busy,
+      selected: String(selectedMechanicId) === String(m.id), recommended: isRecommended,
+    }));
+  });
+}
+
+// Four states: nobody's picked yet (lead with the recommendation), they picked
+// the recommended one (confirm quietly), they picked someone else (compare
+// plainly, offer a one-tap switch, never block), or no one free specializes
+// in any of it (say so — everyone on duty is cross-trained regardless).
+function renderRecommendationPanel() {
+  const panel = document.getElementById('mech-recommend-panel');
+  const freeMechanics = mechanicsRoster.filter(m => !m.busy);
+
+  if (!freeMechanics.length) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  const rec = bestMechanicRecommendation();
+  panel.style.display = 'block';
+  panel.className = 'mech-recommend-panel';
+
+  if (!rec) {
+    panel.classList.add('neutral');
+    panel.innerHTML = `
+      <div class="mrp-title">No specialist match</div>
+      <div class="mrp-body">No one free right now specializes in what you picked — every mechanic on duty is trained on all our services, so you're in good hands either way.</div>`;
+    return;
+  }
+
+  const recPct  = Math.round(rec.share * 100);
+  const recWhat = rec.matches.length ? rec.matches.join(' and ').toLowerCase() : null;
+  const recFirstName = rec.mechanic.name.split(' ')[0];
+
+  if (!selectedMechanicId) {
+    panel.classList.add('good');
+    const body = recWhat
+      ? `specialises in ${recWhat} — ${recPct}% of your booked shop time`
+      : `covers ${recPct}% of your booked shop time`;
+    panel.innerHTML = `
+      <div class="mrp-title">Best for this job</div>
+      <div class="mrp-body"><strong>${rec.mechanic.name}</strong> — ${rec.mechanic.specialization}<br>${body}</div>
+      <button type="button" class="mrp-btn" onclick="chooseMechanic(${rec.mechanic.id})">Choose ${recFirstName}</button>`;
+    return;
+  }
+
+  if (String(selectedMechanicId) === String(rec.mechanic.id)) {
+    panel.classList.add('good');
+    const body = recWhat
+      ? `specialises in ${recWhat} — ${recPct}% of your booked shop time`
+      : `covers ${recPct}% of your booked shop time`;
+    panel.innerHTML = `
+      <div class="mrp-title">Best for this job</div>
+      <div class="mrp-body">✓ <strong>${rec.mechanic.name}</strong> — ${rec.mechanic.specialization}<br>${body}</div>`;
+    return;
+  }
+
+  const picked = mechanicsRoster.find(m => String(m.id) === String(selectedMechanicId));
+  if (!picked) { panel.style.display = 'none'; return; }
+  const pickedCoverage = mechanicCoverage(picked);
+  const pickedPct  = Math.round(pickedCoverage.share * 100);
+  const pickedDesc = pickedCoverage.matches.length
+    ? `covers ${pickedCoverage.matches.join(' and ').toLowerCase()} (${pickedPct}%)`
+    : 'is not a specialist for anything on your list';
+  const recDesc = recWhat ? `covers ${recWhat} (${recPct}%)` : `covers ${recPct}%`;
+
+  panel.classList.add('warn');
+  panel.innerHTML = `
+    <div class="mrp-title">Better match available</div>
+    <div class="mrp-body">${picked.name} ${pickedDesc}, while ${rec.mechanic.name} ${recDesc}. ${picked.name} can still do the work — this is your call.</div>
+    <button type="button" class="mrp-btn" onclick="chooseMechanic(${rec.mechanic.id})">Switch to ${recFirstName}</button>`;
+}
+
+function mechanicInitials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// The profile card below the picker, once someone specific is chosen — not
+// shown for "no one in particular" (nothing to profile).
+function renderMechanicProfileCard() {
+  const card = document.getElementById('mech-profile-card');
+  if (mechanicMode !== 'choose' || !selectedMechanicId) {
+    card.style.display = 'none';
+    return;
+  }
+  const m = mechanicsRoster.find(x => String(x.id) === String(selectedMechanicId));
+  if (!m) { card.style.display = 'none'; return; }
+
+  card.style.display = 'block';
+  document.getElementById('mp-avatar').textContent = mechanicInitials(m.name);
+  document.getElementById('mp-name').textContent = m.name;
+  document.getElementById('mp-spec').textContent = m.specialization;
+  document.getElementById('mp-services').textContent = 'Services: ' + (selectedServiceNames.join(', ') || '—');
+
+  const coverage = mechanicCoverage(m);
+  const line = document.getElementById('mp-specialist-line');
+  if (coverage.matches.length) {
+    line.textContent = `✓ Specialises in ${coverage.matches.join(' and ').toLowerCase()}`;
+    line.style.color = 'var(--green)';
+    line.style.fontWeight = '600';
+  } else {
+    line.textContent = 'Not a specialist for this job — trained on all services';
+    line.style.color = 'var(--fg-3)';
+    line.style.fontWeight = '400';
+  }
+}
 
 // Load mechanics on page load
+setMechanicMode('shop'); // default: the first card, per spec
 loadMechanics();
 
 /* ══ REALTIME POLLING ══ */
