@@ -170,6 +170,14 @@ def compute_finish_time(start_time, duration_minutes):
     return _time(h, m)
 
 
+def real_end_minutes(start_minutes, duration_minutes, overrun_minutes=0):
+    """A booking's actual end, including any counter-staff-recorded overrun on
+    top of its scheduled duration — what the mechanic timeline draws bars
+    against and what downstream clash/delay checks read, instead of the
+    original estimate alone."""
+    return compute_finish_minutes(start_minutes, duration_minutes) + (overrun_minutes or 0)
+
+
 def all_slot_starts():
     """The fixed list of hourly start times the shop always offers as cards —
     independent of any particular job's duration: 8, 9, 10, 11 AM, 1, 2, 3, 4,
@@ -286,6 +294,84 @@ def validate_booking(start_minutes, duration_minutes, shop_intervals, daily_coun
                 return False, (f'{mechanic_name} is already booked between '
                                 f'{minutes_to_ampm(b_start)} and {minutes_to_ampm(b_end)}.')
     return True, None
+
+
+def get_ph_holidays(year):
+    """Philippine regular + special non-working holidays. Mirrors
+    customer_dashboard.html's getPHHolidays() exactly — the calendar that greys
+    out dates and this server-side release-window math must never disagree
+    about which days the shop is actually closed."""
+    return {
+        f'{year}-01-01': "New Year's Day",
+        f'{year}-04-09': "Araw ng Kagitingan",
+        f'{year}-05-01': "Labor Day",
+        f'{year}-06-12': "Independence Day",
+        f'{year}-08-25': "National Heroes Day",
+        f'{year}-11-01': "All Saints' Day",
+        f'{year}-11-30': "Bonifacio Day",
+        f'{year}-12-25': "Christmas Day",
+        f'{year}-12-30': "Rizal Day",
+        f'{year}-02-25': "EDSA Revolution Anniversary",
+        f'{year}-08-21': "Ninoy Aquino Day",
+        f'{year}-11-02': "All Souls' Day",
+        f'{year}-12-08': "Feast of the Immaculate Conception",
+        f'{year}-12-24': "Christmas Eve",
+        f'{year}-12-31': "New Year's Eve",
+        f'{year}-04-17': "Maundy Thursday",
+        f'{year}-04-18': "Good Friday",
+        f'{year}-04-19': "Black Saturday",
+        f'{year}-03-31': "Eid'l Fitr (approx)",
+        f'{year}-06-07': "Eid'l Adha (approx)",
+    }
+
+
+def is_working_day(d):
+    """A 'working day' is any day the shop is actually open — Sunday and PH
+    holidays are out, same rule the customer calendar uses to grey out dates."""
+    return d.weekday() != 6 and d.isoformat() not in get_ph_holidays(d.year)
+
+
+def add_working_days(start_date, days):
+    """Steps forward `days` working days from start_date — turns '3-5 working
+    days' into real calendar dates for a multi-day job's release window."""
+    d = start_date
+    counted = 0
+    while counted < days:
+        d = d + timedelta(days=1)
+        if is_working_day(d):
+            counted += 1
+    return d
+
+
+def working_days_between(start_date, end_date):
+    """How many working days have elapsed from start_date up to (and
+    including) end_date — used for a multi-day job's 'day N of 3-5' progress."""
+    if end_date <= start_date:
+        return 0
+    count = 0
+    d = start_date
+    while d < end_date:
+        d = d + timedelta(days=1)
+        if is_working_day(d):
+            count += 1
+    return count
+
+
+def multiday_progress(dropoff_date, today, min_days=MULTIDAY_MIN_DAYS, max_days=MULTIDAY_MAX_DAYS):
+    """Everything the 'In the bay' strip needs for one open drop-off: how many
+    working days in, the min-max range, and the real release window computed
+    from the actual drop-off date."""
+    day_count = max(1, working_days_between(dropoff_date, today) + 1)
+    release_from = add_working_days(dropoff_date, min_days)
+    release_to = add_working_days(dropoff_date, max_days)
+    return {
+        'day_count': day_count,
+        'min_days': min_days,
+        'max_days': max_days,
+        'label': f'day {day_count} of {min_days}–{max_days}',
+        'release_from': release_from,
+        'release_to': release_to,
+    }
 
 
 def mechanic_origin_note(assigned_name, preferred_name):

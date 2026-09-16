@@ -452,6 +452,8 @@
     <div class="sidebar-label">Management</div>
     <a href="#" onclick="showSection('bookings', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Bookings</a>
     <a href="#" onclick="showSection('day-schedule', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Day Schedule</a>
+    <a href="#" onclick="showSection('outbox', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span> Outbox <span id="outbox-nav-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;"></span></a>
+    <a href="#" onclick="showSection('returns', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></span> Returns <span id="returns-nav-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;"></span></a>
     <a href="#" onclick="showSection('orders', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> Orders</a>
     <a href="#" onclick="showSection('products', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span> Products</a>
     <a href="#" onclick="showSection('users', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Users</a>
@@ -795,16 +797,103 @@
         </div>
       </div>
 
-      <div class="filter-bar" style="align-items:center;flex-wrap:wrap;">
-        <button type="button" onclick="shiftDaySchedule(-1)" class="btn-cancel" style="padding:0.45rem 0.8rem;">‹ Prev</button>
-        <input type="date" id="day-schedule-date" onchange="loadDaySchedule()" style="padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
-        <button type="button" onclick="shiftDaySchedule(1)" class="btn-cancel" style="padding:0.45rem 0.8rem;">Next ›</button>
-        <button type="button" onclick="jumpToToday()" class="btn-primary-custom" style="padding:0.5rem 1rem;">Today</button>
+      <!-- VIEW TOGGLE -->
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+        <button type="button" id="ds-view-btn-calendar" onclick="setDsView('calendar')" class="btn-primary-custom" style="padding:0.45rem 1.1rem;">Calendar</button>
+        <button type="button" id="ds-view-btn-list" onclick="setDsView('list')" class="btn-cancel" style="padding:0.45rem 1.1rem;">List</button>
       </div>
 
-      <div class="card">
-        <div id="day-schedule-body">
-          <div class="empty-state"><p>Loading…</p></div>
+      <!-- CALENDAR VIEW -->
+      <div id="ds-view-calendar">
+        <div class="card" style="margin-bottom:1rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.85rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <button type="button" onclick="shiftCalendarMonth(-1)" class="btn-cancel" style="padding:0.4rem 0.75rem;">‹ Prev</button>
+              <div id="ds-cal-label" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;min-width:160px;text-align:center;"></div>
+              <button type="button" onclick="shiftCalendarMonth(1)" class="btn-cancel" style="padding:0.4rem 0.75rem;">Next ›</button>
+            </div>
+            <button type="button" onclick="jumpToToday()" class="btn-primary-custom" style="padding:0.45rem 1rem;">Today</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;text-align:center;margin-bottom:0.3rem;">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+          </div>
+          <div id="ds-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;"></div>
+        </div>
+
+        <div id="ds-selected-label" style="font-size:0.85rem;color:var(--muted);margin-bottom:0.7rem;font-weight:600;"></div>
+        <input type="date" id="day-schedule-date" style="display:none;">
+
+        <!-- CAPACITY CONTROLS -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:0.85rem;margin-bottom:1.1rem;">
+          <div class="card" style="padding:1rem 1.1rem;">
+            <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.65rem;">Mechanics on Duty</div>
+            <input type="range" id="cap-mechanic-slider" min="0" max="0" value="0" step="1"
+                   oninput="onCapacitySliderInput()" onchange="saveCapacity('mechanic_count', this.value)"
+                   style="width:100%;accent-color:var(--red);">
+            <div id="cap-mechanic-note" style="font-size:0.78rem;color:var(--text);margin-top:0.55rem;line-height:1.5;"></div>
+          </div>
+
+          <div class="card" style="padding:1rem 1.1rem;">
+            <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Daily Booking Cap</div>
+            <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.6rem;">the most we will accept in a day</div>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <button type="button" onclick="stepCap(-1)" style="width:34px;height:34px;flex-shrink:0;border-radius:8px;border:1px solid var(--border);background:#f9fafb;font-weight:700;font-size:1rem;cursor:pointer;">−</button>
+              <input type="number" id="cap-daily-input" min="0" step="1"
+                     onchange="saveCapacity('daily_cap', this.value)"
+                     style="flex:1;min-width:0;text-align:center;padding:0.45rem;border:1px solid var(--border);border-radius:8px;font-weight:700;font-size:0.95rem;">
+              <button type="button" onclick="stepCap(1)" style="width:34px;height:34px;flex-shrink:0;border-radius:8px;border:1px solid var(--border);background:#f9fafb;font-weight:700;font-size:1rem;cursor:pointer;">+</button>
+            </div>
+          </div>
+
+          <div class="card" id="cap-bottleneck-card" style="padding:1rem 1.1rem;border-width:2px;transition:all 0.2s;">
+            <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.55rem;">What's Turning Customers Away</div>
+            <div id="cap-bottleneck-text" style="font-size:0.86rem;font-weight:600;color:var(--text);line-height:1.55;">Loading…</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div id="day-schedule-body">
+            <div class="empty-state"><p>Loading…</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIST VIEW -->
+      <div id="ds-view-list" style="display:none;">
+        <div class="filter-bar" style="align-items:center;flex-wrap:wrap;">
+          <select id="list-status-filter" onchange="renderBookingList()">
+            <option value="">All Status</option>
+            <option value="pending">pending</option>
+            <option value="awaiting_payment">awaiting_payment</option>
+            <option value="confirmed">confirmed</option>
+            <option value="in_progress">in_progress</option>
+            <option value="completed">completed</option>
+            <option value="cancelled">cancelled</option>
+          </select>
+          <select id="list-sort" onchange="renderBookingList()">
+            <option value="date_desc">Newest first</option>
+            <option value="date_asc">Oldest first</option>
+          </select>
+        </div>
+        <div class="card">
+          <div style="overflow-x:auto;">
+            <table class="table" id="booking-list-table" style="table-layout:fixed;width:100%;">
+              <colgroup>
+                <col style="width:110px;"><col style="width:150px;"><col style="width:85px;">
+                <col style="width:auto;"><col style="width:180px;"><col style="width:auto;"><col style="width:110px;">
+              </colgroup>
+              <thead><tr>
+                <th style="white-space:nowrap;">Date</th>
+                <th style="white-space:nowrap;">Time</th>
+                <th style="white-space:nowrap;">Length</th>
+                <th style="white-space:nowrap;">Customer</th>
+                <th style="white-space:nowrap;">Mechanic</th>
+                <th style="white-space:nowrap;">Service</th>
+                <th style="white-space:nowrap;">Status</th>
+              </tr></thead>
+              <tbody id="booking-list-tbody"><tr><td colspan="7">Loading…</td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -843,6 +932,45 @@
         </form>
       </div>
     </div>
+
+    <!-- OUTBOX -->
+    <section id="sec-outbox" class="page-section">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Outbox</div>
+          <div class="page-sub">Every message the shop has sent a customer — the same thing they saw in their own notification bell, one record either way.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;flex-wrap:wrap;gap:0.6rem;">
+        <div style="font-size:0.85rem;color:var(--muted);"><span id="outbox-unread-count" style="font-weight:700;color:var(--text);">0</span> unread</div>
+        <button type="button" class="btn-cancel" style="padding:0.4rem 0.9rem;" onclick="outboxMarkAllRead()">Mark all read</button>
+      </div>
+      <div class="card">
+        <div id="outbox-list"><div class="empty-state"><p>Loading…</p></div></div>
+      </div>
+    </section>
+
+    <!-- RETURNS / WARRANTY -->
+    <section id="sec-returns" class="page-section">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Returns &amp; <span class="accent">Warranty</span></div>
+          <div class="page-sub">Look at the evidence, decide, and carry it out — a part that arrived wrong, or a service that didn't hold. Every claim is one mutually exclusive choice: put it right, or give the money back — never both.</div>
+        </div>
+      </div>
+      <div class="filter-bar" style="align-items:center;flex-wrap:wrap;">
+        <select id="returns-status-filter" onchange="renderReturns()">
+          <option value="">All Status</option>
+          <option value="submitted">submitted</option>
+          <option value="under_review">under_review</option>
+          <option value="approved">approved</option>
+          <option value="denied">denied</option>
+          <option value="resolved">resolved</option>
+        </select>
+        <div style="font-size:0.85rem;color:var(--muted);margin-left:auto;"><span id="returns-open-count" style="font-weight:700;color:var(--text);">0</span> open</div>
+      </div>
+      <div id="returns-list"><div class="empty-state"><p>Loading…</p></div></div>
+    </section>
 
     <!-- ORDERS -->
     <section id="sec-orders" class="page-section">
@@ -2046,7 +2174,9 @@
     sessionStorage.setItem('adminSection', name);
     if (name === 'parts') loadPartsProducts();
     if (name === 'transactions') loadTxns();
-    if (name === 'day-schedule') loadDaySchedule();
+    if (name === 'day-schedule') { initDaySchedule(); if (dsView === 'list') loadBookingList(); }
+    if (name === 'outbox') { loadOutbox(); }
+    if (name === 'returns') { loadReturns(); }
   }
 
   let _currentBookingGroupIds = [];
@@ -2100,18 +2230,321 @@
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 
-  function jumpToToday() {
-    document.getElementById('day-schedule-date').value = todayISO();
-    loadDaySchedule();
+  function formatShopTime(minutes) {
+    if (!minutes || minutes <= 0) return '0m';
+    const h = Math.floor(minutes / 60), m = minutes % 60;
+    if (h && m) return `${h}h ${m}m`;
+    if (h) return `${h}h`;
+    return `${m}m`;
   }
 
-  function shiftDaySchedule(days) {
-    const input = document.getElementById('day-schedule-date');
-    const current = input.value ? new Date(input.value + 'T00:00:00') : new Date();
-    current.setDate(current.getDate() + days);
-    input.value = `${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,'0')}-${String(current.getDate()).padStart(2,'0')}`;
-    loadDaySchedule();
+  // ── VIEW TOGGLE ──
+  let dsView = 'calendar';
+  function setDsView(view) {
+    dsView = view;
+    document.getElementById('ds-view-calendar').style.display = view === 'calendar' ? '' : 'none';
+    document.getElementById('ds-view-list').style.display = view === 'list' ? '' : 'none';
+    document.getElementById('ds-view-btn-calendar').className = view === 'calendar' ? 'btn-primary-custom' : 'btn-cancel';
+    document.getElementById('ds-view-btn-list').className = view === 'list' ? 'btn-primary-custom' : 'btn-cancel';
+    if (view === 'list') loadBookingList();
   }
+
+  // ── MONTH CALENDAR ──
+  let dsCalYear, dsCalMonth; // dsCalMonth is 0-indexed
+  const MONTH_NAMES = ['January','February','March','April','May','June','July',
+                        'August','September','October','November','December'];
+  const DS_CHIP_COLORS = [
+    { bg:'#eff6ff', border:'#93c5fd', text:'#1d4ed8' },
+    { bg:'#f0fdf4', border:'#86efac', text:'#15803d' },
+    { bg:'#fdf4ff', border:'#e9d5ff', text:'#7e22ce' },
+    { bg:'#fff7ed', border:'#fdba74', text:'#c2410c' },
+    { bg:'#f0fdfa', border:'#5eead4', text:'#0f766e' },
+    { bg:'#fefce8', border:'#fde047', text:'#854d0e' },
+  ];
+
+  function initDaySchedule() {
+    if (!dsCalYear) {
+      const d = new Date();
+      dsCalYear = d.getFullYear();
+      dsCalMonth = d.getMonth();
+    }
+    if (!document.getElementById('day-schedule-date').value) {
+      document.getElementById('day-schedule-date').value = todayISO();
+    }
+    updateSelectedLabel();
+    renderDsCalendar();
+    loadDaySchedule();
+    loadCapacity();
+  }
+
+  function jumpToToday() {
+    const d = new Date();
+    dsCalYear = d.getFullYear();
+    dsCalMonth = d.getMonth();
+    document.getElementById('day-schedule-date').value = todayISO();
+    updateSelectedLabel();
+    renderDsCalendar();
+    loadDaySchedule();
+    loadCapacity();
+  }
+
+  function shiftCalendarMonth(delta) {
+    dsCalMonth += delta;
+    if (dsCalMonth > 11) { dsCalMonth = 0; dsCalYear++; }
+    if (dsCalMonth < 0) { dsCalMonth = 11; dsCalYear--; }
+    renderDsCalendar();
+  }
+
+  function updateSelectedLabel() {
+    const dateStr = document.getElementById('day-schedule-date').value;
+    if (!dateStr) return;
+    const d = new Date(dateStr + 'T00:00:00');
+    document.getElementById('ds-selected-label').textContent =
+      'Showing ' + d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
+  function selectDsDay(dateStr) {
+    document.getElementById('day-schedule-date').value = dateStr;
+    updateSelectedLabel();
+    loadDaySchedule();
+    loadCapacity();
+    renderDsCalendar();
+  }
+
+  async function renderDsCalendar() {
+    document.getElementById('ds-cal-label').textContent = `${MONTH_NAMES[dsCalMonth]} ${dsCalYear}`;
+
+    let data = { days: {} };
+    try {
+      const res = await fetch(`/api/month-schedule?year=${dsCalYear}&month=${dsCalMonth + 1}`);
+      data = await res.json();
+    } catch (e) { /* render an empty grid if this fails */ }
+
+    const grid = document.getElementById('ds-cal-grid');
+    grid.innerHTML = '';
+    const firstDay = new Date(dsCalYear, dsCalMonth, 1).getDay();
+    const daysInMonth = new Date(dsCalYear, dsCalMonth + 1, 0).getDate();
+    const selectedDate = document.getElementById('day-schedule-date').value;
+    const todayStr = todayISO();
+
+    for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${dsCalYear}-${String(dsCalMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const info = data.days ? data.days[dateStr] : null;
+      const isSelected = dateStr === selectedDate;
+      const isToday = dateStr === todayStr;
+
+      const cell = document.createElement('div');
+      cell.onclick = function() { selectDsDay(dateStr); };
+      let bg = '#fff';
+      if (info && info.is_full) bg = 'rgba(220,38,38,0.07)';
+      if (isToday) bg = (info && info.is_full) ? 'rgba(220,38,38,0.13)' : '#fffbeb';
+      cell.style.cssText = `border:1.5px solid ${isSelected ? 'var(--red)' : 'var(--border)'};border-radius:8px;` +
+        `padding:0.35rem;min-height:96px;cursor:pointer;font-size:0.7rem;display:flex;flex-direction:column;` +
+        `gap:0.15rem;background:${bg};transition:border-color 0.15s;` +
+        (isSelected ? 'box-shadow:0 0 0 2px rgba(208,0,25,0.15);' : '');
+
+      const head = document.createElement('div');
+      head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:0.2rem;';
+      const num = document.createElement('span');
+      num.style.cssText = 'font-weight:700;font-family:\'Syne\',sans-serif;';
+      num.textContent = d;
+      head.appendChild(num);
+
+      const badges = document.createElement('div');
+      badges.style.cssText = 'display:flex;gap:0.2rem;';
+      if (info && info.is_full) {
+        const badge = document.createElement('span');
+        badge.textContent = 'Full';
+        badge.style.cssText = 'font-size:0.54rem;font-weight:700;background:#dc2626;color:#fff;padding:0.05rem 0.32rem;border-radius:4px;';
+        badges.appendChild(badge);
+      }
+      if (info && info.has_clash) {
+        const badge = document.createElement('span');
+        badge.textContent = 'Clash';
+        badge.style.cssText = 'font-size:0.54rem;font-weight:700;background:#1f2937;color:#fff;padding:0.05rem 0.32rem;border-radius:4px;';
+        badges.appendChild(badge);
+      }
+      head.appendChild(badges);
+      cell.appendChild(head);
+
+      if (info && info.bookings && info.bookings.length) {
+        info.bookings.forEach(b => {
+          const color = DS_CHIP_COLORS[b.id % DS_CHIP_COLORS.length];
+          const chip = document.createElement('div');
+          chip.title = `${b.first_name} — ${b.time_label} to ${b.end_label}`;
+          chip.style.cssText = `font-size:0.6rem;padding:0.1rem 0.3rem;border-radius:4px;white-space:nowrap;` +
+            `overflow:hidden;text-overflow:ellipsis;background:${color.bg};color:${color.text};border:1px solid ${color.border};` +
+            (b.status === 'cancelled' ? 'text-decoration:line-through;opacity:0.55;' : '') +
+            (b.clash ? 'outline:1.5px solid #dc2626;outline-offset:-1px;' : '');
+          chip.textContent = `${b.first_name} ${b.time_label}`;
+          cell.appendChild(chip);
+        });
+        if (info.more > 0) {
+          const more = document.createElement('div');
+          more.style.cssText = 'font-size:0.58rem;color:var(--muted);font-weight:700;';
+          more.textContent = `+${info.more} more`;
+          cell.appendChild(more);
+        }
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  // ── LIST VIEW ──
+  let _bookingListData = null;
+
+  async function loadBookingList() {
+    const tbody = document.getElementById('booking-list-tbody');
+    tbody.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
+    try {
+      const res = await fetch('/api/all-bookings');
+      const data = await res.json();
+      _bookingListData = data.bookings || [];
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="7">Could not load bookings.</td></tr>';
+      return;
+    }
+    renderBookingList();
+  }
+
+  function renderBookingList() {
+    if (!_bookingListData) return;
+    const tbody = document.getElementById('booking-list-tbody');
+    const statusFilter = document.getElementById('list-status-filter').value;
+    const sort = document.getElementById('list-sort').value;
+
+    let rows = _bookingListData.slice();
+    if (statusFilter) rows = rows.filter(b => b.status === statusFilter);
+    rows.sort((a, b) => {
+      const cmp = a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date);
+      return sort === 'date_asc' ? cmp : -cmp;
+    });
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1.5rem;">No bookings match.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(b => {
+      const sc = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
+      const length = b.is_multiday ? 'Multi-day' : formatShopTime(b.duration_minutes);
+      const mechLine = b.assigned_mechanic
+        ? b.assigned_mechanic
+        : '<span style="color:var(--muted);">Shop decides</span>';
+      const prefLine = b.shows_preference
+        ? `<div style="font-size:0.68rem;color:#b45309;margin-top:0.1rem;">customer chose ${b.preferred_mechanic}</div>`
+        : '';
+      return `
+        <tr>
+          <td style="white-space:nowrap;">${b.date_label}</td>
+          <td style="white-space:nowrap;">${b.time_label} – ${b.end_label}</td>
+          <td style="white-space:nowrap;">${length}</td>
+          <td>${b.customer}</td>
+          <td>${mechLine}${prefLine}</td>
+          <td>${b.service}</td>
+          <td><span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${b.status.replace(/_/g,' ')}</span></td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── CAPACITY CONTROLS ──
+  // Three panels sharing the Day Schedule's selected date: how many
+  // mechanics are on duty, the policy cap on bookings, and — the actual
+  // point of this dashboard — which of those two is really limiting the day.
+  let _capacityRosterSize = 0;
+
+  async function loadCapacity() {
+    const dateInput = document.getElementById('day-schedule-date');
+    if (!dateInput.value) dateInput.value = todayISO();
+    let data;
+    try {
+      const res = await fetch(`/api/capacity?date=${dateInput.value}`);
+      data = await res.json();
+    } catch (e) {
+      document.getElementById('cap-bottleneck-text').textContent = 'Could not load capacity data.';
+      return;
+    }
+    if (data.error) return;
+
+    _capacityRosterSize = data.roster_size;
+    const slider = document.getElementById('cap-mechanic-slider');
+    slider.max = data.roster_size;
+    slider.value = data.mechanic_count;
+    renderMechanicNote(data.mechanic_count, data.working_today, data.roster_size, data.staff_note);
+
+    document.getElementById('cap-daily-input').value = data.daily_cap;
+
+    renderBottleneck(data.bottleneck);
+  }
+
+  function renderMechanicNote(mechanicCount, workingToday, rosterSize, staffNote) {
+    const note = document.getElementById('cap-mechanic-note');
+    note.textContent = staffNote
+      ? staffNote
+      : `${rosterSize} on the roster · ${workingToday} working today`;
+  }
+
+  // Live feedback as the slider is dragged, before the change actually saves
+  // (onchange fires on release) — the roster count itself is known instantly,
+  // even though whether anyone within it is individually off duty needs the
+  // server's answer once it's actually set.
+  function onCapacitySliderInput() {
+    const slider = document.getElementById('cap-mechanic-slider');
+    document.getElementById('cap-mechanic-note').textContent =
+      `${_capacityRosterSize} on the roster · ${slider.value} working today`;
+  }
+
+  function stepCap(delta) {
+    const input = document.getElementById('cap-daily-input');
+    const next = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
+    input.value = next;
+    saveCapacity('daily_cap', next);
+  }
+
+  async function saveCapacity(field, value) {
+    const dateInput = document.getElementById('day-schedule-date');
+    const payload = { date: dateInput.value };
+    payload[field] = value === '' ? null : parseInt(value, 10);
+    try {
+      await fetch('/api/capacity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) { /* fall through to reload regardless */ }
+    loadCapacity();
+    renderDsCalendar();
+  }
+
+  function renderBottleneck(b) {
+    const card = document.getElementById('cap-bottleneck-card');
+    const text = document.getElementById('cap-bottleneck-text');
+    if (!b) { text.textContent = '—'; return; }
+    text.textContent = b.message;
+    if (b.binding === 'cap') {
+      card.style.background = 'rgba(217,119,6,0.08)';
+      card.style.borderColor = '#f59e0b';
+    } else {
+      card.style.background = 'rgba(29,78,216,0.06)';
+      card.style.borderColor = '#3b82f6';
+    }
+  }
+
+  // ── DAY PANEL ──
+  // Everything below renders the Day panel from /api/day-panel: header,
+  // In the bay, Clashes to resolve, the mechanic timeline, time slots with
+  // booking cards, and the footer legend + dev proof. loadDaySchedule() is
+  // the one entry point every date-change / action-completion path calls.
+
+  const TAG_STYLES = {
+    'Cancelled':          { bg:'#f3f4f6', color:'#4b5563', border:'#d1d5db' },
+    'Running long':       { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },
+    'Clash':              { bg:'#fef3c7', color:'#92400e', border:'#f59e0b' },
+    'Rescheduled':        { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe' },
+    'Not their mechanic': { bg:'#faf5ff', color:'#6d28d9', border:'#ddd6fe' },
+  };
 
   async function loadDaySchedule() {
     const dateInput = document.getElementById('day-schedule-date');
@@ -2121,44 +2554,696 @@
 
     let data;
     try {
-      const res = await fetch(`/api/day-schedule?date=${dateInput.value}`);
+      const res = await fetch(`/api/day-panel?date=${dateInput.value}`);
       data = await res.json();
     } catch (e) {
       body.innerHTML = '<div class="empty-state"><p>Could not load the schedule.</p></div>';
       return;
     }
-
-    if (!data.bookings || !data.bookings.length) {
-      body.innerHTML = '<div class="empty-state"><div class="ei">📅</div><p>Nothing booked this day.</p></div>';
+    if (data.error) {
+      body.innerHTML = `<div class="empty-state"><p>${data.error}</p></div>`;
       return;
     }
+    renderDayPanel(data);
+  }
 
-    body.innerHTML = `
-      <div style="overflow-x:auto;">
-        <table class="table">
-          <thead><tr><th>Time</th><th>Customer</th><th>Service</th><th>Mechanic</th><th>Status</th><th>Action</th></tr></thead>
-          <tbody>
-            ${data.bookings.map(b => {
-              const sc = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
-              const when = b.is_multiday ? `${b.time_label} drop-off` : `${b.time_label} – ${b.end_label}`;
-              const mech = b.assigned_mechanic
-                ? b.assigned_mechanic + (b.preferred_mechanic && b.preferred_mechanic !== b.assigned_mechanic ? ' <span style="color:#b45309;">(not their pick)</span>' : '')
-                : '<span style="color:var(--muted);">Shop decides</span>';
-              const canReschedule = !['completed', 'cancelled'].includes(b.status);
-              return `
-                <tr>
-                  <td style="white-space:nowrap;font-weight:600;">${when}</td>
-                  <td>${b.customer}${b.is_walkin ? ' <span style="font-size:0.62rem;font-weight:600;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;padding:0.1rem 0.4rem;border-radius:4px;">Walk-In</span>' : ''}</td>
-                  <td>${b.service}</td>
-                  <td>${mech}</td>
-                  <td><span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${b.status.replace(/_/g,' ')}</span></td>
-                  <td>${canReschedule ? `<button type="button" class="btn-action-edit" onclick='openRescheduleModal(${b.id}, ${JSON.stringify(b.service)}, ${JSON.stringify(b.customer)}, ${JSON.stringify(when)})'>Reschedule</button>` : '—'}</td>
-                </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
+  function renderDayPanel(data) {
+    const body = document.getElementById('day-schedule-body');
+    body.innerHTML =
+      renderDayPanelHeader(data) +
+      renderBayStrip(data.bay) +
+      renderClashesPanel(data.clashes) +
+      renderMechanicTimeline(data) +
+      renderTimeSlotsPanel(data) +
+      renderDayPanelFooter();
+    populateCardMechanicSelects(data);
+  }
+
+  function renderDayPanelHeader(data) {
+    const badges = [];
+    if (data.is_full) badges.push('<span class="badge" style="background:#dc2626;color:#fff;border:1px solid #dc2626;font-weight:700;">Full</span>');
+    if (data.has_clash) badges.push('<span class="badge" style="background:#1f2937;color:#fff;border:1px solid #1f2937;font-weight:700;">Clash</span>');
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;margin-bottom:1.2rem;">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;">${data.date_label}</div>
+          <div style="font-size:0.82rem;color:var(--muted);margin-top:0.15rem;">
+            ${data.booked_count} of ${data.daily_cap} booked &middot; ${data.mechanic_count} mechanic${data.mechanic_count === 1 ? '' : 's'} on duty
+          </div>
+        </div>
+        <div style="display:flex;gap:0.4rem;">${badges.join('')}</div>
       </div>`;
   }
+
+  function renderBayStrip(bay) {
+    return `
+      <div style="margin-bottom:1.3rem;">
+        <div style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">In the Bay</div>
+        ${!bay.length ? '<div style="font-size:0.82rem;color:var(--muted);">Nothing open right now.</div>' : `
+        <div style="display:flex;gap:0.7rem;overflow-x:auto;padding-bottom:0.3rem;">
+          ${bay.map(b => `
+            <div style="flex:0 0 auto;min-width:210px;border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.85rem;background:#fafafa;">
+              <div style="font-weight:700;font-size:0.86rem;">${b.customer}</div>
+              <div style="font-size:0.74rem;color:var(--muted);margin-top:0.1rem;">${b.service}</div>
+              <div style="font-size:0.74rem;color:var(--muted);">${b.mechanic || 'Shop decides'}</div>
+              <div style="font-size:0.76rem;font-weight:600;margin-top:0.35rem;">${b.day_label}</div>
+              <div style="font-size:0.74rem;color:var(--green);">${b.release_label}</div>
+              <button type="button" class="btn-primary-custom" style="margin-top:0.55rem;padding:0.35rem 0.6rem;font-size:0.73rem;width:100%;" onclick="markReadyForPickup(${b.id})">Ready for pickup</button>
+            </div>`).join('')}
+        </div>`}
+      </div>`;
+  }
+
+  async function markReadyForPickup(bid) {
+    if (!confirm("Mark this job ready for pickup? This closes the job, frees the mechanic's bay, and emails the customer.")) return;
+    try {
+      const res = await fetch(`/booking/${bid}/ready-for-pickup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Closed.', 'success'); loadDaySchedule(); }
+      else showToast(data.error || 'Could not close this job.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  function renderClashesPanel(clashes) {
+    if (!clashes.length) {
+      return `
+        <div style="margin-bottom:1.3rem;">
+          <div style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Clashes to Resolve</div>
+          <div style="font-size:0.82rem;color:var(--green);">No clashes — every booking has a real, on-duty, non-overlapping mechanic.</div>
+        </div>`;
+    }
+    return `
+      <div style="margin-bottom:1.3rem;">
+        <div style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Clashes to Resolve (${clashes.length})</div>
+        <div style="display:flex;flex-direction:column;gap:0.6rem;">
+          ${clashes.map(c => renderClashCard(c)).join('')}
+        </div>
+      </div>`;
+  }
+
+  function renderClashCard(c) {
+    return `
+      <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:10px;padding:0.75rem 0.9rem;">
+        <div style="font-weight:700;font-size:0.86rem;">${c.customer} — ${c.service} (${c.time_label})</div>
+        <div style="font-size:0.8rem;color:#92400e;margin:0.25rem 0 0.6rem;">${c.cause}</div>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.74rem;color:var(--muted);margin-bottom:0.5rem;">
+          <input type="checkbox" id="clash-notify-${c.id}" checked> Email the customer when this is applied
+        </label>
+        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+          ${renderFixButton(1, 'preferred', c)}
+          ${renderFixButton(2, 'move_time', c)}
+          ${renderFixButton(3, 'any_free', c)}
+          ${c.fixes.delay_notice ? renderFixButton(4, 'delay_notice', c) : ''}
+        </div>
+        <div id="clash-result-${c.id}" style="margin-top:0.5rem;font-size:0.78rem;"></div>
+      </div>`;
+  }
+
+  function renderFixButton(n, kind, c) {
+    const f = c.fixes[kind];
+    if (kind !== 'delay_notice' && !f) return '';
+    let label, disabled = false;
+    if (kind === 'preferred') {
+      label = f.available ? `${n}. Give it to ${f.mechanic} — free now, same slot` : `${n}. ${f.mechanic} isn't free — ${f.reason}`;
+      disabled = !f.available;
+    } else if (kind === 'move_time') {
+      label = f.available ? `${n}. Keep ${c.assigned_mechanic}, move to ${f.label}` : `${n}. Move the time — nothing free within 14 days`;
+      disabled = !f.available;
+    } else if (kind === 'any_free') {
+      label = f.available ? `${n}. Hand to ${f.mechanic} at the same time (changes the customer's request)` : `${n}. No one else on duty is free at this time`;
+      disabled = !f.available;
+    } else {
+      label = `${n}. Keep the slot, send a delay notice`;
+    }
+    const cls = disabled ? 'btn-cancel' : 'btn-primary-custom';
+    return `<button type="button" class="${cls}" ${disabled ? 'disabled' : `onclick="applyClashFix(${c.id}, '${kind}')"`}
+              style="text-align:left;padding:0.5rem 0.7rem;font-size:0.78rem;${disabled ? 'opacity:0.55;cursor:not-allowed;' : ''}">${label}</button>`;
+  }
+
+  async function applyClashFix(bid, fix) {
+    const resultEl = document.getElementById(`clash-result-${bid}`);
+    const notifyEl = document.getElementById(`clash-notify-${bid}`);
+    const notify = notifyEl ? notifyEl.checked : true;
+    resultEl.style.color = 'var(--muted)';
+    resultEl.textContent = 'Applying…';
+    try {
+      const res = await fetch(`/booking/${bid}/resolve-clash`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fix, notify }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Clash resolved.', 'success');
+        loadDaySchedule();
+      } else {
+        resultEl.style.color = '#b91c1c';
+        resultEl.textContent = data.error || 'Could not apply this fix.';
+      }
+    } catch (e) {
+      resultEl.style.color = '#b91c1c';
+      resultEl.textContent = 'Network error — please try again.';
+    }
+  }
+
+  function renderMechanicTimeline(data) {
+    const SHOP_START = 480, SHOP_END = 1110, SPAN = SHOP_END - SHOP_START;
+    const hourMarks = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+    const pct = min => ((min - SHOP_START) / SPAN * 100).toFixed(2);
+
+    function rowHTML(label, spec, bars) {
+      return `
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;">
+          <div style="width:110px;flex-shrink:0;font-size:0.76rem;">
+            <div style="font-weight:700;">${label}</div>
+            ${spec ? `<div style="color:var(--muted);font-size:0.66rem;">${spec}</div>` : ''}
+          </div>
+          <div style="position:relative;flex:1;height:32px;background:#fafafa;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+            ${hourMarks.map(h => `<div style="position:absolute;top:0;bottom:0;left:${pct(h * 60)}%;width:1px;background:var(--border);"></div>`).join('')}
+            <div style="position:absolute;top:0;bottom:0;left:${pct(720)}%;width:${(30 / SPAN * 100).toFixed(2)}%;background:repeating-linear-gradient(45deg,#e5e7eb,#e5e7eb 4px,#f3f4f6 4px,#f3f4f6 8px);"></div>
+            ${bars.map(b => {
+              const left = pct(Math.max(b.start, SHOP_START));
+              const width = Math.max(((Math.min(b.end, SHOP_END) - Math.max(b.start, SHOP_START)) / SPAN * 100), 1.2).toFixed(2);
+              const bg = b.status === 'cancelled' ? '#f3f4f6' : (b.is_multiday ? '#ede9fe' : '#dbeafe');
+              const border = b.clash ? '2px solid #d97706' : ('1px solid ' + (b.is_multiday ? '#c4b5fd' : '#93c5fd'));
+              const stripe = b.overrunning ? 'background-image:repeating-linear-gradient(45deg,rgba(220,38,38,0.22),rgba(220,38,38,0.22) 4px,transparent 4px,transparent 8px);' : '';
+              const strike = b.status === 'cancelled' ? 'text-decoration:line-through;opacity:0.6;' : '';
+              return `<div title="${b.customer} — ${b.service}" style="position:absolute;top:3px;bottom:3px;left:${left}%;width:${width}%;background:${bg};border:${border};border-radius:4px;font-size:0.6rem;padding:0.1rem 0.3rem;overflow:hidden;white-space:nowrap;${stripe}${strike}">${b.customer}</div>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }
+
+    const rows = data.timeline.map(t => rowHTML(t.mechanic, t.specialization, t.bars)).join('');
+    const unassignedRow = data.unassigned_bars.length ? rowHTML('Unassigned', null, data.unassigned_bars) : '';
+    const freeLine = data.free_all_day.length
+      ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">${data.free_all_day.length} mechanic${data.free_all_day.length === 1 ? '' : 's'} free all day: ${data.free_all_day.join(', ')}.</div>`
+      : '';
+
+    return `
+      <div style="margin-bottom:1.3rem;">
+        <div style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Mechanic Timeline</div>
+        ${rows}${unassignedRow}${freeLine}
+      </div>`;
+  }
+
+  function renderTimeSlotsPanel(data) {
+    const blocks = data.slots.map(s => `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:0.8rem 0.9rem;margin-bottom:0.7rem;${s.blocked ? 'background:#f3f4f6;' : ''}">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;${s.cards.length ? 'margin-bottom:0.7rem;' : ''}">
+          <div>
+            <span style="font-weight:700;font-family:'Syne',sans-serif;">${s.label}</span>
+            <span style="font-size:0.76rem;color:var(--muted);margin-left:0.5rem;">${s.booked_count} booked &middot; ${s.free_mechanics} of ${s.mechanic_count} mechanics free</span>
+            ${s.blocked ? '<span class="badge" style="background:#e5e7eb;color:#374151;border:1px solid #d1d5db;margin-left:0.5rem;">Blocked</span>' : ''}
+          </div>
+          <button type="button" class="btn-cancel" style="padding:0.3rem 0.7rem;font-size:0.73rem;" onclick="toggleSlotBlock('${s.time}', ${s.blocked})">${s.blocked ? 'Unblock' : 'Block'}</button>
+        </div>
+        ${s.cards.length ? `<div style="display:flex;flex-direction:column;gap:0.55rem;">${s.cards.map(bookingCardHTML).join('')}</div>` : ''}
+      </div>`).join('');
+
+    return `
+      <div>
+        <div style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Time Slots</div>
+        ${blocks}
+      </div>`;
+  }
+
+  async function toggleSlotBlock(time, currentlyBlocked) {
+    const dateInput = document.getElementById('day-schedule-date');
+    try {
+      const res = await fetch('/api/blocked-slots', {
+        method: currentlyBlocked ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateInput.value, time }),
+      });
+      const data = await res.json();
+      if (data.success === false) { showToast(data.error || 'Could not update this slot.', 'error'); return; }
+      loadDaySchedule();
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  function bookingCardHTML(c) {
+    const strike = c.status === 'cancelled' ? 'text-decoration:line-through;opacity:0.6;' : '';
+    const tagsHTML = c.tags.map(t => {
+      const s = TAG_STYLES[t] || { bg: '#f3f4f6', color: '#374151', border: '#d1d5db' };
+      return `<span class="badge" style="background:${s.bg};color:${s.color};border:1px solid ${s.border};font-size:0.6rem;">${t}</span>`;
+    }).join(' ');
+    const mechLine = c.mechanic
+      ? `${c.mechanic}${c.specialization ? ` — ${c.specialization}` : ''}`
+      : '<span style="color:var(--muted);">No mechanic assigned</span>';
+    const lenLabel = c.is_multiday ? 'Drop-off (30m intake)' : c.duration_label;
+    const canAct = c.status !== 'cancelled' && c.status !== 'completed';
+
+    return `
+      <div id="booking-card-${c.id}" style="border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.8rem;transition:box-shadow 0.3s, border-color 0.3s;">
+        <div style="display:flex;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;${strike}">
+          <div>
+            <div style="font-weight:700;font-size:0.86rem;">${c.customer}</div>
+            <div style="font-size:0.74rem;color:var(--muted);">${c.time_label} – ${c.end_label} &middot; ${lenLabel} &middot; ${c.ref}</div>
+          </div>
+          <div style="display:flex;gap:0.3rem;flex-wrap:wrap;align-content:flex-start;">${tagsHTML}</div>
+        </div>
+        <div style="font-size:0.8rem;margin-top:0.45rem;${strike}">${mechLine}</div>
+        ${c.chosen_by ? `<div style="font-size:0.71rem;color:var(--muted);">${c.chosen_by}</div>` : ''}
+        <div style="font-size:0.76rem;color:var(--muted);margin-top:0.2rem;">${c.motorcycle || '—'}</div>
+        <div style="font-size:0.76rem;color:var(--muted);">${c.services}</div>
+        ${canAct ? `
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.6rem;">
+          <select id="card-mech-${c.id}" style="font-size:0.73rem;padding:0.3rem;border:1px solid var(--border);border-radius:6px;" onchange="if(this.value!=='__noop__')assignCardMechanic(${c.id}, this.value)">
+            <option value="__noop__">Assign mechanic…</option>
+          </select>
+          <button type="button" class="btn-cancel" style="padding:0.3rem 0.55rem;font-size:0.71rem;" onclick="runningLong(${c.id}, 'add30')">+30m</button>
+          <button type="button" class="btn-cancel" style="padding:0.3rem 0.55rem;font-size:0.71rem;" onclick="runningLong(${c.id}, 'add60')">+1h</button>
+          <button type="button" class="btn-cancel" style="padding:0.3rem 0.55rem;font-size:0.71rem;" onclick="runningLong(${c.id}, 'reset')">Back on time</button>
+          <button type="button" class="btn-action-edit" style="padding:0.3rem 0.55rem;font-size:0.71rem;" onclick='openRescheduleModal(${c.id}, ${JSON.stringify(c.services)}, ${JSON.stringify(c.customer)}, ${JSON.stringify(c.time_label + " – " + c.end_label)})'>Reschedule</button>
+          <button type="button" class="btn-cancel" style="padding:0.3rem 0.55rem;font-size:0.71rem;color:#b91c1c;" onclick="cancelCardBooking(${c.id})">Cancel</button>
+        </div>` : (c.status === 'cancelled' ? `
+        <div style="margin-top:0.6rem;">
+          <button type="button" class="btn-primary-custom" style="padding:0.3rem 0.6rem;font-size:0.71rem;" onclick="restoreCardBooking(${c.id})">Restore</button>
+        </div>` : '')}
+      </div>`;
+  }
+
+  function populateCardMechanicSelects(data) {
+    data.slots.forEach(s => {
+      s.cards.forEach(c => {
+        const sel = document.getElementById(`card-mech-${c.id}`);
+        if (!sel) return;
+        data.timeline.forEach(t => {
+          const busy = t.bars.some(bar => bar.id !== c.id && bar.start < c.end && c.start < bar.end);
+          const opt = document.createElement('option');
+          opt.value = String(t.mechanic_id);
+          opt.textContent = t.mechanic + ' — ' + t.specialization + (busy ? ' (busy then)' : '');
+          opt.disabled = busy;
+          if (t.mechanic === c.mechanic) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        const unassignOpt = document.createElement('option');
+        unassignOpt.value = '';
+        unassignOpt.textContent = 'Unassign';
+        sel.appendChild(unassignOpt);
+      });
+    });
+  }
+
+  async function assignCardMechanic(bid, mechanicId) {
+    try {
+      const res = await fetch(`/booking/${bid}/assign-mechanic`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: `mechanic_id=${encodeURIComponent(mechanicId)}`,
+      });
+      const data = await res.json();
+      if (data.success) { showToast('Mechanic updated.', 'success'); loadDaySchedule(); }
+      else { showToast(data.error || 'Could not update the mechanic.', 'error'); loadDaySchedule(); }
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  async function runningLong(bid, action) {
+    try {
+      const res = await fetch(`/booking/${bid}/running-long`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (data.success) { showToast('Updated.', 'success'); loadDaySchedule(); }
+      else showToast(data.error || 'Could not update.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  async function cancelCardBooking(bid) {
+    if (!confirm('Cancel this booking?')) return;
+    const notify = confirm('Tell the customer?\n\nOK = yes, notify them. Cancel = no, stay quiet.');
+    let reason = '';
+    if (notify) {
+      reason = prompt('Reason (one honest sentence — this goes in the message the customer sees):', '') || '';
+    }
+    try {
+      const res = await fetch(`/booking/${bid}/cancel`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notify, reason }),
+      });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Cancelled.', 'success'); loadDaySchedule(); }
+      else showToast(data.error || 'Could not cancel.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  async function restoreCardBooking(bid) {
+    try {
+      const res = await fetch(`/booking/${bid}/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (data.success) { showToast('Booking restored.', 'success'); loadDaySchedule(); }
+      else showToast(data.error || 'Could not restore.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  function renderDayPanelFooter() {
+    return `
+      <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;">
+        <div style="display:flex;gap:0.9rem;flex-wrap:wrap;font-size:0.7rem;color:var(--muted);align-items:center;">
+          <span style="display:flex;align-items:center;gap:0.3rem;"><span style="width:13px;height:13px;border-radius:3px;background:#dbeafe;border:1px solid #93c5fd;display:inline-block;"></span> Confirmed</span>
+          <span style="display:flex;align-items:center;gap:0.3rem;"><span style="width:13px;height:13px;border-radius:3px;background:#ede9fe;border:1px solid #c4b5fd;display:inline-block;"></span> Drop-off</span>
+          <span style="display:flex;align-items:center;gap:0.3rem;"><span style="width:13px;height:13px;border-radius:3px;background:#f3f4f6;border:1px solid #d1d5db;display:inline-block;"></span> Cancelled</span>
+          <span style="display:flex;align-items:center;gap:0.3rem;"><span style="width:13px;height:13px;border-radius:3px;background:#dbeafe;border:2px solid #d97706;display:inline-block;"></span> Clash</span>
+          <span style="display:flex;align-items:center;gap:0.3rem;"><span style="width:13px;height:13px;border-radius:3px;background:repeating-linear-gradient(45deg,rgba(220,38,38,0.28),rgba(220,38,38,0.28) 3px,#dbeafe 3px,#dbeafe 6px);border:1px solid #93c5fd;display:inline-block;"></span> Running long</span>
+        </div>
+        <button type="button" class="btn-cancel" style="padding:0.35rem 0.8rem;font-size:0.73rem;" onclick="devTryDoubleBooking()">Dev: try a direct double-booking</button>
+      </div>
+      <div id="dev-double-booking-result" style="margin-top:0.5rem;font-size:0.76rem;font-family:monospace;white-space:pre-wrap;"></div>`;
+  }
+
+  async function devTryDoubleBooking() {
+    const dateInput = document.getElementById('day-schedule-date');
+    const el = document.getElementById('dev-double-booking-result');
+    el.style.color = 'var(--muted)';
+    el.textContent = 'Calling the create routine directly…';
+    try {
+      const res = await fetch('/api/dev/try-double-booking', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateInput.value }),
+      });
+      const data = await res.json();
+      if (data.ok === null) {
+        el.textContent = data.message;
+      } else {
+        el.textContent = `Attempted: ${data.attempted}\nServer said: "${data.message}"\nAllowed: ${data.ok}`;
+        el.style.color = data.ok ? '#b91c1c' : 'var(--green)';
+      }
+    } catch (e) { el.textContent = 'Network error.'; }
+  }
+
+  // ── OUTBOX ──
+  // Every customer notification, read from the same rows the customer's own
+  // bell reads — one record, two views. Priority-and-unread rows float to
+  // the top; everything else is newest first (the server already sorts it
+  // this way). Each row collapses to a compact line; expanding it marks it
+  // read and reveals the full message plus a link to the actual booking.
+  let _outboxItems = [];
+  let _outboxExpanded = new Set();
+
+  async function loadOutbox() {
+    const list = document.getElementById('outbox-list');
+    list.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
+    try {
+      const res = await fetch('/api/outbox');
+      const data = await res.json();
+      _outboxItems = data.items || [];
+      document.getElementById('outbox-unread-count').textContent = data.unread_count;
+      updateOutboxNavBadge(data.unread_count);
+      renderOutbox();
+    } catch (e) {
+      list.innerHTML = '<div class="empty-state"><p>Could not load the outbox.</p></div>';
+    }
+  }
+
+  function updateOutboxNavBadge(count) {
+    const badge = document.getElementById('outbox-nav-badge');
+    if (count > 0) { badge.style.display = 'inline-block'; badge.textContent = count > 99 ? '99+' : count; }
+    else badge.style.display = 'none';
+  }
+
+  function renderOutbox() {
+    const list = document.getElementById('outbox-list');
+    if (!_outboxItems.length) {
+      list.innerHTML = '<div class="empty-state"><div class="ei">📭</div><p>Nothing sent yet.</p></div>';
+      return;
+    }
+    list.innerHTML = _outboxItems.map(n => {
+      const expanded = _outboxExpanded.has(n.id);
+      const unread = !n.is_read;
+      const time = new Date(n.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+      return `
+        <div style="border-left:3px solid ${unread ? 'var(--red)' : 'transparent'};border-bottom:1px solid var(--border);background:${unread ? 'rgba(208,0,25,0.03)' : 'transparent'};">
+          <div style="display:flex;align-items:center;gap:0.7rem;padding:0.7rem 0.9rem;cursor:pointer;" onclick="toggleOutboxItem(${n.id})">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <span style="font-weight:700;font-size:0.84rem;">${n.customer}</span>
+                ${n.priority && unread ? '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;font-size:0.6rem;">Needs a look</span>' : ''}
+              </div>
+              <div style="font-size:0.8rem;color:var(--text);margin-top:0.1rem;white-space:${expanded ? 'normal' : 'nowrap'};overflow:${expanded ? 'visible' : 'hidden'};text-overflow:ellipsis;">${n.title}</div>
+            </div>
+            <div style="font-size:0.72rem;color:var(--muted);flex-shrink:0;">${time}</div>
+          </div>
+          ${expanded ? `
+          <div style="padding:0 0.9rem 0.9rem 0.9rem;">
+            <div style="font-size:0.8rem;color:var(--text);line-height:1.55;white-space:pre-line;background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.8rem;">${n.message}</div>
+            ${n.booking_id ? `<button type="button" class="btn-action-edit" style="margin-top:0.5rem;padding:0.35rem 0.7rem;font-size:0.75rem;" onclick="event.stopPropagation(); outboxViewBooking(${n.booking_id}, '${n.booking_date || ''}')">View booking →</button>` : ''}
+          </div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  async function toggleOutboxItem(id) {
+    if (_outboxExpanded.has(id)) {
+      _outboxExpanded.delete(id);
+      renderOutbox();
+      return;
+    }
+    _outboxExpanded.add(id);
+    const item = _outboxItems.find(n => n.id === id);
+    if (item && !item.is_read) {
+      item.is_read = true;
+      const countEl = document.getElementById('outbox-unread-count');
+      const newCount = Math.max(0, parseInt(countEl.textContent, 10) - 1);
+      countEl.textContent = newCount;
+      updateOutboxNavBadge(newCount);
+      try { await fetch(`/api/outbox/${id}/read`, { method: 'POST' }); } catch (e) {}
+    }
+    renderOutbox();
+  }
+
+  async function outboxMarkAllRead() {
+    try {
+      await fetch('/api/outbox/mark-all-read', { method: 'POST' });
+      _outboxItems.forEach(n => n.is_read = true);
+      document.getElementById('outbox-unread-count').textContent = '0';
+      updateOutboxNavBadge(0);
+      renderOutbox();
+      showToast('Marked all read.', 'success');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  function outboxViewBooking(bookingId, dateISO) {
+    if (!dateISO) { showToast('That booking no longer has a date on file.', 'error'); return; }
+    // Set the target date/month BEFORE handing off to showSection, so its
+    // initDaySchedule() call (which only fills in defaults when unset) picks
+    // up the right day the first time instead of racing a "today" fetch
+    // against the correct one.
+    document.getElementById('day-schedule-date').value = dateISO;
+    dsCalYear = parseInt(dateISO.slice(0, 4), 10);
+    dsCalMonth = parseInt(dateISO.slice(5, 7), 10) - 1;
+    const navLink = document.querySelector(".sidebar a[onclick*=\"'day-schedule'\"]");
+    showSection('day-schedule', navLink || null);
+    setTimeout(() => {
+      const card = document.getElementById(`booking-card-${bookingId}`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.style.borderColor = 'var(--red)';
+        card.style.boxShadow = '0 0 0 3px rgba(208,0,25,0.15)';
+        setTimeout(() => { card.style.borderColor = ''; card.style.boxShadow = ''; }, 2500);
+      }
+    }, 600);
+  }
+
+  // ── RETURNS / WARRANTY ──
+  // The shop looks at the evidence, decides (approve with a remedy, or
+  // deny — both with a reason the customer will see), then separately marks
+  // the remedy actually carried out. Open claims (submitted/under_review)
+  // sort to the top, same convention as the Outbox.
+  let _returnsItems = [];
+
+  const RETURN_STATUS_COLORS = {
+    submitted:    { bg: '#fef9c3', color: '#713f12', border: '#eab308' },
+    under_review: { bg: '#e0e7ff', color: '#3730a3', border: '#6366f1' },
+    approved:     { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
+    denied:       { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
+    resolved:     { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
+  };
+  // The rule the whole feature rests on: every claim forces ONE mutually
+  // exclusive choice — put it right, or give the money back, never both —
+  // so each option states its own consequence in bold, not a footnote.
+  const RETURN_OUTCOME_OPTIONS = {
+    product: [
+      { value: 'replacement', title: 'Return and replacement', consequence: 'No money is returned.' },
+      { value: 'refund', title: 'Return and refund', consequence: 'No replacement is shipped.' },
+    ],
+    service: [
+      { value: 'redo_service', title: 'Back job', consequence: 'No money is returned — this is the warranty remedy.' },
+      { value: 'refund', title: 'Refund', consequence: 'The work is not redone — they book again separately if needed.' },
+    ],
+  };
+  let _returnOutcomeChoice = {};
+
+  function returnOutcomeLabel(kind, value) {
+    const opt = (RETURN_OUTCOME_OPTIONS[kind] || []).find(o => o.value === value);
+    return opt ? opt.title : (value || '');
+  }
+
+  function returnOutcomePickerHTML(r) {
+    const opts = RETURN_OUTCOME_OPTIONS[r.kind] || [];
+    if (!(r.id in _returnOutcomeChoice)) _returnOutcomeChoice[r.id] = r.desired_outcome;
+    const chosen = _returnOutcomeChoice[r.id];
+    return `
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        ${opts.map(o => {
+          const selected = o.value === chosen;
+          return `<div onclick="selectReturnOutcome(${r.id}, '${o.value}')" style="flex:1;min-width:170px;border:1.5px solid ${selected ? 'var(--red)' : 'var(--border)'};background:${selected ? 'rgba(208,0,25,0.06)' : '#fff'};border-radius:8px;padding:0.5rem 0.65rem;cursor:pointer;transition:all 0.15s;">
+            <div style="font-weight:700;font-size:0.78rem;">${o.title}</div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:0.15rem;"><strong>${o.consequence}</strong></div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  function selectReturnOutcome(rid, value) {
+    _returnOutcomeChoice[rid] = value;
+    renderReturns();
+  }
+
+  async function loadReturns() {
+    const list = document.getElementById('returns-list');
+    list.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
+    try {
+      const res = await fetch('/api/returns');
+      const data = await res.json();
+      _returnsItems = data.items || [];
+      document.getElementById('returns-open-count').textContent = data.open_count;
+      updateReturnsNavBadge(data.open_count);
+      renderReturns();
+    } catch (e) {
+      list.innerHTML = '<div class="empty-state"><p>Could not load returns.</p></div>';
+    }
+  }
+
+  function updateReturnsNavBadge(count) {
+    const badge = document.getElementById('returns-nav-badge');
+    if (count > 0) { badge.style.display = 'inline-block'; badge.textContent = count > 99 ? '99+' : count; }
+    else badge.style.display = 'none';
+  }
+
+  function renderReturns() {
+    const list = document.getElementById('returns-list');
+    const filter = document.getElementById('returns-status-filter').value;
+    const rows = filter ? _returnsItems.filter(r => r.status === filter) : _returnsItems;
+
+    if (!rows.length) {
+      list.innerHTML = '<div class="empty-state"><div class="ei">📦</div><p>Nothing here.</p></div>';
+      return;
+    }
+    list.innerHTML = `<div style="display:flex;flex-direction:column;gap:0.7rem;">${rows.map(returnCardHTML).join('')}</div>`;
+  }
+
+  function returnCardHTML(r) {
+    const sc = RETURN_STATUS_COLORS[r.status] || RETURN_STATUS_COLORS.submitted;
+    const photosHTML = r.photos.length
+      ? `<div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">${r.photos.map(p =>
+          `<a href="/static/return_evidence/${p}" target="_blank"><img src="/static/return_evidence/${p}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border);"></a>`).join('')}</div>`
+      : '';
+
+    let actionsHTML = '';
+    if (r.status === 'submitted' || r.status === 'under_review') {
+      actionsHTML = `
+        <div style="margin-top:0.65rem;padding-top:0.6rem;border-top:1px dashed var(--border);">
+          <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">Pick one — never both</div>
+          ${returnOutcomePickerHTML(r)}
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.55rem;">
+            <button type="button" class="btn-primary-custom" style="padding:0.35rem 0.7rem;font-size:0.75rem;" onclick="decideReturn(${r.id}, 'approve')">Approve</button>
+            <button type="button" class="btn-cancel" style="padding:0.35rem 0.7rem;font-size:0.75rem;color:#b91c1c;" onclick="decideReturn(${r.id}, 'deny')">Deny</button>
+          </div>
+        </div>`;
+    } else if (r.status === 'approved') {
+      actionsHTML = `
+        <div style="margin-top:0.65rem;">
+          <button type="button" class="btn-primary-custom" style="padding:0.35rem 0.7rem;font-size:0.75rem;" onclick="resolveReturn(${r.id})">Mark Resolved</button>
+        </div>`;
+    }
+
+    const decisionHTML = r.decision_reason ? `
+      <div style="margin-top:0.55rem;padding:0.55rem 0.7rem;background:#fafafa;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;color:var(--text);">
+        ${r.status === 'denied' ? 'Denied' : (r.status === 'resolved' ? 'Done' : 'Approved')}
+        ${r.resolution ? ` — ${returnOutcomeLabel(r.kind, r.resolution)}` : ''}
+        ${r.resolution === 'refund' && r.refund_amount ? ` (₱${Number(r.refund_amount).toFixed(2)})` : ''}: ${r.decision_reason}
+      </div>` : '';
+
+    const lineItemsHTML = r.line_items.length ? `
+      <div style="margin-top:0.5rem;font-size:0.78rem;color:var(--text);">
+        ${r.line_items.map(li => `<div>${li.name} &times;${li.quantity} — ₱${Number(li.subtotal).toFixed(2)}</div>`).join('')}
+      </div>` : '';
+
+    const reasonsHTML = r.reasons.length
+      ? `<div style="font-size:0.78rem;color:var(--text);margin-top:0.4rem;"><strong>Why:</strong> ${r.reasons.join('; ')}</div>` : '';
+
+    const mechanicHTML = r.requested_mechanic_name
+      ? `<div style="font-size:0.76rem;color:var(--muted);margin-top:0.2rem;">Requested (not guaranteed): ${r.requested_mechanic_name} to handle the back job</div>` : '';
+
+    const askHTML = r.desired_outcome === 'refund' && r.requested_refund_amount
+      ? `wants: ${returnOutcomeLabel(r.kind, r.desired_outcome)} (asked for ₱${Number(r.requested_refund_amount).toFixed(2)})`
+      : `wants: ${returnOutcomeLabel(r.kind, r.desired_outcome)}`;
+
+    return `
+      <div class="card" style="padding:0.9rem 1.05rem;">
+        <div style="display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700;font-size:0.9rem;">${r.customer} — ${r.subject}</div>
+            <div style="font-size:0.76rem;color:var(--muted);margin-top:0.1rem;">${r.ref} &middot; ${r.kind === 'product' ? 'Product' : 'Service'} &middot; ${askHTML}</div>
+          </div>
+          <span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};height:fit-content;">${r.status.replace(/_/g,' ')}</span>
+        </div>
+        ${lineItemsHTML}
+        ${reasonsHTML}
+        ${mechanicHTML}
+        ${photosHTML}
+        ${decisionHTML}
+        ${actionsHTML}
+      </div>`;
+  }
+
+  async function decideReturn(rid, decision) {
+    const reason = prompt(decision === 'approve'
+      ? 'Reason for approving (the customer will see this):'
+      : 'Reason for denying (the customer will see this):', '');
+    if (reason === null) return;
+    if (!reason.trim()) { showToast('A reason is required.', 'error'); return; }
+
+    const payload = { decision, reason: reason.trim() };
+    if (decision === 'approve') {
+      const row = _returnsItems.find(r => r.id === rid);
+      payload.resolution = _returnOutcomeChoice[rid] || (row ? row.desired_outcome : 'refund');
+      if (payload.resolution === 'refund') {
+        const suggested = row && row.requested_refund_amount ? row.requested_refund_amount : 0;
+        const amountStr = prompt('Refund amount (₱):', String(suggested));
+        if (amountStr === null) return;
+        payload.refund_amount = parseFloat(amountStr) || 0;
+      }
+    }
+    try {
+      const res = await fetch(`/returns/${rid}/decide`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Decision sent.', 'success'); loadReturns(); }
+      else showToast(data.error || 'Could not save this decision.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  async function resolveReturn(rid) {
+    if (!confirm('Mark this claim resolved? The customer will be told it is done.')) return;
+    try {
+      const res = await fetch(`/returns/${rid}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Marked resolved.', 'success'); loadReturns(); }
+      else showToast(data.error || 'Could not mark resolved.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  (async function primeReturnsBadge() {
+    try {
+      const res = await fetch('/api/returns');
+      const data = await res.json();
+      updateReturnsNavBadge(data.open_count);
+    } catch (e) {}
+  })();
 
   let _rescheduleBookingId = null;
 
@@ -2189,6 +3274,9 @@
       if (data.success) {
         closeModal('modal-reschedule');
         loadDaySchedule();
+        loadCapacity();
+        renderDsCalendar();
+        _bookingListData = null;
       } else {
         errEl.textContent = data.error || 'Could not reschedule this booking.';
         errEl.style.display = 'block';
@@ -3035,6 +4123,16 @@ document.addEventListener('click', function(e) {
 });
 
 fetchAdminNotifications();
+
+// Outbox unread badge should be visible from any section, not just after
+// visiting Outbox — a lightweight count-only fetch at page load.
+(async function primeOutboxBadge() {
+  try {
+    const res = await fetch('/api/outbox');
+    const data = await res.json();
+    updateOutboxNavBadge(data.unread_count);
+  } catch (e) {}
+})();
 
 // ── Toast notification ──────────────────────────────────────────────────────
 function showToast(msg, type) {

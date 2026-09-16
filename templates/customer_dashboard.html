@@ -222,6 +222,11 @@
     .badge-processing     { background: #ede9fe; color: #4c1d95; border: 1px solid #8b5cf6; }
     .badge-shipped        { background: #cffafe; color: #164e63; border: 1px solid #06b6d4; }
     .badge-delivered      { background: #d1fae5; color: #064e3b; border: 1px solid #10b981; }
+    .badge-submitted      { background: #fef9c3; color: #713f12; border: 1px solid #eab308; }
+    .badge-underreview    { background: #e0e7ff; color: #3730a3; border: 1px solid #6366f1; }
+    .badge-approved       { background: #dcfce7; color: #14532d; border: 1px solid #22c55e; }
+    .badge-denied         { background: #fee2e2; color: #7f1d1d; border: 1px solid #ef4444; }
+    .badge-resolved       { background: #d1fae5; color: #064e3b; border: 1px solid #10b981; }
 
     /* ── FORMS ── */
     .form-group { margin-bottom: 1.1rem; }
@@ -544,6 +549,7 @@
     <a href="#" onclick="showSection('bookings', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg> My Bookings</a>
     <a href="#" onclick="showSection('shop', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Parts Catalog</a>
     <a href="#" onclick="showSection('orders', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> My Orders</a>
+    <a href="#" onclick="showSection('returns', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Returns &amp; Warranty</a>
   </div>
 
   <div class="nav-hamburger" id="nav-hamburger" onclick="toggleCustomerNav()">
@@ -575,6 +581,7 @@
   <a href="#" onclick="showSection('bookings', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg> My Bookings</a>
   <a href="#" onclick="showSection('shop', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Parts Catalog</a>
   <a href="#" onclick="showSection('orders', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> My Orders</a>
+  <a href="#" onclick="showSection('returns', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Returns &amp; Warranty</a>
 </div>
 
 <!-- ═══ NOTIFICATION PANEL ═══ --> 
@@ -955,7 +962,7 @@
     {% if bookings %}
     <div style="overflow-x:auto;">
       <table class="table">
-        <thead><tr><th>#</th><th>Service</th><th>Date & Time</th><th>Motorcycle</th><th>Status</th></tr></thead>
+        <thead><tr><th>#</th><th>Service</th><th>Date & Time</th><th>Motorcycle</th><th>Status</th><th>Warranty</th></tr></thead>
         <tbody>
           {% for b in bookings %}
           <tr class="booking-row" data-booking-id="{{ b.id }}" style="cursor:pointer;" onclick="openBookingDetails({{ b.id }})">
@@ -976,6 +983,13 @@
               {% endif %}
             </td>
             <td><span class="badge badge-{{ b.status }}">{{ b.status|replace('_', ' ')|title }}</span></td>
+            <td>
+              {% if b.return_window %}
+                <span class="badge" style="background:{{ '#fee2e2' if b.return_window.expired else '#dbeafe' }};color:{{ '#7f1d1d' if b.return_window.expired else '#1e3a8a' }};border:1px solid {{ '#ef4444' if b.return_window.expired else '#3b82f6' }};">{{ b.return_window.label }}</span>
+              {% else %}
+                <span style="color:var(--fg-3);">—</span>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -1047,7 +1061,7 @@
     {% if orders %}
     <div style="overflow-x:auto;">
       <table class="table">
-        <thead><tr><th>Order #</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
+        <thead><tr><th>Order #</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th><th>Return</th></tr></thead>
         <tbody>
           {% for o in orders %}
           <tr class="order-row" data-order-id="{{ o.id }}" style="cursor:pointer;" onclick="openOrderDetails({{ o.id }})">
@@ -1072,6 +1086,13 @@
                 <span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span>
               {% endif %}
             </td>
+            <td>
+              {% if o.return_window %}
+                <span class="badge" style="background:{{ '#fee2e2' if o.return_window.expired else '#dbeafe' }};color:{{ '#7f1d1d' if o.return_window.expired else '#1e3a8a' }};border:1px solid {{ '#ef4444' if o.return_window.expired else '#3b82f6' }};">{{ o.return_window.label }}</span>
+              {% else %}
+                <span style="color:var(--fg-3);">—</span>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -1079,6 +1100,54 @@
     </div>
     {% else %}
     <div class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><p>No orders yet. <a href="#" onclick="showSection('shop', null)">Browse the catalog!</a></p></div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ═══ RETURNS & WARRANTY — Screen 1: what can be claimed ═══ -->
+<section id="sec-returns" class="c-section" style="padding: 1.5rem 1.25rem 4rem;">
+  <div class="section-head">
+    <div><div class="section-title">RETURNS &amp; <span>WARRANTY</span></div><div class="section-sub">What can be claimed — pick an order or a completed service to start a request.</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.85rem;">
+    <div class="card" style="padding:1rem 1.1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;margin-bottom:0.3rem;color:var(--fg-1);">Replacement or back job</div>
+      <div style="font-size:0.8rem;color:var(--fg-2);line-height:1.55;">We put it right — ship the same part again, or the mechanic redoes the job — at no charge. <strong>No money is returned.</strong></div>
+    </div>
+    <div class="card" style="padding:1rem 1.1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;margin-bottom:0.3rem;color:var(--fg-1);">Refund</div>
+      <div style="font-size:0.8rem;color:var(--fg-2);line-height:1.55;">We return what you paid. <strong>The part isn't replaced and the work isn't redone</strong> — book again separately if you still need it.</div>
+    </div>
+  </div>
+  <div style="font-size:0.78rem;color:var(--fg-3);margin-bottom:1.5rem;">Parts are returnable within <strong>7 days</strong> of delivery. Services carry a <strong>15-day warranty</strong> from the day the job was completed.</div>
+
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Spare Parts Orders</div>
+  <div id="claimable-orders-list" style="display:flex;flex-direction:column;gap:0.7rem;margin-bottom:1.85rem;"></div>
+
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Completed Services</div>
+  <div id="claimable-bookings-list" style="display:flex;flex-direction:column;gap:0.7rem;margin-bottom:1.85rem;"></div>
+
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Your Requests</div>
+  <div class="card">
+    {% if returns %}
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead><tr><th>Reference</th><th>About</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for r in returns %}
+          <tr class="return-row" style="cursor:pointer;" onclick="openReturnDetails({{ r.id }})">
+            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--brand-red);">RMA-{{ '%03d'|format(r.id) }}</span></td>
+            <td><span style="font-size:0.82rem;">{{ r.subject_label }}</span></td>
+            <td>{{ r.created_at.strftime('%b %d, %Y') }}</td>
+            <td><span class="badge badge-{{ r.status|replace('_','') }}">{{ r.status|replace('_',' ')|title }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></div><p>No return or warranty requests yet.</p></div>
     {% endif %}
   </div>
 </section>
@@ -1210,6 +1279,12 @@
     <!-- Status Timeline -->
     <div id="bd-timeline"></div>
 
+    <div id="bd-report-problem-wrap" style="display:none;margin-top:1rem;">
+      <div id="bd-warranty-badge" style="text-align:center;font-size:0.76rem;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:0.5rem;"></div>
+      <button type="button" id="bd-report-problem-btn" onclick="reportProblemForBooking()" style="width:100%;padding:0.65rem;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.25);border-radius:10px;color:var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Report a Problem With This Service</button>
+      <div id="bd-warranty-expired-msg" style="display:none;font-size:0.78rem;color:var(--fg-2);text-align:center;padding:0.65rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;">The warranty window has closed. Message the shop directly — we'll look at it case by case.</div>
+    </div>
+
     <div class="modal-actions" style="margin-top:1.5rem;">
       <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-booking-details')">Close</button>
     </div>
@@ -1274,8 +1349,125 @@
       </button>
     </div>
 
+    <div id="od-report-problem-wrap" style="display:none;margin-top:1rem;">
+      <div id="od-return-badge" style="text-align:center;font-size:0.76rem;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:0.5rem;"></div>
+      <button type="button" id="od-report-problem-btn" onclick="reportProblemForOrder()" style="width:100%;padding:0.65rem;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.25);border-radius:10px;color:var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Report a Problem With This Order</button>
+      <div id="od-return-expired-msg" style="display:none;font-size:0.78rem;color:var(--fg-2);text-align:center;padding:0.65rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;">The return window has closed. Message the shop directly — we'll look at it case by case.</div>
+    </div>
+
     <div class="modal-actions" style="margin-top:1rem;">
       <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order-details')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RETURN / WARRANTY REQUEST DIALOG — Screen 2 ═══ -->
+<div class="modal-overlay" id="modal-return-form">
+  <div class="modal-box" style="width:640px;max-width:95vw;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+      <h5 style="margin:0;" id="rf-title">Start a Request</h5>
+      <button type="button" onclick="closeModal('modal-return-form')" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+    </div>
+
+    <div id="rf-errors" style="display:none;margin-bottom:1rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.7rem 0.9rem;">
+      <div style="font-weight:700;font-size:0.8rem;color:#b91c1c;margin-bottom:0.3rem;">Please fix the following:</div>
+      <ul id="rf-errors-list" style="margin:0;padding-left:1.1rem;font-size:0.8rem;color:#b91c1c;"></ul>
+    </div>
+
+    <form id="return-form" onsubmit="return submitReturnForm(event)">
+      <div class="form-group" id="rf-section-items">
+        <label>1 · Which items</label>
+        <div id="rf-items-list" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+      </div>
+
+      <div class="form-group">
+        <label>2 · What do you want us to do</label>
+        <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:0.55rem 0.8rem;font-size:0.76rem;color:#7c2d12;margin-bottom:0.6rem;">
+          Pick one — <strong>never both</strong>: either we put it right, or we give your money back.
+        </div>
+        <div id="rf-outcome-cards"></div>
+        <input type="hidden" id="rf-outcome">
+        <div id="rf-mechanic-tick-wrap" style="display:none;margin-top:0.6rem;">
+          <label style="display:flex;align-items:center;gap:0.5rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.82rem;cursor:pointer;">
+            <input type="checkbox" id="rf-want-mechanic"> <span id="rf-mechanic-tick-label"></span>
+          </label>
+          <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.15rem;margin-left:1.6rem;">A request, not a guarantee — the shop assigns whoever's free and best suited if this can't be honored.</div>
+        </div>
+        <div id="rf-refund-footer" style="margin-top:0.6rem;padding:0.55rem 0.8rem;border-radius:8px;font-size:0.85rem;font-weight:700;"></div>
+      </div>
+
+      <div class="form-group">
+        <label>3 · Why</label>
+        <div id="rf-reasons-list" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
+        <div id="rf-other-wrap" style="display:none;margin-top:0.5rem;">
+          <textarea id="rf-other-text" rows="3" maxlength="500" placeholder="What went wrong? (Tagalog/Taglish is fine)" oninput="updateOtherCharCount()"></textarea>
+          <div id="rf-other-count" style="font-size:0.72rem;color:var(--fg-3);text-align:right;margin-top:0.2rem;">0 / 500</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>4 · Photos of the Problem</label>
+        <div id="rf-dropzone" ondrop="handleReturnPhotoDrop(event)" ondragover="event.preventDefault()" ondragenter="event.preventDefault()" onclick="document.getElementById('rf-photos-input').click()" style="border:2px dashed var(--line-2);border-radius:10px;padding:1.4rem 1rem;text-align:center;cursor:pointer;font-size:0.8rem;color:var(--fg-3);">
+          Drag photos here, or tap to choose — images only, up to 5 photos, 5MB each.
+        </div>
+        <input type="file" id="rf-photos-input" accept="image/*" multiple style="display:none;" onchange="handleReturnPhotoFiles(this.files)">
+        <div id="rf-photos-preview" style="display:flex;gap:0.5rem;margin-top:0.6rem;flex-wrap:wrap;"></div>
+        <div id="rf-photos-skipped" style="display:none;font-size:0.76rem;color:#b91c1c;margin-top:0.4rem;"></div>
+      </div>
+
+      <div class="form-group">
+        <label>5 · Check Before Sending</label>
+        <div id="rf-summary" style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.9rem 1rem;font-size:0.83rem;color:var(--fg-1);line-height:1.6;"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-return-form')">Cancel</button>
+        <button type="submit" class="btn-submit" id="rf-submit-btn">Submit Request</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ RETURN / WARRANTY DETAILS MODAL ═══ -->
+<div class="modal-overlay" id="modal-return-details">
+  <div class="modal-box" style="width:480px;max-width:95vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h5 style="margin:0;">Return / Warranty Details</h5>
+      <button type="button" onclick="closeModal('modal-return-details')" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
+      <div>
+        <div id="rd-ref" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--brand-red);letter-spacing:0.04em;"></div>
+        <div id="rd-subject" style="font-size:0.8rem;color:var(--fg-3);"></div>
+      </div>
+      <div id="rd-status-badge"></div>
+    </div>
+
+    <div style="padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
+      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">Why</div>
+      <div id="rd-category" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;margin-bottom:0.6rem;"></div>
+      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">What you asked for</div>
+      <div id="rd-outcome" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;"></div>
+      <div id="rd-mechanic-wrap" style="display:none;margin-top:0.5rem;font-size:0.78rem;color:var(--fg-2);"></div>
+    </div>
+
+    <div id="rd-photos-wrap" style="display:none;margin-bottom:1rem;">
+      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.4rem;">Photos you sent</div>
+      <div id="rd-photos" style="display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
+    </div>
+
+    <div id="rd-decision-wrap" style="display:none;padding:1rem;background:rgba(21,128,61,0.06);border:1px solid rgba(21,128,61,0.2);border-radius:10px;margin-bottom:1rem;">
+      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">The shop's decision</div>
+      <div id="rd-decision" style="font-size:0.85rem;color:var(--fg-1);line-height:1.6;"></div>
+    </div>
+
+    <div id="rd-cancel-wrap" style="display:none;margin-bottom:1rem;">
+      <button type="button" onclick="cancelReturnRequest()" style="width:100%;padding:0.6rem;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#b91c1c;font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;cursor:pointer;">Cancel This Request</button>
+    </div>
+
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-return-details')">Close</button>
     </div>
   </div>
 </div>
@@ -1524,6 +1716,7 @@
 <script>
   function showSection(name, el) {
     if (name === 'book') loadMechanics();
+    if (name === 'returns') renderClaimableLists();
     document.querySelectorAll('.c-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-links a, .mobile-nav-menu a').forEach(a => a.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
@@ -1548,11 +1741,14 @@
     });
   }
 
-  // Restore section on page load
+  // Restore section on page load. Deferred a tick: showSection('returns', ...)
+  // reads ordersData/bookingsData, which are declared with const further down
+  // this same script — calling it synchronously here, before that line runs,
+  // would hit them mid-temporal-dead-zone.
   (function() {
     const saved = localStorage.getItem('dashSection');
     if (saved && document.getElementById('sec-' + saved)) {
-      showSection(saved, null);
+      setTimeout(() => showSection(saved, null), 0);
     }
   })();
 
@@ -2440,6 +2636,15 @@ function renderNotifications() {
   else if (activeFilter === 'order') filtered = notifications.filter(n => n.type === 'order');
   else if (activeFilter === 'unread') filtered = notifications.filter(n => !n.is_read);
 
+  // Anything the customer might want to push back on (a delay, a mechanic
+  // swap, a reschedule) stays pinned unread at the top until they actually
+  // open it — everything else stays in its normal newest-first order.
+  filtered = filtered.slice().sort((a, b) => {
+    const aPin = a.priority && !a.is_read ? 1 : 0;
+    const bPin = b.priority && !b.is_read ? 1 : 0;
+    return bPin - aPin;
+  });
+
   if (filtered.length === 0) {
     empty.style.display = 'block';
     list.querySelectorAll('.notif-item').forEach(el => el.remove());
@@ -2550,6 +2755,15 @@ async function readNotif(id, n) {
       n.is_read = true;
       renderNotifications();
     } catch(e) {}
+  }
+  // Opening a booking-linked notification lands on that specific booking,
+  // not just the list.
+  if (n.booking_id && bookingsData[n.booking_id]) {
+    notifOpen = false;
+    const panel = document.getElementById('notif-panel');
+    if (panel) panel.style.display = 'none';
+    showSection('bookings', null);
+    setTimeout(() => openBookingDetails(n.booking_id), 150);
   }
 }
 
@@ -2777,6 +2991,8 @@ function validateBookingForm() {
 fetchNotifications();
 
 /* ══ BOOKING DETAILS ══ */
+let _currentBookingDetailId = null;
+let _currentOrderDetailId = null;
 const bookingsData = {
   {% for b in bookings %}
   {{ b.id }}: {
@@ -2794,7 +3010,10 @@ const bookingsData = {
     notes: '{{ b.notes|e if b.notes else "" }}',
     mechanic_name: '{{ b.assigned_mechanic_name|e if b.assigned_mechanic_name else "" }}',
     mechanic_spec: '{{ b.assigned_mechanic_specialization|e if b.assigned_mechanic_specialization else "" }}',
-    created_at: '{{ b.created_at.strftime("%b %d, %Y at %I:%M %p") }}'
+    created_at: '{{ b.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
+    total_amount: {{ b.total_amount or 0 }},
+    return_window: {{ ({'expired': b.return_window.expired, 'days_left': b.return_window.days_left, 'label': b.return_window.label} if b.return_window else none)|tojson }},
+    open_claim: {{ ({'id': b.open_claim.id, 'ref': 'RMA-%03d'|format(b.open_claim.id)} if b.open_claim else none)|tojson }}
   }{% if not loop.last %},{% endif %}
   {% endfor %}
 };
@@ -2904,6 +3123,20 @@ function openBookingDetails(bookingId) {
       </div>`;
   }
 
+  _currentBookingDetailId = bookingId;
+  const bdWrap = document.getElementById('bd-report-problem-wrap');
+  if (booking.status === 'completed' && booking.return_window) {
+    bdWrap.style.display = 'block';
+    const w = booking.return_window;
+    const badge = document.getElementById('bd-warranty-badge');
+    badge.textContent = w.label;
+    badge.style.color = w.expired ? '#b91c1c' : '#1e3a8a';
+    document.getElementById('bd-report-problem-btn').style.display = w.expired ? 'none' : 'block';
+    document.getElementById('bd-warranty-expired-msg').style.display = w.expired ? 'block' : 'none';
+  } else {
+    bdWrap.style.display = 'none';
+  }
+
   document.getElementById('modal-booking-details').classList.add('open');
 }
 
@@ -2917,9 +3150,12 @@ const ordersData = {
     payment_method: '{{ o.payment_method or "cash" }}',
     delivery_method: '{{ o.delivery_method or "pickup" }}',
     created_at: '{{ o.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
+    return_window: {{ ({'expired': o.return_window.expired, 'days_left': o.return_window.days_left, 'label': o.return_window.label} if o.return_window else none)|tojson }},
+    open_claim: {{ ({'id': o.open_claim.id, 'ref': 'RMA-%03d'|format(o.open_claim.id)} if o.open_claim else none)|tojson }},
     items: [
       {% for item in o.items %}
       {
+        id: {{ item.id }},
         product_name: '{{ item.product.name|e }}',
         category: '{{ item.product.category|e }}',
         quantity: {{ item.quantity }},
@@ -3048,6 +3284,20 @@ function openOrderDetails(orderId) {
     receivedWrap.style.display = 'none';
   }
 
+  _currentOrderDetailId = order.id;
+  const odWrap = document.getElementById('od-report-problem-wrap');
+  if (['delivered', 'completed'].includes(order.status) && order.return_window) {
+    odWrap.style.display = 'block';
+    const w = order.return_window;
+    const badge = document.getElementById('od-return-badge');
+    badge.textContent = w.label;
+    badge.style.color = w.expired ? '#b91c1c' : '#1e3a8a';
+    document.getElementById('od-report-problem-btn').style.display = w.expired ? 'none' : 'block';
+    document.getElementById('od-return-expired-msg').style.display = w.expired ? 'block' : 'none';
+  } else {
+    odWrap.style.display = 'none';
+  }
+
   document.getElementById('modal-order-details').classList.add('open');
 }
 
@@ -3097,6 +3347,566 @@ async function confirmOrderReceived() {
     alert(data.message || 'Something went wrong.');
     btn.disabled = false;
     btn.textContent = _confirmOrderLabel;
+  }
+}
+
+/* ══ RETURNS & WARRANTY ══ */
+const returnsData = {
+  {% for r in returns %}
+  {{ r.id }}: {
+    id: {{ r.id }},
+    kind: '{{ r.kind }}',
+    subject: {{ r.subject_label|tojson }},
+    reasons: {{ (r.reasons.split(',') if r.reasons else [])|tojson }},
+    other_reason_text: {{ (r.other_reason_text or '')|tojson }},
+    desired_outcome: '{{ r.desired_outcome }}',
+    requested_mechanic_name: {{ (r.requested_mechanic_name or '')|tojson }},
+    requested_refund_amount: {{ r.requested_refund_amount if r.requested_refund_amount else 'null' }},
+    photos: {{ (r.photos.split(',') if r.photos else [])|tojson }},
+    status: '{{ r.status }}',
+    decision_reason: {{ (r.decision_reason or '')|tojson }},
+    resolution: {{ (r.resolution or '')|tojson }},
+    refund_amount: {{ r.refund_amount if r.refund_amount else 'null' }},
+    created_at: '{{ r.created_at.strftime("%b %d, %Y at %I:%M %p") }}'
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+};
+
+// The rule the whole feature rests on: one mutually exclusive choice, put it
+// right or give the money back, never both — so each card states its own
+// consequence in bold, not a footnote.
+const RETURN_OUTCOMES = {
+  product: [
+    { value: 'replacement', title: 'Return and replacement',
+      detail: 'You send the part back and we ship the same item again, checked before it leaves.',
+      consequence: 'No money is returned.' },
+    { value: 'refund', title: 'Return and refund',
+      detail: 'You send the part back and we return what you paid.',
+      consequence: 'No replacement is shipped.' },
+  ],
+  service: [
+    { value: 'redo_service', title: 'Back job',
+      detail: 'The mechanic redoes the work at no charge — this is the warranty remedy.',
+      consequence: 'No money is returned.' },
+    { value: 'refund', title: 'Refund',
+      detail: 'We return what you paid for the service. The work is not redone.',
+      consequence: "You'll need to book again separately if you still need it." },
+  ],
+};
+
+// "Why" checklist (section 3): [code, label, needs_photo]. A reason needs a
+// photo when it's something a photo could actually prove.
+const RETURN_REASONS = {
+  product: [
+    ['damaged', 'Arrived damaged or broken', true],
+    ['defective', 'Defective, does not work properly', true],
+    ['wrong_item', 'Wrong item sent', true],
+    ['no_fit', 'Does not fit my motorcycle', false],
+    ['missing_parts', 'Missing parts or accessories', true],
+    ['not_as_described', 'Different from the description or photo', true],
+    ['changed_mind', 'Changed my mind, part is unused and sealed', false],
+    ['other', 'Other — none of these fit', false],
+  ],
+  service: [
+    ['recurred', 'The problem came back after the service', true],
+    ['unfinished', 'The work was not finished', false],
+    ['new_problem', 'A new problem started after the service', true],
+    ['noise_leak', 'Noise, vibration or leak after the service', true],
+    ['wrong_service', 'This is not the service I booked', false],
+    ['wrong_parts', 'Parts used were not what we agreed on', true],
+    ['other', 'Other — none of these fit', false],
+  ],
+};
+
+// ── Screen 1: what can be claimed ──
+function renderClaimableLists() {
+  renderClaimableOrders();
+  renderClaimableBookings();
+}
+
+function claimBadgeHTML(w) {
+  return `<span class="badge" style="background:${w.expired ? '#fee2e2' : '#dbeafe'};color:${w.expired ? '#7f1d1d' : '#1e3a8a'};border:1px solid ${w.expired ? '#ef4444' : '#3b82f6'};">${w.label}</span>`;
+}
+
+function claimActionHTML(openClaim, expired, onStart) {
+  if (openClaim) {
+    return `<a href="#" onclick="openReturnDetails(${openClaim.id}); return false;" style="font-size:0.82rem;font-weight:700;color:var(--brand-red);">Request ${openClaim.ref} open →</a>`;
+  }
+  if (expired) {
+    return `<div style="font-size:0.76rem;color:var(--fg-3);max-width:220px;text-align:right;">Message the shop directly — we'll look at it case by case.</div>`;
+  }
+  return `<button type="button" class="pic-upload-btn" onclick="${onStart}" style="padding:0.5rem 1rem;">Start a Claim</button>`;
+}
+
+function renderClaimableOrders() {
+  const list = document.getElementById('claimable-orders-list');
+  const eligible = Object.values(ordersData).filter(o => o.return_window !== null);
+  if (!eligible.length) {
+    list.innerHTML = '<div class="card" style="padding:1rem;text-align:center;color:var(--fg-3);font-size:0.85rem;">No delivered orders yet.</div>';
+    return;
+  }
+  list.innerHTML = eligible.map(o => `
+    <div class="card" style="padding:1rem 1.1rem;">
+      <div style="display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--brand-red);">ORD-${String(o.id).padStart(3,'0')}</div>
+          <div style="font-size:0.76rem;color:var(--fg-3);">Delivered ${o.created_at}</div>
+        </div>
+        ${claimBadgeHTML(o.return_window)}
+      </div>
+      ${o.items.map(it => `<div style="font-size:0.78rem;color:var(--fg-2);">${it.product_name} &times;${it.quantity} — &#8369;${it.subtotal.toFixed(2)}</div>`).join('')}
+      <div style="border-top:1px solid var(--line-1);margin-top:0.5rem;padding-top:0.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">Total &#8369;${o.total.toFixed(2)}</span>
+        ${claimActionHTML(o.open_claim, o.return_window.expired, `openReturnForm('product', ${o.id})`)}
+      </div>
+    </div>`).join('');
+}
+
+function renderClaimableBookings() {
+  const list = document.getElementById('claimable-bookings-list');
+  const eligible = Object.values(bookingsData).filter(b => b.return_window !== null);
+  if (!eligible.length) {
+    list.innerHTML = '<div class="card" style="padding:1rem;text-align:center;color:var(--fg-3);font-size:0.85rem;">No completed services yet.</div>';
+    return;
+  }
+  list.innerHTML = eligible.map(b => `
+    <div class="card" style="padding:1rem 1.1rem;">
+      <div style="display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">${b.service}</div>
+          <div style="font-size:0.76rem;color:var(--fg-3);">${b.date}</div>
+        </div>
+        ${claimBadgeHTML(b.return_window)}
+      </div>
+      <div style="font-size:0.78rem;color:var(--fg-2);">Motorcycle: ${b.motorcycle_model || '—'}</div>
+      <div style="font-size:0.78rem;color:var(--fg-2);">Mechanic: ${b.mechanic_name || 'Shop assigned'}</div>
+      <div style="border-top:1px solid var(--line-1);margin-top:0.5rem;padding-top:0.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">Total &#8369;${b.total_amount.toFixed(2)}</span>
+        ${claimActionHTML(b.open_claim, b.return_window.expired, `openReturnForm('service', ${b.id})`)}
+      </div>
+    </div>`).join('');
+}
+
+// ── Screen 2: the request dialog ──
+let _rfKind = null;
+let _rfOrder = null;
+let _rfBooking = null;
+let _rfItemQty = {};
+let _rfPhotos = [];
+
+function openReturnForm(kind, id) {
+  _rfKind = kind;
+  _rfOrder = kind === 'product' ? ordersData[id] : null;
+  _rfBooking = kind === 'service' ? bookingsData[id] : null;
+  _rfItemQty = {};
+  _rfPhotos = [];
+
+  document.getElementById('rf-outcome').value = '';
+  document.getElementById('rf-other-text').value = '';
+  document.getElementById('rf-want-mechanic').checked = false;
+  document.getElementById('rf-errors').style.display = 'none';
+  document.getElementById('rf-title').textContent = kind === 'product'
+    ? `Return Request — ORD-${String(id).padStart(3,'0')}`
+    : `Warranty Request — ${_rfBooking.service}`;
+
+  renderRfItemsSection();
+  renderReturnOutcomeCards(_rfKind);
+  renderRfReasonsSection();
+  renderRfPhotosSection();
+  updateRfOutcomeFooter();
+  updateRfSummary();
+
+  document.getElementById('modal-return-form').classList.add('open');
+}
+
+function reportProblemForOrder() {
+  if (!_currentOrderDetailId) return;
+  closeModal('modal-order-details');
+  openReturnForm('product', _currentOrderDetailId);
+}
+
+function reportProblemForBooking() {
+  if (!_currentBookingDetailId) return;
+  closeModal('modal-booking-details');
+  openReturnForm('service', _currentBookingDetailId);
+}
+
+// 1 · Which items (parts only)
+function renderRfItemsSection() {
+  const section = document.getElementById('rf-section-items');
+  if (_rfKind !== 'product') { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  document.getElementById('rf-items-list').innerHTML = _rfOrder.items.map(it => `
+    <div style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0.75rem;border:1px solid var(--line-2);border-radius:8px;">
+      <input type="checkbox" id="rf-item-tick-${it.id}" onchange="onRfItemTick(${it.id})">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:0.85rem;">${it.product_name}</div>
+        <div style="font-size:0.74rem;color:var(--fg-3);">&#8369;${it.unit_price.toFixed(2)} each &middot; bought ${it.quantity}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem;">
+        <button type="button" onclick="stepRfItemQty(${it.id}, -1, ${it.quantity})" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line-2);background:#fff;cursor:pointer;">−</button>
+        <span id="rf-item-qty-${it.id}" style="min-width:20px;text-align:center;font-weight:700;">0</span>
+        <button type="button" onclick="stepRfItemQty(${it.id}, 1, ${it.quantity})" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line-2);background:#fff;cursor:pointer;">+</button>
+      </div>
+    </div>`).join('');
+}
+
+function onRfItemTick(itemId) {
+  const checked = document.getElementById(`rf-item-tick-${itemId}`).checked;
+  if (checked) _rfItemQty[itemId] = 1; else delete _rfItemQty[itemId];
+  document.getElementById(`rf-item-qty-${itemId}`).textContent = _rfItemQty[itemId] || 0;
+  updateRfOutcomeFooter();
+  updateRfSummary();
+}
+
+function stepRfItemQty(itemId, delta, maxQty) {
+  const tick = document.getElementById(`rf-item-tick-${itemId}`);
+  let qty = Math.max(0, Math.min(maxQty, (_rfItemQty[itemId] || 0) + delta));
+  if (qty === 0) { delete _rfItemQty[itemId]; tick.checked = false; }
+  else { _rfItemQty[itemId] = qty; tick.checked = true; }
+  document.getElementById(`rf-item-qty-${itemId}`).textContent = qty;
+  updateRfOutcomeFooter();
+  updateRfSummary();
+}
+
+// 2 · What do you want us to do
+function populateSelect(sel, options) {
+  sel.innerHTML = options.map(([v, label]) => `<option value="${v}">${label}</option>`).join('');
+}
+
+function renderReturnOutcomeCards(kind) {
+  const wrap = document.getElementById('rf-outcome-cards');
+  const hidden = document.getElementById('rf-outcome');
+  const opts = RETURN_OUTCOMES[kind];
+  wrap.innerHTML = opts.map(o => {
+    const selected = o.value === hidden.value;
+    return `
+      <div onclick="selectReturnOutcome('${o.value}')" style="border:1.5px solid ${selected ? 'var(--brand-red)' : 'var(--line-2)'};background:${selected ? 'rgba(208,0,25,0.06)' : '#fff'};border-radius:10px;padding:0.75rem 0.9rem;cursor:pointer;margin-bottom:0.5rem;transition:all 0.15s;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:var(--fg-1);">${o.title}</div>
+        <div style="font-size:0.78rem;color:var(--fg-2);margin-top:0.25rem;">${o.detail}</div>
+        <div style="font-size:0.78rem;color:var(--fg-1);margin-top:0.35rem;"><strong>${o.consequence}</strong></div>
+      </div>`;
+  }).join('');
+}
+
+function selectReturnOutcome(value) {
+  document.getElementById('rf-outcome').value = value;
+  renderReturnOutcomeCards(_rfKind);
+  updateRfOutcomeFooter();
+  updateRfSummary();
+}
+
+function computeRfRefundAmount() {
+  if (_rfKind === 'product') {
+    let total = 0;
+    for (const it of _rfOrder.items) total += (_rfItemQty[it.id] || 0) * it.unit_price;
+    return total;
+  }
+  return (_rfBooking && _rfBooking.total_amount) || 0;
+}
+
+function updateRfOutcomeFooter() {
+  const outcome = document.getElementById('rf-outcome').value;
+  const footer = document.getElementById('rf-refund-footer');
+  const mechWrap = document.getElementById('rf-mechanic-tick-wrap');
+
+  if (_rfKind === 'service' && outcome === 'redo_service' && _rfBooking && _rfBooking.mechanic_name) {
+    mechWrap.style.display = 'block';
+    document.getElementById('rf-mechanic-tick-label').textContent = `I want ${_rfBooking.mechanic_name} to handle it`;
+  } else {
+    mechWrap.style.display = 'none';
+  }
+
+  if (outcome === 'refund') {
+    footer.style.color = '#15803d';
+    footer.style.background = 'rgba(21,128,61,0.08)';
+    footer.textContent = `Refund amount: ₱${computeRfRefundAmount().toFixed(2)}`;
+  } else if (outcome) {
+    footer.style.color = 'var(--fg-2)';
+    footer.style.background = 'var(--bg-subtle)';
+    footer.textContent = 'No refund on this request.';
+  } else {
+    footer.textContent = '';
+    footer.style.background = 'transparent';
+  }
+}
+
+// 3 · Why
+function renderRfReasonsSection() {
+  document.getElementById('rf-reasons-list').innerHTML = RETURN_REASONS[_rfKind].map(([code, label, needsPhoto]) => `
+    <label style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border:1px solid var(--line-2);border-radius:8px;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.83rem;cursor:pointer;">
+      <input type="checkbox" class="rf-reason-tick" value="${code}" onchange="onRfReasonChange()">
+      <span style="flex:1;">${label}</span>
+      ${needsPhoto ? '<span style="font-size:0.64rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:0.1rem 0.4rem;white-space:nowrap;">needs a photo</span>' : ''}
+    </label>`).join('');
+  document.getElementById('rf-other-wrap').style.display = 'none';
+  document.getElementById('rf-other-count').textContent = '0 / 500';
+}
+
+function onRfReasonChange() {
+  const otherBox = document.querySelector('.rf-reason-tick[value="other"]');
+  document.getElementById('rf-other-wrap').style.display = (otherBox && otherBox.checked) ? 'block' : 'none';
+  updateRfSummary();
+}
+
+function updateOtherCharCount() {
+  const val = document.getElementById('rf-other-text').value;
+  document.getElementById('rf-other-count').textContent = `${val.length} / 500`;
+  updateRfSummary();
+}
+
+// 4 · Photos
+function renderRfPhotosSection() {
+  document.getElementById('rf-photos-preview').innerHTML = '';
+  document.getElementById('rf-photos-skipped').style.display = 'none';
+}
+
+function handleReturnPhotoDrop(e) {
+  e.preventDefault();
+  handleReturnPhotoFiles(e.dataTransfer.files);
+}
+
+function handleReturnPhotoFiles(fileList) {
+  const files = Array.from(fileList);
+  let skipped = 0;
+  for (const f of files) {
+    if (_rfPhotos.length >= 5) { skipped++; continue; }
+    if (!f.type.startsWith('image/')) { skipped++; continue; }
+    if (f.size > 5 * 1024 * 1024) { skipped++; continue; }
+    _rfPhotos.push(f);
+  }
+  renderRfPhotoPreviews();
+  const skippedEl = document.getElementById('rf-photos-skipped');
+  if (skipped > 0) {
+    skippedEl.style.display = 'block';
+    skippedEl.textContent = `${skipped} file${skipped === 1 ? ' was' : 's were'} skipped — images only, 5MB max.`;
+  } else {
+    skippedEl.style.display = 'none';
+  }
+  updateRfSummary();
+}
+
+function renderRfPhotoPreviews() {
+  document.getElementById('rf-photos-preview').innerHTML = _rfPhotos.map((f, i) => `
+    <div style="position:relative;">
+      <img src="${URL.createObjectURL(f)}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);">
+      <button type="button" onclick="removeRfPhoto(${i})" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--brand-red);color:#fff;border:none;cursor:pointer;font-size:0.7rem;line-height:1;">✕</button>
+    </div>`).join('');
+}
+
+function removeRfPhoto(index) {
+  _rfPhotos.splice(index, 1);
+  renderRfPhotoPreviews();
+  updateRfSummary();
+}
+
+// 5 · Check before sending
+function updateRfSummary() {
+  const summary = document.getElementById('rf-summary');
+  const outcome = document.getElementById('rf-outcome').value;
+
+  let itemsLine;
+  if (_rfKind === 'product') {
+    const picked = _rfOrder.items.filter(it => _rfItemQty[it.id]);
+    itemsLine = picked.length ? picked.map(it => `${it.product_name} ×${_rfItemQty[it.id]}`).join(', ') : '(no items selected yet)';
+  } else {
+    itemsLine = _rfBooking ? _rfBooking.service : '';
+  }
+
+  const outcomeOpt = outcome ? RETURN_OUTCOMES[_rfKind].find(o => o.value === outcome) : null;
+  let askLine;
+  if (outcomeOpt && outcome === 'refund') {
+    askLine = `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--brand-red);">₱${computeRfRefundAmount().toFixed(2)} refund</span>`;
+  } else if (outcomeOpt) {
+    askLine = outcomeOpt.title;
+  } else {
+    askLine = '(not chosen yet)';
+  }
+
+  const reasonTicks = Array.from(document.querySelectorAll('.rf-reason-tick:checked')).map(el => el.value);
+  const reasonLabels = reasonTicks.filter(c => c !== 'other').map(c => {
+    const found = RETURN_REASONS[_rfKind].find(r => r[0] === c);
+    return found ? found[1] : c;
+  });
+  const otherText = document.getElementById('rf-other-text').value.trim();
+  if (reasonTicks.includes('other') && otherText) reasonLabels.push(otherText);
+  const reasonsLine = reasonLabels.length ? reasonLabels.join('; ') : '(no reason selected yet)';
+
+  const explainer = outcome === 'refund'
+    ? (_rfKind === 'product'
+        ? 'How a refund is released: return the item first, then 5 to 7 banking days to your original payment method.'
+        : 'How a refund is released: 5 to 7 banking days to your original payment method.')
+    : (outcome ? 'No money is returned — we are replacing the part or redoing the job.' : '');
+
+  summary.innerHTML = `
+    <div><strong>${_rfKind === 'product' ? 'Items' : 'Service'}:</strong> ${itemsLine}</div>
+    <div style="margin-top:0.3rem;"><strong>Asking for:</strong> ${askLine}</div>
+    <div style="margin-top:0.3rem;"><strong>Reasons:</strong> ${reasonsLine}</div>
+    <div style="margin-top:0.3rem;"><strong>Photos:</strong> ${_rfPhotos.length}</div>
+    ${explainer ? `<div style="margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed var(--line-2);color:var(--fg-2);font-size:0.78rem;">${explainer}</div>` : ''}
+  `;
+}
+
+// Validate-on-submit: every problem, listed together, in plain language.
+function submitReturnForm(e) {
+  e.preventDefault();
+  const errors = [];
+  const outcome = document.getElementById('rf-outcome').value;
+  if (!outcome) errors.push('Choose either to have it made right, or a refund.');
+
+  let itemRows = [];
+  if (_rfKind === 'product') {
+    itemRows = Object.entries(_rfItemQty).map(([id, qty]) => ({ order_item_id: parseInt(id), quantity: qty }));
+    if (!itemRows.length) errors.push('Select at least one item, and how many, to return.');
+  }
+
+  const reasonTicks = Array.from(document.querySelectorAll('.rf-reason-tick:checked')).map(el => el.value);
+  if (!reasonTicks.length) errors.push('Please select at least one reason.');
+  const otherText = document.getElementById('rf-other-text').value.trim();
+  if (reasonTicks.includes('other') && !otherText) errors.push('You ticked Other — please type what went wrong.');
+
+  const reasonMeta = Object.fromEntries(RETURN_REASONS[_rfKind].map(r => [r[0], r[2]]));
+  const needsPhoto = reasonTicks.some(c => reasonMeta[c]);
+  if (needsPhoto && _rfPhotos.length === 0) errors.push('The reason you picked needs at least one photo of the problem.');
+
+  if (errors.length) {
+    showRfErrors(errors);
+    return false;
+  }
+
+  doSubmitReturnForm(outcome, itemRows, reasonTicks, otherText);
+  return false;
+}
+
+function showRfErrors(errors) {
+  const box = document.getElementById('rf-errors');
+  document.getElementById('rf-errors-list').innerHTML = errors.map(e => `<li>${e}</li>`).join('');
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function doSubmitReturnForm(outcome, itemRows, reasonTicks, otherText) {
+  const btn = document.getElementById('rf-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  const fd = new FormData();
+  fd.append('kind', _rfKind);
+  fd.append('desired_outcome', outcome);
+  reasonTicks.forEach(r => fd.append('reasons', r));
+  fd.append('other_reason_text', otherText);
+  if (_rfKind === 'product') {
+    fd.append('order_id', _rfOrder.id);
+    fd.append('items_json', JSON.stringify(itemRows));
+  } else {
+    fd.append('booking_id', _rfBooking.id);
+    if (document.getElementById('rf-want-mechanic').checked) fd.append('requested_mechanic', 'yes');
+  }
+  _rfPhotos.forEach(f => fd.append('photos', f));
+
+  try {
+    const res = await fetch('/returns/new', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      closeModal('modal-return-form');
+      window.location.reload();
+      return;
+    }
+    showRfErrors(data.errors || ['Something went wrong — please try again.']);
+  } catch (err) {
+    showRfErrors(['Network error — please try again.']);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Submit Request';
+}
+
+// ── Request details / history ──
+const RETURN_STATUS_COLORS = {
+  submitted:     { bg: '#fef9c3', color: '#713f12', border: '#eab308' },
+  under_review:  { bg: '#e0e7ff', color: '#3730a3', border: '#6366f1' },
+  approved:      { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
+  denied:        { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
+  resolved:      { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
+  cancelled:     { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
+};
+let _currentReturnDetailId = null;
+
+function openReturnDetails(id) {
+  const r = returnsData[id];
+  if (!r) return;
+  _currentReturnDetailId = id;
+
+  document.getElementById('rd-ref').textContent = 'RMA-' + String(r.id).padStart(3, '0');
+  document.getElementById('rd-subject').textContent = (r.kind === 'product' ? 'Product: ' : 'Service: ') + r.subject;
+
+  const sc = RETURN_STATUS_COLORS[r.status] || RETURN_STATUS_COLORS.submitted;
+  document.getElementById('rd-status-badge').innerHTML = `
+    <span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.4em 0.9em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+      ${r.status.replace('_', ' ')}
+    </span>`;
+
+  const reasonLabels = r.reasons.filter(c => c !== 'other').map(c => {
+    const found = (RETURN_REASONS[r.kind] || []).find(x => x[0] === c);
+    return found ? found[1] : c;
+  });
+  if (r.other_reason_text) reasonLabels.push(r.other_reason_text);
+  document.getElementById('rd-category').textContent = reasonLabels.join('; ') || '—';
+
+  const outcomeOpt = (RETURN_OUTCOMES[r.kind] || []).find(o => o.value === r.desired_outcome);
+  document.getElementById('rd-outcome').textContent = outcomeOpt
+    ? (r.desired_outcome === 'refund' && r.requested_refund_amount ? `${outcomeOpt.title} (₱${Number(r.requested_refund_amount).toFixed(2)})` : outcomeOpt.title)
+    : r.desired_outcome.replace(/_/g, ' ');
+
+  const mechWrap = document.getElementById('rd-mechanic-wrap');
+  if (r.requested_mechanic_name) {
+    mechWrap.style.display = 'block';
+    mechWrap.textContent = `Requested (not guaranteed): ${r.requested_mechanic_name} to handle it`;
+  } else {
+    mechWrap.style.display = 'none';
+  }
+
+  const photosWrap = document.getElementById('rd-photos-wrap');
+  if (r.photos && r.photos.length) {
+    photosWrap.style.display = 'block';
+    document.getElementById('rd-photos').innerHTML = r.photos.map(p =>
+      `<a href="/static/return_evidence/${p}" target="_blank"><img src="/static/return_evidence/${p}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);"></a>`
+    ).join('');
+  } else {
+    photosWrap.style.display = 'none';
+  }
+
+  const decisionWrap = document.getElementById('rd-decision-wrap');
+  if (r.status === 'denied' || r.status === 'approved' || r.status === 'resolved') {
+    decisionWrap.style.display = 'block';
+    const resolutionOpt = r.resolution ? (RETURN_OUTCOMES[r.kind] || []).find(o => o.value === r.resolution) : null;
+    const outcomeText = resolutionOpt ? resolutionOpt.title : (r.resolution || '').replace(/_/g, ' ');
+    const amountText = r.resolution === 'refund' && r.refund_amount ? ` (₱${Number(r.refund_amount).toFixed(2)})` : '';
+    const statusLine = r.status === 'denied' ? 'Not approved' :
+      (r.status === 'resolved' ? `Done — ${outcomeText}${amountText}` : `Approved — ${outcomeText}${amountText}`);
+    document.getElementById('rd-decision').innerHTML = `<strong>${statusLine}</strong><br>${r.decision_reason || ''}`;
+  } else {
+    decisionWrap.style.display = 'none';
+  }
+
+  document.getElementById('rd-cancel-wrap').style.display =
+    (r.status === 'submitted' || r.status === 'under_review') ? 'block' : 'none';
+
+  document.getElementById('modal-return-details').classList.add('open');
+}
+
+async function cancelReturnRequest() {
+  if (!_currentReturnDetailId) return;
+  if (!confirm('Cancel this request? You can file a new one for this order or service afterward.')) return;
+  try {
+    const res = await fetch(`/returns/${_currentReturnDetailId}/cancel`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Could not cancel this request.');
+    }
+  } catch (e) {
+    alert('Network error — please try again.');
   }
 }
 

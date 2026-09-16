@@ -10,9 +10,48 @@ from flask import abort
 
 # ─── WHITELISTS ──────────────────────────────────────────────────────────────
 
-ALLOWED_BOOKING_STATUSES = {'pending', 'confirmed', 'in_progress', 'inprogress', 'completed', 'cancelled', 'awaiting_payment'}
+ALLOWED_BOOKING_STATUSES = {'pending', 'confirmed', 'in_progress', 'inprogress', 'completed', 'cancelled', 'awaiting_payment', 'ready_for_pickup'}
 ALLOWED_ORDER_STATUSES   = {'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'}
 ALLOWED_OTP_PURPOSES     = {'login', 'verify', 'reset'}
+
+ALLOWED_RETURN_KINDS      = {'product', 'service'}
+ALLOWED_RETURN_OUTCOMES   = {'refund', 'replacement', 'redo_service'}
+# The rule the whole feature rests on: every claim forces ONE mutually
+# exclusive choice — put it right, or give the money back, never both.
+# Which "put it right" option applies depends on kind: a spare part gets a
+# replacement shipped, a service gets redone (a "back job") at no charge.
+RETURN_OUTCOMES_BY_KIND = {'product': {'replacement', 'refund'}, 'service': {'redo_service', 'refund'}}
+ALLOWED_RETURN_STATUSES   = {'submitted', 'under_review', 'approved', 'denied', 'resolved', 'cancelled'}
+# Every open-claim status — the ones that block filing a second claim
+# against the same order/booking until this one is resolved, denied, or
+# cancelled.
+OPEN_RETURN_STATUSES = {'submitted', 'under_review', 'approved'}
+
+# Reason checklist for "Why" (section 3): (code, label, needs_photo). A
+# reason needs a photo when it's something a photo could actually prove —
+# damage, defects, wrong items, missing parts, leaks or noise; reasons with
+# nothing to photograph (fit, change of mind, wrong service) don't ask for one.
+RETURN_REASONS = {
+    'product': [
+        ('damaged', 'Arrived damaged or broken', True),
+        ('defective', 'Defective, does not work properly', True),
+        ('wrong_item', 'Wrong item sent', True),
+        ('no_fit', 'Does not fit my motorcycle', False),
+        ('missing_parts', 'Missing parts or accessories', True),
+        ('not_as_described', 'Different from the description or photo', True),
+        ('changed_mind', 'Changed my mind, part is unused and sealed', False),
+        ('other', 'Other — none of these fit', False),
+    ],
+    'service': [
+        ('recurred', 'The problem came back after the service', True),
+        ('unfinished', 'The work was not finished', False),
+        ('new_problem', 'A new problem started after the service', True),
+        ('noise_leak', 'Noise, vibration or leak after the service', True),
+        ('wrong_service', 'This is not the service I booked', False),
+        ('wrong_parts', 'Parts used were not what we agreed on', True),
+        ('other', 'Other — none of these fit', False),
+    ],
+}
 
 # ─── STRING SANITIZATION ─────────────────────────────────────────────────────
 
@@ -86,3 +125,15 @@ def validate_otp_purpose(purpose):
     if purpose not in ALLOWED_OTP_PURPOSES:
         abort(400, description=f"Invalid OTP purpose: '{purpose}'")
     return purpose
+
+
+def validate_return_kind(kind):
+    if kind not in ALLOWED_RETURN_KINDS:
+        abort(400, description=f"Invalid return kind: '{kind}'")
+    return kind
+
+
+def validate_return_outcome(outcome):
+    if outcome not in ALLOWED_RETURN_OUTCOMES:
+        abort(400, description=f"Invalid desired outcome: '{outcome}'")
+    return outcome

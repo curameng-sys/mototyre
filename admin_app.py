@@ -17,12 +17,15 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from io import BytesIO
-from security import clean_str, clean_int, clean_float, is_valid_email, validate_booking_status, validate_order_status
+from security import (clean_str, clean_int, clean_float, is_valid_email, validate_booking_status, validate_order_status,
+    ALLOWED_RETURN_OUTCOMES, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
 from order_notifications import order_status_message, with_stamp, shipping_destination
 from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDAY_INTAKE_MIN,
     compute_finish_time, mechanic_origin_note, compute_finish_minutes, all_slot_starts,
     SHOP_CLOSE_MIN, mechanic_overlaps, minutes_to_ampm, hhmm_to_minutes, minutes_to_hhmm,
-    validate_booking)
+    validate_booking, MAX_BOOKINGS_PER_DAY, max_jobs_one_mechanic, capacity_bottleneck,
+    SLOT_GRANULARITY_MIN, SHOP_OPEN_MIN, real_end_minutes, multiday_progress, format_duration,
+    MULTIDAY_MIN_DAYS, MULTIDAY_MAX_DAYS, is_working_day, _overlaps)
 import json
 import os, uuid, random, string, base64, requests
 import threading
@@ -175,6 +178,7 @@ class Booking(db.Model):
     payment_method   = db.Column(db.String(20), default='cash')
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     reminder_sent    = db.Column(db.Boolean, default=False)
+    day_before_reminder_sent = db.Column(db.Boolean, default=False)
     assigned_mechanic_name           = db.Column(db.String(100))  # who is actually doing the work — shop changes this freely
     assigned_mechanic_specialization = db.Column(db.String(100))
     preferred_mechanic_name           = db.Column(db.String(100))  # who the customer asked for, or None — never overwritten after booking creation
@@ -189,6 +193,21 @@ class Booking(db.Model):
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
+    overrun_minutes  = db.Column(db.Integer, default=0)  # counter-staff-recorded extra time on top of duration_minutes
+    was_rescheduled  = db.Column(db.Boolean, default=False)  # set once, first time this booking's date/time changes after creation
+    completed_at     = db.Column(db.DateTime, nullable=True)  # when status actually reached completed — the warranty window's start
+
+
+class BlockedSlot(db.Model):
+    """An admin-blocked start time — staff meeting, parts delivery — that
+    removes that slot from the customer booking flow immediately without
+    touching any real booking."""
+    id         = db.Column(db.Integer, primary_key=True)
+    date       = db.Column(db.Date, nullable=False)
+    time       = db.Column(db.Time, nullable=False)
+    reason     = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    __table_args__ = (db.UniqueConstraint('date', 'time', name='uq_blocked_slot'),)
 
 
 class Mechanic(db.Model):
@@ -197,6 +216,15 @@ class Mechanic(db.Model):
     specialization = db.Column(db.String(100), nullable=False)
     status         = db.Column(db.String(20), default='available')
     created_at     = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+
+
+class DailyCapacity(db.Model):
+    """Per-date overrides for the shop's capacity controls. A missing row for
+    a date means "use the defaults" — full roster, standard daily cap."""
+    id             = db.Column(db.Integer, primary_key=True)
+    date           = db.Column(db.Date, nullable=False, unique=True)
+    mechanic_count = db.Column(db.Integer, nullable=True)  # None = whole roster is rostered
+    daily_cap      = db.Column(db.Integer, nullable=True)  # None = MAX_BOOKINGS_PER_DAY default
 
 
 class Product(db.Model):
@@ -223,6 +251,7 @@ class Order(db.Model):
     items           = db.relationship('OrderItem', backref='order', lazy=True)
     is_archived     = db.Column(db.Boolean, default=False)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
+    delivered_at    = db.Column(db.DateTime, nullable=True)  # when status actually reached delivered/completed — the return window's start
 
 
 class OrderItem(db.Model):
@@ -330,6 +359,47 @@ class Notification(db.Model):
     status     = db.Column(db.String(30))
     is_read    = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    priority    = db.Column(db.Boolean, default=False)  # needs a customer decision — stays pinned to the top, unread, until opened
+    booking_id  = db.Column(db.Integer, nullable=True)  # lets "open" land on the specific booking, not a list
+
+
+class ReturnRequest(db.Model):
+    """A customer reporting a spare part that arrived wrong or a service that
+    didn't hold, and what they want done about it (an RMA). kind picks
+    whether this claim is against an order (product) or a booking (service)
+    — exactly one of order_id/booking_id is ever set. Only one open claim
+    (submitted/under_review/approved) may exist per order or booking at a
+    time; the next one can only be filed once this is resolved, denied, or
+    cancelled."""
+    id              = db.Column(db.Integer, primary_key=True)
+    user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    kind            = db.Column(db.String(10), nullable=False)  # 'product' | 'service'
+    order_id        = db.Column(db.Integer, nullable=True)
+    booking_id      = db.Column(db.Integer, nullable=True)
+    reasons         = db.Column(db.String(300), nullable=False)  # comma-separated reason codes, multi-select
+    other_reason_text = db.Column(db.Text, nullable=True)  # required when 'other' is among reasons
+    desired_outcome = db.Column(db.String(20), nullable=False)
+    requested_mechanic_name = db.Column(db.String(100), nullable=True)  # back-job only — a request, never a guarantee
+    requested_refund_amount = db.Column(db.Float, nullable=True)  # what the customer's own math added up to at submission
+    photos          = db.Column(db.String(500))  # comma-separated filenames under static/return_evidence/ — permanent, never stripped
+    status          = db.Column(db.String(20), default='submitted')  # submitted|under_review|approved|denied|resolved|cancelled
+    decision_reason = db.Column(db.Text)
+    resolution      = db.Column(db.String(20))  # refund|replacement|redo_service
+    refund_amount   = db.Column(db.Float)  # the shop's final approved amount — may differ from requested_refund_amount
+    created_at      = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    decided_at      = db.Column(db.DateTime)
+    resolved_at     = db.Column(db.DateTime)
+    cancelled_at    = db.Column(db.DateTime)
+
+
+class ReturnRequestItem(db.Model):
+    """One line item within a product return — which order line, and how
+    many of it (capped at what was actually bought on that line), since only
+    one of several identical parts might be the bad one."""
+    id                = db.Column(db.Integer, primary_key=True)
+    return_request_id = db.Column(db.Integer, db.ForeignKey('return_request.id'), nullable=False)
+    order_item_id     = db.Column(db.Integer, nullable=False)
+    quantity          = db.Column(db.Integer, nullable=False)
 
 
 @login_manager.user_loader
@@ -341,8 +411,16 @@ def load_user(user_id):
 def ph_now():
     return datetime.utcnow() + timedelta(hours=8)
 
-def send_notification(user_id, title, message, type='update', status=None):
-    db.session.add(Notification(user_id=user_id, title=title, message=message, type=type, status=status))
+def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False):
+    """The one place a customer notification gets written. Email and the bell
+    always carry the exact same title/message — see each call site, which
+    builds one (title, message) pair and reuses it for both channels.
+    priority=True pins it unread at the top of the customer's bell (and the
+    admin outbox) until they actually open it — reserved for changes a
+    customer might want to push back on: a delay, a mechanic swap, a
+    reschedule, or any shop-initiated cancellation."""
+    db.session.add(Notification(user_id=user_id, title=title, message=message, type=type,
+                                 status=status, booking_id=booking_id, priority=priority))
     db.session.commit()
 
 
@@ -640,6 +718,65 @@ def admin_dashboard():
     )
 
 
+def _notify_customer(booking, title, body, priority=False, status=None):
+    """The one place a booking-change notification is produced. Writes the
+    bell notification and — unless this is a walk-in with no account —
+    emails the exact same title and body, so the two channels can never say
+    something different. Every message here already carries the booking's
+    reference and, for anything that changes an existing commitment, what
+    stayed the same and the way out — built by the caller, not here, since
+    the right words depend on what actually happened. Returns whether an
+    email went out."""
+    send_notification(booking.user_id, title, body, type='booking',
+                       status=status or booking.status, booking_id=booking.id, priority=priority)
+    if booking.walkin_customer_id:
+        return False
+    customer = User.query.get(booking.user_id)
+    if not (customer and customer.email):
+        return False
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+      <p>Hi {customer.fullname},</p>
+      <p>{body}</p>
+      <p>— MotoTyre North Caloocan</p>
+    </div>"""
+    _send_gmail(customer.email, f'{title} — MotoTyre', html)
+    return True
+
+
+def _mechanic_swap_notification(booking, new_name):
+    """The 'mechanic changed' notification — fires ONLY when a stated
+    preference is broken; an empty preference means the shop can move the
+    job freely, and there's nothing to tell the customer. Leads with naming
+    who they asked for and that they're unavailable, then prominently states
+    the time has NOT changed, who's handling it now, and how to hold out for
+    the original mechanic instead. Always priority when it does fire — a
+    mechanic swap is something the customer can push back on. Shared by a
+    plain reassignment and the clash fix that hands the job to someone else,
+    so the wording never drifts between the two paths."""
+    preferred = booking.preferred_mechanic_name
+    if not preferred:
+        return False
+
+    ref = f'BKG-{booking.id:03d}'
+    date_str = booking.date.strftime('%b %d, %Y')
+    time_str = booking.time.strftime('%I:%M %p')
+    origin = mechanic_origin_note(new_name, preferred)
+
+    if new_name:
+        title = f'{preferred} is not available — same time, different mechanic'
+        who_now = f'{new_name} is handling it instead ({origin}).'
+    else:
+        title = f'{preferred} is not available — same time, no mechanic yet'
+        who_now = 'Nobody specific is assigned to it yet.'
+
+    body = (f'You asked for {preferred}, but {preferred} is not available for your booking. '
+            f'Your appointment time has NOT changed — {date_str} at {time_str} still stands. '
+            f'{who_now} Services: {booking.service} ({ref}). '
+            f"If you'd rather wait for {preferred}, reply and we'll find a day they're free.")
+    return _notify_customer(booking, title, body, priority=True)
+
+
 @admin_app.route('/booking/<int:bid>/status', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -657,17 +794,47 @@ def update_booking_status(bid):
         return redirect(url_for('admin_dashboard'))
     booking.status = new_status
     db.session.commit()
+
+    ref = f'BKG-{booking.id:03d}'
+    date_str = booking.date.strftime('%b %d, %Y')
+    date_short = booking.date.strftime('%b %d')
+    time_str = booking.time.strftime('%I:%M %p')
     messages = {
-        'confirmed':        ('Booking Confirmed! ✅', f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} has been confirmed. Please arrive 15 minutes before your scheduled time.'),
-        'inprogress':       ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
-        'in_progress':      ('Service In Progress 🔧', f'Your {booking.service} is now in progress.'),
-        'awaiting_payment': ('Service Done! 💳', f'Your {booking.service} is complete. Please proceed to the counter for payment.'),
-        'completed':        ('Service Completed! 🎉',  f'Your {booking.service} has been completed. Thank you!'),
-        'cancelled':        ('Booking Cancelled ❌',   f'Your {booking.service} on {booking.date.strftime("%b %d, %Y")} was cancelled.'),
+        'confirmed': (
+            f'Confirmed — {date_short} at {time_str}',
+            f'Your {booking.service} appointment ({ref}) on {date_str} at {time_str} is confirmed. Please arrive 15 minutes early.',
+            False,
+        ),
+        'inprogress': (
+            f'{booking.service} is now in progress',
+            f'We started work on your {booking.service} ({ref}).',
+            False,
+        ),
+        'in_progress': (
+            f'{booking.service} is now in progress',
+            f'We started work on your {booking.service} ({ref}).',
+            False,
+        ),
+        'awaiting_payment': (
+            f'{booking.service} is done — pay at the counter',
+            f'Your {booking.service} ({ref}) is done. Please pay at the counter.',
+            False,
+        ),
+        'completed': (
+            f'{booking.service} complete — thanks for coming in',
+            f'Your {booking.service} ({ref}) is complete. Thanks for coming in.',
+            False,
+        ),
+        'cancelled': (
+            f'Cancelled — {date_short} at {time_str}',
+            f"Your {booking.service} appointment ({ref}) on {date_str} at {time_str} was cancelled by the shop. "
+            f"If this was a mistake or you'd like to rebook, just get in touch.",
+            True,
+        ),
     }
     if new_status in messages:
-        title, msg = messages[new_status]
-        send_notification(booking.user_id, title, msg, type='booking', status=new_status.replace('_', ''))
+        title, body, priority = messages[new_status]
+        _notify_customer(booking, title, body, priority=priority, status=new_status.replace('_', ''))
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'new_status': new_status, 'message': 'Booking status updated!'})
     flash('Booking status updated!', 'success')
@@ -730,32 +897,40 @@ def assign_booking_mechanic(bid):
     changed      = new_name != old_name
     had_promise  = bool(booking.preferred_mechanic_name)
     broke_promise = had_promise and new_name != booking.preferred_mechanic_name
-    if changed and broke_promise and not booking.walkin_customer_id:
-        time_str = booking.time.strftime('%I:%M %p')
-        date_str = booking.date.strftime('%b %d, %Y')
-        # Same phrasing helper the initial booking confirmation email uses, so
-        # the reason given never reads differently between the two messages.
-        origin = mechanic_origin_note(new_name, booking.preferred_mechanic_name)
-        who = f'{new_name} is now assigned to your job ({origin})' if new_name else \
-              f'Your job no longer has a specific mechanic assigned ({booking.preferred_mechanic_name} was not free at this time)'
-        msg = (f'Your {booking.service} appointment on {date_str} at {time_str}: {who}. '
-               f'Your appointment time has not changed.')
-        send_notification(booking.user_id, 'Mechanic Reassigned', msg, type='booking', status=booking.status)
-        customer = User.query.get(booking.user_id)
-        if customer and customer.email:
-            html = f"""
-            <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
-              <p>Hi {customer.fullname},</p>
-              <p>Your <strong>{booking.service}</strong> appointment on <strong>{date_str} at {time_str}</strong>: {who}.</p>
-              <p><strong>Your appointment time has not changed.</strong></p>
-              <p>— MotoTyre North Caloocan</p>
-            </div>"""
-            _send_gmail(customer.email, 'Your mechanic has been reassigned — MotoTyre', html)
+    if changed and broke_promise:
+        _mechanic_swap_notification(booking, new_name)
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'mechanic_name': new_name})
     flash('Mechanic updated.', 'success')
     return redirect(url_for('admin_dashboard'))
+
+
+def get_capacity_row(query_date):
+    return DailyCapacity.query.filter_by(date=query_date).first()
+
+
+def get_on_duty_mechanics(query_date=None):
+    """Who's actually working a given day: the first N by roster order (N
+    from that date's capacity override, or the whole roster if none is set),
+    further cut down to whoever isn't individually marked off duty in their
+    own profile — that override always applies, however high N is set. This
+    is THE roster every scheduling check in both apps reads."""
+    query_date = query_date or ph_now().date()
+    roster = Mechanic.query.order_by(Mechanic.id).all()
+    cap_row = get_capacity_row(query_date)
+    n = cap_row.mechanic_count if (cap_row and cap_row.mechanic_count is not None) else len(roster)
+    rostered_today = roster[:max(n, 0)]
+    on_duty = [m for m in rostered_today if m.status == 'available']
+    return roster, rostered_today, on_duty
+
+
+def get_daily_cap(query_date=None):
+    query_date = query_date or ph_now().date()
+    cap_row = get_capacity_row(query_date)
+    if cap_row and cap_row.daily_cap is not None:
+        return cap_row.daily_cap
+    return MAX_BOOKINGS_PER_DAY
 
 
 def _gather_intervals(query):
@@ -765,6 +940,16 @@ def _gather_intervals(query):
         b_start = b.time.hour * 60 + b.time.minute
         result.append((b_start, compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)))
     return result
+
+
+def _gather_blocked_intervals(booking_date):
+    """Admin-blocked start times for one day, as full-hour windows — folded
+    into the shop's queue intervals so a blocked slot reads exactly like an
+    already-booked one and an admin action can't be forced through it either."""
+    return [
+        (t.hour * 60 + t.minute, t.hour * 60 + t.minute + SLOT_GRANULARITY_MIN)
+        for t in (bs.time for bs in BlockedSlot.query.filter_by(date=booking_date).all())
+    ]
 
 
 def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, exclude_id=None,
@@ -784,12 +969,16 @@ def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, 
             q = q.filter(Booking.id != exclude_id)
         shop_intervals = _gather_intervals(q)
         daily_count = len(shop_intervals)
+        shop_intervals += _gather_blocked_intervals(booking_date)
 
     mechanic_status = None
     mechanic_intervals = None
     if mechanic_name:
-        mechanic = Mechanic.query.filter_by(name=mechanic_name).first()
-        mechanic_status = mechanic.status if mechanic else None
+        # "On duty" is roster-count AND individually-available — not just the
+        # profile toggle — so a mechanic dialed out by the capacity slider
+        # reads exactly the same as one marked off duty on their own profile.
+        _, _, on_duty = get_on_duty_mechanics(booking_date)
+        mechanic_status = 'available' if any(m.name == mechanic_name for m in on_duty) else 'off duty'
         mq = Booking.query.filter(
             Booking.assigned_mechanic_name == mechanic_name,
             Booking.date == booking_date,
@@ -801,9 +990,40 @@ def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, 
 
     return validate_booking(
         start_minutes, duration_minutes, shop_intervals, daily_count,
-        require_slot_grid=require_slot_grid,
+        require_slot_grid=require_slot_grid, daily_cap=get_daily_cap(booking_date),
         mechanic_name=mechanic_name, mechanic_status=mechanic_status, mechanic_intervals=mechanic_intervals,
     )
+
+
+def _apply_reschedule(booking, new_date, new_time, notify=True):
+    """Move a booking to a new date/time and, unless told not to, tell the
+    customer. Shared by the direct Reschedule action and the clash-fix engine
+    (fix #2, 'keep the mechanic, move the time') so both go through the exact
+    same write and the exact same email — a fix is just a reschedule with a
+    reason attached, not a separate code path."""
+    duration  = booking.duration_minutes or DEFAULT_DURATION_MIN
+    old_date_str = booking.date.strftime('%b %d, %Y')
+    old_time_str = booking.time.strftime('%I:%M %p')
+
+    booking.date      = new_date
+    booking.time      = new_time
+    booking.end_time  = compute_finish_time(new_time, duration)
+    booking.overrun_minutes = 0
+    booking.was_rescheduled = True
+    db.session.commit()
+
+    new_date_str = booking.date.strftime('%b %d, %Y')
+    new_time_str = booking.time.strftime('%I:%M %p')
+    emailed = False
+    if notify:
+        ref = f'BKG-{booking.id:03d}'
+        title = f"Moved to {booking.date.strftime('%b %d')}, {new_time_str}"
+        mechanic_line = booking.assigned_mechanic_name or 'shop decides'
+        body = (f'Was: {old_date_str} at {old_time_str}. Now: {new_date_str} at {new_time_str}. '
+                f'Mechanic: {mechanic_line} ({ref}). '
+                f"If the new time does not work for you, reply to this email and we will find another.")
+        emailed = _notify_customer(booking, title, body, priority=True)
+    return {'date': new_date_str, 'time': new_time_str, 'emailed': emailed}
 
 
 @admin_app.route('/booking/<int:bid>/reschedule', methods=['POST'])
@@ -845,36 +1065,613 @@ def reschedule_booking(bid):
     if not ok:
         return fail(error)
 
-    old_date_str = booking.date.strftime('%b %d, %Y')
-    old_time_str = booking.time.strftime('%I:%M %p')
-
-    booking.date      = new_date
-    booking.time      = new_time
-    booking.end_time  = compute_finish_time(new_time, duration)
-    db.session.commit()
-
-    new_date_str = booking.date.strftime('%b %d, %Y')
-    new_time_str = booking.time.strftime('%I:%M %p')
-    msg = (f'Your {booking.service} appointment has been moved from {old_date_str} at {old_time_str} '
-           f'to {new_date_str} at {new_time_str}.')
-    send_notification(booking.user_id, 'Appointment Rescheduled', msg, type='booking', status=booking.status)
-    if not booking.walkin_customer_id:
-        customer = User.query.get(booking.user_id)
-        if customer and customer.email:
-            html = f"""
-            <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
-              <p>Hi {customer.fullname},</p>
-              <p>Your <strong>{booking.service}</strong> appointment has been moved:</p>
-              <p>From <strong>{old_date_str} at {old_time_str}</strong><br>
-                 To &nbsp;&nbsp;<strong>{new_date_str} at {new_time_str}</strong></p>
-              <p>— MotoTyre North Caloocan</p>
-            </div>"""
-            _send_gmail(customer.email, 'Your appointment has been rescheduled — MotoTyre', html)
+    result = _apply_reschedule(booking, new_date, new_time, notify=True)
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'success': True, 'date': new_date_str, 'time': new_time_str})
+        return jsonify({'success': True, 'date': result['date'], 'time': result['time']})
     flash('Booking rescheduled.', 'success')
     return redirect(url_for('admin_dashboard'))
+
+
+def _booking_customer_name(b):
+    return b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'a customer')
+
+
+# ── CLASHES ──────────────────────────────────────────────────────────────
+# A clash is one mechanic double-booked, a booking with nobody assigned, or a
+# booking sitting on someone no longer on duty. It is NOT the shop being over
+# capacity — that's a capacity question (the Panel-3 bottleneck), never
+# surfaced here.
+
+def _mechanic_overlap_causes(bookings):
+    """bookings: active Booking rows all assigned to the SAME mechanic. Returns
+    {booking.id: cause dict} for every one that overlaps an earlier-starting
+    booking on that mechanic — phrased around whichever earlier job is
+    actually blocking it, 'running long' called out when the blocker itself
+    currently carries a recorded overrun."""
+    ordered = sorted(bookings, key=lambda b: (b.time, b.id))
+    causes = {}
+    for i in range(1, len(ordered)):
+        cur = ordered[i]
+        cur_start = cur.time.hour * 60 + cur.time.minute
+        cur_end = real_end_minutes(cur_start, cur.duration_minutes or DEFAULT_DURATION_MIN, cur.overrun_minutes or 0)
+        for j in range(i - 1, -1, -1):
+            prev = ordered[j]
+            prev_start = prev.time.hour * 60 + prev.time.minute
+            prev_end = real_end_minutes(prev_start, prev.duration_minutes or DEFAULT_DURATION_MIN, prev.overrun_minutes or 0)
+            if mechanic_overlaps(cur_start, cur_end, prev_start, prev_end):
+                running_long = (prev.overrun_minutes or 0) > 0
+                suffix = ' (running long)' if running_long else ''
+                causes[cur.id] = {
+                    'text': f"{cur.assigned_mechanic_name} is still on {_booking_customer_name(prev)}'s job until {minutes_to_ampm(prev_end)}{suffix}",
+                    'type': 'running_long' if running_long else 'double_booked',
+                    'blocker_id': prev.id,
+                    'blocker_end': prev_end,
+                }
+                break
+    return causes
+
+
+def _mechanic_free_at(mechanic_name, booking_date, start_min, end_min, exclude_id):
+    others = Booking.query.filter(
+        Booking.assigned_mechanic_name == mechanic_name, Booking.date == booking_date,
+        Booking.status != 'cancelled', Booking.id != exclude_id,
+    ).all()
+    for o in others:
+        o_start = o.time.hour * 60 + o.time.minute
+        o_end = real_end_minutes(o_start, o.duration_minutes or DEFAULT_DURATION_MIN, o.overrun_minutes or 0)
+        if mechanic_overlaps(start_min, end_min, o_start, o_end):
+            return False
+    return True
+
+
+def _fix1_preview(booking, on_duty_names):
+    """Fix #1: give it to the mechanic the customer asked for, if they're free
+    right now at this exact slot — same slot, nothing to tell the customer."""
+    preferred = booking.preferred_mechanic_name
+    if not preferred:
+        return None
+    if preferred not in on_duty_names:
+        return {'available': False, 'mechanic': preferred, 'reason': f'{preferred} is not on duty.'}
+    start_min = booking.time.hour * 60 + booking.time.minute
+    duration = booking.duration_minutes or DEFAULT_DURATION_MIN
+    end_min = real_end_minutes(start_min, duration, 0)
+    if _mechanic_free_at(preferred, booking.date, start_min, end_min, booking.id):
+        return {'available': True, 'mechanic': preferred}
+    return {'available': False, 'mechanic': preferred, 'reason': f'{preferred} is busy then too.'}
+
+
+def _fix2_preview(booking):
+    """Fix #2: keep the assigned mechanic, move the time — a later slot the
+    same day first, then the first workable date within 14 days."""
+    mechanic = booking.assigned_mechanic_name
+    if not mechanic:
+        return None
+    duration = booking.duration_minutes or DEFAULT_DURATION_MIN
+    start_min = booking.time.hour * 60 + booking.time.minute
+
+    for slot in all_slot_starts():
+        if slot <= start_min:
+            continue
+        ok, _ = _check_admin_booking_request(booking.date, slot, duration, exclude_id=booking.id, mechanic_name=mechanic)
+        if ok:
+            return {'available': True, 'date': booking.date.isoformat(), 'time': minutes_to_hhmm(slot),
+                    'label': f"{booking.date.strftime('%b %d')} at {minutes_to_ampm(slot)}", 'same_day': True}
+
+    d = booking.date
+    for _ in range(14):
+        d = d + timedelta(days=1)
+        if not is_working_day(d):
+            continue
+        for slot in all_slot_starts():
+            ok, _ = _check_admin_booking_request(d, slot, duration, exclude_id=booking.id, mechanic_name=mechanic)
+            if ok:
+                return {'available': True, 'date': d.isoformat(), 'time': minutes_to_hhmm(slot),
+                        'label': f"{d.strftime('%b %d')} at {minutes_to_ampm(slot)}", 'same_day': False}
+    return {'available': False}
+
+
+def _fix3_preview(booking, on_duty):
+    """Fix #3: hand it to any other free mechanic at the same time — flagged
+    as changing what the customer originally asked for."""
+    start_min = booking.time.hour * 60 + booking.time.minute
+    duration = booking.duration_minutes or DEFAULT_DURATION_MIN
+    end_min = real_end_minutes(start_min, duration, 0)
+    for m in on_duty:
+        if m.name == booking.assigned_mechanic_name:
+            continue
+        if _mechanic_free_at(m.name, booking.date, start_min, end_min, booking.id):
+            return {'available': True, 'mechanic': m.name, 'specialization': m.specialization}
+    return {'available': False}
+
+
+def _compute_day_clashes(the_date, bookings=None):
+    """Every clash open on one day, in booking order, each with its cause in
+    plain words and a preview of what each numbered fix would actually do."""
+    if bookings is None:
+        bookings = Booking.query.filter(Booking.date == the_date, Booking.status != 'cancelled').order_by(Booking.time).all()
+    else:
+        bookings = [b for b in bookings if b.status != 'cancelled']
+
+    _, _, on_duty = get_on_duty_mechanics(the_date)
+    on_duty_names = {m.name for m in on_duty}
+
+    by_mechanic = {}
+    for b in bookings:
+        if b.assigned_mechanic_name:
+            by_mechanic.setdefault(b.assigned_mechanic_name, []).append(b)
+    overlap_causes = {}
+    for blist in by_mechanic.values():
+        overlap_causes.update(_mechanic_overlap_causes(blist))
+
+    clashes = []
+    for b in sorted(bookings, key=lambda x: (x.time, x.id)):
+        cause = None
+        if b.id in overlap_causes:
+            cause = overlap_causes[b.id]
+        elif not b.assigned_mechanic_name:
+            cause = {'text': 'No mechanic assigned', 'type': 'unassigned'}
+        elif b.assigned_mechanic_name not in on_duty_names:
+            cause = {'text': f'{b.assigned_mechanic_name} is not on duty', 'type': 'off_duty'}
+        if not cause:
+            continue
+
+        start_min = b.time.hour * 60 + b.time.minute
+        fixes = {
+            'preferred':    _fix1_preview(b, on_duty_names),
+            'move_time':    _fix2_preview(b),
+            'any_free':     _fix3_preview(b, on_duty),
+            'delay_notice': {'available': True} if cause['type'] == 'running_long' else None,
+        }
+        clashes.append({
+            'id': b.id,
+            'customer': _booking_customer_name(b),
+            'service': b.service,
+            'time_label': minutes_to_ampm(start_min),
+            'cause': cause['text'],
+            'cause_type': cause['type'],
+            'assigned_mechanic': b.assigned_mechanic_name,
+            'preferred_mechanic': b.preferred_mechanic_name,
+            'fixes': fixes,
+        })
+    return clashes
+
+
+@admin_app.route('/booking/<int:bid>/resolve-clash', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def resolve_clash(bid):
+    """Apply one of the four clash fixes to a single booking. Every fix that
+    actually changes the mechanic or the time re-validates through the same
+    shared routine as any other schedule change — a fix can never trade one
+    clash for a different one. Reports in plain words what happened and
+    whether an email went out."""
+    booking = Booking.query.get_or_404(bid)
+    data = request.get_json() or {}
+    fix = data.get('fix')
+    notify = data.get('notify', True)
+
+    def fail(msg):
+        return jsonify({'success': False, 'error': msg}), 400
+
+    if fix == 'preferred':
+        _, _, on_duty = get_on_duty_mechanics(booking.date)
+        preview = _fix1_preview(booking, {m.name for m in on_duty})
+        if not preview or not preview.get('available'):
+            return fail((preview or {}).get('reason') or 'No preferred mechanic on file for this booking.')
+        mechanic = Mechanic.query.filter_by(name=preview['mechanic']).first()
+        ok, error = _check_admin_booking_request(
+            booking.date, booking.time.hour * 60 + booking.time.minute, booking.duration_minutes or DEFAULT_DURATION_MIN,
+            exclude_id=booking.id, mechanic_name=mechanic.name, require_slot_grid=False, check_shop_queue=False,
+        )
+        if not ok:
+            return fail(error)
+        booking.assigned_mechanic_name = mechanic.name
+        booking.assigned_mechanic_specialization = mechanic.specialization
+        db.session.commit()
+        return jsonify({'success': True, 'emailed': False,
+                         'message': f'{mechanic.name} now has this job — same time slot, nothing sent to the customer.'})
+
+    if fix == 'move_time':
+        preview = _fix2_preview(booking)
+        if not preview or not preview.get('available'):
+            return fail('Nothing is free for this mechanic within the next two weeks. Please call the customer directly.')
+        new_date = datetime.strptime(preview['date'], '%Y-%m-%d').date()
+        new_time = datetime.strptime(preview['time'], '%H:%M').time()
+        duration = booking.duration_minutes or DEFAULT_DURATION_MIN
+        ok, error = _check_admin_booking_request(
+            new_date, hhmm_to_minutes(preview['time']), duration, exclude_id=booking.id,
+            mechanic_name=booking.assigned_mechanic_name,
+        )
+        if not ok:
+            return fail(error)
+        result = _apply_reschedule(booking, new_date, new_time, notify=notify)
+        where = 'later today' if preview['same_day'] else f"on {new_date.strftime('%b %d')}"
+        return jsonify({'success': True, 'emailed': result['emailed'],
+                         'message': f"Kept {booking.assigned_mechanic_name}, moved the job to {result['time']} {where}."})
+
+    if fix == 'any_free':
+        _, _, on_duty = get_on_duty_mechanics(booking.date)
+        preview = _fix3_preview(booking, on_duty)
+        if not preview or not preview.get('available'):
+            return fail('No one else on duty is free at this exact time. Please call the customer directly.')
+        mechanic = Mechanic.query.filter_by(name=preview['mechanic']).first()
+        old_name = booking.assigned_mechanic_name or 'No one'
+        ok, error = _check_admin_booking_request(
+            booking.date, booking.time.hour * 60 + booking.time.minute, booking.duration_minutes or DEFAULT_DURATION_MIN,
+            exclude_id=booking.id, mechanic_name=mechanic.name, require_slot_grid=False, check_shop_queue=False,
+        )
+        if not ok:
+            return fail(error)
+        booking.assigned_mechanic_name = mechanic.name
+        booking.assigned_mechanic_specialization = mechanic.specialization
+        db.session.commit()
+
+        emailed = _mechanic_swap_notification(booking, mechanic.name) if notify else False
+        return jsonify({'success': True, 'emailed': emailed,
+                         'message': f"{old_name} → {mechanic.name} at the same time — flagged as a change from what the customer asked for."})
+
+    if fix == 'delay_notice':
+        same_mechanic = Booking.query.filter(
+            Booking.date == booking.date, Booking.status != 'cancelled',
+            Booking.assigned_mechanic_name == booking.assigned_mechanic_name,
+        ).all() if booking.assigned_mechanic_name else []
+        cause = _mechanic_overlap_causes(same_mechanic).get(booking.id)
+        if not cause or cause['type'] != 'running_long':
+            return fail('This booking is not currently blocked by a job running long.')
+        realistic_start = minutes_to_ampm(cause['blocker_end'])
+        ref = f'BKG-{booking.id:03d}'
+        time_str = booking.time.strftime('%I:%M %p')
+        date_str = booking.date.strftime('%b %d, %Y')
+        mechanic_line = booking.assigned_mechanic_name or 'shop decides'
+        title = f'Your {time_str} slot is running behind, realistic start {realistic_start}'
+        body = (f'The job ahead of yours is taking longer than expected, so we will not be able to start at '
+                f'{time_str}. We now expect to start around {realistic_start} instead, on {date_str}. '
+                f'Mechanic: {mechanic_line}. Services: {booking.service} ({ref}). '
+                f'Your slot is still yours. If the new time does not work, reply to this email and we will '
+                f'reschedule you at no charge.')
+        emailed = _notify_customer(booking, title, body, priority=True)
+        return jsonify({'success': True, 'emailed': emailed,
+                         'message': f'Delay notice sent — told the customer to expect ~{realistic_start}.'})
+
+    return fail('Unknown fix.')
+
+
+@admin_app.route('/booking/<int:bid>/ready-for-pickup', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def booking_ready_for_pickup(bid):
+    """Closes an open multi-day job: frees the mechanic's bay and tells the
+    customer their bike is ready."""
+    booking = Booking.query.get_or_404(bid)
+    if not booking.is_multiday:
+        return jsonify({'success': False, 'error': 'This is not a multi-day job.'}), 400
+    if booking.status in ('cancelled', 'ready_for_pickup', 'completed'):
+        return jsonify({'success': False, 'error': 'This job is already closed.'}), 400
+
+    booking.status = 'ready_for_pickup'
+    db.session.commit()
+
+    ref = f'BKG-{booking.id:03d}'
+    date_str = booking.date.strftime('%b %d, %Y')
+    title = f'{booking.service} — ready for pickup'
+    body = (f'Your motorcycle is ready for pickup. We carried out: {booking.service} ({ref}), dropped off '
+            f'{date_str}. Collect anytime: Mon–Sat, 8:00 AM – 6:30 PM.')
+    emailed = _notify_customer(booking, title, body, priority=False)
+    return jsonify({'success': True, 'emailed': emailed, 'message': f'{booking.service} closed — bay freed.'})
+
+
+@admin_app.route('/booking/<int:bid>/running-long', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def booking_running_long(bid):
+    """Counter staff records that a job is overrunning its scheduled duration
+    (or clears that). The extra minutes push into the mechanic's real end
+    time, which is what the clash detector and the delay notice both read."""
+    booking = Booking.query.get_or_404(bid)
+    data = request.get_json() or {}
+    action = data.get('action')
+    if action == 'reset':
+        booking.overrun_minutes = 0
+    elif action == 'add30':
+        booking.overrun_minutes = (booking.overrun_minutes or 0) + 30
+    elif action == 'add60':
+        booking.overrun_minutes = (booking.overrun_minutes or 0) + 60
+    else:
+        return jsonify({'success': False, 'error': 'Unknown action.'}), 400
+    db.session.commit()
+    return jsonify({'success': True, 'overrun_minutes': booking.overrun_minutes})
+
+
+@admin_app.route('/booking/<int:bid>/cancel', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def cancel_booking_day_panel(bid):
+    """Cancels a booking and frees the mechanic's time immediately (a
+    cancelled booking is excluded from every conflict check). Sent only when
+    the admin chooses to notify — but when it is sent, it's priority: a
+    shop-initiated cancellation is the message people most want to avoid
+    sending and the one where silence does the most damage. Stays visible —
+    struck through — and never counts toward the daily cap again."""
+    booking = Booking.query.get_or_404(bid)
+    data = request.get_json() or {}
+    notify = data.get('notify', True)
+    reason = clean_str(data.get('reason', ''), max_len=200)
+    booking.status = 'cancelled'
+    db.session.commit()
+
+    emailed = False
+    if notify:
+        ref = f'BKG-{booking.id:03d}'
+        date_str = booking.date.strftime('%b %d, %Y')
+        date_short = booking.date.strftime('%b %d')
+        time_str = booking.time.strftime('%I:%M %p')
+        title = f'Cancelled — {date_short} at {time_str}'
+        reason_text = reason or 'the shop is unable to take this appointment'
+        body = (f"Your {booking.service} appointment ({ref}) on {date_str} at {time_str} was cancelled — "
+                f"{reason_text}. Rebook anytime, or reply to this email with questions.")
+        emailed = _notify_customer(booking, title, body, priority=True)
+    return jsonify({'success': True, 'emailed': emailed,
+                     'message': f'Cancelled{" — customer notified." if emailed else (" — customer not notified." if not notify else " — no email on file.")}'})
+
+
+@admin_app.route('/booking/<int:bid>/restore', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def restore_booking_day_panel(bid):
+    """Un-cancels a booking back to confirmed. Bypasses fresh-booking
+    validation on purpose — restoring what already existed isn't creating a
+    new commitment, and if it lands back on a clash, that's exactly what the
+    Clashes-to-resolve panel exists to surface and fix."""
+    booking = Booking.query.get_or_404(bid)
+    if booking.status != 'cancelled':
+        return jsonify({'success': False, 'error': 'This booking is not cancelled.'}), 400
+    booking.status = 'confirmed'
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Booking restored.'})
+
+
+@admin_app.route('/api/blocked-slots', methods=['GET', 'POST', 'DELETE'])
+@login_required
+@require_admin_or_staff
+def api_blocked_slots():
+    """A blocked slot is a manual hold on one start time — staff meeting,
+    parts delivery — that removes it from the customer flow immediately
+    without touching any real booking. GET lists a day's blocked times; POST
+    blocks one; DELETE unblocks it."""
+    if request.method == 'GET':
+        date_str = request.args.get('date', '').strip()
+        try:
+            the_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date'}), 400
+        rows = BlockedSlot.query.filter_by(date=the_date).all()
+        return jsonify({'blocked': [minutes_to_hhmm(r.time.hour * 60 + r.time.minute) for r in rows]})
+
+    data = request.get_json() or {}
+    date_str = clean_str(data.get('date', ''), max_len=10)
+    time_str = clean_str(data.get('time', ''), max_len=5)
+    try:
+        the_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        the_time = datetime.strptime(time_str, '%H:%M').time()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid date/time.'}), 400
+
+    existing = BlockedSlot.query.filter_by(date=the_date, time=the_time).first()
+    if request.method == 'DELETE':
+        if existing:
+            db.session.delete(existing)
+            db.session.commit()
+        return jsonify({'success': True, 'blocked': False})
+
+    if existing:
+        return jsonify({'success': True, 'blocked': True})
+
+    start_min = the_time.hour * 60 + the_time.minute
+    for b in Booking.query.filter(Booking.date == the_date, Booking.status != 'cancelled').all():
+        b_start = b.time.hour * 60 + b.time.minute
+        b_end = compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)
+        if _overlaps(start_min, start_min + SLOT_GRANULARITY_MIN, b_start, b_end):
+            return jsonify({'success': False, 'error': 'A booking already occupies this slot — cancel or move it first.'}), 400
+
+    db.session.add(BlockedSlot(date=the_date, time=the_time, reason=clean_str(data.get('reason', ''), max_len=100)))
+    db.session.commit()
+    return jsonify({'success': True, 'blocked': True})
+
+
+@admin_app.route('/api/dev/try-double-booking', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def dev_try_double_booking():
+    """Proof, not a feature: calls the exact same server-side routine a real
+    booking would, deliberately aimed at an existing booking's mechanic and
+    exact slot (no exclude_id), and returns the rejection verbatim — showing
+    the rule lives in _check_admin_booking_request / validate_booking, not in
+    whatever the form happens to let you click."""
+    data = request.get_json() or {}
+    date_str = clean_str(data.get('date', ''), max_len=10)
+    try:
+        the_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    target = Booking.query.filter(
+        Booking.date == the_date, Booking.status != 'cancelled',
+        Booking.assigned_mechanic_name.isnot(None), Booking.assigned_mechanic_name != '',
+    ).first()
+    if not target:
+        return jsonify({'ok': None, 'message': 'No assigned booking on this day to try to collide with.'})
+
+    start_min = target.time.hour * 60 + target.time.minute
+    duration = target.duration_minutes or DEFAULT_DURATION_MIN
+    ok, error = _check_admin_booking_request(the_date, start_min, duration, mechanic_name=target.assigned_mechanic_name)
+    return jsonify({
+        'ok': ok,
+        'message': error or 'Unexpectedly allowed — this should never happen.',
+        'attempted': f'{target.assigned_mechanic_name} at {minutes_to_ampm(start_min)} on {the_date.strftime("%b %d, %Y")} (same slot as booking #{target.id})',
+    })
+
+
+@admin_app.route('/api/day-panel')
+@login_required
+@require_admin_or_staff
+def api_day_panel():
+    """Everything the Day panel renders, computed together in one pass since
+    most of it shares the same day's bookings and on-duty roster: the header
+    counts, the In-the-bay strip, every open clash with its fix previews, the
+    per-mechanic timeline, and the time-slot blocks with their booking cards."""
+    date_str = request.args.get('date', '').strip()
+    try:
+        the_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    bookings = Booking.query.filter(Booking.date == the_date).order_by(Booking.time).all()
+    active = [b for b in bookings if b.status != 'cancelled']
+
+    _, _, on_duty = get_on_duty_mechanics(the_date)
+    daily_cap = get_daily_cap(the_date)
+    clashes = _compute_day_clashes(the_date, bookings=bookings)
+    clash_ids = {c['id'] for c in clashes}
+    is_full = len(active) >= daily_cap
+
+    # ── In the bay: every currently-open multi-day drop-off, regardless of
+    # which day is being viewed — bay occupancy isn't a property of one date.
+    bay_jobs = Booking.query.filter(
+        Booking.is_multiday == True, Booking.status.notin_(['cancelled', 'ready_for_pickup']),
+        Booking.date <= ph_now().date(),
+    ).order_by(Booking.date).all()
+    bay = []
+    for b in bay_jobs:
+        prog = multiday_progress(b.date, ph_now().date())
+        bay.append({
+            'id': b.id,
+            'customer': _booking_customer_name(b),
+            'service': b.service,
+            'mechanic': b.assigned_mechanic_name,
+            'day_label': prog['label'],
+            'release_label': f"ready {prog['release_from'].strftime('%b %d')} to {prog['release_to'].strftime('%b %d')}",
+            'dropoff_date': b.date.isoformat(),
+        })
+
+    # ── Mechanic timeline ──
+    timeline = []
+    free_all_day = []
+    for m in on_duty:
+        m_bookings = [b for b in active if b.assigned_mechanic_name == m.name]
+        bars = []
+        for b in m_bookings:
+            start_min = b.time.hour * 60 + b.time.minute
+            duration = MULTIDAY_INTAKE_MIN if b.is_multiday else (b.duration_minutes or DEFAULT_DURATION_MIN)
+            end_min = real_end_minutes(start_min, duration, b.overrun_minutes or 0)
+            bars.append({
+                'id': b.id, 'start': start_min, 'end': end_min,
+                'customer': _booking_customer_name(b), 'service': b.service,
+                'is_multiday': bool(b.is_multiday),
+                'clash': b.id in clash_ids,
+                'overrunning': (b.overrun_minutes or 0) > 0,
+                'status': b.status,
+            })
+        timeline.append({'mechanic_id': m.id, 'mechanic': m.name, 'specialization': m.specialization, 'bars': bars})
+        if not bars:
+            free_all_day.append(m.name)
+
+    unassigned_bars = []
+    for b in active:
+        if not b.assigned_mechanic_name:
+            start_min = b.time.hour * 60 + b.time.minute
+            duration = MULTIDAY_INTAKE_MIN if b.is_multiday else (b.duration_minutes or DEFAULT_DURATION_MIN)
+            end_min = real_end_minutes(start_min, duration, b.overrun_minutes or 0)
+            unassigned_bars.append({
+                'id': b.id, 'start': start_min, 'end': end_min,
+                'customer': _booking_customer_name(b), 'service': b.service,
+                'is_multiday': bool(b.is_multiday), 'clash': True,
+                'overrunning': (b.overrun_minutes or 0) > 0, 'status': b.status,
+            })
+
+    # ── Time slots + booking cards ──
+    blocked_times = {bs.time.strftime('%H:%M') for bs in BlockedSlot.query.filter_by(date=the_date).all()}
+    slots = []
+    for start in all_slot_starts():
+        hhmm = minutes_to_hhmm(start)
+        occupied_mechanics = set()
+        for b in active:
+            if not b.assigned_mechanic_name:
+                continue
+            b_start = b.time.hour * 60 + b.time.minute
+            b_dur = MULTIDAY_INTAKE_MIN if b.is_multiday else (b.duration_minutes or DEFAULT_DURATION_MIN)
+            b_end = real_end_minutes(b_start, b_dur, b.overrun_minutes or 0)
+            if b_start <= start < b_end:
+                occupied_mechanics.add(b.assigned_mechanic_name)
+
+        slot_bookings = [b for b in bookings if (b.time.hour * 60 + b.time.minute) == start]
+        cards = []
+        for b in slot_bookings:
+            start_min = b.time.hour * 60 + b.time.minute
+            duration = MULTIDAY_INTAKE_MIN if b.is_multiday else (b.duration_minutes or DEFAULT_DURATION_MIN)
+            end_min = real_end_minutes(start_min, duration, b.overrun_minutes or 0)
+            tags = []
+            if b.status == 'cancelled':
+                tags.append('Cancelled')
+            if (b.overrun_minutes or 0) > 0:
+                tags.append('Running long')
+            if b.id in clash_ids:
+                tags.append('Clash')
+            if b.was_rescheduled:
+                tags.append('Rescheduled')
+            if b.preferred_mechanic_name and b.assigned_mechanic_name and b.preferred_mechanic_name != b.assigned_mechanic_name:
+                tags.append('Not their mechanic')
+            moto = (b.motorcycle_model or '').strip()
+            if b.motorcycle_plate:
+                moto = f'{moto} ({b.motorcycle_plate})' if moto else b.motorcycle_plate
+            cards.append({
+                'id': b.id,
+                'customer': _booking_customer_name(b),
+                'start': start_min,
+                'end': end_min,
+                'time_label': minutes_to_ampm(start_min),
+                'end_label': minutes_to_ampm(end_min),
+                'duration_label': format_duration(duration),
+                'ref': f'BKG-{b.id:03d}',
+                'mechanic': b.assigned_mechanic_name,
+                'specialization': b.assigned_mechanic_specialization,
+                'preferred_mechanic': b.preferred_mechanic_name,
+                'chosen_by': mechanic_origin_note(b.assigned_mechanic_name, b.preferred_mechanic_name),
+                'motorcycle': moto,
+                'services': b.service,
+                'status': b.status,
+                'tags': tags,
+                'overrun_minutes': b.overrun_minutes or 0,
+                'is_multiday': bool(b.is_multiday),
+                'can_reschedule': b.status not in ('completed', 'cancelled'),
+            })
+
+        active_here = [b for b in slot_bookings if b.status != 'cancelled']
+        slots.append({
+            'time': hhmm,
+            'label': minutes_to_ampm(start),
+            'booked_count': len(active_here),
+            'mechanic_count': len(on_duty),
+            'free_mechanics': max(len(on_duty) - len(occupied_mechanics), 0),
+            'blocked': hhmm in blocked_times,
+            'cards': cards,
+        })
+
+    return jsonify({
+        'date': date_str,
+        'date_label': the_date.strftime('%A, %B %d, %Y'),
+        'booked_count': len(active),
+        'daily_cap': daily_cap,
+        'mechanic_count': len(on_duty),
+        'is_full': is_full,
+        'has_clash': bool(clashes),
+        'bay': bay,
+        'clashes': clashes,
+        'timeline': timeline,
+        'unassigned_bars': unassigned_bars,
+        'free_all_day': free_all_day,
+        'slots': slots,
+    })
 
 
 @admin_app.route('/api/day-schedule')
@@ -912,6 +1709,438 @@ def api_day_schedule():
             'is_walkin': bool(b.walkin_customer_id),
         })
     return jsonify({'date': date_str, 'bookings': rows})
+
+
+@admin_app.route('/api/month-schedule')
+@login_required
+@require_admin_or_staff
+def api_month_schedule():
+    """One row per day in a month, sized for the calendar grid: how many
+    bookings, whether the day is full against its cap, whether any two
+    bookings on it actually clash, and up to three chips to preview."""
+    try:
+        year = int(request.args.get('year', ''))
+        month = int(request.args.get('month', ''))
+        if not (1 <= month <= 12):
+            raise ValueError
+    except ValueError:
+        return jsonify({'error': 'Invalid year/month'}), 400
+
+    start = date(year, month, 1)
+    end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+
+    bookings = Booking.query.filter(
+        Booking.date >= start, Booking.date < end
+    ).order_by(Booking.date, Booking.time).all()
+
+    by_day = {}
+    for b in bookings:
+        by_day.setdefault(b.date, []).append(b)
+
+    days = {}
+    for d, day_bookings in by_day.items():
+        active = [b for b in day_bookings if b.status != 'cancelled']
+        cap = get_daily_cap(d)
+        is_full = len(active) >= cap
+
+        # A clash is one mechanic double-booked, a booking with nobody
+        # assigned, or a booking sitting on someone no longer on duty — the
+        # exact same definition the Day panel's Clashes-to-resolve list uses,
+        # computed once here and reused for the badge and every chip.
+        clashing_ids = {c['id'] for c in _compute_day_clashes(d, bookings=day_bookings)}
+
+        chips = []
+        for b in day_bookings[:3]:
+            start_min = b.time.hour * 60 + b.time.minute
+            end_min = compute_finish_minutes(start_min, b.duration_minutes or DEFAULT_DURATION_MIN)
+            first_name = (b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else '—')).split(' ')[0]
+            chips.append({
+                'id': b.id,
+                'first_name': first_name,
+                'time_label': minutes_to_ampm(start_min),
+                'end_label': minutes_to_ampm(end_min),
+                'status': b.status,
+                'clash': b.id in clashing_ids,
+            })
+
+        days[d.isoformat()] = {
+            'count': len(active),
+            'total_count': len(day_bookings),
+            'is_full': is_full,
+            'has_clash': len(clashing_ids) > 0,
+            'daily_cap': cap,
+            'bookings': chips,
+            'more': max(0, len(day_bookings) - 3),
+        }
+
+    return jsonify({'year': year, 'month': month, 'days': days})
+
+
+@admin_app.route('/api/outbox')
+@login_required
+@require_admin_or_staff
+def api_outbox():
+    """Every message the shop has sent a customer, in one place — the exact
+    same rows the customer's own bell reads (one record, two views), so this
+    is literally what the shop can check when someone phones to say they
+    were never told. Priority-and-unread rows sort to the top; everything
+    else is newest first."""
+    rows = Notification.query.order_by(Notification.created_at.desc()).limit(300).all()
+
+    booking_ids = {n.booking_id for n in rows if n.booking_id}
+    bookings = {b.id: b for b in Booking.query.filter(Booking.id.in_(booking_ids)).all()} if booking_ids else {}
+    user_ids = {n.user_id for n in rows}
+    users = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
+
+    def sort_key(n):
+        return (0 if (n.priority and not n.is_read) else 1, -n.created_at.timestamp())
+
+    rows.sort(key=sort_key)
+
+    items = []
+    for n in rows:
+        b = bookings.get(n.booking_id) if n.booking_id else None
+        u = users.get(n.user_id)
+        items.append({
+            'id': n.id,
+            'customer': u.fullname if u else 'Unknown customer',
+            'title': n.title,
+            'message': n.message,
+            'type': n.type,
+            'status': n.status,
+            'is_read': n.is_read,
+            'priority': n.priority,
+            'booking_id': n.booking_id,
+            'booking_date': b.date.isoformat() if b else None,
+            'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
+        })
+
+    unread_count = Notification.query.filter_by(is_read=False).count()
+    return jsonify({'items': items, 'unread_count': unread_count})
+
+
+@admin_app.route('/api/outbox/<int:nid>/read', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def api_outbox_read(nid):
+    n = Notification.query.get_or_404(nid)
+    n.is_read = True
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@admin_app.route('/api/outbox/mark-all-read', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def api_outbox_mark_all_read():
+    Notification.query.filter_by(is_read=False).update({'is_read': True})
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+# ── RETURNS / WARRANTY ─────────────────────────────────────────────────────
+# A customer reporting a spare part that arrived wrong, or a service that
+# didn't hold, and what they want done about it. The shop looks at the
+# evidence, decides (approve with a remedy, or deny — both with a reason),
+# and separately marks the remedy actually carried out.
+#
+# The rule the whole feature rests on: every claim forces ONE mutually
+# exclusive choice — put it right, or give the money back, never both.
+RETURN_OUTCOME_LABELS = {
+    'product': {'replacement': 'Return and replacement', 'refund': 'Return and refund'},
+    'service': {'redo_service': 'Back job', 'refund': 'Refund'},
+}
+
+
+RETURN_REASON_LABELS = {kind: {code: label for code, label, _ in opts} for kind, opts in RETURN_REASONS.items()}
+
+
+def _return_ref(rr):
+    return f'RMA-{rr.id:03d}'
+
+
+def _return_line_items(rr):
+    """[{name, quantity, unit_price, subtotal}] for a product claim's picked
+    lines — empty for a service claim."""
+    if rr.kind != 'product':
+        return []
+    rows = ReturnRequestItem.query.filter_by(return_request_id=rr.id).all()
+    out = []
+    for row in rows:
+        item = OrderItem.query.get(row.order_item_id)
+        if not item:
+            continue
+        out.append({
+            'name': item.product.name if item.product else 'Item',
+            'quantity': row.quantity,
+            'unit_price': item.unit_price,
+            'subtotal': item.unit_price * row.quantity,
+        })
+    return out
+
+
+def _return_subject_label(rr):
+    """Human-readable 'what' the claim is about: the picked line items, or
+    the service — whichever of order/booking this claim is against."""
+    if rr.kind == 'product':
+        names = [f"{i['name']} ×{i['quantity']}" for i in _return_line_items(rr)]
+        if names:
+            return ', '.join(names)
+        return f'ORD-{rr.order_id:03d}' if rr.order_id else 'an order'
+    booking = Booking.query.get(rr.booking_id) if rr.booking_id else None
+    return booking.service if booking else 'a service'
+
+
+def _notify_return_customer(rr, title, body, priority=True):
+    """Same shape as _notify_customer for bookings — bell + email, identical
+    text, so a return decision never reads differently between the two."""
+    send_notification(rr.user_id, title, body, type='booking' if rr.kind == 'service' else 'order',
+                       status=rr.status, priority=priority)
+    customer = User.query.get(rr.user_id)
+    if not (customer and customer.email):
+        return False
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+      <p>Hi {customer.fullname},</p>
+      <p>{body}</p>
+      <p>— MotoTyre North Caloocan</p>
+    </div>"""
+    _send_gmail(customer.email, f'{title} — MotoTyre', html)
+    return True
+
+
+@admin_app.route('/api/returns')
+@login_required
+@require_admin_or_staff
+def api_returns():
+    """Every return/warranty claim — open ones (submitted / under_review)
+    sorted to the top so the queue reads like a to-do list, newest first
+    within each group."""
+    rows = ReturnRequest.query.order_by(ReturnRequest.created_at.desc()).all()
+    user_ids = {r.user_id for r in rows}
+    users = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
+
+    def sort_key(r):
+        return (0 if r.status in ('submitted', 'under_review') else 1, -r.created_at.timestamp())
+    rows.sort(key=sort_key)
+
+    items = []
+    for r in rows:
+        u = users.get(r.user_id)
+        reason_codes = [c for c in (r.reasons or '').split(',') if c]
+        reason_labels = [RETURN_REASON_LABELS.get(r.kind, {}).get(c, c) for c in reason_codes if c != 'other']
+        if r.other_reason_text:
+            reason_labels.append(r.other_reason_text)
+        items.append({
+            'id': r.id, 'ref': _return_ref(r),
+            'customer': u.fullname if u else 'Unknown customer',
+            'kind': r.kind,
+            'subject': _return_subject_label(r),
+            'line_items': _return_line_items(r),
+            'reasons': reason_labels,
+            'desired_outcome': r.desired_outcome,
+            'requested_mechanic_name': r.requested_mechanic_name,
+            'requested_refund_amount': r.requested_refund_amount,
+            'photos': [p for p in (r.photos or '').split(',') if p],
+            'status': r.status,
+            'decision_reason': r.decision_reason,
+            'resolution': r.resolution,
+            'refund_amount': r.refund_amount,
+            'order_id': r.order_id,
+            'booking_id': r.booking_id,
+            'created_at': r.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
+            'decided_at': r.decided_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.decided_at else None,
+            'resolved_at': r.resolved_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.resolved_at else None,
+        })
+    open_count = sum(1 for r in rows if r.status in OPEN_RETURN_STATUSES)
+    return jsonify({'items': items, 'open_count': open_count})
+
+
+@admin_app.route('/returns/<int:rid>/decide', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def decide_return_request(rid):
+    """Approve (with the remedy the shop will carry out) or deny (with a
+    reason) after reviewing the evidence. Actually carrying the remedy out is
+    a separate step — Mark Resolved — since approving is a decision and
+    fulfilling it is a real-world action that may take time."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    if rr.status not in ('submitted', 'under_review'):
+        return jsonify({'success': False, 'error': 'This claim has already been decided.'}), 400
+
+    data = request.get_json() or {}
+    decision = data.get('decision')
+    reason = clean_str(data.get('reason', ''), max_len=500)
+    if not reason:
+        return jsonify({'success': False, 'error': 'A reason is required for the customer to see.'}), 400
+
+    ref = _return_ref(rr)
+    subject = _return_subject_label(rr)
+
+    if decision == 'approve':
+        resolution = data.get('resolution', '')
+        # The rule the whole feature rests on: put it right, or give the
+        # money back — never both, and never a third option.
+        if resolution not in RETURN_OUTCOMES_BY_KIND[rr.kind]:
+            return jsonify({'success': False, 'error': 'Choose either to put it right or refund it — not both, and not a different remedy.'}), 400
+        rr.status = 'approved'
+        rr.resolution = resolution
+        if resolution == 'refund':
+            rr.refund_amount = clean_float(data.get('refund_amount', ''), default=0.0, min_val=0)
+        rr.decision_reason = reason
+        rr.decided_at = ph_now()
+        db.session.commit()
+
+        outcome_label = RETURN_OUTCOME_LABELS[rr.kind][resolution]
+        amount_line = f' Amount: ₱{rr.refund_amount:,.2f}.' if resolution == 'refund' and rr.refund_amount else ''
+        title = f'Approved — {outcome_label} ({ref})'
+        body = (f'Your return request ({ref}) about {subject} was approved. We will: {outcome_label}.{amount_line} '
+                f'Reason: {reason}. We will follow up once this is carried out.')
+    elif decision == 'deny':
+        rr.status = 'denied'
+        rr.decision_reason = reason
+        rr.decided_at = ph_now()
+        db.session.commit()
+
+        title = f'Not approved ({ref})'
+        body = (f'Your return request ({ref}) about {subject} was not approved. Reason: {reason}. '
+                f'Reply to this if you have more information or evidence to add.')
+    else:
+        return jsonify({'success': False, 'error': 'Unknown decision.'}), 400
+
+    emailed = _notify_return_customer(rr, title, body, priority=True)
+    return jsonify({'success': True, 'emailed': emailed, 'message': f'{rr.status.title()} — customer notified.'})
+
+
+@admin_app.route('/returns/<int:rid>/resolve', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def resolve_return_request(rid):
+    """Marks an approved claim's remedy as actually carried out — the refund
+    was issued, the replacement sent, the service redone, the credit
+    applied. Tells the customer it's done."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    if rr.status != 'approved':
+        return jsonify({'success': False, 'error': 'Only an approved claim can be marked resolved.'}), 400
+
+    rr.status = 'resolved'
+    rr.resolved_at = ph_now()
+    db.session.commit()
+
+    ref = _return_ref(rr)
+    subject = _return_subject_label(rr)
+    outcome_label = RETURN_OUTCOME_LABELS.get(rr.kind, {}).get(rr.resolution, rr.resolution or '')
+    title = f'Done — {outcome_label} ({ref})'
+    body = f'Your return request ({ref}) about {subject} is complete — {outcome_label} has been carried out.'
+    emailed = _notify_return_customer(rr, title, body, priority=False)
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Marked resolved — customer notified.'})
+
+
+@admin_app.route('/api/all-bookings')
+@login_required
+@require_admin_or_staff
+def api_all_bookings():
+    """The flat list view: every booking, one row each, for the sortable /
+    filterable table beside the calendar."""
+    bookings = Booking.query.order_by(Booking.date.desc(), Booking.time.desc()).all()
+
+    rows = []
+    for b in bookings:
+        start_min = b.time.hour * 60 + b.time.minute
+        duration = b.duration_minutes or DEFAULT_DURATION_MIN
+        end_min = compute_finish_minutes(start_min, duration)
+        customer_name = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else '—')
+        preferred = (b.preferred_mechanic_name or '').strip()
+        assigned = (b.assigned_mechanic_name or '').strip()
+        rows.append({
+            'id': b.id,
+            'date': b.date.isoformat(),
+            'date_label': b.date.strftime('%b %d, %Y'),
+            'time': minutes_to_hhmm(start_min), 'time_label': minutes_to_ampm(start_min),
+            'end_label': minutes_to_ampm(end_min),
+            'duration_minutes': duration,
+            'is_multiday': bool(b.is_multiday),
+            'customer': customer_name,
+            'assigned_mechanic': assigned or None,
+            'preferred_mechanic': preferred or None,
+            'shows_preference': bool(preferred) and preferred != assigned,
+            'service': b.service,
+            'status': b.status,
+        })
+    return jsonify({'bookings': rows})
+
+
+@admin_app.route('/api/capacity')
+@login_required
+@require_admin_or_staff
+def api_capacity():
+    """Everything the capacity strip shows for one day: the roster panel, the
+    cap panel, and the bottleneck panel that's the actual point of the
+    dashboard — which lever, staff or policy, is really limiting the day."""
+    date_str = request.args.get('date', '').strip()
+    try:
+        the_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    roster, rostered_today, on_duty = get_on_duty_mechanics(the_date)
+    daily_cap = get_daily_cap(the_date)
+
+    off_duty_within_roster = [m.name for m in rostered_today if m.status != 'available']
+    staff_note = None
+    if off_duty_within_roster:
+        who = ' and '.join(off_duty_within_roster) if len(off_duty_within_roster) <= 2 else \
+              f"{', '.join(off_duty_within_roster[:-1])}, and {off_duty_within_roster[-1]}"
+        verb = 'is' if len(off_duty_within_roster) == 1 else 'are'
+        staff_note = f'{who} {verb} marked off duty, so {len(on_duty)} actually working'
+
+    shortest = db.session.query(func.min(Service.duration_minutes)).filter(
+        Service.is_active == True, Service.is_multiday == False
+    ).scalar() or DEFAULT_DURATION_MIN
+
+    bottleneck = capacity_bottleneck(shortest, len(on_duty), daily_cap)
+
+    return jsonify({
+        'date': date_str,
+        'roster_size': len(roster),
+        'mechanic_count': len(rostered_today),
+        'working_today': len(on_duty),
+        'on_duty_names': [m.name for m in on_duty],
+        'staff_note': staff_note,
+        'daily_cap': daily_cap,
+        'shortest_service_minutes': shortest,
+        'bottleneck': bottleneck,
+    })
+
+
+@admin_app.route('/api/capacity', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def api_set_capacity():
+    """Admin moves the roster slider or the cap stepper for one day — upserts
+    the override row; either field can be sent alone."""
+    data = request.get_json() or {}
+    date_str = clean_str(data.get('date', ''), max_len=10)
+    try:
+        the_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid date'}), 400
+
+    row = get_capacity_row(the_date)
+    if not row:
+        row = DailyCapacity(date=the_date)
+        db.session.add(row)
+
+    if 'mechanic_count' in data:
+        mc = data.get('mechanic_count')
+        roster_size = Mechanic.query.count()
+        row.mechanic_count = None if mc is None else max(0, min(int(mc), roster_size))
+    if 'daily_cap' in data:
+        dc = data.get('daily_cap')
+        row.daily_cap = None if dc is None else max(0, int(dc))
+
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @admin_app.route('/order/<int:oid>/status', methods=['POST'])
@@ -985,6 +2214,8 @@ def update_order_status(oid):
                 product.stock += item.quantity
     prev_status  = order.status
     order.status = new_status
+    if new_status == 'completed' and not order.delivered_at:
+        order.delivered_at = ph_now()
     db.session.commit()
     # Every tracking step gets a customer notification stamped with the exact time
     # of the update — ship-to-address orders get delivery-specific wording. Re-saving
@@ -1689,6 +2920,8 @@ def booking_payment_submit(bid):
 
     try:
         booking.status         = 'completed'
+        if not booking.completed_at:
+            booking.completed_at = ph_now()
         booking.payment_method = method
         booking.total_amount   = amount_f
         db.session.commit()
@@ -1731,6 +2964,8 @@ def billing_order_complete(oid):
     if order.payment_method != 'cash' or order.delivery_method != 'pickup':
         return jsonify({'success': False, 'error': 'Only cash pick-up orders can be billed here'}), 400
     order.status = 'completed'
+    if not order.delivered_at:
+        order.delivered_at = ph_now()
     db.session.commit()
     send_notification(order.user_id, 'Order Completed!',
         f'Your order ORD-{order.id:03d} has been picked up and payment collected. Thank you!',
@@ -1852,6 +3087,8 @@ def pos_checkout():
             source_order = Order.query.get(source_order_id)
             if source_order:
                 source_order.status = 'completed'
+                if not source_order.delivered_at:
+                    source_order.delivered_at = ph_now()
                 source_order.payment_method = payment_method
                 completed_order_ids.add(source_order_id)
                 if source_order.user_id:
@@ -1862,7 +3099,8 @@ def pos_checkout():
     if new_cart_items:
         uid = int(customer_id) if customer_id else current_user.id
         new_total = sum(item['quantity'] * float(item['unit_price']) for item in new_cart_items)
-        order = Order(user_id=uid, total_amount=new_total, status='completed', payment_method=payment_method)
+        order = Order(user_id=uid, total_amount=new_total, status='completed', payment_method=payment_method,
+                      delivered_at=ph_now())
         db.session.add(order)
         db.session.flush()
         order_id = order.id
@@ -1885,6 +3123,8 @@ def pos_checkout():
             source_booking = Booking.query.get(source_booking_id)
             if source_booking:
                 source_booking.status = 'completed'
+                if not source_booking.completed_at:
+                    source_booking.completed_at = ph_now()
                 source_booking.payment_method = payment_method
                 source_booking.total_amount = svc_price * svc_qty
                 completed_booking_ids.add(source_booking_id)
@@ -1901,7 +3141,7 @@ def pos_checkout():
                 motorcycle_model=svc.get('motorcycle_model', ''),
                 motorcycle_plate=svc.get('motorcycle_plate', ''),
                 notes='Walk-in POS service.', status='completed', payment_method=payment_method,
-                total_amount=svc_price * svc_qty
+                total_amount=svc_price * svc_qty, completed_at=ph_now()
             )
             db.session.add(booking)
             db.session.flush()
@@ -2166,7 +3406,8 @@ def walkin_checkout():
             total_amount=prod_total,
             status='completed',
             payment_method=payment_method,
-            walkin_customer_id=walkin_customer.id
+            walkin_customer_id=walkin_customer.id,
+            delivered_at=ph_now()
         )
         db.session.add(order)
         db.session.flush()
@@ -2203,7 +3444,8 @@ def walkin_checkout():
             preferred_mechanic_name=mechanic_name,
             preferred_mechanic_specialization=mechanic_spec,
             walkin_customer_id=walkin_customer.id,
-            booking_batch=batch_id
+            booking_batch=batch_id,
+            completed_at=(ph_now() if booking_status == 'completed' else None)
         )
         db.session.add(booking)
         db.session.flush()

@@ -14,13 +14,16 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from io import BytesIO
-from security import clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_otp_purpose
+from security import (clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_otp_purpose,
+    validate_return_kind, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
+import json as _json
 from order_notifications import order_status_message, with_stamp, shipping_destination
 from service_duration import (
     DEFAULT_DURATION_MIN, combine_services, combined_service_name, split_service_names,
     format_duration, minutes_to_ampm, minutes_to_hhmm, hhmm_to_minutes, slot_statuses,
     all_slot_starts, SHOP_CLOSE_MIN, compute_finish_minutes, mechanic_overlaps,
-    mechanic_origin_note, validate_booking,
+    mechanic_origin_note, validate_booking, MAX_BOOKINGS_PER_DAY, SLOT_GRANULARITY_MIN,
+    add_working_days, MULTIDAY_MIN_DAYS, MULTIDAY_MAX_DAYS,
 )
 from gmail_helper import send_gmail_html as _send_gmail, send_otp_email
 import os, uuid, random, string, base64, requests
@@ -256,6 +259,41 @@ def send_order_receipt_email(order, override_email=None):
         print(f"[receipt email] failed for order {order.id}: {e}")
 
 
+def _booking_confirmation_facts(booking):
+    """The facts a booking confirmation states, computed once so the email
+    and the bell notification can never disagree: reference, date, the time
+    set aside, the expected finish (a range for a drop-off — never an exact
+    time), the mechanic and where they came from, services, and motorcycle."""
+    ref = f'BKG-{booking.id:03d}'
+    date_str = booking.date.strftime('%B %d, %Y')
+    date_short = booking.date.strftime('%b %d')
+    time_str = booking.time.strftime('%I:%M %p')
+
+    if booking.is_multiday:
+        time_label = f'{time_str} (drop-off intake)'
+        release_from = add_working_days(booking.date, MULTIDAY_MIN_DAYS)
+        release_to = add_working_days(booking.date, MULTIDAY_MAX_DAYS)
+        finish_label = f"ready between {release_from.strftime('%b %d')} and {release_to.strftime('%b %d')} — we will call you"
+    else:
+        time_label = time_str
+        finish_label = f"Done by {booking.end_time.strftime('%I:%M %p')}" if booking.end_time else 'To be confirmed'
+
+    origin = mechanic_origin_note(booking.assigned_mechanic_name, booking.preferred_mechanic_name)
+    mechanic_label = f'{booking.assigned_mechanic_name} ({origin})' if booking.assigned_mechanic_name \
+        else "We'll assign one closer to your appointment"
+
+    motorcycle = (booking.motorcycle_model or '').strip()
+    if booking.motorcycle_plate:
+        motorcycle = f'{motorcycle} ({booking.motorcycle_plate})' if motorcycle else booking.motorcycle_plate
+    motorcycle = motorcycle or 'On file'
+
+    return {
+        'ref': ref, 'date_str': date_str, 'date_short': date_short, 'time_str': time_str,
+        'time_label': time_label, 'finish_label': finish_label, 'mechanic_label': mechanic_label,
+        'services': booking.service, 'motorcycle': motorcycle,
+    }
+
+
 def send_booking_confirmation_email(booking):
     """States the mechanic and where they came from, using the same phrasing
     the admin-side reassignment email uses (mechanic_origin_note), so a
@@ -265,30 +303,7 @@ def send_booking_confirmation_email(booking):
         if not user or not user.email:
             return
 
-        date_str = booking.date.strftime("%B %d, %Y")
-        time_str = booking.time.strftime("%I:%M %p")
-        if booking.is_multiday:
-            when_line = f"{time_str} drop-off on {date_str}"
-        elif booking.end_time:
-            when_line = f"{time_str} – {booking.end_time.strftime('%I:%M %p')} on {date_str}"
-        else:
-            when_line = f"{time_str} on {date_str}"
-
-        origin = mechanic_origin_note(booking.assigned_mechanic_name, booking.preferred_mechanic_name)
-        if booking.assigned_mechanic_name:
-            mechanic_row = f"""
-              <tr>
-                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Mechanic</td>
-                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">
-                  {booking.assigned_mechanic_name} <span style="color:#9ca3af;">({origin})</span>
-                </td>
-              </tr>"""
-        else:
-            mechanic_row = """
-              <tr>
-                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Mechanic</td>
-                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">We'll assign one closer to your appointment</td>
-              </tr>"""
+        f = _booking_confirmation_facts(booking)
 
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
@@ -307,30 +322,28 @@ def send_booking_confirmation_email(booking):
           </div>
           <div style="padding:24px 32px;">
             <table style="width:100%;border-collapse:collapse;">
-              <tr>
-                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Order</td>
-                <td style="padding:6px 0;color:#111827;font-size:13px;font-weight:700;text-align:right;">ORD-{booking.id:03d}</td>
-              </tr>
-              <tr>
-                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Service</td>
-                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{booking.service}</td>
-              </tr>
-              <tr>
-                <td style="padding:6px 0;color:#6b7280;font-size:13px;">When</td>
-                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{when_line}</td>
-              </tr>{mechanic_row}
+              <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Reference</td><td style="padding:6px 0;color:#111827;font-size:13px;font-weight:700;text-align:right;">{f['ref']}</td></tr>
+              <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Date</td><td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{f['date_str']}</td></tr>
+              <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Time set aside</td><td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{f['time_label']}</td></tr>
+              <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Expected finish</td><td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{f['finish_label']}</td></tr>
+              <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Mechanic</td><td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{f['mechanic_label']}</td></tr>
+              <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Services</td><td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{f['services']}</td></tr>
+              <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Motorcycle</td><td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{f['motorcycle']}</td></tr>
             </table>
+            <div style="margin-top:16px;padding-top:16px;border-top:1px dashed #e5e7eb;color:#374151;font-size:13px;">
+              Please arrive 10 minutes early so we can start on time.
+            </div>
           </div>
           <div style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 32px;text-align:center;">
             <div style="color:#6b7280;font-size:12px;line-height:1.7;">
               <strong style="color:#111827;">MotoTyre North Caloocan</strong><br>
               Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>
-              &#128222; 0915 269 8366 &nbsp;|&nbsp; Mon–Sat 8:00 AM – 7:00 PM
+              &#128222; 0915 269 8366 &nbsp;|&nbsp; Mon–Sat 8:00 AM – 6:30 PM
             </div>
           </div>
         </div>"""
 
-        _send_gmail(user.email, f"Booking Confirmed — ORD-{booking.id:03d}", html)
+        _send_gmail(user.email, f"Booking Confirmed — {f['ref']}", html)
         print(f"[booking confirmation email] sent to {user.email} for booking {booking.id}")
     except Exception as e:
         print(f"[booking confirmation email] failed for booking {booking.id}: {e}")
@@ -394,6 +407,7 @@ class Booking(db.Model):
     payment_method   = db.Column(db.String(20), default='cash')
     created_at       = db.Column(db.DateTime, default=ph_now)
     reminder_sent    = db.Column(db.Boolean, default=False)
+    day_before_reminder_sent = db.Column(db.Boolean, default=False)
     assigned_mechanic_name           = db.Column(db.String(100))  # who is actually doing the work — shop changes this freely
     assigned_mechanic_specialization = db.Column(db.String(100))
     preferred_mechanic_name           = db.Column(db.String(100))  # who the customer asked for, or None — never overwritten after booking creation
@@ -406,6 +420,20 @@ class Booking(db.Model):
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
+    overrun_minutes  = db.Column(db.Integer, default=0)  # counter-staff-recorded extra time on top of duration_minutes
+    was_rescheduled  = db.Column(db.Boolean, default=False)  # set once, first time this booking's date/time changes after creation
+    completed_at     = db.Column(db.DateTime, nullable=True)  # when status actually reached completed — the warranty window's start
+
+
+class BlockedSlot(db.Model):
+    """An admin-blocked start time — removes that slot from the customer
+    booking flow immediately. Admin-managed; customer side only ever reads it."""
+    id         = db.Column(db.Integer, primary_key=True)
+    date       = db.Column(db.Date, nullable=False)
+    time       = db.Column(db.Time, nullable=False)
+    reason     = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=ph_now)
+    __table_args__ = (db.UniqueConstraint('date', 'time', name='uq_blocked_slot'),)
 
 
 class Mechanic(db.Model):
@@ -414,6 +442,15 @@ class Mechanic(db.Model):
     specialization = db.Column(db.String(100), nullable=False)
     status         = db.Column(db.String(20), default='available')
     created_at     = db.Column(db.DateTime, default=ph_now)
+
+
+class DailyCapacity(db.Model):
+    """Per-date overrides for the shop's capacity controls. A missing row for
+    a date means "use the defaults" — full roster, standard daily cap."""
+    id             = db.Column(db.Integer, primary_key=True)
+    date           = db.Column(db.Date, nullable=False, unique=True)
+    mechanic_count = db.Column(db.Integer, nullable=True)  # None = whole roster is rostered
+    daily_cap      = db.Column(db.Integer, nullable=True)  # None = MAX_BOOKINGS_PER_DAY default
 
 
 class Product(db.Model):
@@ -440,6 +477,7 @@ class Order(db.Model):
     items           = db.relationship('OrderItem', backref='order', lazy=True)
     is_archived     = db.Column(db.Boolean, default=False)
     receipt_sent    = db.Column(db.Boolean, default=False)
+    delivered_at    = db.Column(db.DateTime, nullable=True)  # when status actually reached delivered/completed — the return window's start
 
 
 class OrderItem(db.Model):
@@ -471,6 +509,47 @@ class Notification(db.Model):
     status     = db.Column(db.String(30))
     is_read    = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=ph_now)
+    priority    = db.Column(db.Boolean, default=False)  # needs a customer decision — stays pinned to the top, unread, until opened
+    booking_id  = db.Column(db.Integer, nullable=True)  # lets "open" land on the specific booking, not a list
+
+
+class ReturnRequest(db.Model):
+    """A customer reporting a spare part that arrived wrong or a service that
+    didn't hold, and what they want done about it (an RMA). kind picks
+    whether this claim is against an order (product) or a booking (service)
+    — exactly one of order_id/booking_id is ever set. Only one open claim
+    (submitted/under_review/approved) may exist per order or booking at a
+    time; the next one can only be filed once this is resolved, denied, or
+    cancelled."""
+    id              = db.Column(db.Integer, primary_key=True)
+    user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    kind            = db.Column(db.String(10), nullable=False)  # 'product' | 'service'
+    order_id        = db.Column(db.Integer, nullable=True)
+    booking_id      = db.Column(db.Integer, nullable=True)
+    reasons         = db.Column(db.String(300), nullable=False)  # comma-separated reason codes, multi-select
+    other_reason_text = db.Column(db.Text, nullable=True)  # required when 'other' is among reasons
+    desired_outcome = db.Column(db.String(20), nullable=False)
+    requested_mechanic_name = db.Column(db.String(100), nullable=True)  # back-job only — a request, never a guarantee
+    requested_refund_amount = db.Column(db.Float, nullable=True)  # what the customer's own math added up to at submission
+    photos          = db.Column(db.String(500))  # comma-separated filenames under static/return_evidence/ — permanent, never stripped
+    status          = db.Column(db.String(20), default='submitted')  # submitted|under_review|approved|denied|resolved|cancelled
+    decision_reason = db.Column(db.Text)
+    resolution      = db.Column(db.String(20))  # refund|replacement|redo_service
+    refund_amount   = db.Column(db.Float)  # the shop's final approved amount — may differ from requested_refund_amount
+    created_at      = db.Column(db.DateTime, default=ph_now)
+    decided_at      = db.Column(db.DateTime)
+    resolved_at     = db.Column(db.DateTime)
+    cancelled_at    = db.Column(db.DateTime)
+
+
+class ReturnRequestItem(db.Model):
+    """One line item within a product return — which order line, and how
+    many of it (capped at what was actually bought on that line), since only
+    one of several identical parts might be the bad one."""
+    id                = db.Column(db.Integer, primary_key=True)
+    return_request_id = db.Column(db.Integer, db.ForeignKey('return_request.id'), nullable=False)
+    order_item_id     = db.Column(db.Integer, nullable=False)
+    quantity          = db.Column(db.Integer, nullable=False)
 
 
 @login_manager.user_loader
@@ -478,8 +557,9 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-def send_notification(user_id, title, message, type='update', status=None):
-    db.session.add(Notification(user_id=user_id, title=title, message=message, type=type, status=status))
+def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False):
+    db.session.add(Notification(user_id=user_id, title=title, message=message, type=type,
+                                 status=status, booking_id=booking_id, priority=priority))
     db.session.commit()
 
 
@@ -529,6 +609,45 @@ def check_upcoming_bookings():
                 b.reminder_sent = True
                 db.session.commit()
                 print(f'[REMINDER] Sent for booking #{b.id} to user {b.user_id}')
+
+
+def check_day_before_reminders():
+    """Once daily-scale (checked every 30 min): find bookings happening
+    tomorrow and send a short reminder — no marketing, no upsell, just what
+    they need to show up: date, time, mechanic, services, motorcycle, and
+    how to reply if they need to move it."""
+    with app.app_context():
+        tomorrow = (datetime.now() + timedelta(days=1)).date()
+        upcoming = Booking.query.filter(
+            Booking.status.in_(['confirmed', 'in_progress', 'inprogress']),
+            Booking.day_before_reminder_sent == False,
+            Booking.date == tomorrow,
+        ).all()
+
+        for b in upcoming:
+            f = _booking_confirmation_facts(b)
+            send_notification(
+                b.user_id, f"Tomorrow — {f['time_str']}",
+                f"Reminder: your {f['services']} appointment ({f['ref']}) is tomorrow, {f['date_str']} at {f['time_label']}. "
+                f"Mechanic: {f['mechanic_label']}. Motorcycle: {f['motorcycle']}. "
+                f"Reply to this if you need to move it.",
+                type='booking', status=b.status, booking_id=b.id,
+            )
+            b.day_before_reminder_sent = True
+            db.session.commit()
+
+            user = User.query.get(b.user_id)
+            if user and user.email:
+                html = f"""
+                <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;">
+                  <p>Hi {user.fullname},</p>
+                  <p>Reminder: your <strong>{f['services']}</strong> appointment ({f['ref']}) is tomorrow, <strong>{f['date_str']} at {f['time_label']}</strong>.</p>
+                  <p>Mechanic: {f['mechanic_label']}<br>Motorcycle: {f['motorcycle']}</p>
+                  <p>Reply to this email if you need to move it.</p>
+                  <p>— MotoTyre North Caloocan</p>
+                </div>"""
+                _send_gmail(user.email, f"Reminder — tomorrow at {f['time_str']} ({f['ref']})", html)
+            print(f'[DAY-BEFORE REMINDER] Sent for booking #{b.id} to user {b.user_id}')
 
 
 def _generate_otp(length=6):
@@ -866,8 +985,42 @@ def customer_dashboard():
     orders   = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
     products = Product.query.filter(Product.stock > 0).all()
     services = Service.query.filter_by(is_active=True).order_by(Service.name).all()
+    returns  = ReturnRequest.query.filter_by(user_id=current_user.id).order_by(ReturnRequest.created_at.desc()).all()
+    for r in returns:
+        r.subject_label = _return_subject_label(r)
+
+    open_claims = ReturnRequest.query.filter(
+        ReturnRequest.user_id == current_user.id, ReturnRequest.status.in_(OPEN_RETURN_STATUSES)
+    ).all()
+    open_by_order = {r.order_id: r for r in open_claims if r.order_id}
+    open_by_booking = {r.booking_id: r for r in open_claims if r.booking_id}
+
+    for o in orders:
+        o.return_window = return_window_info('product', o.delivered_at) if o.status in ('delivered', 'completed') else None
+        o.open_claim = open_by_order.get(o.id)
+    for b in bookings:
+        b.return_window = return_window_info('service', b.completed_at) if b.status == 'completed' else None
+        b.open_claim = open_by_booking.get(b.id)
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders,
-                           products=products, services=services)
+                           products=products, services=services, returns=returns)
+
+
+def _return_subject_label(rr):
+    """Human-readable 'what' a return/warranty claim is about — the specific
+    line items, or the service."""
+    if rr.kind == 'product':
+        rows = ReturnRequestItem.query.filter_by(return_request_id=rr.id).all()
+        if rows:
+            names = []
+            for row in rows:
+                item = OrderItem.query.get(row.order_item_id)
+                if item and item.product:
+                    names.append(f'{item.product.name} ×{row.quantity}')
+            if names:
+                return ', '.join(names)
+        return f'ORD-{rr.order_id:03d}' if rr.order_id else 'an order'
+    booking = Booking.query.get(rr.booking_id) if rr.booking_id else None
+    return booking.service if booking else 'a service'
 
 
 def _resolve_service_combo(names):
@@ -892,6 +1045,44 @@ def _resolve_service_combo(names):
     return combine_services(rows)
 
 
+def get_capacity_row(query_date):
+    return DailyCapacity.query.filter_by(date=query_date).first()
+
+
+def get_on_duty_mechanics(query_date=None):
+    """Who's actually working a given day: the first N by roster order (N
+    from that date's capacity override, or the whole roster if none is set),
+    further cut down to whoever isn't individually marked off duty in their
+    own profile — that override always applies, however high N is set. Same
+    routine the admin side uses, so the two can't ever disagree about who's on."""
+    query_date = query_date or ph_now().date()
+    roster = Mechanic.query.order_by(Mechanic.id).all()
+    cap_row = get_capacity_row(query_date)
+    n = cap_row.mechanic_count if (cap_row and cap_row.mechanic_count is not None) else len(roster)
+    rostered_today = roster[:max(n, 0)]
+    on_duty = [m for m in rostered_today if m.status == 'available']
+    return roster, rostered_today, on_duty
+
+
+def get_daily_cap(query_date=None):
+    query_date = query_date or ph_now().date()
+    cap_row = get_capacity_row(query_date)
+    if cap_row and cap_row.daily_cap is not None:
+        return cap_row.daily_cap
+    return MAX_BOOKINGS_PER_DAY
+
+
+def _gather_blocked_intervals(booking_date):
+    """Admin-blocked start times (staff meeting, parts delivery) for one day,
+    as full-hour (start, start+60) windows — folded into the shop's queue
+    intervals so a blocked slot reads exactly like an already-booked one:
+    'Fully booked', gone from the grid, refused if requested directly."""
+    return [
+        (t.hour * 60 + t.minute, t.hour * 60 + t.minute + SLOT_GRANULARITY_MIN)
+        for t in (bs.time for bs in BlockedSlot.query.filter_by(date=booking_date).all())
+    ]
+
+
 def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_minutes, exclude_id=None):
     """THE call every booking-creation path in this app makes before touching
     the schedule. Gathers what service_duration.validate_booking() needs from
@@ -908,6 +1099,7 @@ def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_mi
     for b in q.all():
         b_start = b.time.hour * 60 + b.time.minute
         shop_intervals.append((b_start, compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)))
+    shop_intervals += _gather_blocked_intervals(booking_date)
 
     mechanic = None
     mechanic_status = None
@@ -916,7 +1108,10 @@ def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_mi
         mechanic = Mechanic.query.get(int(mechanic_id)) if str(mechanic_id).isdigit() else None
         if not mechanic:
             return None, 'That mechanic could not be found. Please choose someone else.'
-        mechanic_status = mechanic.status
+        # On the roster AND individually available — a mechanic dialed out by
+        # today's capacity slider reads the same as one marked off duty.
+        _, _, on_duty = get_on_duty_mechanics(booking_date)
+        mechanic_status = 'available' if any(m.name == mechanic.name for m in on_duty) else 'off duty'
         mq = Booking.query.filter(
             Booking.assigned_mechanic_name == mechanic.name,
             Booking.date == booking_date,
@@ -931,6 +1126,7 @@ def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_mi
 
     ok, error = validate_booking(
         start_minutes, duration_minutes, shop_intervals, daily_count=len(shop_intervals),
+        daily_cap=get_daily_cap(booking_date),
         mechanic_name=(mechanic.name if mechanic else None),
         mechanic_status=mechanic_status, mechanic_intervals=mechanic_intervals,
     )
@@ -1001,12 +1197,13 @@ def book_service():
     db.session.commit()
     send_booking_confirmation_email(booking)
 
-    done_text = (f" Estimated completion: {combo['duration_label']}." if combo['is_multiday']
-                 else f" Done by {minutes_to_ampm(end_min)}.")
+    cf = _booking_confirmation_facts(booking)
     send_notification(
-        current_user.id, 'Booking Confirmed! ✅',
-        f'Your {service} appointment on {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} is confirmed.{done_text} Please arrive 15 minutes early.',
-        type='booking', status='confirmed'
+        current_user.id, f"Confirmed — {cf['date_short']} at {cf['time_str']}",
+        f"Your {cf['services']} appointment ({cf['ref']}) on {cf['date_str']} — {cf['time_label']}. "
+        f"{cf['finish_label']}. Mechanic: {cf['mechanic_label']}. Motorcycle: {cf['motorcycle']}. "
+        f"Please arrive 10 minutes early so we can start on time.",
+        type='booking', status='confirmed', booking_id=booking.id,
     )
     for admin in User.query.filter_by(role='admin').all():
         send_notification(
@@ -1031,7 +1228,6 @@ def book_multiple_services():
     created = []
     created_bookings = []
     errors  = []
-    booking_summaries = []
     # Only bookings submitted together as a batch of 2+ get a shared batch id, so the
     # admin's Manage Booking page compresses them into one row — single bookings never
     # get grouped with anything else, even ones made later the same day.
@@ -1095,37 +1291,34 @@ def book_multiple_services():
         db.session.add(booking)
         db.session.flush()
         created.append(booking.id)
-        created_bookings.append(booking)
-        done_text = (f"est. {combo['duration_label']}" if combo['is_multiday']
-                     else f"done by {minutes_to_ampm(end_min)}")
-        booking_summaries.append({
-            'service': service,
-            'date':    booking.date.strftime('%b %d, %Y'),
-            'time':    booking.time.strftime('%I:%M %p'),
-            'done':    done_text,
-        })
+        created_bookings.append(booking)  # facts computed once each below, after IDs are final
 
     if created:
         db.session.commit()
+        facts = [_booking_confirmation_facts(b) for b in created_bookings]
         for booking in created_bookings:
             send_booking_confirmation_email(booking)
 
         # One combined notification instead of one per booking, so a multi-service
         # queue doesn't stack several near-identical notifications for the customer.
-        if len(booking_summaries) == 1:
-            s = booking_summaries[0]
+        if len(facts) == 1:
+            cf = facts[0]
             send_notification(
-                current_user.id, 'Booking Confirmed! ✅',
-                f"Your {s['service']} appointment on {s['date']} at {s['time']} is confirmed — "
-                f"{s['done']}. Please arrive 15 minutes early.",
-                type='booking', status='confirmed'
+                current_user.id, f"Confirmed — {cf['date_short']} at {cf['time_str']}",
+                f"Your {cf['services']} appointment ({cf['ref']}) on {cf['date_str']} — {cf['time_label']}. "
+                f"{cf['finish_label']}. Mechanic: {cf['mechanic_label']}. Motorcycle: {cf['motorcycle']}. "
+                f"Please arrive 10 minutes early so we can start on time.",
+                type='booking', status='confirmed', booking_id=created_bookings[0].id,
             )
         else:
-            lines = '\n'.join(f"• {s['service']} — {s['date']} at {s['time']} ({s['done']})" for s in booking_summaries)
+            lines = '\n'.join(
+                f"• {cf['services']} ({cf['ref']}) — {cf['date_str']} at {cf['time_label']}, {cf['finish_label']}, mechanic: {cf['mechanic_label']}"
+                for cf in facts
+            )
             send_notification(
-                current_user.id, f'{len(booking_summaries)} Bookings Confirmed! ✅',
-                f"Your appointments are confirmed:\n{lines}\nPlease arrive 15 minutes early for each.",
-                type='booking', status='confirmed'
+                current_user.id, f'{len(facts)} bookings confirmed',
+                f"Your appointments are confirmed:\n{lines}\nPlease arrive 10 minutes early for each.",
+                type='booking', status='confirmed',
             )
 
         for admin in User.query.filter_by(role='admin').all():
@@ -1307,6 +1500,245 @@ def upload_profile_pic():
     return redirect(url_for('customer_dashboard'))
 
 
+RETURN_PHOTOS_MAX = 5
+RETURN_PHOTO_MAX_BYTES = 5 * 1024 * 1024
+RETURN_OUTCOME_LABELS = {
+    'product': {'replacement': 'Return and replacement', 'refund': 'Return and refund'},
+    'service': {'redo_service': 'Back job', 'refund': 'Refund'},
+}
+RETURN_REASON_LABELS = {kind: {code: label for code, label, _ in opts} for kind, opts in RETURN_REASONS.items()}
+RETURN_REASON_NEEDS_PHOTO = {kind: {code: np for code, _, np in opts} for kind, opts in RETURN_REASONS.items()}
+
+# Eligibility windows: a spare part is returnable within 7 days of delivery;
+# a service carries a 15-day warranty from the day the job was completed.
+RETURN_WINDOW_DAYS = {'product': 7, 'service': 15}
+
+
+def return_window_info(kind, reference_dt):
+    """Days left (or expired) in a claim's eligibility window, measured from
+    when the order was actually delivered / the booking actually completed —
+    not when it was placed/booked. None if that hasn't happened yet, so
+    there's no window to speak of."""
+    if not reference_dt:
+        return None
+    window_days = RETURN_WINDOW_DAYS[kind]
+    deadline = reference_dt + timedelta(days=window_days)
+    now = ph_now()
+    expired = now > deadline
+    days_left = max((deadline.date() - now.date()).days, 0)
+    if expired:
+        label = 'Return window closed' if kind == 'product' else 'Warranty expired'
+    else:
+        unit = 'day' if days_left == 1 else 'days'
+        label = f"{days_left} {unit} left to return" if kind == 'product' else f"{days_left} {unit} of warranty left"
+    return {'expired': expired, 'days_left': days_left, 'deadline': deadline, 'label': label}
+
+
+def _save_return_photos(files):
+    """Images only, up to RETURN_PHOTOS_MAX, each under RETURN_PHOTO_MAX_BYTES.
+    Returns (saved_filenames, skipped_count) — never raises on a bad file,
+    just leaves it out, since the client already told the customer which
+    ones didn't make it."""
+    folder = os.path.join(app.root_path, 'static', 'return_evidence')
+    saved, skipped = [], 0
+    for file in files[:RETURN_PHOTOS_MAX]:
+        if not (file and file.filename):
+            continue
+        if not allowed_file(file.filename):
+            skipped += 1
+            continue
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(0)
+        if size > RETURN_PHOTO_MAX_BYTES:
+            skipped += 1
+            continue
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{current_user.id}_{uuid.uuid4().hex}.{ext}"
+        os.makedirs(folder, exist_ok=True)
+        file.save(os.path.join(folder, filename))
+        saved.append(filename)
+    return saved, skipped
+
+
+@app.route('/returns/new', methods=['POST'])
+@login_required
+@require_active_account
+def create_return_request():
+    """A customer reporting a spare part that arrived wrong, or a service
+    that didn't hold, and what they want done about it — an RMA. Validates
+    everything the dialog itself checks, again, since the dialog's checks
+    are a courtesy, not the rule: eligibility + window, one open claim per
+    order/booking, the outcome pairing, at least one reason (with the typed
+    text if 'other' is among them), and a photo if any picked reason needs
+    one. Every problem is collected and returned together, not one at a
+    time, so the customer sees the whole list at once."""
+    errors = []
+
+    kind = request.form.get('kind', '')
+    if kind not in ('product', 'service'):
+        return jsonify({'success': False, 'errors': ['Choose a spare part order or a completed service.']}), 400
+    validate_return_kind(kind)
+
+    desired_outcome = clean_str(request.form.get('desired_outcome', ''), max_len=20)
+    if desired_outcome not in RETURN_OUTCOMES_BY_KIND[kind]:
+        errors.append('Choose either to have it made right, or a refund.')
+
+    reason_meta = RETURN_REASON_NEEDS_PHOTO[kind]
+    reasons = [clean_str(r, max_len=30) for r in request.form.getlist('reasons')]
+    reasons = [r for r in reasons if r in reason_meta]
+    if not reasons:
+        errors.append('Please select at least one reason.')
+
+    other_text = clean_str(request.form.get('other_reason_text', ''), max_len=500)
+    if 'other' in reasons and not other_text:
+        errors.append('You ticked Other — please type what went wrong.')
+
+    needs_photo = any(reason_meta.get(r, False) for r in reasons)
+
+    incoming_photos = [f for f in request.files.getlist('photos') if f and f.filename]
+    if len(incoming_photos) > RETURN_PHOTOS_MAX:
+        errors.append(f'Only {RETURN_PHOTOS_MAX} photos may be attached — the rest were left out.')
+        incoming_photos = incoming_photos[:RETURN_PHOTOS_MAX]
+    valid_photo_count = 0
+    for f in incoming_photos:
+        if not allowed_file(f.filename):
+            continue
+        f.seek(0, os.SEEK_END)
+        size = f.tell()
+        f.seek(0)
+        if size <= RETURN_PHOTO_MAX_BYTES:
+            valid_photo_count += 1
+    if needs_photo and valid_photo_count == 0:
+        errors.append('The reason you picked needs at least one photo of the problem.')
+
+    order, booking = None, None
+    item_rows = []  # [(OrderItem, quantity)]
+    requested_mechanic_name = None
+
+    if kind == 'product':
+        oid = clean_int(request.form.get('order_id', ''))
+        order = Order.query.filter_by(id=oid, user_id=current_user.id).first() if oid else None
+        if not order or order.status not in ('delivered', 'completed'):
+            errors.append('That order is not eligible for a return — it has to be delivered first.')
+        else:
+            window = return_window_info('product', order.delivered_at)
+            if window is None or window['expired']:
+                errors.append("The 7-day return window for this order has closed. Message the shop "
+                              "directly and we'll look at it case by case.")
+            existing_open = ReturnRequest.query.filter(
+                ReturnRequest.order_id == order.id, ReturnRequest.status.in_(OPEN_RETURN_STATUSES)
+            ).first()
+            if existing_open:
+                errors.append(f'Request RMA-{existing_open.id:03d} is already open for this order.')
+
+            try:
+                raw_items = _json.loads(request.form.get('items_json', '[]'))
+            except ValueError:
+                raw_items = []
+            order_items_by_id = {i.id: i for i in OrderItem.query.filter_by(order_id=order.id).all()}
+            for ri in (raw_items if isinstance(raw_items, list) else []):
+                oiid = clean_int(ri.get('order_item_id', ''))
+                qty = clean_int(ri.get('quantity', ''))
+                oi = order_items_by_id.get(oiid)
+                if oi and 1 <= qty <= oi.quantity:
+                    item_rows.append((oi, qty))
+            if not item_rows:
+                errors.append('Please select at least one item, with how many, to return.')
+        what = ', '.join(f'{oi.product.name} ×{qty}' for oi, qty in item_rows) if item_rows else \
+            (f'your order (ORD-{order.id:03d})' if order else 'your order')
+    else:
+        bid = clean_int(request.form.get('booking_id', ''))
+        booking = Booking.query.filter_by(id=bid, user_id=current_user.id).first() if bid else None
+        if not booking or booking.status != 'completed':
+            errors.append('That appointment is not eligible for a warranty claim — it has to be completed first.')
+        else:
+            window = return_window_info('service', booking.completed_at)
+            if window is None or window['expired']:
+                errors.append("The 15-day warranty window for this service has closed. Message the shop "
+                              "directly and we'll look at it case by case.")
+            existing_open = ReturnRequest.query.filter(
+                ReturnRequest.booking_id == booking.id, ReturnRequest.status.in_(OPEN_RETURN_STATUSES)
+            ).first()
+            if existing_open:
+                errors.append(f'Request RMA-{existing_open.id:03d} is already open for this appointment.')
+            if desired_outcome == 'redo_service' and request.form.get('requested_mechanic') == 'yes' and booking.assigned_mechanic_name:
+                requested_mechanic_name = booking.assigned_mechanic_name
+        what = booking.service if booking else 'your appointment'
+
+    if errors:
+        return jsonify({'success': False, 'errors': errors}), 400
+
+    saved_filenames, _skipped = _save_return_photos(incoming_photos)
+
+    requested_refund_amount = None
+    if desired_outcome == 'refund':
+        if kind == 'product':
+            requested_refund_amount = sum(oi.unit_price * qty for oi, qty in item_rows)
+        else:
+            requested_refund_amount = booking.total_amount or 0
+
+    rr = ReturnRequest(
+        user_id=current_user.id, kind=kind,
+        order_id=order.id if order else None, booking_id=booking.id if booking else None,
+        reasons=','.join(reasons), other_reason_text=other_text if 'other' in reasons else None,
+        desired_outcome=desired_outcome, requested_mechanic_name=requested_mechanic_name,
+        requested_refund_amount=requested_refund_amount, photos=','.join(saved_filenames) or None,
+    )
+    db.session.add(rr)
+    db.session.flush()
+    for oi, qty in item_rows:
+        db.session.add(ReturnRequestItem(return_request_id=rr.id, order_item_id=oi.id, quantity=qty))
+    db.session.commit()
+
+    ref = f'RMA-{rr.id:03d}'
+    reason_labels = [RETURN_REASON_LABELS[kind].get(r, r) for r in reasons if r != 'other']
+    if other_text:
+        reason_labels.append(other_text)
+    reasons_text = '; '.join(reason_labels)
+    outcome_label = RETURN_OUTCOME_LABELS[kind][desired_outcome]
+    send_notification(
+        current_user.id, f'We received your return request ({ref})',
+        f"We got your report about {what} ({ref}) — {reasons_text}. You asked for: {outcome_label}. "
+        f"We'll review the evidence and get back to you with a decision.",
+        type='booking' if kind == 'service' else 'order', status='submitted',
+    )
+    if current_user.email:
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+          <p>Hi {current_user.fullname},</p>
+          <p>We got your report about <strong>{what}</strong> — {reasons_text}. You asked for: {outcome_label}.</p>
+          <p>Reference: <strong>{ref}</strong></p>
+          <p>We'll review the evidence and get back to you with a decision.</p>
+          <p>— MotoTyre North Caloocan</p>
+        </div>"""
+        _send_gmail(current_user.email, f'We received your return request — {ref}', html)
+
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(
+            admin.id, f'New return request ({ref})',
+            f'{current_user.fullname} reported {what} — {reasons_text}. Wants: {outcome_label}.',
+            type='booking' if kind == 'service' else 'order', status='submitted',
+        )
+
+    return jsonify({'success': True, 'ref': ref, 'id': rr.id})
+
+
+@app.route('/returns/<int:rid>/cancel', methods=['POST'])
+@login_required
+def cancel_return_request(rid):
+    """The customer withdraws their own open claim — one of the three ways
+    (resolved, denied, cancelled) an order/booking's slot frees up for
+    another request later."""
+    rr = ReturnRequest.query.filter_by(id=rid, user_id=current_user.id).first_or_404()
+    if rr.status not in OPEN_RETURN_STATUSES:
+        return jsonify({'success': False, 'error': 'This request is not open.'}), 400
+    rr.status = 'cancelled'
+    rr.cancelled_at = ph_now()
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @app.route('/api/booked-slots')
 @login_required
 def get_booked_slots():
@@ -1348,6 +1780,7 @@ def api_time_slots():
     for b in existing:
         b_start = b.time.hour * 60 + b.time.minute
         intervals.append((b_start, compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)))
+    intervals += _gather_blocked_intervals(slot_date)
 
     now_minutes = None
     if slot_date == ph_now().date():
@@ -1377,19 +1810,26 @@ def api_time_slots():
 @app.route('/api/mechanics')
 @login_required
 def get_mechanics():
-    # Ordered by id (hire/creation order) — a stable stand-in for a rotation queue,
-    # used both as the picker's list order and to pick who's "next in line" for
-    # shop-assigned bookings (the first one on this list who isn't busy then).
-    mechanics = Mechanic.query.filter_by(status='available').order_by(Mechanic.id).all()
+    date_str = request.args.get('date', '').strip()
+    time_str = request.args.get('time', '').strip()
+    duration = request.args.get('duration', type=int) or DEFAULT_DURATION_MIN
+
+    # Ordered by id (hire/creation order) — a stable stand-in for a rotation
+    # queue. Who's actually "on duty" is the roster call every scheduling
+    # check in both apps uses: the first N by that order (from today's — or
+    # the picked date's — capacity setting), minus anyone individually marked
+    # off duty on their own profile.
+    try:
+        roster_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else None
+    except ValueError:
+        roster_date = None
+    _, _, mechanics = get_on_duty_mechanics(roster_date)
 
     # A mechanic is busy only if their existing job's time window overlaps the
     # slot being picked — not for every booking they've ever had. Busy mechanics
     # are still returned (marked busy) rather than dropped, so the customer sees
     # the whole crew and why someone isn't available right now.
     busy_names = set()
-    date_str = request.args.get('date', '').strip()
-    time_str = request.args.get('time', '').strip()
-    duration = request.args.get('duration', type=int) or DEFAULT_DURATION_MIN
     if date_str and time_str:
         try:
             slot_date  = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -1423,6 +1863,7 @@ def get_notifications():
     return jsonify([{
         'id': n.id, 'title': n.title, 'message': n.message,
         'type': n.type, 'status': n.status, 'is_read': n.is_read,
+        'priority': n.priority, 'booking_id': n.booking_id,
         'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
     } for n in notifs])
 
@@ -1483,6 +1924,8 @@ def confirm_order_received(oid):
         return jsonify({'success': False,
                         'message': 'Please settle the cash payment at the counter — staff will mark this order complete.'}), 400
     order.status = 'completed'
+    if not order.delivered_at:
+        order.delivered_at = ph_now()
     db.session.commit()
     _is_ship = order.delivery_method == 'ship'
     send_notification(current_user.id, 'Order Received!',
@@ -1713,8 +2156,10 @@ import atexit
 scheduler = BackgroundScheduler(timezone='Asia/Manila')
 scheduler.add_job(func=check_upcoming_bookings, trigger='interval', minutes=1,
                   id='booking_reminder_job', replace_existing=True)
+scheduler.add_job(func=check_day_before_reminders, trigger='interval', minutes=30,
+                  id='day_before_reminder_job', replace_existing=True)
 scheduler.start()
-print('[SCHEDULER] Booking reminder service started — checking every 1 minute')
+print('[SCHEDULER] Booking reminder service started — checking every 1 minute (15-min) / 30 minutes (day-before)')
 atexit.register(lambda: scheduler.shutdown())
 
 
