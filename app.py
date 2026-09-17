@@ -38,12 +38,19 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/m
 
 def _ensure_database():
     """Local-dev convenience only: creates the database if it doesn't exist
-    yet. Silently skipped if it fails — a managed database (Azure Database
-    for MySQL, etc.) may not grant CREATE DATABASE, or it may simply already
-    exist there; either way this must never block startup."""
+    yet. Skipped entirely for anything that isn't localhost — a hosted
+    database (Aiven, etc.) already has its database created, requires SSL
+    this quick connection doesn't bother with, and may not even grant
+    CREATE DATABASE; there's nothing useful for this to do there, and
+    trying would just cost a slow, doomed connection attempt on every
+    startup. Also silently skipped if it fails for any other reason —
+    this must never block startup."""
     parsed = urlparse(DATABASE_URL.replace('mysql+pymysql://', 'mysql://', 1))
+    host = parsed.hostname or 'localhost'
+    if host not in ('localhost', '127.0.0.1'):
+        return
     try:
-        conn = pymysql.connect(host=parsed.hostname or 'localhost', port=parsed.port or 3306,
+        conn = pymysql.connect(host=host, port=parsed.port or 3306,
                                 user=parsed.username or 'root', password=parsed.password or '')
         try:
             db_name = (parsed.path or '/mototyre').lstrip('/')
@@ -58,6 +65,11 @@ _ensure_database()
 
 app = Flask(__name__)
 _secure_cookies = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+# A hosted database (Aiven, etc.) requires an SSL connection; a local XAMPP
+# one typically isn't even configured for it — so this is opt-in by host,
+# never something that has to be remembered as a separate setting.
+_db_host = urlparse(DATABASE_URL.replace('mysql+pymysql://', 'mysql://', 1)).hostname or ''
+_engine_options = {} if _db_host in ('localhost', '127.0.0.1', '') else {'connect_args': {'ssl': {'ssl': {}}}}
 app.config.update(
     SECRET_KEY=os.getenv('SECRET_KEY', 'mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4'),
     SESSION_COOKIE_NAME='mototyre_customer_session',
@@ -67,7 +79,7 @@ app.config.update(
     REMEMBER_COOKIE_SAMESITE='Lax',
     REMEMBER_COOKIE_SECURE=_secure_cookies,
     SQLALCHEMY_DATABASE_URI=DATABASE_URL,
-    SQLALCHEMY_ENGINE_OPTIONS={},
+    SQLALCHEMY_ENGINE_OPTIONS=_engine_options,
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 )
 

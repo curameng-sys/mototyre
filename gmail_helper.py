@@ -16,6 +16,21 @@ GMAIL_CREDS_FILE = "credentials.json"
 GMAIL_SENDER     = os.getenv("GMAIL_SENDER", "mototyre0505@gmail.com")
 OTP_EXPIRY_MINS  = 2
 
+def _write_gmail_secret_from_env(path, env_var):
+    """Both Gmail files are gitignored, so a fresh deploy never has them on
+    disk. If the matching env var is set with the file's exact contents,
+    write it out once at startup so the file-based OAuth flow below needs no
+    other changes. Local dev already has the real files, no env var is set,
+    and this is a no-op."""
+    if not os.path.exists(path):
+        contents = os.getenv(env_var)
+        if contents:
+            with open(path, "w") as f:
+                f.write(contents)
+
+_write_gmail_secret_from_env(GMAIL_TOKEN_FILE, "GMAIL_TOKEN_JSON")
+_write_gmail_secret_from_env(GMAIL_CREDS_FILE, "GMAIL_CREDENTIALS_JSON")
+
 _lock   = threading.Lock()
 _svc_cache = None
 

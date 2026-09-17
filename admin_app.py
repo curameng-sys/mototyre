@@ -32,6 +32,7 @@ from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDA
     slot_statuses, MECHANIC_SPECIALIZATIONS)
 import json
 import os, uuid, random, string, base64, requests
+from urllib.parse import urlparse
 import threading
 
 # App setup
@@ -41,12 +42,17 @@ import threading
 DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre')
 
 admin_app = Flask(__name__, template_folder='templates', static_folder='static')
+# A hosted database (Aiven, etc.) requires an SSL connection; a local XAMPP
+# one typically isn't even configured for it — so this is opt-in by host,
+# never something that has to be remembered as a separate setting.
+_db_host = urlparse(DATABASE_URL.replace('mysql+pymysql://', 'mysql://', 1)).hostname or ''
+_engine_options = {} if _db_host in ('localhost', '127.0.0.1', '') else {'connect_args': {'ssl': {'ssl': {}}}}
 admin_app.config.update(
     SECRET_KEY=os.getenv('ADMIN_SECRET_KEY', 'mototyre-admin-secret-key-aP5nQ9vX2kR8mT6yW1'),
     SESSION_COOKIE_NAME='mototyre_admin_session',
     SESSION_COOKIE_SECURE=os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true',
     SQLALCHEMY_DATABASE_URI=DATABASE_URL,
-    SQLALCHEMY_ENGINE_OPTIONS={},
+    SQLALCHEMY_ENGINE_OPTIONS=_engine_options,
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 )
 

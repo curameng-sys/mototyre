@@ -13,10 +13,17 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/m
 
 def get_pymysql_connection():
     parsed = urlparse(DATABASE_URL.replace('mysql+pymysql://', 'mysql://', 1))
+    host = parsed.hostname or 'localhost'
+    kwargs = {}
+    if host not in ('localhost', '127.0.0.1'):
+        # A hosted database (Aiven, etc.) requires SSL; local XAMPP doesn't
+        # need it and usually isn't even configured for it.
+        kwargs['ssl'] = {'ssl': {}}
     return pymysql.connect(
-        host=parsed.hostname or 'localhost',
+        host=host,
         port=parsed.port or 3306,
         user=parsed.username or 'root',
         password=parsed.password or '',
         database=(parsed.path or '/mototyre').lstrip('/'),
+        **kwargs,
     )
