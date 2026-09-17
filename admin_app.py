@@ -218,6 +218,8 @@ class Mechanic(db.Model):
     status         = db.Column(db.String(20), default='available')
     phone          = db.Column(db.String(20))
     note           = db.Column(db.Text)  # a short profile note shown under their name — not customer-visible
+    manual_customer = db.Column(db.String(200))  # fallback only — shown when there is no real booking, never overrides one
+    manual_service  = db.Column(db.String(300))  # comma-separated service names, same fallback rule
     created_at     = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
 
 
@@ -426,14 +428,36 @@ def load_user(user_id):
 def ph_now():
     return datetime.utcnow() + timedelta(hours=8)
 
-def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False, return_request_id=None):
+def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False,
+                       return_request_id=None, collapse_minutes=None):
     """The one place a customer notification gets written. Email and the bell
     always carry the exact same title/message — see each call site, which
     builds one (title, message) pair and reuses it for both channels.
     priority=True pins it unread at the top of the customer's bell (and the
     admin outbox) until they actually open it — reserved for changes a
     customer might want to push back on: a delay, a mechanic swap, a
-    reschedule, or any shop-initiated cancellation."""
+    reschedule, or any shop-initiated cancellation.
+
+    collapse_minutes: if set, and this exact user+booking+type already has a
+    notification from within that many minutes, it's overwritten in place
+    (title, message, re-marked unread) instead of inserting a new row — a
+    flurry of admin changes to the same booking within the window reads as
+    one notification carrying the latest state, not one per edit."""
+    if collapse_minutes and booking_id:
+        cutoff = ph_now() - timedelta(minutes=collapse_minutes)
+        existing = Notification.query.filter(
+            Notification.user_id == user_id, Notification.booking_id == booking_id,
+            Notification.type == type, Notification.created_at >= cutoff,
+        ).order_by(Notification.created_at.desc()).first()
+        if existing:
+            existing.title = title
+            existing.message = message
+            existing.status = status
+            existing.priority = priority
+            existing.is_read = False
+            existing.created_at = ph_now()
+            db.session.commit()
+            return
     db.session.add(Notification(user_id=user_id, title=title, message=message, type=type,
                                  status=status, booking_id=booking_id, priority=priority,
                                  return_request_id=return_request_id))
@@ -734,7 +758,7 @@ def admin_dashboard():
     )
 
 
-def _notify_customer(booking, title, body, priority=False, status=None):
+def _notify_customer(booking, title, body, priority=False, status=None, collapse_minutes=None):
     """The one place a booking-change notification is produced. Writes the
     bell notification and — unless this is a walk-in with no account —
     emails the exact same title and body, so the two channels can never say
@@ -744,7 +768,8 @@ def _notify_customer(booking, title, body, priority=False, status=None):
     the right words depend on what actually happened. Returns whether an
     email went out."""
     send_notification(booking.user_id, title, body, type='booking',
-                       status=status or booking.status, booking_id=booking.id, priority=priority)
+                       status=status or booking.status, booking_id=booking.id, priority=priority,
+                       collapse_minutes=collapse_minutes)
     if booking.walkin_customer_id:
         return False
     customer = User.query.get(booking.user_id)
@@ -790,7 +815,9 @@ def _mechanic_swap_notification(booking, new_name):
             f'Your appointment time has NOT changed — {date_str} at {time_str} still stands. '
             f'{who_now} Services: {booking.service} ({ref}). '
             f"If you'd rather wait for {preferred}, reply and we'll find a day they're free.")
-    return _notify_customer(booking, title, body, priority=True)
+    # Sorting out the same booking twice in a few minutes reads as one
+    # update, not one push per edit — collapse into the latest state.
+    return _notify_customer(booking, title, body, priority=True, collapse_minutes=5)
 
 
 @admin_app.route('/booking/<int:bid>/status', methods=['POST'])
@@ -2833,6 +2860,14 @@ def api_mechanics_roster():
         }) or None
         more_count = max(0, len(jobs) - 1) if assigned else 0
 
+        # The manual fields are a fallback, never an override: a real booking
+        # always wins, and what's typed here only surfaces when there isn't
+        # one — always labelled so it's never mistaken for schedule data.
+        assigned_is_manual = False
+        if not assigned and (m.manual_customer or m.manual_service):
+            assigned = {'customer': m.manual_customer or '', 'service': m.manual_service or ''}
+            assigned_is_manual = True
+
         if m.status == 'off_duty':
             effective_status = 'off_duty'
         elif has_job_today:
@@ -2846,9 +2881,46 @@ def api_mechanics_roster():
             'not_rostered_today': m.name not in rostered_names,
             'effective_status': effective_status,
             'active_jobs_count': len(jobs),
-            'assigned': assigned, 'more_count': more_count,
+            'assigned': assigned, 'more_count': more_count, 'assigned_is_manual': assigned_is_manual,
+            'manual_customer': m.manual_customer, 'manual_service': m.manual_service,
         })
     return jsonify({'mechanics': result, 'today': today.isoformat()})
+
+
+@admin_app.route('/api/mechanics/<int:mid>/assignable-bookings')
+@login_required
+@require_admin_or_staff
+def api_mechanic_assignable_bookings(mid):
+    """Today's unassigned bookings, from one mechanic's point of view — 'what
+    can X actually pick up' rather than 'who fits this slot'. Every
+    unassigned booking today is listed, never dropped from the list; each is
+    fit-checked through the exact same routine actually assigning it would
+    use, so a greyed-out reason here can never disagree with the refusal
+    you'd get by trying it anyway. This is the secondary way in — the
+    primary one is the assign control on the booking's own card."""
+    mechanic = Mechanic.query.get_or_404(mid)
+    today = ph_now().date()
+    bookings = Booking.query.filter(
+        Booking.date == today, Booking.assigned_mechanic_name.is_(None),
+        Booking.status.notin_(['cancelled', 'completed']),
+    ).order_by(Booking.time).all()
+
+    items = []
+    for b in bookings:
+        start_min = b.time.hour * 60 + b.time.minute
+        duration = b.duration_minutes or DEFAULT_DURATION_MIN
+        ok, reason = _check_admin_booking_request(
+            b.date, start_min, duration, exclude_id=b.id,
+            mechanic_name=mechanic.name, require_slot_grid=False, check_shop_queue=False,
+        )
+        items.append({
+            'booking_id': b.id, 'ref': f'BKG-{b.id:03d}',
+            'customer': _booking_customer_name(b), 'service': b.service,
+            'start_label': minutes_to_ampm(start_min),
+            'end_label': minutes_to_ampm(real_end_minutes(start_min, duration, b.overrun_minutes or 0)),
+            'fits': ok, 'reason': None if ok else reason,
+        })
+    return jsonify({'mechanic_id': mechanic.id, 'mechanic_name': mechanic.name, 'items': items})
 
 
 @admin_app.route('/mechanic/add', methods=['POST'])
@@ -2863,11 +2935,14 @@ def add_mechanic():
     status = data.get('status') if data.get('status') in ('available', 'busy', 'off_duty') else 'available'
     phone = clean_str(data.get('phone', ''), max_len=20)
     note = clean_str(data.get('note', ''), max_len=500)
+    manual_customer = clean_str(data.get('manual_customer', ''), max_len=200)
+    manual_service = clean_str(data.get('manual_service', ''), max_len=300)
     if not name or specialization not in MECHANIC_SPECIALIZATIONS:
         return jsonify({'success': False, 'error': 'Name is required and specialization must be one of the six.'}), 400
     if phone and not is_valid_phone(phone):
         return jsonify({'success': False, 'error': 'That phone number does not look right — use a Philippine mobile number.'}), 400
-    m = Mechanic(name=name, specialization=specialization, status=status, phone=phone or None, note=note or None)
+    m = Mechanic(name=name, specialization=specialization, status=status, phone=phone or None, note=note or None,
+                 manual_customer=manual_customer or None, manual_service=manual_service or None)
     db.session.add(m)
     db.session.commit()
     return jsonify({'success': True, 'id': m.id})
@@ -2885,6 +2960,8 @@ def edit_mechanic(mid):
     specialization = clean_str(data.get('specialization', ''), max_len=100)
     phone = clean_str(data.get('phone', ''), max_len=20)
     note = clean_str(data.get('note', ''), max_len=500)
+    manual_customer = clean_str(data.get('manual_customer', ''), max_len=200)
+    manual_service = clean_str(data.get('manual_service', ''), max_len=300)
     status = data.get('status') if data.get('status') in ('available', 'busy', 'off_duty') else m.status
     if not name or specialization not in MECHANIC_SPECIALIZATIONS:
         return jsonify({'success': False, 'error': 'Name is required and specialization must be one of the six.'}), 400
@@ -2898,6 +2975,8 @@ def edit_mechanic(mid):
     m.specialization = specialization
     m.phone = phone or None
     m.note = note or None
+    m.manual_customer = manual_customer or None
+    m.manual_service = manual_service or None
     m.status = status
     db.session.commit()
     return jsonify({'success': True})
@@ -2907,20 +2986,33 @@ def edit_mechanic(mid):
 @login_required
 @require_admin_or_staff
 def delete_mechanic(mid):
+    """Deleting the profile never deletes the work. Every active booking
+    still pointing at this mechanic gets cleared, never removed — it drops
+    to 'No mechanic assigned' and surfaces in the day panel's clash list,
+    where the existing fixes re-home it. Any customer preference naming
+    this mechanic is cleared too, on any booking, any status — nobody is
+    left pointing at someone who's gone."""
     if current_user.role != 'admin':
         return jsonify({'success': False, 'error': 'Access denied.'}), 403
     m = Mechanic.query.get_or_404(mid)
     today = ph_now().date()
-    upcoming = Booking.query.filter(
+
+    active = Booking.query.filter(
         Booking.assigned_mechanic_name == m.name, Booking.date >= today,
         Booking.status.notin_(['cancelled', 'completed']),
-    ).count()
-    if upcoming:
-        return jsonify({'success': False, 'error':
-            f'{m.name} has {upcoming} upcoming booking{"s" if upcoming != 1 else ""} — reassign them first.'}), 400
+    ).all()
+    for b in active:
+        b.assigned_mechanic_name = None
+        b.assigned_mechanic_specialization = None
+
+    for b in Booking.query.filter(Booking.preferred_mechanic_name == m.name).all():
+        b.preferred_mechanic_name = None
+        b.preferred_mechanic_specialization = None
+
+    unassigned_count = len(active)
     db.session.delete(m)
     db.session.commit()
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'unassigned_count': unassigned_count})
 
 
 @admin_app.route('/add-staff', methods=['POST'])

@@ -2149,6 +2149,23 @@
           <option value="off_duty">Off Duty</option>
         </select>
       </div>
+
+      <div style="margin-bottom:0.9rem;padding:0.7rem 0.8rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
+        <div style="font-size:0.76rem;color:#78350f;margin-bottom:0.6rem;line-height:1.5;">A real booking always wins. These only show — labelled "entered manually" — when this mechanic has no booking at all. Typing here does not create or change anything on the calendar.</div>
+        <div class="form-group" style="margin-bottom:0.6rem;">
+          <label>Assigned Customer / Reference No.</label>
+          <input type="text" id="am-manual-customer" placeholder="e.g. Juan dela Cruz / REF-0001">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Assigned Service</label>
+          <select id="am-manual-service" multiple size="4">
+            {% for s in all_services %}
+            <option value="{{ s.name }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>Notes</label>
         <textarea id="am-note" placeholder="Optional notes..." rows="2"></textarea>
@@ -2156,7 +2173,7 @@
       <div id="am-error" style="display:none;color:#b91c1c;font-size:0.8rem;margin-bottom:0.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.6rem 0.8rem;"></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-add-mechanic')">Cancel</button>
-        <button type="submit" class="btn-primary-custom">Add Mechanic</button>
+        <button type="submit" class="btn-primary-custom" style="background:#EF4444;">Add Mechanic</button>
       </div>
     </form>
   </div>
@@ -2202,6 +2219,23 @@
           <option value="off_duty">Off Duty</option>
         </select>
       </div>
+
+      <div style="margin-bottom:0.9rem;padding:0.7rem 0.8rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
+        <div style="font-size:0.76rem;color:#78350f;margin-bottom:0.6rem;line-height:1.5;">A real booking always wins. These only show — labelled "entered manually" — when this mechanic has no booking at all. Typing here does not create or change anything on the calendar.</div>
+        <div class="form-group" style="margin-bottom:0.6rem;">
+          <label>Assigned Customer / Reference No.</label>
+          <input type="text" id="em-manual-customer" placeholder="e.g. Juan dela Cruz / REF-0001">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Assigned Service</label>
+          <select id="em-manual-service" multiple size="4">
+            {% for s in all_services %}
+            <option value="{{ s.name }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>Notes</label>
         <textarea id="em-note" placeholder="Optional notes..." rows="2"></textarea>
@@ -2209,9 +2243,21 @@
       <div id="em-error" style="display:none;color:#b91c1c;font-size:0.8rem;margin-bottom:0.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.6rem 0.8rem;"></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-mechanic')">Cancel</button>
-        <button type="submit" class="btn-primary-custom">Save Changes</button>
+        <button type="submit" class="btn-primary-custom" style="background:#EF4444;">Save Changes</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ASSIGN PICKER MODAL: today's unassigned bookings, from one mechanic's side -->
+<div class="modal-overlay" id="modal-assign-picker" onclick="if(event.target===this) closeModal('modal-assign-picker')">
+  <div class="modal-box" style="width:480px;max-width:95vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <h5 id="assign-picker-title" style="margin:0;">Assign a booking</h5>
+      <button type="button" onclick="closeModal('modal-assign-picker')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.8rem;">Today's unassigned bookings this mechanic can actually take — the ones that don't fit their day are greyed out with the reason.</div>
+    <div id="assign-picker-list" style="max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:0.5rem;"></div>
   </div>
 </div>
 
@@ -2290,6 +2336,17 @@
     if (name === 'mechanics') { loadMechanicsRoster(); }
   }
 
+  // Every add, edit, delete or assign touches the roster the bookings
+  // calendar, the mechanic timeline, the on-duty slider, and the capacity
+  // read all depend on — a stale one of those is how a shop double-books
+  // someone who's already gone. Refresh them all together, not just this
+  // table, whether or not the admin is currently looking at them.
+  function refreshMechanicDependents() {
+    loadMechanicsRoster();
+    initDaySchedule();
+    if (typeof dsView !== 'undefined' && dsView === 'list') loadBookingList();
+  }
+
   // ── MECHANICS: the roster behind the bookings calendar ──
   let _mechanicsRoster = [];
 
@@ -2328,13 +2385,20 @@
   function mechanicAssignedCustomerHTML(m) {
     const a = m.assigned;
     if (!a) return '<span style="color:var(--muted);">—</span>';
+    if (m.assigned_is_manual) {
+      return `<div style="color:var(--text);font-weight:600;">${a.customer || '<span style="color:var(--muted);font-weight:400;">—</span>'}</div><div style="font-size:0.68rem;color:#b45309;font-style:italic;">entered manually</div>`;
+    }
     const when = a.is_today ? a.start_label : `${a.date_label}, ${a.start_label}`;
     const more = m.more_count > 0 ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">+${m.more_count} more booked</div>` : '';
     return `<div style="color:var(--text);font-weight:600;">${a.customer} / #${a.ref}</div><div style="font-size:0.72rem;color:var(--muted);">${when}</div>${more}`;
   }
 
   function mechanicAssignedServiceHTML(m) {
-    return m.assigned ? m.assigned.service : '<span style="color:var(--muted);">—</span>';
+    if (!m.assigned) return '<span style="color:var(--muted);">—</span>';
+    if (m.assigned_is_manual) {
+      return `${m.assigned.service || '<span style="color:var(--muted);">—</span>'}<div style="font-size:0.68rem;color:#b45309;font-style:italic;">entered manually</div>`;
+    }
+    return m.assigned.service;
   }
 
   const MECH_STATUS_PILLS = {
@@ -2363,11 +2427,21 @@
         <td>${mechanicAssignedCustomerHTML(m)}</td>
         <td>${mechanicAssignedServiceHTML(m)}</td>
         <td>${mechanicStatusHTML(m)}</td>
-        <td>
+        <td style="white-space:nowrap;">
+          <button type="button" class="btn-action-edit" onclick="openAssignPicker(${m.id})">Assign</button>
           <button type="button" class="btn-action-edit" onclick='openEditMechanic(${JSON.stringify(m).replace(/'/g, "&#39;")})'>Edit</button>
-          <button type="button" class="btn-action-delete" onclick="deleteMechanicJS(${m.id}, '${m.name.replace(/'/g, "\\'")}')">Delete</button>
+          <button type="button" class="btn-action-delete" onclick="deleteMechanicJS(${m.id}, '${m.name.replace(/'/g, "\\'")}', ${m.active_jobs_count})">Delete</button>
         </td>
       </tr>`;
+  }
+
+  function selectedMultiValues(selectEl) {
+    return Array.from(selectEl.selectedOptions).map(o => o.value);
+  }
+
+  function setMultiSelectValues(selectEl, csv) {
+    const values = new Set((csv || '').split(',').map(s => s.trim()).filter(Boolean));
+    Array.from(selectEl.options).forEach(o => { o.selected = values.has(o.value); });
   }
 
   function openAddMechanicModal() {
@@ -2376,6 +2450,8 @@
     document.getElementById('am-specialization').value = '';
     document.getElementById('am-note').value = '';
     document.getElementById('am-status').value = 'available';
+    document.getElementById('am-manual-customer').value = '';
+    setMultiSelectValues(document.getElementById('am-manual-service'), '');
     document.getElementById('am-error').style.display = 'none';
     document.getElementById('am-name-error').style.display = 'none';
     openModal('modal-add-mechanic');
@@ -2395,6 +2471,8 @@
       specialization: document.getElementById('am-specialization').value.trim(),
       note: document.getElementById('am-note').value.trim(),
       status: document.getElementById('am-status').value,
+      manual_customer: document.getElementById('am-manual-customer').value.trim(),
+      manual_service: selectedMultiValues(document.getElementById('am-manual-service')).join(','),
     };
     try {
       const res = await fetch('/mechanic/add', {
@@ -2405,7 +2483,7 @@
       if (data.success) {
         closeModal('modal-add-mechanic');
         showToast('Mechanic added.', 'success');
-        loadMechanicsRoster();
+        refreshMechanicDependents();
       } else {
         errEl.textContent = data.error || 'Could not add this mechanic.';
         errEl.style.display = 'block';
@@ -2424,6 +2502,8 @@
     document.getElementById('em-specialization').value = m.specialization;
     document.getElementById('em-note').value = m.note || '';
     document.getElementById('em-status').value = m.status;
+    document.getElementById('em-manual-customer').value = m.manual_customer || '';
+    setMultiSelectValues(document.getElementById('em-manual-service'), m.manual_service || '');
     document.getElementById('em-error').style.display = 'none';
     document.getElementById('em-name-error').style.display = 'none';
     openModal('modal-edit-mechanic');
@@ -2442,6 +2522,8 @@
       name,
       phone: document.getElementById('em-phone').value.trim(),
       specialization: document.getElementById('em-specialization').value.trim(),
+      manual_customer: document.getElementById('em-manual-customer').value.trim(),
+      manual_service: selectedMultiValues(document.getElementById('em-manual-service')).join(','),
       note: document.getElementById('em-note').value.trim(),
       status: document.getElementById('em-status').value,
     };
@@ -2454,7 +2536,7 @@
       if (data.success) {
         closeModal('modal-edit-mechanic');
         showToast('Mechanic updated.', 'success');
-        loadMechanicsRoster();
+        refreshMechanicDependents();
       } else {
         errEl.textContent = data.error || 'Could not save these changes.';
         errEl.style.display = 'block';
@@ -2466,13 +2548,65 @@
     return false;
   }
 
-  async function deleteMechanicJS(id, name) {
-    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+  async function deleteMechanicJS(id, name, activeJobsCount) {
+    const consequence = activeJobsCount > 0
+      ? ` ${activeJobsCount} booking${activeJobsCount !== 1 ? 's' : ''} assigned to ${name} will become unassigned and show up as clashes until you reassign them.`
+      : '';
+    if (!confirm(`Delete ${name}?${consequence} This cannot be undone.`)) return;
     try {
       const res = await fetch(`/mechanic/${id}/delete`, { method: 'POST' });
       const data = await res.json();
-      if (data.success) { showToast('Mechanic deleted.', 'success'); loadMechanicsRoster(); }
-      else showToast(data.error || 'Could not delete this mechanic.', 'error');
+      if (data.success) {
+        const msg = data.unassigned_count > 0
+          ? `Mechanic deleted — ${data.unassigned_count} booking${data.unassigned_count !== 1 ? 's' : ''} now unassigned.`
+          : 'Mechanic deleted.';
+        showToast(msg, 'success');
+        refreshMechanicDependents();
+      } else showToast(data.error || 'Could not delete this mechanic.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  // ── Assign picker: the secondary way in — "Toto is free this afternoon,
+  // what can he pick up?" — the primary path is still the booking card's
+  // own assign control; both write through /booking/<id>/assign-mechanic. ──
+  async function openAssignPicker(mid) {
+    const listEl = document.getElementById('assign-picker-list');
+    listEl.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
+    openModal('modal-assign-picker');
+    try {
+      const res = await fetch(`/api/mechanics/${mid}/assignable-bookings`);
+      const data = await res.json();
+      document.getElementById('assign-picker-title').textContent = `Assign — ${data.mechanic_name}`;
+      if (!data.items.length) {
+        listEl.innerHTML = '<div class="empty-state"><p>No unassigned bookings today.</p></div>';
+        return;
+      }
+      listEl.innerHTML = data.items.map(it => `
+        <div style="padding:0.65rem 0.8rem;border:1px solid ${it.fits ? 'var(--border)' : '#f3f4f6'};border-radius:8px;background:${it.fits ? '#fff' : '#f9fafb'};display:flex;justify-content:space-between;align-items:center;gap:0.6rem;">
+          <div>
+            <div style="font-weight:600;color:${it.fits ? 'var(--text)' : 'var(--muted)'};">${it.customer} — ${it.service}</div>
+            <div style="font-size:0.76rem;color:var(--muted);">${it.start_label}–${it.end_label} · ${it.ref}</div>
+            ${!it.fits ? `<div style="font-size:0.74rem;color:#b91c1c;margin-top:0.2rem;">${it.reason}</div>` : ''}
+          </div>
+          <button type="button" class="btn-primary-custom" style="padding:0.35rem 0.7rem;font-size:0.74rem;flex-shrink:0;${it.fits ? '' : 'opacity:0.4;cursor:not-allowed;'}" ${it.fits ? '' : 'disabled'} onclick="assignBookingToMechanic(${mid}, ${it.booking_id})">Assign</button>
+        </div>`).join('');
+    } catch (e) {
+      listEl.innerHTML = '<div class="empty-state"><p>Could not load bookings.</p></div>';
+    }
+  }
+
+  async function assignBookingToMechanic(mechanicId, bookingId) {
+    try {
+      const res = await fetch(`/booking/${bookingId}/assign-mechanic`, {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: `mechanic_id=${encodeURIComponent(mechanicId)}`,
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Assigned.', 'success');
+        closeModal('modal-assign-picker');
+        refreshMechanicDependents();
+      } else showToast(data.error || 'Could not assign this booking.', 'error');
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
 
