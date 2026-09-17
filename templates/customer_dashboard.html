@@ -1012,15 +1012,15 @@
       </button>
     </div>
 
-   <!-- Category Filter Tabs -->
-    <div style="margin-bottom:1rem;">
-  <input type="text" id="shop-search" placeholder="Search products..." oninput="searchProducts()" style="width:100%;background:var(--bg-page);border:1px solid var(--line-2);border-radius:10px;padding:0.75rem 1rem;color:var(--fg-1);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--brand-red)'" onblur="this.style.borderColor='var(--line-2)'"  >
-</div>
-<div id="cat-tabs" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
-      <button class="cat-tab active" onclick="filterProducts('all', this)">All</button>
-      {% for cat in products|map(attribute='category')|unique|sort %}
-      <button class="cat-tab" onclick="filterProducts('{{ cat|e }}', this)">{{ cat }}</button>
-      {% endfor %}
+   <!-- Search + Category Filter -->
+    <div style="display:flex;gap:0.65rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+      <input type="text" id="shop-search" placeholder="Search products..." oninput="searchProducts()" style="flex:1;min-width:200px;background:var(--bg-page);border:1px solid var(--line-2);border-radius:10px;padding:0.75rem 1rem;color:var(--fg-1);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--brand-red)'" onblur="this.style.borderColor='var(--line-2)'">
+      <select id="shop-cat-select" onchange="filterProducts(this.value)" style="background:var(--bg-page);border:1px solid var(--line-2);border-radius:10px;padding:0.75rem 1rem;color:var(--fg-1);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;min-width:180px;">
+        <option value="all">All Categories</option>
+        {% for cat in products|map(attribute='category')|unique|sort %}
+        <option value="{{ cat|e }}">{{ cat }}</option>
+        {% endfor %}
+      </select>
     </div>
 
     {% if products %}
@@ -4039,10 +4039,8 @@ let currentProductInfo = null;
 
 let _shopCategory = 'all';
 
-function filterProducts(cat, btn) {
+function filterProducts(cat) {
   _shopCategory = cat;
-  document.querySelectorAll('#cat-tabs .cat-tab').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
   applyShopFilters();
 }
 
