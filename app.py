@@ -102,11 +102,17 @@ PAYMONGO_API_URL = "https://api.paymongo.com/v1"
 BASE_URL = os.getenv("BASE_URL", "").rstrip("/")
 
 # Hosts the customer is allowed to be redirected back to after payment.
+# ALLOWED_ORIGIN lets a deployed host (Render, etc.) add itself without a
+# code change — set it in that service's environment to its own public URL.
 ALLOWED_RETURN_ORIGINS = [
     "http://127.0.0.1:5000",
     "http://localhost:5000",
     "https://h4fjzg66-5000.jpe1.devtunnels.ms",
+    "https://mototyre-customer.onrender.com",
 ]
+_extra_origin = os.getenv("ALLOWED_ORIGIN", "").rstrip("/")
+if _extra_origin and _extra_origin not in ALLOWED_RETURN_ORIGINS:
+    ALLOWED_RETURN_ORIGINS.append(_extra_origin)
 
 def safe_return_origin(origin):
     """Return a whitelisted origin for the post-payment redirect, or a safe default."""

@@ -95,7 +95,9 @@ _write_gmail_secret_from_env(GMAIL_CREDS_FILE, "GMAIL_CREDENTIALS_JSON")
 
 PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
-BASE_URL = os.getenv("BASE_URL", "https://h4fjzg66-5000.jpe1.devtunnels.ms")
+# /payment/success and /payment/failed only exist on the customer app, never
+# this one — so this always has to point there, not at admin_app's own host.
+BASE_URL = os.getenv("BASE_URL", "https://mototyre-customer.onrender.com")
 
 def create_gcash_payment(amount, description, order_id=None, booking_id=None):
     headers = {
