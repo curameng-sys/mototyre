@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -33,11 +36,16 @@ import threading
 
 # App setup
 
+# Same DATABASE_URL env var and same default as app.py — one database, read
+# identically by both apps, never two separately-maintained connection strings.
+DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre')
+
 admin_app = Flask(__name__, template_folder='templates', static_folder='static')
 admin_app.config.update(
-    SECRET_KEY='mototyre-admin-secret-key-aP5nQ9vX2kR8mT6yW1',
+    SECRET_KEY=os.getenv('ADMIN_SECRET_KEY', 'mototyre-admin-secret-key-aP5nQ9vX2kR8mT6yW1'),
     SESSION_COOKIE_NAME='mototyre_admin_session',
-    SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:@localhost:3306/mototyre",
+    SESSION_COOKIE_SECURE=os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true',
+    SQLALCHEMY_DATABASE_URI=DATABASE_URL,
     SQLALCHEMY_ENGINE_OPTIONS={},
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 )

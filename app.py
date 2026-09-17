@@ -27,30 +27,46 @@ from service_duration import (
 )
 from gmail_helper import send_gmail_html as _send_gmail, send_otp_email
 import os, uuid, random, string, base64, requests
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import pymysql
 import threading
 
+# One source of truth for the database location — every other place that
+# needs host/user/password (like the local-dev auto-create below) derives it
+# from this instead of keeping a second, separately-maintained copy.
+DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre')
+
 def _ensure_database():
-    conn = pymysql.connect(host='localhost', port=3306, user='root', password='')
+    """Local-dev convenience only: creates the database if it doesn't exist
+    yet. Silently skipped if it fails — a managed database (Azure Database
+    for MySQL, etc.) may not grant CREATE DATABASE, or it may simply already
+    exist there; either way this must never block startup."""
+    parsed = urlparse(DATABASE_URL.replace('mysql+pymysql://', 'mysql://', 1))
     try:
-        conn.cursor().execute("CREATE DATABASE IF NOT EXISTS mototyre CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-        conn.commit()
-    finally:
-        conn.close()
+        conn = pymysql.connect(host=parsed.hostname or 'localhost', port=parsed.port or 3306,
+                                user=parsed.username or 'root', password=parsed.password or '')
+        try:
+            db_name = (parsed.path or '/mototyre').lstrip('/')
+            conn.cursor().execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
 
 _ensure_database()
 
 app = Flask(__name__)
+_secure_cookies = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
 app.config.update(
-    SECRET_KEY='mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4',
+    SECRET_KEY=os.getenv('SECRET_KEY', 'mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4'),
     SESSION_COOKIE_NAME='mototyre_customer_session',
     SESSION_COOKIE_SAMESITE='Lax',
-    SESSION_COOKIE_SECURE=False,
+    SESSION_COOKIE_SECURE=_secure_cookies,
     SESSION_COOKIE_DOMAIN=None,
     REMEMBER_COOKIE_SAMESITE='Lax',
-    REMEMBER_COOKIE_SECURE=False,
-    SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:@localhost:3306/mototyre",
+    REMEMBER_COOKIE_SECURE=_secure_cookies,
+    SQLALCHEMY_DATABASE_URI=DATABASE_URL,
     SQLALCHEMY_ENGINE_OPTIONS={},
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 )
