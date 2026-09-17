@@ -78,6 +78,13 @@
     .btn-done:hover{background:#15803d;color:#fff;}
     .btn-close{flex:1;padding:.6rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;text-transform:uppercase;cursor:pointer;text-align:center;transition:all .15s;text-decoration:none;}
     .btn-close:hover{color:#fff;}
+
+    @media (max-width: 600px) {
+      .main{padding:1.25rem 1rem;}
+      .info-grid{grid-template-columns:1fr;}
+      .service-band{flex-direction:column;align-items:flex-start;gap:.35rem;}
+      .modal-foot{flex-direction:column;}
+    }
   </style>
 </head>
 <body>

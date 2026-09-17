@@ -192,6 +192,12 @@
         to   { opacity: 1; transform: translateY(0); }
       }
       .page-wrap { animation: fadeUp 0.5s ease both; }
+
+      @media (max-width: 600px) {
+        .page-wrap { padding: 2rem 1.25rem 3rem; }
+        .meta { gap: 0.75rem 1.25rem; }
+        .contact-grid { grid-template-columns: 1fr; }
+      }
     </style>
 </head>
 <body>

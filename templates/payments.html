@@ -147,6 +147,14 @@
     .h-ord{background:rgba(16,185,129,.2);color:#6ee7b7;}
 
     @media(max-width:900px){.main{padding:1.25rem 1rem;} thead th:nth-child(3),td:nth-child(3){display:none;} }
+    @media(max-width:640px){
+      .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+      table{min-width:560px;}
+      .topbar{padding:0 1rem;flex-wrap:wrap;height:auto;min-height:56px;padding-top:.5rem;padding-bottom:.5rem;gap:.5rem;}
+      .page-title{font-size:1.7rem;}
+      .tab-bar{flex-wrap:wrap;}
+      .bill-box{max-width:100%;}
+    }
   </style>
 </head>
 <body>

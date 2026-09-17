@@ -409,6 +409,9 @@
       #parts-pagination { padding: 0.5rem 0; }
       /* Two-column inline grids that need to collapse */
       [style*="grid-template-columns:1fr 1fr"]:not(.stats-grid):not(#parts-product-grid) { grid-template-columns: 1fr !important; }
+      /* Notification panel is positioned relative to the desktop sidebar; reposition for mobile */
+      #admin-notif-panel { left: 0.75rem !important; right: 0.75rem !important; width: auto !important; top: 4rem !important; }
+      #user-manage-menu { max-width: calc(100vw - 1.5rem) !important; }
     }
 
     @media (max-width: 640px) {
@@ -1229,7 +1232,7 @@
             <tbody>
               {% for u in all_users %}
               <tr>
-                <td>{{ u.id }}</td>
+                <td>{{ loop.index }}</td>
                 <td>{{ u.fullname }}</td>
                 <td>{{ u.email }}</td>
                 <td>{{ u.phone }}</td>

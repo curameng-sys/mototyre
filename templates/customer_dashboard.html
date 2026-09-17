@@ -1018,10 +1018,9 @@
 </div>
 <div id="cat-tabs" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
       <button class="cat-tab active" onclick="filterProducts('all', this)">All</button>
-      <button class="cat-tab" onclick="filterProducts('tire', this)">Tire</button>
-      <button class="cat-tab" onclick="filterProducts('engineoil', this)">Engine Oil</button>
-      <button class="cat-tab" onclick="filterProducts('airfilter', this)">Air Filter</button>
-      <button class="cat-tab" onclick="filterProducts('brakeshoe', this)">Brake Shoe</button>
+      {% for cat in products|map(attribute='category')|unique|sort %}
+      <button class="cat-tab" onclick="filterProducts('{{ cat|e }}', this)">{{ cat }}</button>
+      {% endfor %}
     </div>
 
     {% if products %}
@@ -4037,6 +4036,35 @@ async function submitReturnInfo(id) {
 
 // ── PRODUCT INFO MODAL ──
 let currentProductInfo = null;
+
+let _shopCategory = 'all';
+
+function filterProducts(cat, btn) {
+  _shopCategory = cat;
+  document.querySelectorAll('#cat-tabs .cat-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  applyShopFilters();
+}
+
+function searchProducts() {
+  applyShopFilters();
+}
+
+function applyShopFilters() {
+  const searchEl = document.getElementById('shop-search');
+  const q = (searchEl ? searchEl.value : '').toLowerCase().trim();
+  const cards = document.querySelectorAll('#product-grid .product-card');
+  let visibleCount = 0;
+  cards.forEach(card => {
+    const matchesCat = _shopCategory === 'all' || card.dataset.category === _shopCategory;
+    const matchesSearch = !q || card.dataset.name.toLowerCase().includes(q);
+    const show = matchesCat && matchesSearch;
+    card.style.display = show ? '' : 'none';
+    if (show) visibleCount++;
+  });
+  const noProducts = document.getElementById('no-products');
+  if (noProducts) noProducts.style.display = visibleCount === 0 ? '' : 'none';
+}
 
 function openProductInfo(card) {
   currentProductInfo = {

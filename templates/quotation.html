@@ -143,6 +143,13 @@
       .catalog{display:none;}
       .quote-panel{height:calc(100vh - 56px);}
     }
+    @media(max-width:480px){
+      .topbar{padding:0 1rem;}
+      .topbar-right{gap:.4rem;}
+      .btn-back span, .btn-view-all span{display:none;}
+      .info-grid{grid-template-columns:1fr;}
+      .modal-foot{flex-direction:column;}
+    }
   </style>
 </head>
 <body>

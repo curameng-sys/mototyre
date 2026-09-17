@@ -93,6 +93,21 @@
     .toast{background:#1f2937;border:1px solid #374151;border-left:3px solid var(--green);border-radius:8px;padding:.7rem 1rem;font-family:'DM Sans',sans-serif;font-size:.82rem;color:#e5e7eb;box-shadow:0 4px 20px rgba(0,0,0,.25);animation:toastIn .25s ease;min-width:180px;}
     .toast.error{border-left-color:var(--red);}
     @keyframes toastIn{from{opacity:0;transform:translateX(12px);}to{opacity:1;transform:translateX(0);}}
+
+    @media (max-width: 860px) {
+      .main{padding:1.25rem 1rem;}
+      .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+      table{min-width:760px;}
+    }
+    @media (max-width: 600px) {
+      .topbar{padding:0 1rem;flex-wrap:wrap;height:auto;min-height:56px;padding-top:.5rem;padding-bottom:.5rem;gap:.5rem;}
+      .topbar-right{width:100%;flex-wrap:wrap;}
+      .btn-action{flex:1;justify-content:center;}
+      .page-title{font-size:1.6rem;}
+      .filter-tabs{flex-wrap:wrap;}
+      .toast-wrap{left:1rem;right:1rem;}
+      .toast{min-width:0;}
+    }
   </style>
 </head>
 <body>
