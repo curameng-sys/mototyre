@@ -2965,7 +2965,7 @@ const bookingsData = {
     date: '{{ b.date.strftime("%B %d, %Y") }}',
     date_iso: '{{ b.date.strftime("%Y-%m-%d") }}',
     time: '{{ b.time.strftime("%I:%M %p") }}',
-    end_time: {{ ("'" + b.end_time.strftime("%I:%M %p") + "'") if b.end_time else 'null' }},
+    end_time: {{ (b.end_time.strftime("%I:%M %p") if b.end_time else none)|tojson }},
     is_multiday: {{ 'true' if b.is_multiday else 'false' }},
     motorcycle_model: {{ (b.motorcycle_model or '')|tojson }},
     motorcycle_plate: {{ (b.motorcycle_plate or '')|tojson }},
@@ -3333,16 +3333,16 @@ const returnsData = {
     refund_amount: {{ r.refund_amount if r.refund_amount else 'null' }},
     awaiting_customer_info: {{ 'true' if r.awaiting_customer_info else 'false' }},
     info_request_note: {{ (r.info_request_note or '')|tojson }},
-    info_provided_at: {{ ("'" + r.info_provided_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.info_provided_at else 'null' }},
+    info_provided_at: {{ (r.info_provided_at.strftime("%b %d, %Y at %I:%M %p") if r.info_provided_at else none)|tojson }},
     item_returned: {{ 'true' if r.item_returned else 'false' }},
-    item_returned_at: {{ ("'" + r.item_returned_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.item_returned_at else 'null' }},
-    redo_date: {{ ("'" + r.redo_date.strftime("%A, %b %d") + "'") if r.redo_date else 'null' }},
-    redo_time: {{ ("'" + r.redo_time.strftime("%I:%M %p").lstrip('0') + "'") if r.redo_time else 'null' }},
+    item_returned_at: {{ (r.item_returned_at.strftime("%b %d, %Y at %I:%M %p") if r.item_returned_at else none)|tojson }},
+    redo_date: {{ (r.redo_date.strftime("%A, %b %d") if r.redo_date else none)|tojson }},
+    redo_time: {{ (r.redo_time.strftime("%I:%M %p").lstrip('0') if r.redo_time else none)|tojson }},
     redo_mechanic_name: {{ (r.redo_mechanic_name or '')|tojson }},
     created_at: '{{ r.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
-    decided_at: {{ ("'" + r.decided_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.decided_at else 'null' }},
-    resolved_at: {{ ("'" + r.resolved_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.resolved_at else 'null' }},
-    cancelled_at: {{ ("'" + r.cancelled_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.cancelled_at else 'null' }}
+    decided_at: {{ (r.decided_at.strftime("%b %d, %Y at %I:%M %p") if r.decided_at else none)|tojson }},
+    resolved_at: {{ (r.resolved_at.strftime("%b %d, %Y at %I:%M %p") if r.resolved_at else none)|tojson }},
+    cancelled_at: {{ (r.cancelled_at.strftime("%b %d, %Y at %I:%M %p") if r.cancelled_at else none)|tojson }}
   }{% if not loop.last %},{% endif %}
   {% endfor %}
 };
