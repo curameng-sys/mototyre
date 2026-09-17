@@ -933,6 +933,22 @@
       </div>
     </div>
 
+    <!-- RETURN / WARRANTY CLAIM REVIEW MODAL -->
+    <div class="modal-overlay" id="modal-return-review">
+      <div class="modal-box" style="width:680px;max-width:95vw;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <h5 style="margin:0;">Claim Review</h5>
+          <button type="button" onclick="closeModal('modal-return-review')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;">✕</button>
+        </div>
+        <div id="rr-modal-body" style="max-height:75vh;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- PHOTO LIGHTBOX -->
+    <div id="rr-lightbox" onclick="closeReturnLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;">
+      <img id="rr-lightbox-img" src="" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+    </div>
+
     <!-- OUTBOX -->
     <section id="sec-outbox" class="page-section">
       <div class="page-header">
@@ -958,18 +974,35 @@
           <div class="page-sub">Look at the evidence, decide, and carry it out — a part that arrived wrong, or a service that didn't hold. Every claim is one mutually exclusive choice: put it right, or give the money back — never both.</div>
         </div>
       </div>
-      <div class="filter-bar" style="align-items:center;flex-wrap:wrap;">
-        <select id="returns-status-filter" onchange="renderReturns()">
-          <option value="">All Status</option>
-          <option value="submitted">submitted</option>
-          <option value="under_review">under_review</option>
-          <option value="approved">approved</option>
-          <option value="denied">denied</option>
-          <option value="resolved">resolved</option>
-        </select>
-        <div style="font-size:0.85rem;color:var(--muted);margin-left:auto;"><span id="returns-open-count" style="font-weight:700;color:var(--text);">0</span> open</div>
+
+      <div class="stats-grid">
+        <div class="stat-card orange">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="stat-value" id="rq-counter-needs-review">0</div><div class="stat-label">Needs Review</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg></div>
+          <div class="stat-value" id="rq-counter-waiting-part">0</div><div class="stat-label">Waiting For The Part Back</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-value" id="rq-counter-pesos-approved">₱0.00</div><div class="stat-label">Approved, Not Yet Released</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="stat-value" id="rq-counter-backjobs-unbooked">0</div><div class="stat-label">Back Jobs Not Yet Booked</div>
+        </div>
       </div>
-      <div id="returns-list"><div class="empty-state"><p>Loading…</p></div></div>
+
+      <div class="filter-bar" id="returns-filter-tabs" style="align-items:center;flex-wrap:wrap;gap:0.4rem;"></div>
+      <div style="overflow-x:auto;">
+        <table class="table" id="returns-table" style="min-width:1100px;width:100%;">
+          <thead><tr>
+            <th>Claim</th><th>Type</th><th>Customer</th><th>Covers</th><th>Asked For</th><th>Photos</th><th>Age</th><th>Status</th><th>Action</th>
+          </tr></thead>
+          <tbody id="returns-list"><tr><td colspan="9"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- ORDERS -->
@@ -1247,40 +1280,39 @@
 <section id="sec-mechanics" class="page-section">
   <div class="page-header">
     <div class="page-header-left">
-      <div class="page-title">Manage <span class="accent">Mechanics</span></div>
-      <div class="page-sub">Add and manage your shop mechanics.</div>
+      <div class="page-title">Mechanics</div>
+      <div class="page-sub">The roster behind the bookings calendar — not a separate address book. A status change here, or an assignment made from the calendar, shows up in both immediately.</div>
     </div>
     <div class="page-actions">
-      <button class="btn-primary-custom" onclick="openModal('modal-add-mechanic')">+ Add Mechanic</button>
+      <button class="btn-primary-custom" style="background:var(--red);" onclick="openAddMechanicModal()">+ Add Mechanic</button>
     </div>
   </div>
-  <div class="filter-bar">
+
+  <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+    <div style="flex:1;min-width:140px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem;text-align:center;">
+      <div id="mech-stat-total" style="font-size:1.9rem;font-weight:700;color:var(--text);">0</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">Total</div>
+    </div>
+    <div style="flex:1;min-width:140px;background:#F0FDF4;border:1px solid #bbf7d0;border-radius:10px;padding:1.1rem;text-align:center;">
+      <div id="mech-stat-available" style="font-size:1.9rem;font-weight:700;color:#15803D;">0</div>
+      <div style="font-size:0.78rem;color:#15803D;margin-top:0.2rem;">Available</div>
+    </div>
+    <div style="flex:1;min-width:140px;background:#FEFCE8;border:1px solid #fde68a;border-radius:10px;padding:1.1rem;text-align:center;">
+      <div id="mech-stat-busy" style="font-size:1.9rem;font-weight:700;color:#B45309;">0</div>
+      <div style="font-size:0.78rem;color:#B45309;margin-top:0.2rem;">Busy</div>
+    </div>
   </div>
+
   <div class="card">
-    {% if all_mechanics %}
     <div style="overflow-x:auto;">
       <table class="table">
-        <thead><tr><th>#</th><th>Name</th><th>Specialization</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
-          {% for m in all_mechanics %}
-          <tr>
-            <td>{{ loop.index }}</td>
-            <td style="font-weight:600;color:var(--text);">{{ m.name }}</td>
-            <td>{{ m.specialization }}</td>
-            <td><span class="badge badge-{{ 'completed' if m.status == 'available' else 'cancelled' }}">{{ m.status }}</span></td>
-            <td>
-              <form method="POST" action="{{ url_for('delete_mechanic', mid=m.id) }}" onsubmit="return confirm('Delete {{ m.name }}?')">
-                <button type="submit" class="btn-action-delete">Delete</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
+        <thead><tr>
+          <th>Name</th><th>Phone</th><th>Specialization</th><th>Active Jobs</th>
+          <th>Assigned Customer</th><th>Assigned Service</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="mechanics-roster-list"><tr><td colspan="8"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
       </table>
     </div>
-    {% else %}
-    <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><p>No mechanics yet. Add one!</p></div>
-    {% endif %}
   </div>
 </section>
 
@@ -2078,28 +2110,106 @@
 </div>
 
 <!-- ADD MECHANIC MODAL -->
-<div class="modal-overlay" id="modal-add-mechanic">
+<div class="modal-overlay" id="modal-add-mechanic" onclick="if(event.target===this) closeModal('modal-add-mechanic')">
   <div class="modal-box">
-    <h5>Add Mechanic</h5>
-    <form method="POST" action="{{ url_for('add_mechanic') }}">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <span style="position:relative;width:26px;height:26px;display:inline-block;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;bottom:-2px;right:-5px;border-radius:50%;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </span>
+        <h5 style="margin:0;">Add Mechanic</h5>
+      </div>
+      <button type="button" onclick="closeModal('modal-add-mechanic')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <form onsubmit="return submitAddMechanic(event)">
       <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" name="name" placeholder="e.g. Juan dela Cruz" required>
+        <label>Name*</label>
+        <input type="text" id="am-name" placeholder="Full name">
+        <div id="am-name-error" style="display:none;color:#b91c1c;font-size:0.76rem;margin-top:0.25rem;">Name is required.</div>
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="text" id="am-phone" placeholder="Phone number">
       </div>
       <div class="form-group">
         <label>Specialization</label>
-        <input type="text" name="specialization" placeholder="e.g. CVT, Engine, FI Cleaning" required>
+        <select id="am-specialization" required>
+          <option value="" disabled selected>Choose one…</option>
+          {% for spec in mechanic_specializations %}
+          <option value="{{ spec }}">{{ spec }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="form-group">
         <label>Status</label>
-        <select name="status">
+        <select id="am-status">
           <option value="available">Available</option>
-          <option value="unavailable">Unavailable</option>
+          <option value="busy">Busy</option>
+          <option value="off_duty">Off Duty</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="am-note" placeholder="Optional notes..." rows="2"></textarea>
+      </div>
+      <div id="am-error" style="display:none;color:#b91c1c;font-size:0.8rem;margin-bottom:0.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.6rem 0.8rem;"></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-add-mechanic')">Cancel</button>
         <button type="submit" class="btn-primary-custom">Add Mechanic</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT MECHANIC MODAL -->
+<div class="modal-overlay" id="modal-edit-mechanic" onclick="if(event.target===this) closeModal('modal-edit-mechanic')">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <span style="position:relative;width:26px;height:26px;display:inline-block;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;bottom:-2px;right:-5px;border-radius:50%;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </span>
+        <h5 style="margin:0;">Edit Mechanic</h5>
+      </div>
+      <button type="button" onclick="closeModal('modal-edit-mechanic')" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <form onsubmit="return submitEditMechanic(event)">
+      <input type="hidden" id="em-id">
+      <div class="form-group">
+        <label>Name*</label>
+        <input type="text" id="em-name" placeholder="Full name">
+        <div id="em-name-error" style="display:none;color:#b91c1c;font-size:0.76rem;margin-top:0.25rem;">Name is required.</div>
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="text" id="em-phone" placeholder="Phone number">
+      </div>
+      <div class="form-group">
+        <label>Specialization</label>
+        <select id="em-specialization" required>
+          {% for spec in mechanic_specializations %}
+          <option value="{{ spec }}">{{ spec }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="em-status">
+          <option value="available">Available</option>
+          <option value="busy">Busy</option>
+          <option value="off_duty">Off Duty</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="em-note" placeholder="Optional notes..." rows="2"></textarea>
+      </div>
+      <div id="em-error" style="display:none;color:#b91c1c;font-size:0.8rem;margin-bottom:0.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.6rem 0.8rem;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-mechanic')">Cancel</button>
+        <button type="submit" class="btn-primary-custom">Save Changes</button>
       </div>
     </form>
   </div>
@@ -2177,7 +2287,200 @@
     if (name === 'day-schedule') { initDaySchedule(); if (dsView === 'list') loadBookingList(); }
     if (name === 'outbox') { loadOutbox(); }
     if (name === 'returns') { loadReturns(); }
+    if (name === 'mechanics') { loadMechanicsRoster(); }
   }
+
+  // ── MECHANICS: the roster behind the bookings calendar ──
+  let _mechanicsRoster = [];
+
+  async function loadMechanicsRoster() {
+    const tbody = document.getElementById('mechanics-roster-list');
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>Loading…</p></div></td></tr>';
+    try {
+      const res = await fetch('/api/mechanics-roster');
+      const data = await res.json();
+      _mechanicsRoster = data.mechanics || [];
+      renderMechanicsRoster();
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>Could not load mechanics.</p></div></td></tr>';
+    }
+  }
+
+  function renderMechanicsRoster() {
+    const tbody = document.getElementById('mechanics-roster-list');
+    document.getElementById('mech-stat-total').textContent = _mechanicsRoster.length;
+    document.getElementById('mech-stat-available').textContent = _mechanicsRoster.filter(m => m.effective_status === 'available').length;
+    document.getElementById('mech-stat-busy').textContent = _mechanicsRoster.filter(m => m.effective_status === 'busy').length;
+
+    if (!_mechanicsRoster.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></div><p>No mechanics yet. Add one!</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = _mechanicsRoster.map(mechanicRowHTML).join('');
+  }
+
+  function mechanicActiveJobsPillHTML(m) {
+    const n = m.active_jobs_count;
+    if (!n) return `<span style="background:#F3F4F6;color:var(--muted);border-radius:999px;padding:0.25rem 0.65rem;font-size:0.74rem;font-weight:600;">0 jobs</span>`;
+    return `<span style="background:#FEE2E2;color:#991b1b;border-radius:999px;padding:0.25rem 0.65rem;font-size:0.74rem;font-weight:600;">${n} job${n !== 1 ? 's' : ''}</span>`;
+  }
+
+  function mechanicAssignedCustomerHTML(m) {
+    const a = m.assigned;
+    if (!a) return '<span style="color:var(--muted);">—</span>';
+    const when = a.is_today ? a.start_label : `${a.date_label}, ${a.start_label}`;
+    const more = m.more_count > 0 ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">+${m.more_count} more booked</div>` : '';
+    return `<div style="color:var(--text);font-weight:600;">${a.customer} / #${a.ref}</div><div style="font-size:0.72rem;color:var(--muted);">${when}</div>${more}`;
+  }
+
+  function mechanicAssignedServiceHTML(m) {
+    return m.assigned ? m.assigned.service : '<span style="color:var(--muted);">—</span>';
+  }
+
+  const MECH_STATUS_PILLS = {
+    available: { label: 'Available', bg: '#F0FDF4', color: '#15803D' },
+    busy:      { label: 'Busy',      bg: '#FEFCE8', color: '#B45309' },
+    off_duty:  { label: 'Off Duty',  bg: '#F3F4F6', color: '#4b5563' },
+  };
+
+  function mechanicStatusHTML(m) {
+    const p = MECH_STATUS_PILLS[m.effective_status] || MECH_STATUS_PILLS.off_duty;
+    const notRostered = m.not_rostered_today
+      ? '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem;">not rostered today</div>' : '';
+    return `<span style="background:${p.bg};color:${p.color};border-radius:999px;padding:0.3rem 0.75rem;font-size:0.76rem;font-weight:700;">${p.label}</span>${notRostered}`;
+  }
+
+  function mechanicRowHTML(m) {
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:600;color:var(--text);">${m.name}</div>
+          ${m.note ? `<div style="font-size:0.72rem;color:var(--muted);">${m.note}</div>` : ''}
+        </td>
+        <td>${m.phone || '<span style="color:var(--muted);">—</span>'}</td>
+        <td>${m.specialization}</td>
+        <td>${mechanicActiveJobsPillHTML(m)}</td>
+        <td>${mechanicAssignedCustomerHTML(m)}</td>
+        <td>${mechanicAssignedServiceHTML(m)}</td>
+        <td>${mechanicStatusHTML(m)}</td>
+        <td>
+          <button type="button" class="btn-action-edit" onclick='openEditMechanic(${JSON.stringify(m).replace(/'/g, "&#39;")})'>Edit</button>
+          <button type="button" class="btn-action-delete" onclick="deleteMechanicJS(${m.id}, '${m.name.replace(/'/g, "\\'")}')">Delete</button>
+        </td>
+      </tr>`;
+  }
+
+  function openAddMechanicModal() {
+    document.getElementById('am-name').value = '';
+    document.getElementById('am-phone').value = '';
+    document.getElementById('am-specialization').value = '';
+    document.getElementById('am-note').value = '';
+    document.getElementById('am-status').value = 'available';
+    document.getElementById('am-error').style.display = 'none';
+    document.getElementById('am-name-error').style.display = 'none';
+    openModal('modal-add-mechanic');
+  }
+
+  async function submitAddMechanic(event) {
+    event.preventDefault();
+    const errEl = document.getElementById('am-error');
+    const nameErrEl = document.getElementById('am-name-error');
+    errEl.style.display = 'none';
+    nameErrEl.style.display = 'none';
+    const name = document.getElementById('am-name').value.trim();
+    if (!name) { nameErrEl.style.display = 'block'; return false; }
+    const payload = {
+      name,
+      phone: document.getElementById('am-phone').value.trim(),
+      specialization: document.getElementById('am-specialization').value.trim(),
+      note: document.getElementById('am-note').value.trim(),
+      status: document.getElementById('am-status').value,
+    };
+    try {
+      const res = await fetch('/mechanic/add', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeModal('modal-add-mechanic');
+        showToast('Mechanic added.', 'success');
+        loadMechanicsRoster();
+      } else {
+        errEl.textContent = data.error || 'Could not add this mechanic.';
+        errEl.style.display = 'block';
+      }
+    } catch (e) {
+      errEl.textContent = 'Network error — please try again.';
+      errEl.style.display = 'block';
+    }
+    return false;
+  }
+
+  function openEditMechanic(m) {
+    document.getElementById('em-id').value = m.id;
+    document.getElementById('em-name').value = m.name;
+    document.getElementById('em-phone').value = m.phone || '';
+    document.getElementById('em-specialization').value = m.specialization;
+    document.getElementById('em-note').value = m.note || '';
+    document.getElementById('em-status').value = m.status;
+    document.getElementById('em-error').style.display = 'none';
+    document.getElementById('em-name-error').style.display = 'none';
+    openModal('modal-edit-mechanic');
+  }
+
+  async function submitEditMechanic(event) {
+    event.preventDefault();
+    const errEl = document.getElementById('em-error');
+    const nameErrEl = document.getElementById('em-name-error');
+    errEl.style.display = 'none';
+    nameErrEl.style.display = 'none';
+    const id = document.getElementById('em-id').value;
+    const name = document.getElementById('em-name').value.trim();
+    if (!name) { nameErrEl.style.display = 'block'; return false; }
+    const payload = {
+      name,
+      phone: document.getElementById('em-phone').value.trim(),
+      specialization: document.getElementById('em-specialization').value.trim(),
+      note: document.getElementById('em-note').value.trim(),
+      status: document.getElementById('em-status').value,
+    };
+    try {
+      const res = await fetch(`/mechanic/${id}/edit`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeModal('modal-edit-mechanic');
+        showToast('Mechanic updated.', 'success');
+        loadMechanicsRoster();
+      } else {
+        errEl.textContent = data.error || 'Could not save these changes.';
+        errEl.style.display = 'block';
+      }
+    } catch (e) {
+      errEl.textContent = 'Network error — please try again.';
+      errEl.style.display = 'block';
+    }
+    return false;
+  }
+
+  async function deleteMechanicJS(id, name) {
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/mechanic/${id}/delete`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) { showToast('Mechanic deleted.', 'success'); loadMechanicsRoster(); }
+      else showToast(data.error || 'Could not delete this mechanic.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('modal-add-mechanic').classList.contains('open')) closeModal('modal-add-mechanic');
+    if (document.getElementById('modal-edit-mechanic').classList.contains('open')) closeModal('modal-edit-mechanic');
+  });
 
   let _currentBookingGroupIds = [];
 
@@ -3046,18 +3349,50 @@
   }
 
   // ── RETURNS / WARRANTY ──
-  // The shop looks at the evidence, decides (approve with a remedy, or
-  // deny — both with a reason the customer will see), then separately marks
-  // the remedy actually carried out. Open claims (submitted/under_review)
-  // sort to the top, same convention as the Outbox.
+  // The queue: four work-counters, a filterable table with its own
+  // per-tab counts, unreviewed claims sorted first and flagged overdue past
+  // one working day — a returns queue fails by going quiet, not by being
+  // wrong. Reviewing / deciding / scheduling all happen in one claim modal;
+  // the table stays a scannable list.
   let _returnsItems = [];
+  let _returnsFilter = 'open';
+  let _returnsFilterCounts = {};
 
-  const RETURN_STATUS_COLORS = {
-    submitted:    { bg: '#fef9c3', color: '#713f12', border: '#eab308' },
-    under_review: { bg: '#e0e7ff', color: '#3730a3', border: '#6366f1' },
-    approved:     { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
-    denied:       { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
-    resolved:     { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
+  // One shared vocabulary for both sides — the customer and the admin must
+  // never be looking at two different names for the same state. This exact
+  // function (and its 11 labels) is duplicated verbatim in
+  // customer_dashboard.html; keep the two in lockstep.
+  function returnStatusLabel(r) {
+    if (r.status === 'submitted') return 'Submitted';
+    if (r.awaiting_customer_info) return 'Waiting on you';
+    if (r.status === 'under_review') return 'Under review';
+    if (r.status === 'denied') return 'Declined';
+    if (r.status === 'cancelled') return 'Cancelled';
+    if (r.status === 'approved') {
+      if (r.kind === 'product' && !r.item_returned) return 'Waiting for your item';
+      if (r.kind === 'service' && r.resolution === 'redo_service' && r.redo_date) return 'Back job booked';
+      return 'Approved';
+    }
+    if (r.status === 'resolved') {
+      if (r.resolution === 'refund') return 'Refunded';
+      if (r.resolution === 'replacement') return 'Replacement on the way';
+      return 'Closed';
+    }
+    return r.status;
+  }
+
+  const RETURN_STATUS_LABEL_COLORS = {
+    'Submitted':              { bg: '#fef9c3', color: '#713f12', border: '#eab308' },
+    'Under review':           { bg: '#e0e7ff', color: '#3730a3', border: '#6366f1' },
+    'Waiting on you':         { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
+    'Approved':               { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
+    'Waiting for your item':  { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
+    'Replacement on the way': { bg: '#cffafe', color: '#155e75', border: '#06b6d4' },
+    'Back job booked':        { bg: '#ede9fe', color: '#5b21b6', border: '#8b5cf6' },
+    'Refunded':               { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
+    'Declined':               { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
+    'Closed':                 { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
+    'Cancelled':              { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
   };
   // The rule the whole feature rests on: every claim forces ONE mutually
   // exclusive choice — put it right, or give the money back, never both —
@@ -3072,46 +3407,32 @@
       { value: 'refund', title: 'Refund', consequence: 'The work is not redone — they book again separately if needed.' },
     ],
   };
-  let _returnOutcomeChoice = {};
-
   function returnOutcomeLabel(kind, value) {
     const opt = (RETURN_OUTCOME_OPTIONS[kind] || []).find(o => o.value === value);
     return opt ? opt.title : (value || '');
   }
 
-  function returnOutcomePickerHTML(r) {
-    const opts = RETURN_OUTCOME_OPTIONS[r.kind] || [];
-    if (!(r.id in _returnOutcomeChoice)) _returnOutcomeChoice[r.id] = r.desired_outcome;
-    const chosen = _returnOutcomeChoice[r.id];
-    return `
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-        ${opts.map(o => {
-          const selected = o.value === chosen;
-          return `<div onclick="selectReturnOutcome(${r.id}, '${o.value}')" style="flex:1;min-width:170px;border:1.5px solid ${selected ? 'var(--red)' : 'var(--border)'};background:${selected ? 'rgba(208,0,25,0.06)' : '#fff'};border-radius:8px;padding:0.5rem 0.65rem;cursor:pointer;transition:all 0.15s;">
-            <div style="font-weight:700;font-size:0.78rem;">${o.title}</div>
-            <div style="font-size:0.7rem;color:var(--muted);margin-top:0.15rem;"><strong>${o.consequence}</strong></div>
-          </div>`;
-        }).join('')}
-      </div>`;
-  }
-
-  function selectReturnOutcome(rid, value) {
-    _returnOutcomeChoice[rid] = value;
-    renderReturns();
+  function returnAlternateOutcome(r) {
+    return (RETURN_OUTCOME_OPTIONS[r.kind] || []).find(o => o.value !== r.desired_outcome);
   }
 
   async function loadReturns() {
-    const list = document.getElementById('returns-list');
-    list.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
+    const tbody = document.getElementById('returns-list');
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>Loading…</p></div></td></tr>';
     try {
       const res = await fetch('/api/returns');
       const data = await res.json();
       _returnsItems = data.items || [];
-      document.getElementById('returns-open-count').textContent = data.open_count;
+      _returnsFilterCounts = data.filter_counts || {};
+      document.getElementById('rq-counter-needs-review').textContent = data.counters.needs_review;
+      document.getElementById('rq-counter-waiting-part').textContent = data.counters.waiting_for_part;
+      document.getElementById('rq-counter-pesos-approved').textContent = '₱' + Number(data.counters.pesos_approved_not_released).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      document.getElementById('rq-counter-backjobs-unbooked').textContent = data.counters.back_jobs_not_booked;
       updateReturnsNavBadge(data.open_count);
+      renderReturnFilterTabs();
       renderReturns();
     } catch (e) {
-      list.innerHTML = '<div class="empty-state"><p>Could not load returns.</p></div>';
+      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>Could not load returns.</p></div></td></tr>';
     }
   }
 
@@ -3121,118 +3442,532 @@
     else badge.style.display = 'none';
   }
 
-  function renderReturns() {
-    const list = document.getElementById('returns-list');
-    const filter = document.getElementById('returns-status-filter').value;
-    const rows = filter ? _returnsItems.filter(r => r.status === filter) : _returnsItems;
+  const RETURN_FILTER_TABS = [
+    ['open', 'Open'], ['needs_review', 'Needs Review'], ['parts', 'Parts'],
+    ['services', 'Services'], ['refund_asked', 'Refund Asked'], ['closed', 'Closed'], ['all', 'All'],
+  ];
 
-    if (!rows.length) {
-      list.innerHTML = '<div class="empty-state"><div class="ei">📦</div><p>Nothing here.</p></div>';
-      return;
-    }
-    list.innerHTML = `<div style="display:flex;flex-direction:column;gap:0.7rem;">${rows.map(returnCardHTML).join('')}</div>`;
+  function renderReturnFilterTabs() {
+    const bar = document.getElementById('returns-filter-tabs');
+    bar.innerHTML = RETURN_FILTER_TABS.map(([key, label]) => {
+      const active = _returnsFilter === key;
+      const count = _returnsFilterCounts[key] || 0;
+      return `<button type="button" onclick="setReturnsFilter('${key}')" style="padding:0.4rem 0.85rem;border-radius:999px;border:1.5px solid ${active ? 'var(--red)' : 'var(--border)'};background:${active ? 'var(--red)' : '#fff'};color:${active ? '#fff' : 'var(--text)'};font-weight:700;font-size:0.78rem;cursor:pointer;">${label} <span style="opacity:0.8;">${count}</span></button>`;
+    }).join('');
   }
 
-  function returnCardHTML(r) {
-    const sc = RETURN_STATUS_COLORS[r.status] || RETURN_STATUS_COLORS.submitted;
-    const photosHTML = r.photos.length
-      ? `<div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">${r.photos.map(p =>
-          `<a href="/static/return_evidence/${p}" target="_blank"><img src="/static/return_evidence/${p}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border);"></a>`).join('')}</div>`
-      : '';
+  function setReturnsFilter(key) {
+    _returnsFilter = key;
+    renderReturnFilterTabs();
+    renderReturns();
+  }
 
-    let actionsHTML = '';
-    if (r.status === 'submitted' || r.status === 'under_review') {
-      actionsHTML = `
-        <div style="margin-top:0.65rem;padding-top:0.6rem;border-top:1px dashed var(--border);">
-          <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">Pick one — never both</div>
-          ${returnOutcomePickerHTML(r)}
-          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.55rem;">
-            <button type="button" class="btn-primary-custom" style="padding:0.35rem 0.7rem;font-size:0.75rem;" onclick="decideReturn(${r.id}, 'approve')">Approve</button>
-            <button type="button" class="btn-cancel" style="padding:0.35rem 0.7rem;font-size:0.75rem;color:#b91c1c;" onclick="decideReturn(${r.id}, 'deny')">Deny</button>
-          </div>
-        </div>`;
-    } else if (r.status === 'approved') {
-      actionsHTML = `
-        <div style="margin-top:0.65rem;">
-          <button type="button" class="btn-primary-custom" style="padding:0.35rem 0.7rem;font-size:0.75rem;" onclick="resolveReturn(${r.id})">Mark Resolved</button>
-        </div>`;
+  function returnFilterMatch(r, key) {
+    switch (key) {
+      case 'open': return ['submitted', 'under_review', 'approved'].includes(r.status);
+      case 'needs_review': return (r.status === 'submitted' || r.status === 'under_review') && !r.awaiting_customer_info;
+      case 'parts': return r.kind === 'product';
+      case 'services': return r.kind === 'service';
+      case 'refund_asked': return r.desired_outcome === 'refund';
+      case 'closed': return ['resolved', 'denied', 'cancelled'].includes(r.status);
+      default: return true;
+    }
+  }
+
+  function returnAgeLabel(r) {
+    const created = new Date(r.created_at);
+    const days = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
+    return days <= 0 ? 'Today' : (days === 1 ? '1 day' : `${days} days`);
+  }
+
+  function renderReturns() {
+    const tbody = document.getElementById('returns-list');
+    const rows = _returnsItems.filter(r => returnFilterMatch(r, _returnsFilter));
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="ei">📦</div><p>Nothing here.</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(returnRowHTML).join('');
+  }
+
+  function returnRowHTML(r) {
+    const statusLabel = returnStatusLabel(r);
+    const sc = RETURN_STATUS_LABEL_COLORS[statusLabel] || RETURN_STATUS_LABEL_COLORS['Submitted'];
+    const askHTML = r.desired_outcome === 'refund'
+      ? `<span style="color:#15803d;font-weight:700;">${returnOutcomeLabel(r.kind, r.desired_outcome)}${r.requested_refund_amount ? ` (₱${Number(r.requested_refund_amount).toFixed(2)})` : ''}</span>`
+      : `<span style="color:#b45309;font-weight:700;">${returnOutcomeLabel(r.kind, r.desired_outcome)}</span>`;
+    const photosHTML = r.photos.length
+      ? `<div style="display:flex;gap:0.25rem;">${r.photos.slice(0,3).map(p =>
+          `<img src="/static/return_evidence/${p}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">`).join('')}${r.photos.length > 3 ? `<span style="font-size:0.7rem;color:var(--muted);align-self:center;">+${r.photos.length - 3}</span>` : ''}</div>`
+      : '<span style="color:var(--muted);">—</span>';
+    const ageHTML = r.overdue
+      ? `<span style="color:#b91c1c;font-weight:700;">${returnAgeLabel(r)} — overdue</span>`
+      : `<span style="color:var(--muted);">${returnAgeLabel(r)}</span>`;
+
+    let actionLabel = 'View';
+    if (r.awaiting_customer_info) actionLabel = 'View';
+    else if (r.status === 'submitted' || r.status === 'under_review') actionLabel = 'Review';
+    else if (r.status === 'approved') {
+      if (r.kind === 'product' && !r.item_returned) actionLabel = 'Mark Part Received';
+      else if (r.kind === 'service' && r.resolution === 'redo_service' && !r.redo_date) actionLabel = 'Schedule';
+      else if (r.resolution === 'refund') actionLabel = `Release ₱${Number(r.refund_amount || 0).toFixed(2)}`;
+      else if (r.resolution === 'replacement') actionLabel = 'Mark Replacement Sent';
+      else actionLabel = 'Back Job Done';
     }
 
+    return `
+      <tr>
+        <td><div style="font-weight:700;">${r.ref}</div><div style="font-size:0.72rem;color:var(--muted);">${r.origin || '—'}</div></td>
+        <td>${r.kind === 'product' ? 'Product' : 'Service'}</td>
+        <td><div>${r.customer}</div><div style="font-size:0.72rem;color:var(--muted);">${r.motorcycle || '—'}</div></td>
+        <td style="max-width:180px;">${r.subject}</td>
+        <td>${askHTML}</td>
+        <td>${photosHTML}</td>
+        <td>${ageHTML}</td>
+        <td><span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${statusLabel}</span></td>
+        <td><button type="button" class="btn-primary-custom" style="padding:0.3rem 0.6rem;font-size:0.72rem;" onclick="openReturnModal(${r.id})">${actionLabel}</button></td>
+      </tr>`;
+  }
+
+  function openReturnModal(rid) {
+    const r = _returnsItems.find(x => x.id === rid);
+    if (!r) return;
+    document.getElementById('rr-modal-body').innerHTML = returnModalBodyHTML(r);
+    openModal('modal-return-review');
+  }
+
+  function openReturnLightbox(src) {
+    document.getElementById('rr-lightbox-img').src = src;
+    document.getElementById('rr-lightbox').style.display = 'flex';
+  }
+
+  function closeReturnLightbox() {
+    document.getElementById('rr-lightbox').style.display = 'none';
+    document.getElementById('rr-lightbox-img').src = '';
+  }
+
+  function rrFmt(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  // The full history of the claim, chronological — what the shop did and
+  // when, built from the same timestamps the queue already tracks.
+  function adminReturnTimelineEntries(r) {
+    const entries = [{ time: r.created_at, text: `Claim filed — ${returnOutcomeLabel(r.kind, r.desired_outcome)} requested.` }];
+    if (r.info_request_note) entries.push({ time: r.created_at, text: `Shop asked: "${r.info_request_note}"` });
+    if (r.info_provided_at) entries.push({ time: r.info_provided_at, text: 'Customer replied with the requested information.' });
+    if (r.decided_at) {
+      entries.push({ time: r.decided_at, text: r.status === 'denied'
+        ? `Not approved. ${r.decision_reason || ''}`.trim()
+        : `Approved — ${returnOutcomeLabel(r.kind, r.resolution)}${r.resolution === 'refund' && r.refund_amount ? ` (₱${Number(r.refund_amount).toFixed(2)})` : ''}. ${r.decision_reason || ''}`.trim() });
+    }
+    if (r.item_returned_at) entries.push({ time: r.item_returned_at, text: 'Item marked received at the shop.' });
+    if (r.redo_date) entries.push({ time: r.decided_at, text: `Back job scheduled for ${r.redo_date}${r.redo_time ? ' ' + r.redo_time : ''}${r.redo_mechanic_name ? ' with ' + r.redo_mechanic_name : ''}.` });
+    if (r.resolved_at) entries.push({ time: r.resolved_at, text: 'Marked resolved — remedy carried out.' });
+    if (r.cancelled_at) entries.push({ time: r.cancelled_at, text: 'Cancelled by the customer.' });
+    return entries.sort((a, b) => new Date(a.time || 0) - new Date(b.time || 0));
+  }
+
+  // ── Back-job scheduler: a real appointment on the shop's own calendar,
+  // built from the same slot/mechanic rules every other booking obeys. ──
+  const _redoState = {};
+  function todayISO() { const d = new Date(); return d.toISOString().slice(0, 10); }
+
+  function returnRedoSchedulerHTML(r) {
+    _redoState[r.id] = { date: null, time: null, mechanic: null };
+    return `
+      <input type="date" id="rr-redo-date-${r.id}" min="${todayISO()}" onchange="loadRedoSlots(${r.id})" style="padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:6px;">
+      <div id="rr-redo-slots-${r.id}" style="margin-top:0.6rem;display:flex;flex-wrap:wrap;gap:0.35rem;"></div>
+      <div id="rr-redo-mechanics-${r.id}" style="margin-top:0.6rem;display:flex;flex-wrap:wrap;gap:0.35rem;"></div>
+      <div id="rr-redo-note-${r.id}" style="margin-top:0.4rem;font-size:0.76rem;color:#92400e;"></div>
+      <div id="rr-redo-error-${r.id}" style="display:none;margin-top:0.5rem;padding:0.5rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:0.78rem;color:#7f1d1d;"></div>
+      <button type="button" id="rr-redo-book-btn-${r.id}" class="btn-primary-custom" disabled style="margin-top:0.6rem;padding:0.4rem 0.8rem;font-size:0.78rem;opacity:0.5;" onclick="bookReturnRedo(${r.id})">Book It</button>
+    `;
+  }
+
+  async function loadRedoSlots(rid) {
+    const date = document.getElementById(`rr-redo-date-${rid}`).value;
+    const slotsEl = document.getElementById(`rr-redo-slots-${rid}`);
+    const mechEl = document.getElementById(`rr-redo-mechanics-${rid}`);
+    const bookBtn = document.getElementById(`rr-redo-book-btn-${rid}`);
+    if (!date) return;
+    _redoState[rid] = { date, time: null, mechanic: null };
+    mechEl.innerHTML = '';
+    document.getElementById(`rr-redo-note-${rid}`).textContent = '';
+    bookBtn.disabled = true; bookBtn.style.opacity = '0.5';
+    slotsEl.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);">Loading times…</div>';
+    try {
+      const res = await fetch(`/returns/${rid}/redo-availability?date=${date}`);
+      const data = await res.json();
+      if (!res.ok) { slotsEl.innerHTML = `<div style="font-size:0.78rem;color:#b91c1c;">${data.error || 'Could not load times.'}</div>`; return; }
+      slotsEl.innerHTML = data.slots.map(s => `
+        <button type="button" ${s.available ? '' : 'disabled'} onclick="selectRedoSlot(${rid}, '${s.time}')"
+          id="rr-redo-slot-${rid}-${s.time}"
+          style="padding:0.35rem 0.6rem;border-radius:6px;border:1.5px solid ${s.available ? 'var(--border)' : '#f3f4f6'};background:${s.available ? '#fff' : '#f9fafb'};color:${s.available ? 'var(--text)' : 'var(--muted)'};font-size:0.76rem;cursor:${s.available ? 'pointer' : 'not-allowed'};">
+          ${s.label}${!s.available ? ` (${s.reason === 'booked' ? 'taken' : s.reason === 'past' ? 'past' : 'too long'})` : ''}
+        </button>`).join('');
+    } catch (e) {
+      slotsEl.innerHTML = '<div style="font-size:0.78rem;color:#b91c1c;">Network error — please try again.</div>';
+    }
+  }
+
+  function selectRedoSlot(rid, time) {
+    _redoState[rid].time = time;
+    _redoState[rid].mechanic = null;
+    document.querySelectorAll(`[id^="rr-redo-slot-${rid}-"]`).forEach(b => {
+      const chosen = b.id === `rr-redo-slot-${rid}-${time}`;
+      b.style.borderColor = chosen ? 'var(--red)' : 'var(--border)';
+      b.style.background = chosen ? 'rgba(208,0,25,0.06)' : '#fff';
+    });
+    loadRedoMechanics(rid);
+  }
+
+  async function loadRedoMechanics(rid) {
+    const { date, time } = _redoState[rid];
+    const mechEl = document.getElementById(`rr-redo-mechanics-${rid}`);
+    const bookBtn = document.getElementById(`rr-redo-book-btn-${rid}`);
+    bookBtn.disabled = true; bookBtn.style.opacity = '0.5';
+    mechEl.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);">Loading mechanics…</div>';
+    try {
+      const res = await fetch(`/returns/${rid}/redo-mechanics?date=${date}&time=${time}`);
+      const data = await res.json();
+      if (!res.ok) { mechEl.innerHTML = `<div style="font-size:0.78rem;color:#b91c1c;">${data.error || 'Could not load mechanics.'}</div>`; return; }
+      if (!data.mechanics.length) { mechEl.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);">Nobody on duty this day.</div>'; return; }
+      mechEl.innerHTML = data.mechanics.map(m => `
+        <button type="button" ${m.busy ? 'disabled' : ''} onclick="selectRedoMechanic(${rid}, '${m.name.replace(/'/g, "\\'")}')"
+          id="rr-redo-mech-${rid}-${m.id}"
+          style="padding:0.35rem 0.6rem;border-radius:6px;border:1.5px solid ${m.busy ? '#f3f4f6' : 'var(--border)'};background:${m.busy ? '#f9fafb' : '#fff'};color:${m.busy ? 'var(--muted)' : 'var(--text)'};font-size:0.76rem;cursor:${m.busy ? 'not-allowed' : 'pointer'};">
+          ${m.name}${m.busy ? ' (busy)' : ''}
+        </button>`).join('');
+    } catch (e) {
+      mechEl.innerHTML = '<div style="font-size:0.78rem;color:#b91c1c;">Network error — please try again.</div>';
+    }
+  }
+
+  function selectRedoMechanic(rid, name) {
+    _redoState[rid].mechanic = name;
+    document.querySelectorAll(`[id^="rr-redo-mech-${rid}-"]`).forEach(b => {
+      const chosen = b.textContent.trim().startsWith(name);
+      b.style.borderColor = chosen ? 'var(--red)' : 'var(--border)';
+      b.style.background = chosen ? 'rgba(208,0,25,0.06)' : '#fff';
+    });
+    const bookBtn = document.getElementById(`rr-redo-book-btn-${rid}`);
+    bookBtn.disabled = false; bookBtn.style.opacity = '1';
+    const row = _returnsItems.find(x => x.id === rid);
+    const preferred = row ? row.requested_mechanic_name : null;
+    const noteEl = document.getElementById(`rr-redo-note-${rid}`);
+    noteEl.textContent = (preferred && preferred !== name)
+      ? `Customer asked for ${preferred} — worth a phone call first if someone else is doing it.`
+      : '';
+  }
+
+  async function bookReturnRedo(rid) {
+    const { date, time, mechanic } = _redoState[rid] || {};
+    const errEl = document.getElementById(`rr-redo-error-${rid}`);
+    errEl.style.display = 'none';
+    if (!date || !time || !mechanic) { showToast('Pick a date, time, and mechanic.', 'error'); return; }
+    try {
+      const res = await fetch(`/returns/${rid}/schedule-redo`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, time, mechanic_name: mechanic }),
+      });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Scheduled.', 'success'); closeModal('modal-return-review'); loadReturns(); }
+      else {
+        errEl.textContent = data.error || 'Could not schedule this.';
+        errEl.style.display = 'block';
+        loadRedoSlots(rid); // the grid may be stale — refresh so they pick again
+      }
+    } catch (e) {
+      errEl.textContent = 'Network error — please try again.';
+      errEl.style.display = 'block';
+    }
+  }
+
+  function returnModalBodyHTML(r) {
+    const statusLabel = returnStatusLabel(r);
+    const sc = RETURN_STATUS_LABEL_COLORS[statusLabel] || RETURN_STATUS_LABEL_COLORS['Submitted'];
+    const photosHTML = r.photos.length
+      ? `<div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">${r.photos.map(p =>
+          `<img src="/static/return_evidence/${p}" onclick="openReturnLightbox('/static/return_evidence/${p}')" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;">`).join('')}</div>`
+      : '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">No photos submitted.</div>';
+    const lineItemsHTML = r.line_items.length ? `
+      <div style="margin-top:0.4rem;font-size:0.82rem;color:var(--text);">
+        ${r.line_items.map(li => `<div>${li.name} &times;${li.quantity} — ₱${Number(li.subtotal).toFixed(2)}</div>`).join('')}
+      </div>` : '';
+    const reasonsHTML = r.reasons.length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.4rem;">${r.reasons.map(rl =>
+          `<span style="background:#f5f5f5;border:1px solid var(--border);border-radius:999px;padding:0.25rem 0.65rem;font-size:0.75rem;">${rl}</span>`).join('')}</div>`
+      : '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">No reasons ticked.</div>';
+    const ownWordsHTML = r.other_reason_text ? `
+      <div style="margin-top:0.55rem;padding:0.6rem 0.75rem;background:#fffbeb;border-left:3px solid #eab308;border-radius:0 8px 8px 0;font-size:0.83rem;color:var(--text);font-style:italic;">
+        "${r.other_reason_text}"
+      </div>` : '';
+    const mechanicHTML = r.requested_mechanic_name
+      ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">Requested (not guaranteed): ${r.requested_mechanic_name} to handle the back job</div>` : '';
+    const askHTML = r.desired_outcome === 'refund' && r.requested_refund_amount
+      ? `${returnOutcomeLabel(r.kind, r.desired_outcome)} (asked for ₱${Number(r.requested_refund_amount).toFixed(2)})`
+      : returnOutcomeLabel(r.kind, r.desired_outcome);
     const decisionHTML = r.decision_reason ? `
-      <div style="margin-top:0.55rem;padding:0.55rem 0.7rem;background:#fafafa;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;color:var(--text);">
-        ${r.status === 'denied' ? 'Denied' : (r.status === 'resolved' ? 'Done' : 'Approved')}
+      <div style="margin-top:0.6rem;padding:0.6rem 0.75rem;background:#fafafa;border:1px solid var(--border);border-radius:8px;font-size:0.8rem;color:var(--text);">
+        ${r.status === 'denied' ? 'Not approved' : (r.status === 'resolved' ? 'Done' : 'Approved')}
         ${r.resolution ? ` — ${returnOutcomeLabel(r.kind, r.resolution)}` : ''}
         ${r.resolution === 'refund' && r.refund_amount ? ` (₱${Number(r.refund_amount).toFixed(2)})` : ''}: ${r.decision_reason}
       </div>` : '';
-
-    const lineItemsHTML = r.line_items.length ? `
-      <div style="margin-top:0.5rem;font-size:0.78rem;color:var(--text);">
-        ${r.line_items.map(li => `<div>${li.name} &times;${li.quantity} — ₱${Number(li.subtotal).toFixed(2)}</div>`).join('')}
+    const infoHTML = (r.info_request_note || r.info_provided_text) ? `
+      <div style="margin-top:0.6rem;padding:0.6rem 0.75rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:0.8rem;">
+        ${r.info_request_note ? `<div><strong>Asked:</strong> ${r.info_request_note}</div>` : ''}
+        ${r.info_provided_text ? `<div style="margin-top:0.3rem;"><strong>Customer replied:</strong> ${r.info_provided_text}</div>` : ''}
+        ${r.awaiting_customer_info ? `<div style="margin-top:0.3rem;color:#92400e;font-weight:700;">Waiting for the customer to reply.</div>` : ''}
       </div>` : '';
 
-    const reasonsHTML = r.reasons.length
-      ? `<div style="font-size:0.78rem;color:var(--text);margin-top:0.4rem;"><strong>Why:</strong> ${r.reasons.join('; ')}</div>` : '';
-
-    const mechanicHTML = r.requested_mechanic_name
-      ? `<div style="font-size:0.76rem;color:var(--muted);margin-top:0.2rem;">Requested (not guaranteed): ${r.requested_mechanic_name} to handle the back job</div>` : '';
-
-    const askHTML = r.desired_outcome === 'refund' && r.requested_refund_amount
-      ? `wants: ${returnOutcomeLabel(r.kind, r.desired_outcome)} (asked for ₱${Number(r.requested_refund_amount).toFixed(2)})`
-      : `wants: ${returnOutcomeLabel(r.kind, r.desired_outcome)}`;
-
-    return `
-      <div class="card" style="padding:0.9rem 1.05rem;">
-        <div style="display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
-          <div>
-            <div style="font-weight:700;font-size:0.9rem;">${r.customer} — ${r.subject}</div>
-            <div style="font-size:0.76rem;color:var(--muted);margin-top:0.1rem;">${r.ref} &middot; ${r.kind === 'product' ? 'Product' : 'Service'} &middot; ${askHTML}</div>
-          </div>
-          <span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};height:fit-content;">${r.status.replace(/_/g,' ')}</span>
-        </div>
-        ${lineItemsHTML}
-        ${reasonsHTML}
-        ${mechanicHTML}
-        ${photosHTML}
-        ${decisionHTML}
-        ${actionsHTML}
+    const timeline = adminReturnTimelineEntries(r);
+    const historyHTML = `
+      <div style="display:flex;flex-direction:column;gap:0.4rem;">
+        ${timeline.map(e => `
+          <div style="display:flex;gap:0.6rem;font-size:0.78rem;">
+            <div style="color:var(--muted);white-space:nowrap;min-width:130px;">${rrFmt(e.time)}</div>
+            <div style="color:var(--text);line-height:1.5;">${e.text}</div>
+          </div>`).join('')}
       </div>`;
-  }
 
-  async function decideReturn(rid, decision) {
-    const reason = prompt(decision === 'approve'
-      ? 'Reason for approving (the customer will see this):'
-      : 'Reason for denying (the customer will see this):', '');
-    if (reason === null) return;
-    if (!reason.trim()) { showToast('A reason is required.', 'error'); return; }
+    const claimValueHTML = r.claim_value ? `₱${Number(r.claim_value).toFixed(2)}` : '—';
 
-    const payload = { decision, reason: reason.trim() };
-    if (decision === 'approve') {
-      const row = _returnsItems.find(r => r.id === rid);
-      payload.resolution = _returnOutcomeChoice[rid] || (row ? row.desired_outcome : 'refund');
-      if (payload.resolution === 'refund') {
-        const suggested = row && row.requested_refund_amount ? row.requested_refund_amount : 0;
-        const amountStr = prompt('Refund amount (₱):', String(suggested));
-        if (amountStr === null) return;
-        payload.refund_amount = parseFloat(amountStr) || 0;
+    let actionsHTML = '';
+    if ((r.status === 'submitted' || r.status === 'under_review') && !r.awaiting_customer_info) {
+      const alt = returnAlternateOutcome(r) || {};
+      actionsHTML = `
+        <div style="margin-top:0.9rem;padding-top:0.75rem;border-top:1px dashed var(--border);">
+          <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Before deciding</div>
+          <div style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.8rem;margin-bottom:0.7rem;">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="rr-check-photos-${r.id}">${r.photos.length ? ' Photos match what was described' : ' Photos match what was described (none submitted)'}</label>
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="rr-check-window-${r.id}"> Filed inside the window</label>
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="rr-check-record-${r.id}"> Order/service record checked</label>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="showReturnDecisionPanel(${r.id}, 'asked')">Approve As Asked</button>
+            <button type="button" class="btn-cancel" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="showReturnDecisionPanel(${r.id}, 'alt')">Approve, But Offer Something Else</button>
+            <button type="button" class="btn-cancel" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="requestReturnInfo(${r.id})">Ask For More From The Customer</button>
+            <button type="button" class="btn-cancel" style="padding:0.4rem 0.8rem;font-size:0.78rem;color:#b91c1c;" onclick="showReturnDecisionPanel(${r.id}, 'decline')">Decline</button>
+          </div>
+
+          <div id="rr-panel-asked-${r.id}" style="display:none;margin-top:0.7rem;padding:0.7rem 0.75rem;background:#fafafa;border:1px solid var(--border);border-radius:8px;">
+            <div style="font-size:0.8rem;color:var(--text);margin-bottom:0.4rem;">Giving exactly what they asked for: <strong>${returnOutcomeLabel(r.kind, r.desired_outcome)}</strong>${r.desired_outcome === 'refund' && r.requested_refund_amount ? ` (₱${Number(r.requested_refund_amount).toFixed(2)})` : ''}.</div>
+            ${r.desired_outcome === 'refund' ? `<input type="number" id="rr-asked-amount-${r.id}" step="0.01" min="0" placeholder="Refund amount (₱)" value="${r.requested_refund_amount || ''}" style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:6px;margin-bottom:0.4rem;">` : ''}
+            <textarea id="rr-asked-reason-${r.id}" placeholder="Optional note for the customer…" style="width:100%;min-height:50px;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.8rem;resize:vertical;"></textarea>
+            <button type="button" class="btn-primary-custom" style="margin-top:0.5rem;padding:0.35rem 0.7rem;font-size:0.76rem;" onclick="confirmApproveAsAsked(${r.id})">Confirm — Approve As Asked</button>
+          </div>
+
+          <div id="rr-panel-alt-${r.id}" style="display:none;margin-top:0.7rem;padding:0.7rem 0.75rem;background:#fafafa;border:1px solid var(--border);border-radius:8px;">
+            <div style="font-size:0.8rem;color:var(--text);margin-bottom:0.4rem;">Offering <strong>${alt.title || ''}</strong> instead of ${returnOutcomeLabel(r.kind, r.desired_outcome)}. <strong>${alt.consequence || ''}</strong></div>
+            ${alt.value === 'refund' ? `<input type="number" id="rr-alt-amount-${r.id}" step="0.01" min="0" placeholder="Refund amount (₱)" style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:6px;margin-bottom:0.4rem;">` : ''}
+            <textarea id="rr-alt-reason-${r.id}" placeholder="Say what changed and why — the customer sees this word for word…" style="width:100%;min-height:60px;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.8rem;resize:vertical;"></textarea>
+            <button type="button" class="btn-primary-custom" style="margin-top:0.5rem;padding:0.35rem 0.7rem;font-size:0.76rem;" onclick="confirmApproveAlternate(${r.id}, '${alt.value || ''}')">Confirm — Offer ${alt.title || 'Alternate'}</button>
+          </div>
+
+          <div id="rr-panel-decline-${r.id}" style="display:none;margin-top:0.7rem;padding:0.7rem 0.75rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;">
+            <div style="font-size:0.75rem;color:#7f1d1d;margin-bottom:0.4rem;">Write this the way you'd say it to their face — it's sent word for word, with an invitation to reply if they think it's wrong.</div>
+            <textarea id="rr-decline-reason-${r.id}" placeholder="Reason the claim is declined…" style="width:100%;min-height:60px;padding:0.4rem 0.6rem;border:1px solid #fecaca;border-radius:6px;font-family:inherit;font-size:0.8rem;resize:vertical;"></textarea>
+            <button type="button" class="btn-cancel" style="margin-top:0.5rem;padding:0.35rem 0.7rem;font-size:0.76rem;color:#b91c1c;" onclick="confirmDecline(${r.id})">Confirm — Decline</button>
+          </div>
+        </div>`;
+    } else if (r.status === 'approved') {
+      // Carrying the decision out: exactly one next action, worded for
+      // whichever remedy this is — never a generic "Mark Resolved" once we
+      // know what "resolved" actually means here.
+      if (r.kind === 'product' && !r.item_returned) {
+        actionsHTML = `
+          <div style="margin-top:0.9rem;">
+            <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Nothing releases until the item is back — this applies whether it's a refund or a replacement.</div>
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="markReturnItemReceived(${r.id})">Mark Part Received</button>
+          </div>`;
+      } else if (r.kind === 'service' && r.resolution === 'redo_service' && !r.redo_date) {
+        actionsHTML = `
+          <div style="margin-top:0.9rem;padding-top:0.75rem;border-top:1px dashed var(--border);">
+            <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Schedule The Back Job</div>
+            ${returnRedoSchedulerHTML(r)}
+          </div>`;
+      } else if (r.resolution === 'refund') {
+        actionsHTML = `
+          <div style="margin-top:0.9rem;">
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">Release ₱${Number(r.refund_amount || 0).toFixed(2)}</button>
+          </div>`;
+      } else if (r.resolution === 'replacement') {
+        actionsHTML = `
+          <div style="margin-top:0.9rem;">
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">Mark Replacement Sent</button>
+          </div>`;
+      } else {
+        actionsHTML = `
+          <div style="margin-top:0.9rem;">
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">Back Job Done</button>
+          </div>`;
       }
     }
+
+    const sectionHead = label => `<div style="font-size:0.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin:1rem 0 0.4rem;">${label}</div>`;
+
+    return `
+      <div style="display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;font-size:1rem;">${r.customer} — ${r.subject}</div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem;">${r.ref} &middot; ${r.kind === 'product' ? 'Product' : 'Service'} &middot; wants: ${askHTML}</div>
+        </div>
+        <span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};height:fit-content;">${statusLabel}</span>
+      </div>
+
+      ${sectionHead('Customer')}
+      <div style="font-size:0.85rem;color:var(--text);line-height:1.6;">
+        <div>${r.customer}</div>
+        <div style="color:var(--muted);">${r.customer_email || '—'} &middot; ${r.customer_phone || '—'}</div>
+        <div style="color:var(--muted);">${r.motorcycle || 'No motorcycle on file'}</div>
+      </div>
+
+      ${sectionHead('Claim')}
+      <div style="font-size:0.85rem;color:var(--text);line-height:1.6;">
+        <div>${r.origin || '—'}${r.origin_date ? ` &middot; ${r.origin_date}` : ''}</div>
+        <div>Value: ${claimValueHTML}${r.original_mechanic ? ` &middot; Original mechanic: ${r.original_mechanic}` : ''}</div>
+      </div>
+      ${lineItemsHTML}
+      ${mechanicHTML}
+
+      ${sectionHead('Why')}
+      ${reasonsHTML}
+      ${ownWordsHTML}
+
+      ${sectionHead('Photos')}
+      ${photosHTML}
+
+      ${infoHTML}
+      ${decisionHTML}
+
+      ${sectionHead('History')}
+      ${historyHTML}
+
+      ${sectionHead('Internal Notes')}
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.35rem;">Shop only — the customer never sees this.</div>
+      <textarea id="rr-notes-${r.id}" placeholder="Working notes for this claim…" style="width:100%;min-height:70px;padding:0.5rem 0.65rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.82rem;resize:vertical;">${r.internal_notes || ''}</textarea>
+      <button type="button" class="btn-cancel" style="margin-top:0.4rem;padding:0.35rem 0.7rem;font-size:0.75rem;" onclick="saveReturnNotes(${r.id})">Save Notes</button>
+
+      ${actionsHTML ? sectionHead('Actions') + actionsHTML : ''}
+    `;
+  }
+
+  async function saveReturnNotes(rid) {
+    const val = document.getElementById(`rr-notes-${rid}`).value;
+    try {
+      const res = await fetch(`/returns/${rid}/notes`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: val }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const row = _returnsItems.find(x => x.id === rid);
+        if (row) row.internal_notes = val;
+        showToast('Notes saved.', 'success');
+      } else showToast(data.error || 'Could not save notes.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  function returnPhotoCheckOk(rid) {
+    const row = _returnsItems.find(x => x.id === rid);
+    if (!row || !row.photos.length) return true;
+    const cb = document.getElementById(`rr-check-photos-${rid}`);
+    return !!(cb && cb.checked);
+  }
+
+  // Reviewing, not rubber-stamping: a claim with photos can't be approved
+  // until the reviewer has actually ticked that they looked at them.
+  function showReturnDecisionPanel(rid, which) {
+    if ((which === 'asked' || which === 'alt') && !returnPhotoCheckOk(rid)) {
+      showToast('Tick the photo check before approving.', 'error');
+      return;
+    }
+    ['asked', 'alt', 'decline'].forEach(k => {
+      const el = document.getElementById(`rr-panel-${k}-${rid}`);
+      if (el) el.style.display = (k === which) ? 'block' : 'none';
+    });
+  }
+
+  async function submitReturnDecision(rid, payload) {
     try {
       const res = await fetch(`/returns/${rid}/decide`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (data.success) { showToast(data.message || 'Decision sent.', 'success'); loadReturns(); }
+      if (data.success) { showToast(data.message || 'Decision sent.', 'success'); closeModal('modal-return-review'); loadReturns(); }
       else showToast(data.error || 'Could not save this decision.', 'error');
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
+
+  function confirmApproveAsAsked(rid) {
+    const row = _returnsItems.find(x => x.id === rid);
+    const payload = {
+      decision: 'approve_as_asked',
+      photo_checked: returnPhotoCheckOk(rid),
+      reason: (document.getElementById(`rr-asked-reason-${rid}`)?.value || '').trim(),
+    };
+    if (row && row.desired_outcome === 'refund') {
+      const amountEl = document.getElementById(`rr-asked-amount-${rid}`);
+      payload.refund_amount = parseFloat(amountEl?.value || '') || (row.requested_refund_amount || 0);
+    }
+    submitReturnDecision(rid, payload);
+  }
+
+  function confirmApproveAlternate(rid, resolution) {
+    const reason = (document.getElementById(`rr-alt-reason-${rid}`)?.value || '').trim();
+    if (!reason) { showToast('Say what changed and why — the customer sees this word for word.', 'error'); return; }
+    const payload = { decision: 'approve_alternate', resolution, photo_checked: returnPhotoCheckOk(rid), reason };
+    if (resolution === 'refund') {
+      const amountEl = document.getElementById(`rr-alt-amount-${rid}`);
+      payload.refund_amount = parseFloat(amountEl?.value || '') || 0;
+    }
+    submitReturnDecision(rid, payload);
+  }
+
+  function confirmDecline(rid) {
+    const reason = (document.getElementById(`rr-decline-reason-${rid}`)?.value || '').trim();
+    if (!reason) { showToast('A reason is required — the customer sees this word for word.', 'error'); return; }
+    submitReturnDecision(rid, { decision: 'decline', reason });
+  }
+
+  async function requestReturnInfo(rid) {
+    const note = prompt('What do you need from the customer? This becomes the notification they see.', '');
+    if (note === null) return;
+    if (!note.trim()) { showToast('Say what you need from the customer.', 'error'); return; }
+    try {
+      const res = await fetch(`/returns/${rid}/request-info`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: note.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Sent.', 'success'); closeModal('modal-return-review'); loadReturns(); }
+      else showToast(data.error || 'Could not send this.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  async function markReturnItemReceived(rid) {
+    if (!confirm('Mark the returned item as received at the shop?')) return;
+    try {
+      const res = await fetch(`/returns/${rid}/item-received`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Marked received.', 'success'); closeModal('modal-return-review'); loadReturns(); }
+      else showToast(data.error || 'Could not mark it received.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
 
   async function resolveReturn(rid) {
     if (!confirm('Mark this claim resolved? The customer will be told it is done.')) return;
     try {
       const res = await fetch(`/returns/${rid}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await res.json();
-      if (data.success) { showToast(data.message || 'Marked resolved.', 'success'); loadReturns(); }
+      if (data.success) { showToast(data.message || 'Marked resolved.', 'success'); closeModal('modal-return-review'); loadReturns(); }
       else showToast(data.error || 'Could not mark resolved.', 'error');
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }

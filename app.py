@@ -416,6 +416,7 @@ class Booking(db.Model):
     contact_mobile = db.Column(db.String(20))
     odometer       = db.Column(db.Integer)
     is_archived    = db.Column(db.Boolean, default=False)
+    total_amount   = db.Column(db.Float, default=0)
     booking_batch  = db.Column(db.String(36), nullable=True)
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
@@ -441,6 +442,8 @@ class Mechanic(db.Model):
     name           = db.Column(db.String(100), nullable=False)
     specialization = db.Column(db.String(100), nullable=False)
     status         = db.Column(db.String(20), default='available')
+    phone          = db.Column(db.String(20))
+    note           = db.Column(db.Text)
     created_at     = db.Column(db.DateTime, default=ph_now)
 
 
@@ -511,6 +514,7 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=ph_now)
     priority    = db.Column(db.Boolean, default=False)  # needs a customer decision — stays pinned to the top, unread, until opened
     booking_id  = db.Column(db.Integer, nullable=True)  # lets "open" land on the specific booking, not a list
+    return_request_id = db.Column(db.Integer, nullable=True)  # same, for a return/warranty claim
 
 
 class ReturnRequest(db.Model):
@@ -540,6 +544,24 @@ class ReturnRequest(db.Model):
     decided_at      = db.Column(db.DateTime)
     resolved_at     = db.Column(db.DateTime)
     cancelled_at    = db.Column(db.DateTime)
+    # Two things a claim can be blocked on after it's filed, each with its
+    # own "stays pinned until actually done" notification, not just "until
+    # opened": the shop needing more from the customer, or (for a product
+    # claim) the part needing to come back before the remedy is carried out.
+    awaiting_customer_info = db.Column(db.Boolean, default=False)
+    info_request_note      = db.Column(db.Text)          # admin's own words — becomes the notification title verbatim
+    info_provided_at       = db.Column(db.DateTime)
+    info_provided_text     = db.Column(db.Text)
+    item_returned          = db.Column(db.Boolean, default=False)
+    item_returned_at       = db.Column(db.DateTime)
+    # Back-job scheduling — a request recorded here, not an entry on the real
+    # shop calendar; approving and scheduling are two separate state changes,
+    # each raising its own single notification.
+    redo_date          = db.Column(db.Date)
+    redo_time          = db.Column(db.Time)
+    redo_mechanic_name = db.Column(db.String(100))
+    redo_booking_id    = db.Column(db.Integer, nullable=True)  # the real, zero-charge Booking this back job writes into the shop calendar
+    internal_notes     = db.Column(db.Text)  # shop-only — never surfaced to the customer
 
 
 class ReturnRequestItem(db.Model):
@@ -557,9 +579,10 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False):
+def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False, return_request_id=None):
     db.session.add(Notification(user_id=user_id, title=title, message=message, type=type,
-                                 status=status, booking_id=booking_id, priority=priority))
+                                 status=status, booking_id=booking_id, priority=priority,
+                                 return_request_id=return_request_id))
     db.session.commit()
 
 
@@ -988,6 +1011,7 @@ def customer_dashboard():
     returns  = ReturnRequest.query.filter_by(user_id=current_user.id).order_by(ReturnRequest.created_at.desc()).all()
     for r in returns:
         r.subject_label = _return_subject_label(r)
+        r.origin_label = _return_origin_label(r)
 
     open_claims = ReturnRequest.query.filter(
         ReturnRequest.user_id == current_user.id, ReturnRequest.status.in_(OPEN_RETURN_STATUSES)
@@ -1021,6 +1045,15 @@ def _return_subject_label(rr):
         return f'ORD-{rr.order_id:03d}' if rr.order_id else 'an order'
     booking = Booking.query.get(rr.booking_id) if rr.booking_id else None
     return booking.service if booking else 'a service'
+
+
+def _return_origin_label(rr):
+    """'The order or service it came from' — the originating record's own
+    reference, distinct from the claim's own RMA reference."""
+    if rr.kind == 'product':
+        return f'ORD-{rr.order_id:03d}' if rr.order_id else '—'
+    booking = Booking.query.get(rr.booking_id) if rr.booking_id else None
+    return f"{booking.service} — {booking.date.strftime('%b %d, %Y')}" if booking else '—'
 
 
 def _resolve_service_combo(names):
@@ -1620,7 +1653,7 @@ def create_return_request():
         oid = clean_int(request.form.get('order_id', ''))
         order = Order.query.filter_by(id=oid, user_id=current_user.id).first() if oid else None
         if not order or order.status not in ('delivered', 'completed'):
-            errors.append('That order is not eligible for a return — it has to be delivered first.')
+            errors.append('That order has to be delivered before you can return anything from it.')
         else:
             window = return_window_info('product', order.delivered_at)
             if window is None or window['expired']:
@@ -1651,7 +1684,7 @@ def create_return_request():
         bid = clean_int(request.form.get('booking_id', ''))
         booking = Booking.query.filter_by(id=bid, user_id=current_user.id).first() if bid else None
         if not booking or booking.status != 'completed':
-            errors.append('That appointment is not eligible for a warranty claim — it has to be completed first.')
+            errors.append('That appointment has to be completed before you can file a warranty claim on it.')
         else:
             window = return_window_info('service', booking.completed_at)
             if window is None or window['expired']:
@@ -1697,22 +1730,23 @@ def create_return_request():
         reason_labels.append(other_text)
     reasons_text = '; '.join(reason_labels)
     outcome_label = RETURN_OUTCOME_LABELS[kind][desired_outcome]
+    # The bell and the email must always say the same thing — one body, two
+    # deliveries, never two different tellings of the same event.
+    filed_title = f'We received your return request ({ref})'
+    filed_body = (f"We got your report about {what} ({ref}) — {reasons_text}. You asked for: {outcome_label}. "
+                  f"We'll review the evidence and get back to you with a decision.")
     send_notification(
-        current_user.id, f'We received your return request ({ref})',
-        f"We got your report about {what} ({ref}) — {reasons_text}. You asked for: {outcome_label}. "
-        f"We'll review the evidence and get back to you with a decision.",
-        type='booking' if kind == 'service' else 'order', status='submitted',
+        current_user.id, filed_title, filed_body,
+        type='booking' if kind == 'service' else 'order', status='submitted', return_request_id=rr.id,
     )
     if current_user.email:
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
           <p>Hi {current_user.fullname},</p>
-          <p>We got your report about <strong>{what}</strong> — {reasons_text}. You asked for: {outcome_label}.</p>
-          <p>Reference: <strong>{ref}</strong></p>
-          <p>We'll review the evidence and get back to you with a decision.</p>
+          <p>{filed_body}</p>
           <p>— MotoTyre North Caloocan</p>
         </div>"""
-        _send_gmail(current_user.email, f'We received your return request — {ref}', html)
+        _send_gmail(current_user.email, f'{filed_title} — MotoTyre', html)
 
     for admin in User.query.filter_by(role='admin').all():
         send_notification(
@@ -1727,15 +1761,50 @@ def create_return_request():
 @app.route('/returns/<int:rid>/cancel', methods=['POST'])
 @login_required
 def cancel_return_request(rid):
-    """The customer withdraws their own open claim — one of the three ways
-    (resolved, denied, cancelled) an order/booking's slot frees up for
-    another request later."""
+    """The customer withdraws their own claim — but only while it's still
+    Submitted or Under review. Once the shop has approved it, money or parts
+    are already moving, so cancelling from here stops being a self-service
+    click and has to be a conversation instead — the button doesn't even
+    show past that point, and this is the rule behind it, not the button."""
     rr = ReturnRequest.query.filter_by(id=rid, user_id=current_user.id).first_or_404()
-    if rr.status not in OPEN_RETURN_STATUSES:
-        return jsonify({'success': False, 'error': 'This request is not open.'}), 400
+    if rr.status not in ('submitted', 'under_review'):
+        return jsonify({'success': False, 'error': 'This request has already been approved — contact the shop directly to change it.'}), 400
     rr.status = 'cancelled'
     rr.cancelled_at = ph_now()
     db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/returns/<int:rid>/add-info', methods=['POST'])
+@login_required
+def add_return_info(rid):
+    """The customer's reply to a 'we need more from you' request — clears
+    the pending flag (what actually clears the pinned notification, not
+    just opening it) and tells the shop what came in."""
+    rr = ReturnRequest.query.filter_by(id=rid, user_id=current_user.id).first_or_404()
+    if not rr.awaiting_customer_info:
+        return jsonify({'success': False, 'error': 'This request is not waiting on anything from you.'}), 400
+
+    text = clean_str(request.form.get('text', ''), max_len=500)
+    new_photos, _skipped = _save_return_photos([f for f in request.files.getlist('photos') if f and f.filename])
+    if not text and not new_photos:
+        return jsonify({'success': False, 'error': 'Add a note or a photo before sending.'}), 400
+
+    rr.awaiting_customer_info = False
+    rr.info_provided_at = ph_now()
+    rr.info_provided_text = text or None
+    if new_photos:
+        existing = [p for p in (rr.photos or '').split(',') if p]
+        rr.photos = ','.join((existing + new_photos)[:RETURN_PHOTOS_MAX])
+    db.session.commit()
+
+    ref = f'RMA-{rr.id:03d}'
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(
+            admin.id, f'Customer replied on {ref}',
+            f'{current_user.fullname} added more info on {ref}: {text or "(photo only)"}',
+            type='booking' if rr.kind == 'service' else 'order', status=rr.status,
+        )
     return jsonify({'success': True})
 
 
@@ -1860,10 +1929,28 @@ def get_mechanics():
 def get_notifications():
     notifs = Notification.query.filter_by(user_id=current_user.id)\
                                .order_by(Notification.created_at.desc()).limit(50).all()
+
+    return_ids = {n.return_request_id for n in notifs if n.return_request_id}
+    claims = {r.id: r for r in ReturnRequest.query.filter(ReturnRequest.id.in_(return_ids)).all()} if return_ids else {}
+
+    def still_pending(n):
+        """Read is enough to clear most notifications, but two return
+        situations need the real-world thing done, not just a glance: the
+        shop waiting on more from the customer, or (for a product claim) the
+        part needing to come back before its remedy is carried out."""
+        rr = claims.get(n.return_request_id) if n.return_request_id else None
+        if rr:
+            if rr.awaiting_customer_info:
+                return True
+            if rr.kind == 'product' and rr.status == 'approved' and not rr.item_returned:
+                return True
+        return not n.is_read
+
     return jsonify([{
         'id': n.id, 'title': n.title, 'message': n.message,
         'type': n.type, 'status': n.status, 'is_read': n.is_read,
         'priority': n.priority, 'booking_id': n.booking_id,
+        'return_request_id': n.return_request_id, 'still_pending': still_pending(n),
         'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
     } for n in notifs])
 

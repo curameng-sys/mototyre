@@ -17,7 +17,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from io import BytesIO
-from security import (clean_str, clean_int, clean_float, is_valid_email, validate_booking_status, validate_order_status,
+from security import (clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_booking_status, validate_order_status,
     ALLOWED_RETURN_OUTCOMES, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
 from order_notifications import order_status_message, with_stamp, shipping_destination
 from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDAY_INTAKE_MIN,
@@ -25,7 +25,8 @@ from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDA
     SHOP_CLOSE_MIN, mechanic_overlaps, minutes_to_ampm, hhmm_to_minutes, minutes_to_hhmm,
     validate_booking, MAX_BOOKINGS_PER_DAY, max_jobs_one_mechanic, capacity_bottleneck,
     SLOT_GRANULARITY_MIN, SHOP_OPEN_MIN, real_end_minutes, multiday_progress, format_duration,
-    MULTIDAY_MIN_DAYS, MULTIDAY_MAX_DAYS, is_working_day, _overlaps)
+    MULTIDAY_MIN_DAYS, MULTIDAY_MAX_DAYS, is_working_day, _overlaps, working_days_between,
+    slot_statuses, MECHANIC_SPECIALIZATIONS)
 import json
 import os, uuid, random, string, base64, requests
 import threading
@@ -215,6 +216,8 @@ class Mechanic(db.Model):
     name           = db.Column(db.String(100), nullable=False)
     specialization = db.Column(db.String(100), nullable=False)
     status         = db.Column(db.String(20), default='available')
+    phone          = db.Column(db.String(20))
+    note           = db.Column(db.Text)  # a short profile note shown under their name — not customer-visible
     created_at     = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
 
 
@@ -361,6 +364,7 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     priority    = db.Column(db.Boolean, default=False)  # needs a customer decision — stays pinned to the top, unread, until opened
     booking_id  = db.Column(db.Integer, nullable=True)  # lets "open" land on the specific booking, not a list
+    return_request_id = db.Column(db.Integer, nullable=True)  # same, for a return/warranty claim
 
 
 class ReturnRequest(db.Model):
@@ -390,6 +394,17 @@ class ReturnRequest(db.Model):
     decided_at      = db.Column(db.DateTime)
     resolved_at     = db.Column(db.DateTime)
     cancelled_at    = db.Column(db.DateTime)
+    awaiting_customer_info = db.Column(db.Boolean, default=False)
+    info_request_note      = db.Column(db.Text)
+    info_provided_at       = db.Column(db.DateTime)
+    info_provided_text     = db.Column(db.Text)
+    item_returned          = db.Column(db.Boolean, default=False)
+    item_returned_at       = db.Column(db.DateTime)
+    redo_date          = db.Column(db.Date)
+    redo_time          = db.Column(db.Time)
+    redo_mechanic_name = db.Column(db.String(100))
+    redo_booking_id    = db.Column(db.Integer, nullable=True)  # the real, zero-charge Booking this back job writes into the shop calendar
+    internal_notes     = db.Column(db.Text)  # shop-only — the customer never sees this
 
 
 class ReturnRequestItem(db.Model):
@@ -411,7 +426,7 @@ def load_user(user_id):
 def ph_now():
     return datetime.utcnow() + timedelta(hours=8)
 
-def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False):
+def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False, return_request_id=None):
     """The one place a customer notification gets written. Email and the bell
     always carry the exact same title/message — see each call site, which
     builds one (title, message) pair and reuses it for both channels.
@@ -420,7 +435,8 @@ def send_notification(user_id, title, message, type='update', status=None, booki
     customer might want to push back on: a delay, a mechanic swap, a
     reschedule, or any shop-initiated cancellation."""
     db.session.add(Notification(user_id=user_id, title=title, message=message, type=type,
-                                 status=status, booking_id=booking_id, priority=priority))
+                                 status=status, booking_id=booking_id, priority=priority,
+                                 return_request_id=return_request_id))
     db.session.commit()
 
 
@@ -708,8 +724,8 @@ def admin_dashboard():
         all_orders=all_orders,
         all_products=Product.query.all(),
         all_users=User.query.all(),
-        all_mechanics=Mechanic.query.order_by(Mechanic.name).all(),
         all_services=Service.query.order_by(Service.name).all(),
+        mechanic_specializations=MECHANIC_SPECIALIZATIONS,
         archived_orders=archived_orders,
         archived_bookings=Booking.query.filter_by(is_archived=True).order_by(Booking.created_at.desc()).all(),
         order_ship_json=order_ship_json,
@@ -1893,9 +1909,10 @@ def _return_subject_label(rr):
 
 def _notify_return_customer(rr, title, body, priority=True):
     """Same shape as _notify_customer for bookings — bell + email, identical
-    text, so a return decision never reads differently between the two."""
+    text, so a return decision never reads differently between the two.
+    Opening it lands on this specific claim (Screen 3), not the list."""
     send_notification(rr.user_id, title, body, type='booking' if rr.kind == 'service' else 'order',
-                       status=rr.status, priority=priority)
+                       status=rr.status, priority=priority, return_request_id=rr.id)
     customer = User.query.get(rr.user_id)
     if not (customer and customer.email):
         return False
@@ -1913,31 +1930,87 @@ def _notify_return_customer(rr, title, body, priority=True):
 @login_required
 @require_admin_or_staff
 def api_returns():
-    """Every return/warranty claim — open ones (submitted / under_review)
-    sorted to the top so the queue reads like a to-do list, newest first
-    within each group."""
+    """Every return/warranty claim, plus the four work-counters and the
+    filter-tab counts the queue page is built around. Unreviewed claims sort
+    first; anything unreviewed past one working day is flagged overdue — a
+    returns queue fails by going quiet, not by being wrong."""
     rows = ReturnRequest.query.order_by(ReturnRequest.created_at.desc()).all()
     user_ids = {r.user_id for r in rows}
     users = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
+    order_ids = {r.order_id for r in rows if r.order_id}
+    orders = {o.id: o for o in Order.query.filter(Order.id.in_(order_ids)).all()} if order_ids else {}
+    booking_ids = {r.booking_id for r in rows if r.booking_id}
+    bookings = {b.id: b for b in Booking.query.filter(Booking.id.in_(booking_ids)).all()} if booking_ids else {}
+    today = ph_now().date()
 
     def sort_key(r):
-        return (0 if r.status in ('submitted', 'under_review') else 1, -r.created_at.timestamp())
+        # Waiting on the customer isn't waiting on the shop — those don't
+        # jump the queue the way a genuinely unreviewed claim does.
+        unreviewed = r.status in ('submitted', 'under_review') and not r.awaiting_customer_info
+        return (0 if unreviewed else 1, -r.created_at.timestamp())
     rows.sort(key=sort_key)
+
+    needs_review = waiting_for_part = back_jobs_not_booked = 0
+    pesos_approved_not_released = 0.0
+    filter_counts = {'open': 0, 'needs_review': 0, 'parts': 0, 'services': 0, 'refund_asked': 0, 'closed': 0, 'all': len(rows)}
 
     items = []
     for r in rows:
         u = users.get(r.user_id)
         reason_codes = [c for c in (r.reasons or '').split(',') if c]
         reason_labels = [RETURN_REASON_LABELS.get(r.kind, {}).get(c, c) for c in reason_codes if c != 'other']
-        if r.other_reason_text:
-            reason_labels.append(r.other_reason_text)
+
+        origin, motorcycle, origin_date, claim_value, original_mechanic = None, None, None, None, None
+        line_items = _return_line_items(r)
+        if r.kind == 'product' and r.order_id in orders:
+            o = orders[r.order_id]
+            origin = f'ORD-{r.order_id:03d}'
+            motorcycle = u.motorcycle_model if u else None
+            origin_date = o.created_at.strftime('%b %d, %Y')
+            claim_value = sum(li['subtotal'] for li in line_items) or None
+        elif r.kind == 'service' and r.booking_id in bookings:
+            b = bookings[r.booking_id]
+            origin = f"{b.service} — {b.date.strftime('%b %d, %Y')}"
+            motorcycle = b.motorcycle_model
+            origin_date = b.date.strftime('%b %d, %Y')
+            claim_value = b.total_amount
+            original_mechanic = b.assigned_mechanic_name
+
+        is_open = r.status in OPEN_RETURN_STATUSES
+        is_unreviewed = r.status in ('submitted', 'under_review') and not r.awaiting_customer_info
+        overdue = is_unreviewed and working_days_between(r.created_at.date(), today) >= 1
+
+        if is_unreviewed:
+            needs_review += 1
+        if r.kind == 'product' and r.status == 'approved' and not r.item_returned:
+            waiting_for_part += 1
+        if r.status == 'approved' and r.resolution == 'refund' and r.refund_amount:
+            pesos_approved_not_released += r.refund_amount
+        if r.status == 'approved' and r.resolution == 'redo_service' and not r.redo_date:
+            back_jobs_not_booked += 1
+
+        if is_open: filter_counts['open'] += 1
+        if is_unreviewed: filter_counts['needs_review'] += 1
+        if r.kind == 'product': filter_counts['parts'] += 1
+        if r.kind == 'service': filter_counts['services'] += 1
+        if r.desired_outcome == 'refund': filter_counts['refund_asked'] += 1
+        if r.status in ('resolved', 'denied', 'cancelled'): filter_counts['closed'] += 1
+
         items.append({
             'id': r.id, 'ref': _return_ref(r),
             'customer': u.fullname if u else 'Unknown customer',
+            'customer_email': u.email if u else None,
+            'customer_phone': u.phone if u else None,
+            'motorcycle': motorcycle,
             'kind': r.kind,
+            'origin': origin,
+            'origin_date': origin_date,
+            'claim_value': claim_value,
+            'original_mechanic': original_mechanic,
             'subject': _return_subject_label(r),
-            'line_items': _return_line_items(r),
+            'line_items': line_items,
             'reasons': reason_labels,
+            'other_reason_text': r.other_reason_text,
             'desired_outcome': r.desired_outcome,
             'requested_mechanic_name': r.requested_mechanic_name,
             'requested_refund_amount': r.requested_refund_amount,
@@ -1948,68 +2021,362 @@ def api_returns():
             'refund_amount': r.refund_amount,
             'order_id': r.order_id,
             'booking_id': r.booking_id,
+            'awaiting_customer_info': bool(r.awaiting_customer_info),
+            'info_request_note': r.info_request_note,
+            'info_provided_at': r.info_provided_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.info_provided_at else None,
+            'info_provided_text': r.info_provided_text,
+            'item_returned': bool(r.item_returned),
+            'item_returned_at': r.item_returned_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.item_returned_at else None,
+            'redo_date': r.redo_date.isoformat() if r.redo_date else None,
+            'redo_time': r.redo_time.strftime('%H:%M') if r.redo_time else None,
+            'redo_mechanic_name': r.redo_mechanic_name,
+            'redo_booking_id': r.redo_booking_id,
+            'internal_notes': r.internal_notes,
+            'overdue': overdue,
             'created_at': r.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
             'decided_at': r.decided_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.decided_at else None,
             'resolved_at': r.resolved_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.resolved_at else None,
+            'cancelled_at': r.cancelled_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.cancelled_at else None,
         })
-    open_count = sum(1 for r in rows if r.status in OPEN_RETURN_STATUSES)
-    return jsonify({'items': items, 'open_count': open_count})
+
+    counters = {
+        'needs_review': needs_review,
+        'waiting_for_part': waiting_for_part,
+        'pesos_approved_not_released': pesos_approved_not_released,
+        'back_jobs_not_booked': back_jobs_not_booked,
+    }
+    return jsonify({'items': items, 'open_count': filter_counts['open'], 'counters': counters, 'filter_counts': filter_counts})
 
 
 @admin_app.route('/returns/<int:rid>/decide', methods=['POST'])
 @login_required
 @require_admin_or_staff
 def decide_return_request(rid):
-    """Approve (with the remedy the shop will carry out) or deny (with a
-    reason) after reviewing the evidence. Actually carrying the remedy out is
-    a separate step — Mark Resolved — since approving is a decision and
-    fulfilling it is a real-world action that may take time."""
+    """Three ways a review ends: approve exactly what they asked for, approve
+    but swap in a different remedy (claim is fair, remedy isn't), or decline.
+    Actually carrying an approved remedy out is a separate step — Mark
+    Resolved — since approving is a decision and fulfilling it is a
+    real-world action that may take time.
+
+    A claim with photos can't be approved until the reviewer has actually
+    looked at them — enforced here too, not just as a UI courtesy, the same
+    way the eligibility windows are."""
     rr = ReturnRequest.query.get_or_404(rid)
     if rr.status not in ('submitted', 'under_review'):
         return jsonify({'success': False, 'error': 'This claim has already been decided.'}), 400
 
     data = request.get_json() or {}
     decision = data.get('decision')
+    if decision not in ('approve_as_asked', 'approve_alternate', 'decline'):
+        return jsonify({'success': False, 'error': 'Unknown decision.'}), 400
+
+    if decision in ('approve_as_asked', 'approve_alternate') and rr.photos and not data.get('photo_checked'):
+        return jsonify({'success': False, 'error': 'Tick the photo check before approving — the photos need an actual look, not a rubber stamp.'}), 400
+
     reason = clean_str(data.get('reason', ''), max_len=500)
-    if not reason:
-        return jsonify({'success': False, 'error': 'A reason is required for the customer to see.'}), 400
+    if decision in ('approve_alternate', 'decline') and not reason:
+        label = 'Say what changed and why — the customer sees this word for word.' if decision == 'approve_alternate' \
+            else 'A reason is required — the customer sees this word for word.'
+        return jsonify({'success': False, 'error': label}), 400
 
     ref = _return_ref(rr)
     subject = _return_subject_label(rr)
 
-    if decision == 'approve':
-        resolution = data.get('resolution', '')
-        # The rule the whole feature rests on: put it right, or give the
-        # money back — never both, and never a third option.
-        if resolution not in RETURN_OUTCOMES_BY_KIND[rr.kind]:
-            return jsonify({'success': False, 'error': 'Choose either to put it right or refund it — not both, and not a different remedy.'}), 400
+    if decision in ('approve_as_asked', 'approve_alternate'):
+        if decision == 'approve_as_asked':
+            resolution = rr.desired_outcome
+        else:
+            resolution = data.get('resolution', '')
+            if resolution not in RETURN_OUTCOMES_BY_KIND[rr.kind]:
+                return jsonify({'success': False, 'error': 'Pick the remedy you are offering instead — put it right, or give the money back, never both.'}), 400
+            if resolution == rr.desired_outcome:
+                return jsonify({'success': False, 'error': "That's the same remedy they asked for — use Approve As Asked instead."}), 400
+
         rr.status = 'approved'
         rr.resolution = resolution
+        rr.awaiting_customer_info = False
         if resolution == 'refund':
-            rr.refund_amount = clean_float(data.get('refund_amount', ''), default=0.0, min_val=0)
-        rr.decision_reason = reason
+            suggested = rr.requested_refund_amount or 0.0
+            rr.refund_amount = clean_float(data.get('refund_amount', ''), default=suggested, min_val=0)
+        rr.decision_reason = reason or ('Approved as requested.' if decision == 'approve_as_asked' else '')
         rr.decided_at = ph_now()
-        db.session.commit()
 
-        outcome_label = RETURN_OUTCOME_LABELS[rr.kind][resolution]
-        amount_line = f' Amount: ₱{rr.refund_amount:,.2f}.' if resolution == 'refund' and rr.refund_amount else ''
-        title = f'Approved — {outcome_label} ({ref})'
-        body = (f'Your return request ({ref}) about {subject} was approved. We will: {outcome_label}.{amount_line} '
-                f'Reason: {reason}. We will follow up once this is carried out.')
-    elif decision == 'deny':
+        alternate = decision == 'approve_alternate'
+        reason_line = f' {reason}' if reason else ''
+
+        # Every product remedy needs the part back first — replacement or
+        # refund alike — so approving one always opens that sub-state.
+        if rr.kind == 'product':
+            rr.item_returned = False
+            if resolution == 'refund':
+                title = (f'Approved — ₱{rr.refund_amount:,.2f} refund instead of a replacement' if alternate
+                         else f'Approved — return the part to get ₱{rr.refund_amount:,.2f} back')
+                body = ((f'Your {subject} claim ({ref}) was approved, but instead of a replacement we\'re giving a '
+                         f'refund:{reason_line} Return the item to the shop so we can release the refund.') if alternate else
+                        (f'Your {subject} claim ({ref}) was approved: refund. Return the item to the shop so we '
+                         f'can release the refund. Reason: {reason}.'))
+            else:
+                title = 'Approved — replacement instead of a refund' if alternate else 'Approved — return the part for a replacement'
+                body = ((f'Your {subject} claim ({ref}) was approved, but instead of a refund we\'re sending a '
+                         f'replacement:{reason_line} Return the item to the shop so we can send the replacement.') if alternate else
+                        (f'Your {subject} claim ({ref}) was approved: replacement. Return the item to the shop '
+                         f'so we can send the replacement. Reason: {reason}.'))
+        else:
+            if resolution == 'refund':
+                title = f'Approved — ₱{rr.refund_amount:,.2f} refund instead of a back job' if alternate else f'Approved — ₱{rr.refund_amount:,.2f} refund'
+                body = ((f'Your {subject} claim ({ref}) was approved, but instead of redoing the work we\'re '
+                         f"refunding:{reason_line} We'll release it shortly.") if alternate else
+                        (f"Your {subject} claim ({ref}) was approved: refund. Reason: {reason}. We'll release it "
+                         f'shortly.'))
+            else:
+                title = 'Approved — back job instead of a refund' if alternate else f'Approved — back job for {subject}'
+                body = ((f'Your {subject} claim ({ref}) was approved, but instead of a refund we will redo the '
+                         f"work at no charge:{reason_line} We'll be in touch to schedule it.") if alternate else
+                        (f'Your {subject} claim ({ref}) was approved: we will redo the work at no charge. '
+                         f"Reason: {reason}. We'll be in touch to schedule it."))
+        db.session.commit()
+    else:  # decline
         rr.status = 'denied'
         rr.decision_reason = reason
         rr.decided_at = ph_now()
+        rr.awaiting_customer_info = False
         db.session.commit()
 
-        title = f'Not approved ({ref})'
+        title = f'Not approved — {subject}'
         body = (f'Your return request ({ref}) about {subject} was not approved. Reason: {reason}. '
                 f'Reply to this if you have more information or evidence to add.')
-    else:
-        return jsonify({'success': False, 'error': 'Unknown decision.'}), 400
 
     emailed = _notify_return_customer(rr, title, body, priority=True)
     return jsonify({'success': True, 'emailed': emailed, 'message': f'{rr.status.title()} — customer notified.'})
+
+
+@admin_app.route('/returns/<int:rid>/request-info', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def request_return_info(rid):
+    """Moves a claim into 'needs the customer's help before we can decide' —
+    the note becomes the notification title verbatim, since it's the one
+    thing the customer needs to see from a lock screen. Stays pinned in
+    their bell until they actually reply, not merely opened."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    if rr.status not in ('submitted', 'under_review'):
+        return jsonify({'success': False, 'error': 'This claim is no longer open for review.'}), 400
+    note = clean_str((request.get_json() or {}).get('note', ''), max_len=200)
+    if not note:
+        return jsonify({'success': False, 'error': 'Say what you need from the customer.'}), 400
+
+    rr.status = 'under_review'
+    rr.awaiting_customer_info = True
+    rr.info_request_note = note
+    db.session.commit()
+
+    ref = _return_ref(rr)
+    body = f'About your {_return_subject_label(rr)} claim ({ref}): {note}'
+    emailed = _notify_return_customer(rr, note, body, priority=True)
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Sent — customer notified.'})
+
+
+@admin_app.route('/returns/<int:rid>/notes', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def save_return_notes(rid):
+    """The shop's own working notes on a claim — never surfaced to the
+    customer, never part of a notification. Separate from decision_reason,
+    which the customer does see."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    notes = clean_str((request.get_json() or {}).get('notes', ''), max_len=2000)
+    rr.internal_notes = notes or None
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@admin_app.route('/returns/<int:rid>/item-received', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def mark_return_item_received(rid):
+    """The physical part is back at the shop — clears the way for the release
+    action. This is its own state change (Waiting for your item -> Approved),
+    so the customer hears about it — nothing moves silently."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    if rr.kind != 'product' or rr.status != 'approved':
+        return jsonify({'success': False, 'error': 'Only an approved product claim can have its item marked received.'}), 400
+    rr.item_returned = True
+    rr.item_returned_at = ph_now()
+    db.session.commit()
+
+    ref = _return_ref(rr)
+    subject = _return_subject_label(rr)
+    if rr.resolution == 'refund':
+        title = 'We received your item — refund next'
+        body = f'We received the {subject} you sent back ({ref}). Your ₱{rr.refund_amount:,.2f} refund is next.'
+    else:
+        title = 'We received your item — replacement next'
+        body = f'We received the {subject} you sent back ({ref}). Your replacement ships next, checked before it leaves.'
+    emailed = _notify_return_customer(rr, title, body, priority=False)
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Item marked received — customer notified.'})
+
+
+def _return_original_service(rr):
+    """The original booking's duration and service name — a back job runs as
+    long as the job it's redoing, not a generic default, and the calendar
+    entry should read like the job it actually is."""
+    b = Booking.query.get(rr.booking_id) if rr.booking_id else None
+    if b:
+        return b.duration_minutes or DEFAULT_DURATION_MIN, b.service
+    return DEFAULT_DURATION_MIN, _return_subject_label(rr)
+
+
+def _redo_gate(rr):
+    if rr.kind != 'service' or rr.resolution != 'redo_service' or rr.status != 'approved':
+        return 'Only an approved back-job claim can be scheduled.'
+    return None
+
+
+@admin_app.route('/returns/<int:rid>/redo-availability')
+@login_required
+@require_admin_or_staff
+def return_redo_availability(rid):
+    """The back-job scheduler's slot grid — same shop-queue rules as every
+    other booking path (open 8:00 AM, 6:30 PM finish cutoff, the lunch pause
+    baked into every finish time, no collision with the existing queue),
+    sized to the ORIGINAL service's duration, not a guess."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    err = _redo_gate(rr)
+    if err:
+        return jsonify({'error': err}), 400
+    date_str = request.args.get('date', '').strip()
+    try:
+        the_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    duration, service_name = _return_original_service(rr)
+    q = Booking.query.filter(Booking.date == the_date, Booking.status != 'cancelled')
+    intervals = _gather_intervals(q) + _gather_blocked_intervals(the_date)
+    now_minutes = None
+    if the_date == ph_now().date():
+        now = ph_now()
+        now_minutes = now.hour * 60 + now.minute
+
+    slots = slot_statuses(duration, intervals, now_minutes)
+    return jsonify({
+        'duration_minutes': duration,
+        'service_name': service_name,
+        'preferred_mechanic_name': rr.requested_mechanic_name,
+        'slots': [{
+            'time': minutes_to_hhmm(s['start']), 'end_time': minutes_to_hhmm(s['end']),
+            'label': minutes_to_ampm(s['start']), 'end_label': minutes_to_ampm(s['end']),
+            'available': s['available'], 'reason': s['reason'],
+        } for s in slots],
+    })
+
+
+@admin_app.route('/returns/<int:rid>/redo-mechanics')
+@login_required
+@require_admin_or_staff
+def return_redo_mechanics(rid):
+    """On-duty mechanics for the picked slot, busy ones flagged rather than
+    hidden — same convention as the customer-side picker."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    err = _redo_gate(rr)
+    if err:
+        return jsonify({'error': err}), 400
+    date_str = request.args.get('date', '').strip()
+    time_str = request.args.get('time', '').strip()
+    try:
+        the_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        start_min = hhmm_to_minutes(time_str)
+    except (ValueError, IndexError):
+        return jsonify({'error': 'Invalid date or time'}), 400
+
+    duration, _ = _return_original_service(rr)
+    end_min = compute_finish_minutes(start_min, duration)
+    _, _, on_duty = get_on_duty_mechanics(the_date)
+
+    busy_names = set()
+    for b in Booking.query.filter(Booking.assigned_mechanic_name.isnot(None), Booking.date == the_date,
+                                   Booking.status != 'cancelled').all():
+        b_start = b.time.hour * 60 + b.time.minute
+        b_end = compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)
+        if mechanic_overlaps(start_min, end_min, b_start, b_end):
+            busy_names.add(b.assigned_mechanic_name)
+
+    return jsonify({
+        'preferred_mechanic_name': rr.requested_mechanic_name,
+        'mechanics': [{'id': m.id, 'name': m.name, 'specialization': m.specialization, 'busy': m.name in busy_names}
+                      for m in on_duty],
+    })
+
+
+@admin_app.route('/returns/<int:rid>/schedule-redo', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def schedule_return_redo(rid):
+    """Books the back job as a real, zero-charge appointment on the shop's
+    own calendar — the same validated write path a reschedule uses, checked
+    again right here (the slot grid the admin saw may be stale by the time
+    they click Book, e.g. another admin took the mechanic first) rather than
+    trusting what was true when the grid was drawn. Approving the remedy and
+    scheduling it are two separate state changes, each raising exactly one
+    notification, not one bundled into three."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    err = _redo_gate(rr)
+    if err:
+        return jsonify({'success': False, 'error': err}), 400
+    data = request.get_json() or {}
+    try:
+        redo_date = datetime.strptime(clean_str(data.get('date', ''), max_len=10), '%Y-%m-%d').date()
+        redo_time = datetime.strptime(clean_str(data.get('time', ''), max_len=5), '%H:%M').time()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Pick a valid date and time.'}), 400
+    mechanic_name = clean_str(data.get('mechanic_name', ''), max_len=100)
+    if not mechanic_name:
+        return jsonify({'success': False, 'error': 'Name who is doing the redo.'}), 400
+    if datetime.combine(redo_date, redo_time) <= ph_now():
+        return jsonify({'success': False, 'error': 'Cannot book a past or current time.'}), 400
+
+    duration, service_name = _return_original_service(rr)
+    start_min = redo_time.hour * 60 + redo_time.minute
+
+    # The moment-of-booking check — not just what the grid showed when it was
+    # drawn. If the mechanic (or the slot) was taken while the admin was
+    # deciding, this is exactly where that shows up.
+    ok, error = _check_admin_booking_request(redo_date, start_min, duration, mechanic_name=mechanic_name)
+    if not ok:
+        return jsonify({'success': False, 'error': f'{error} Pick again.'}), 409
+
+    mechanic = Mechanic.query.filter_by(name=mechanic_name).first()
+    customer = User.query.get(rr.user_id)
+    booking = Booking(
+        user_id=rr.user_id,
+        service=f'Back job — {service_name}',
+        date=redo_date, time=redo_time,
+        end_time=compute_finish_time(redo_time, duration),
+        duration_minutes=duration,
+        status='confirmed',
+        total_amount=0,
+        motorcycle_model=customer.motorcycle_model if customer else None,
+        assigned_mechanic_name=mechanic_name,
+        assigned_mechanic_specialization=mechanic.specialization if mechanic else None,
+        preferred_mechanic_name=rr.requested_mechanic_name,
+    )
+    db.session.add(booking)
+    db.session.flush()
+
+    rr.redo_date = redo_date
+    rr.redo_time = redo_time
+    rr.redo_mechanic_name = mechanic_name
+    rr.redo_booking_id = booking.id
+    db.session.commit()
+
+    ref = _return_ref(rr)
+    date_label = redo_date.strftime('%A, %b %d')
+    time_label = redo_time.strftime('%I:%M %p').lstrip('0')
+    title = f'Back job booked for {date_label}, {time_label} with {mechanic_name}'
+    body = (f'Your {_return_subject_label(rr)} back job ({ref}) is booked for {date_label} at {time_label} with '
+            f'{mechanic_name} — no charge, there is nothing to pay.')
+    emailed = _notify_return_customer(rr, title, body, priority=True)
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Scheduled — customer notified.'})
 
 
 @admin_app.route('/returns/<int:rid>/resolve', methods=['POST'])
@@ -2017,21 +2384,42 @@ def decide_return_request(rid):
 @require_admin_or_staff
 def resolve_return_request(rid):
     """Marks an approved claim's remedy as actually carried out — the refund
-    was issued, the replacement sent, the service redone, the credit
-    applied. Tells the customer it's done."""
+    was issued, the replacement sent, the back job redone. A product claim
+    can't resolve until its item is marked received; a back job can't
+    resolve until it's been scheduled — carrying out a remedy that was never
+    actually delivered isn't something this button can paper over."""
     rr = ReturnRequest.query.get_or_404(rid)
     if rr.status != 'approved':
         return jsonify({'success': False, 'error': 'Only an approved claim can be marked resolved.'}), 400
+    if rr.kind == 'product' and not rr.item_returned:
+        return jsonify({'success': False, 'error': "Mark the item received first — the part hasn't come back yet."}), 400
+    if rr.kind == 'service' and rr.resolution == 'redo_service' and not rr.redo_date:
+        return jsonify({'success': False, 'error': 'Schedule the back job first.'}), 400
 
     rr.status = 'resolved'
     rr.resolved_at = ph_now()
+
+    # The back job is a real appointment on the shop's calendar — closing the
+    # claim closes that booking too, so the mechanic's day reflects it.
+    if rr.kind == 'service' and rr.resolution == 'redo_service' and rr.redo_booking_id:
+        b = Booking.query.get(rr.redo_booking_id)
+        if b:
+            b.status = 'completed'
+            b.completed_at = ph_now()
+
     db.session.commit()
 
     ref = _return_ref(rr)
     subject = _return_subject_label(rr)
-    outcome_label = RETURN_OUTCOME_LABELS.get(rr.kind, {}).get(rr.resolution, rr.resolution or '')
-    title = f'Done — {outcome_label} ({ref})'
-    body = f'Your return request ({ref}) about {subject} is complete — {outcome_label} has been carried out.'
+    if rr.resolution == 'refund':
+        title = f'Your refund of ₱{rr.refund_amount:,.2f} has been released'
+        body = f'Your refund for {subject} ({ref}) — ₱{rr.refund_amount:,.2f} — has been released to your original payment method.'
+    elif rr.resolution == 'replacement':
+        title = 'Your replacement has shipped'
+        body = f'The replacement for {subject} ({ref}) is on its way — checked before it left.'
+    else:
+        title = 'Your back job is complete'
+        body = f'The redo for {subject} ({ref}) is done.'
     emailed = _notify_return_customer(rr, title, body, priority=False)
     return jsonify({'success': True, 'emailed': emailed, 'message': 'Marked resolved — customer notified.'})
 
@@ -2376,21 +2764,143 @@ def delete_product(pid):
     return redirect(url_for('admin_dashboard'))
 
 
+@admin_app.route('/api/mechanics-roster')
+@login_required
+@require_admin_or_staff
+def api_mechanics_roster():
+    """The roster behind the bookings calendar, not a separate address book —
+    reads the exact same Mechanic and Booking rows the calendar does, so a
+    status change made here, or an assignment made from the calendar, shows
+    up in both immediately. Also answers the actual point of this page: not
+    just who exists, but what each one is doing right now.
+
+    'Effective status' is derived, never stored, resolved in order: marked
+    off duty in the profile always wins (nothing overrides it — they're not
+    in the shop); otherwise a live or upcoming job today makes them busy no
+    matter what the profile says; otherwise the profile value stands
+    (available, or busy for a manually-set, non-booking reason). 'Not
+    rostered today' is a wholly separate, purely positional fact — whoever
+    sits past the on-duty slider's cutoff keeps their real status and just
+    gets that note added beneath it, because the slider is today's staffing
+    decision and the profile is a fact about the person."""
+    today = ph_now().date()
+    now = ph_now()
+    now_min = now.hour * 60 + now.minute
+
+    mechanics = Mechanic.query.order_by(Mechanic.name).all()
+    _, rostered_today_list, _ = get_on_duty_mechanics(today)
+    rostered_names = {m.name for m in rostered_today_list}
+
+    upcoming_bookings = Booking.query.filter(
+        Booking.date >= today, Booking.status.notin_(['cancelled', 'completed']),
+    ).order_by(Booking.date, Booking.time).all()
+    by_mechanic = {}
+    for b in upcoming_bookings:
+        if b.assigned_mechanic_name:
+            by_mechanic.setdefault(b.assigned_mechanic_name, []).append(b)
+
+    result = []
+    for m in mechanics:
+        jobs = by_mechanic.get(m.name, [])
+        current, nxt, has_job_today = None, None, False
+        for b in jobs:
+            b_start = b.time.hour * 60 + b.time.minute
+            b_end = real_end_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN, b.overrun_minutes or 0)
+            is_today = b.date == today
+            if is_today:
+                has_job_today = True
+            job = {
+                'booking_id': b.id, 'ref': f'BKG-{b.id:03d}',
+                'customer': _booking_customer_name(b), 'service': b.service,
+                'date_label': b.date.strftime('%b %d'), 'start_label': minutes_to_ampm(b_start),
+                'end_label': minutes_to_ampm(b_end), 'is_today': is_today,
+            }
+            if is_today and b_start <= now_min < b_end and current is None:
+                current = job
+            if ((not is_today) or (is_today and b_start > now_min)) and nxt is None:
+                nxt = job
+            if current and nxt:
+                break
+
+        assigned = current or nxt or (jobs and {
+            'booking_id': jobs[0].id, 'ref': f'BKG-{jobs[0].id:03d}',
+            'customer': _booking_customer_name(jobs[0]), 'service': jobs[0].service,
+            'date_label': jobs[0].date.strftime('%b %d'),
+            'start_label': minutes_to_ampm(jobs[0].time.hour * 60 + jobs[0].time.minute),
+            'end_label': minutes_to_ampm(real_end_minutes(jobs[0].time.hour * 60 + jobs[0].time.minute,
+                                                            jobs[0].duration_minutes or DEFAULT_DURATION_MIN, jobs[0].overrun_minutes or 0)),
+            'is_today': jobs[0].date == today,
+        }) or None
+        more_count = max(0, len(jobs) - 1) if assigned else 0
+
+        if m.status == 'off_duty':
+            effective_status = 'off_duty'
+        elif has_job_today:
+            effective_status = 'busy'
+        else:
+            effective_status = 'busy' if m.status == 'busy' else 'available'
+
+        result.append({
+            'id': m.id, 'name': m.name, 'specialization': m.specialization, 'status': m.status,
+            'phone': m.phone, 'note': m.note,
+            'not_rostered_today': m.name not in rostered_names,
+            'effective_status': effective_status,
+            'active_jobs_count': len(jobs),
+            'assigned': assigned, 'more_count': more_count,
+        })
+    return jsonify({'mechanics': result, 'today': today.isoformat()})
+
+
 @admin_app.route('/mechanic/add', methods=['POST'])
 @login_required
 @require_admin_or_staff
 def add_mechanic():
     if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    db.session.add(Mechanic(
-        name=request.form['name'],
-        specialization=request.form['specialization'],
-        status=request.form.get('status', 'available')
-    ))
+        return jsonify({'success': False, 'error': 'Access denied.'}), 403
+    data = request.get_json() or {}
+    name = clean_str(data.get('name', ''), max_len=100)
+    specialization = clean_str(data.get('specialization', ''), max_len=100)
+    status = data.get('status') if data.get('status') in ('available', 'busy', 'off_duty') else 'available'
+    phone = clean_str(data.get('phone', ''), max_len=20)
+    note = clean_str(data.get('note', ''), max_len=500)
+    if not name or specialization not in MECHANIC_SPECIALIZATIONS:
+        return jsonify({'success': False, 'error': 'Name is required and specialization must be one of the six.'}), 400
+    if phone and not is_valid_phone(phone):
+        return jsonify({'success': False, 'error': 'That phone number does not look right — use a Philippine mobile number.'}), 400
+    m = Mechanic(name=name, specialization=specialization, status=status, phone=phone or None, note=note or None)
+    db.session.add(m)
     db.session.commit()
-    flash('Mechanic added!', 'success')
-    return redirect(url_for('admin_dashboard'))
+    return jsonify({'success': True, 'id': m.id})
+
+
+@admin_app.route('/mechanic/<int:mid>/edit', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def edit_mechanic(mid):
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied.'}), 403
+    m = Mechanic.query.get_or_404(mid)
+    data = request.get_json() or {}
+    name = clean_str(data.get('name', ''), max_len=100)
+    specialization = clean_str(data.get('specialization', ''), max_len=100)
+    phone = clean_str(data.get('phone', ''), max_len=20)
+    note = clean_str(data.get('note', ''), max_len=500)
+    status = data.get('status') if data.get('status') in ('available', 'busy', 'off_duty') else m.status
+    if not name or specialization not in MECHANIC_SPECIALIZATIONS:
+        return jsonify({'success': False, 'error': 'Name is required and specialization must be one of the six.'}), 400
+    if phone and not is_valid_phone(phone):
+        return jsonify({'success': False, 'error': 'That phone number does not look right — use a Philippine mobile number.'}), 400
+    # Bookings store the mechanic's name as plain text (assigned/preferred
+    # mechanic fields), not a foreign key — a rename here does not rewrite
+    # today's or past bookings, so a profile rename mid-shift can briefly
+    # detach a mechanic from jobs already on the board under their old name.
+    m.name = name
+    m.specialization = specialization
+    m.phone = phone or None
+    m.note = note or None
+    m.status = status
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @admin_app.route('/mechanic/<int:mid>/delete', methods=['POST'])
@@ -2398,13 +2908,19 @@ def add_mechanic():
 @require_admin_or_staff
 def delete_mechanic(mid):
     if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
+        return jsonify({'success': False, 'error': 'Access denied.'}), 403
     m = Mechanic.query.get_or_404(mid)
+    today = ph_now().date()
+    upcoming = Booking.query.filter(
+        Booking.assigned_mechanic_name == m.name, Booking.date >= today,
+        Booking.status.notin_(['cancelled', 'completed']),
+    ).count()
+    if upcoming:
+        return jsonify({'success': False, 'error':
+            f'{m.name} has {upcoming} upcoming booking{"s" if upcoming != 1 else ""} — reassign them first.'}), 400
     db.session.delete(m)
     db.session.commit()
-    flash(f'Mechanic "{m.name}" deleted!', 'success')
-    return redirect(url_for('admin_dashboard'))
+    return jsonify({'success': True})
 
 
 @admin_app.route('/add-staff', methods=['POST'])

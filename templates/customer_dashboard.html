@@ -1104,51 +1104,41 @@
   </div>
 </section>
 
-<!-- ═══ RETURNS & WARRANTY — Screen 1: what can be claimed ═══ -->
+<!-- ═══ RETURNS & WARRANTY — Screen 1 (what can be claimed) + Screen 3 (my requests) ═══ -->
 <section id="sec-returns" class="c-section" style="padding: 1.5rem 1.25rem 4rem;">
   <div class="section-head">
-    <div><div class="section-title">RETURNS &amp; <span>WARRANTY</span></div><div class="section-sub">What can be claimed — pick an order or a completed service to start a request.</div></div>
+    <div><div class="section-title">RETURNS &amp; <span>WARRANTY</span></div><div class="section-sub" id="returns-tab-sub">What can be claimed — pick an order or a completed service to start a request.</div></div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.85rem;">
-    <div class="card" style="padding:1rem 1.1rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;margin-bottom:0.3rem;color:var(--fg-1);">Replacement or back job</div>
-      <div style="font-size:0.8rem;color:var(--fg-2);line-height:1.55;">We put it right — ship the same part again, or the mechanic redoes the job — at no charge. <strong>No money is returned.</strong></div>
-    </div>
-    <div class="card" style="padding:1rem 1.1rem;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;margin-bottom:0.3rem;color:var(--fg-1);">Refund</div>
-      <div style="font-size:0.8rem;color:var(--fg-2);line-height:1.55;">We return what you paid. <strong>The part isn't replaced and the work isn't redone</strong> — book again separately if you still need it.</div>
-    </div>
+  <div style="display:flex;gap:0.3rem;margin-bottom:1.25rem;border-bottom:1px solid var(--line-2);">
+    <button type="button" id="returns-tab-btn-claim" onclick="setReturnsTab('claim')" style="padding:0.6rem 1rem;background:none;border:none;border-bottom:2px solid var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.84rem;color:var(--fg-1);cursor:pointer;">What Can Be Claimed</button>
+    <button type="button" id="returns-tab-btn-requests" onclick="setReturnsTab('requests')" style="padding:0.6rem 1rem;background:none;border:none;border-bottom:2px solid transparent;font-family:'Syne',sans-serif;font-weight:700;font-size:0.84rem;color:var(--fg-3);cursor:pointer;">My Requests</button>
   </div>
-  <div style="font-size:0.78rem;color:var(--fg-3);margin-bottom:1.5rem;">Parts are returnable within <strong>7 days</strong> of delivery. Services carry a <strong>15-day warranty</strong> from the day the job was completed.</div>
 
-  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Spare Parts Orders</div>
-  <div id="claimable-orders-list" style="display:flex;flex-direction:column;gap:0.7rem;margin-bottom:1.85rem;"></div>
-
-  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Completed Services</div>
-  <div id="claimable-bookings-list" style="display:flex;flex-direction:column;gap:0.7rem;margin-bottom:1.85rem;"></div>
-
-  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Your Requests</div>
-  <div class="card">
-    {% if returns %}
-    <div style="overflow-x:auto;">
-      <table class="table">
-        <thead><tr><th>Reference</th><th>About</th><th>Date</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for r in returns %}
-          <tr class="return-row" style="cursor:pointer;" onclick="openReturnDetails({{ r.id }})">
-            <td><span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--brand-red);">RMA-{{ '%03d'|format(r.id) }}</span></td>
-            <td><span style="font-size:0.82rem;">{{ r.subject_label }}</span></td>
-            <td>{{ r.created_at.strftime('%b %d, %Y') }}</td>
-            <td><span class="badge badge-{{ r.status|replace('_','') }}">{{ r.status|replace('_',' ')|title }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <!-- Screen 1 -->
+  <div id="returns-tab-claim">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.85rem;">
+      <div class="card" style="padding:1rem 1.1rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;margin-bottom:0.3rem;color:var(--fg-1);">Replacement or back job</div>
+        <div style="font-size:0.8rem;color:var(--fg-2);line-height:1.55;">We put it right — ship the same part again, or the mechanic redoes the job — at no charge. <strong>No money is returned.</strong></div>
+      </div>
+      <div class="card" style="padding:1rem 1.1rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;margin-bottom:0.3rem;color:var(--fg-1);">Refund</div>
+        <div style="font-size:0.8rem;color:var(--fg-2);line-height:1.55;">We return what you paid. <strong>The part isn't replaced and the work isn't redone</strong> — book again separately if you still need it.</div>
+      </div>
     </div>
-    {% else %}
-    <div class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></div><p>No return or warranty requests yet.</p></div>
-    {% endif %}
+    <div style="font-size:0.78rem;color:var(--fg-3);margin-bottom:1.5rem;">Parts are returnable within <strong>7 days</strong> of delivery. Services carry a <strong>15-day warranty</strong> from the day the job was completed.</div>
+
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Spare Parts Orders</div>
+    <div id="claimable-orders-list" style="display:flex;flex-direction:column;gap:0.7rem;margin-bottom:1.85rem;"></div>
+
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Completed Services</div>
+    <div id="claimable-bookings-list" style="display:flex;flex-direction:column;gap:0.7rem;"></div>
+  </div>
+
+  <!-- Screen 3: My Requests -->
+  <div id="returns-tab-requests" style="display:none;">
+    <div id="my-requests-list" style="display:flex;flex-direction:column;gap:0.8rem;"></div>
   </div>
 </section>
 
@@ -1428,49 +1418,6 @@
   </div>
 </div>
 
-<!-- ═══ RETURN / WARRANTY DETAILS MODAL ═══ -->
-<div class="modal-overlay" id="modal-return-details">
-  <div class="modal-box" style="width:480px;max-width:95vw;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <h5 style="margin:0;">Return / Warranty Details</h5>
-      <button type="button" onclick="closeModal('modal-return-details')" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
-    </div>
-
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
-      <div>
-        <div id="rd-ref" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--brand-red);letter-spacing:0.04em;"></div>
-        <div id="rd-subject" style="font-size:0.8rem;color:var(--fg-3);"></div>
-      </div>
-      <div id="rd-status-badge"></div>
-    </div>
-
-    <div style="padding:1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:1rem;">
-      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">Why</div>
-      <div id="rd-category" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;margin-bottom:0.6rem;"></div>
-      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">What you asked for</div>
-      <div id="rd-outcome" style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);font-size:0.9rem;"></div>
-      <div id="rd-mechanic-wrap" style="display:none;margin-top:0.5rem;font-size:0.78rem;color:var(--fg-2);"></div>
-    </div>
-
-    <div id="rd-photos-wrap" style="display:none;margin-bottom:1rem;">
-      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.4rem;">Photos you sent</div>
-      <div id="rd-photos" style="display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
-    </div>
-
-    <div id="rd-decision-wrap" style="display:none;padding:1rem;background:rgba(21,128,61,0.06);border:1px solid rgba(21,128,61,0.2);border-radius:10px;margin-bottom:1rem;">
-      <div style="font-size:0.72rem;color:var(--fg-2);margin-bottom:0.2rem;">The shop's decision</div>
-      <div id="rd-decision" style="font-size:0.85rem;color:var(--fg-1);line-height:1.6;"></div>
-    </div>
-
-    <div id="rd-cancel-wrap" style="display:none;margin-bottom:1rem;">
-      <button type="button" onclick="cancelReturnRequest()" style="width:100%;padding:0.6rem;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#b91c1c;font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;cursor:pointer;">Cancel This Request</button>
-    </div>
-
-    <div class="modal-actions" style="margin-top:1rem;">
-      <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-return-details')">Close</button>
-    </div>
-  </div>
-</div>
 
 <!-- ═══ CART MODAL ═══ -->
 <div class="modal-overlay" id="modal-order">
@@ -1716,7 +1663,7 @@
 <script>
   function showSection(name, el) {
     if (name === 'book') loadMechanics();
-    if (name === 'returns') renderClaimableLists();
+    if (name === 'returns') setReturnsTab(_returnsActiveTab);
     document.querySelectorAll('.c-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-links a, .mobile-nav-menu a').forEach(a => a.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
@@ -2617,7 +2564,8 @@ function renderNotifications() {
   const footer  = document.getElementById('notif-footer');
   const showing = document.getElementById('notif-showing');
   const btnAll  = document.getElementById('btn-show-all');
-  const unread  = notifications.filter(n => !n.is_read).length;
+  const stillPending = n => (n.still_pending !== undefined ? n.still_pending : !n.is_read);
+  const unread  = notifications.filter(stillPending).length;
 
   // Bell badge
   if (unread > 0) {
@@ -2637,11 +2585,15 @@ function renderNotifications() {
   else if (activeFilter === 'unread') filtered = notifications.filter(n => !n.is_read);
 
   // Anything the customer might want to push back on (a delay, a mechanic
-  // swap, a reschedule) stays pinned unread at the top until they actually
-  // open it — everything else stays in its normal newest-first order.
+  // swap, a reschedule, more info the shop needs, an item that has to come
+  // back before a refund) stays pinned unread at the top until it's
+  // actually resolved — for most of these that's opening it, but for the
+  // two return sub-states it's the real-world thing getting done, which is
+  // what still_pending reflects server-side. Everything else stays in its
+  // normal newest-first order.
   filtered = filtered.slice().sort((a, b) => {
-    const aPin = a.priority && !a.is_read ? 1 : 0;
-    const bPin = b.priority && !b.is_read ? 1 : 0;
+    const aPin = a.priority && stillPending(a) ? 1 : 0;
+    const bPin = b.priority && stillPending(b) ? 1 : 0;
     return bPin - aPin;
   });
 
@@ -2702,11 +2654,12 @@ function renderNotifications() {
       timeZone: 'Asia/Manila'
     });
 
+    const pending = stillPending(n);
     const div = document.createElement('div');
     div.className = 'notif-item';
-    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line-1);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(208,0,25,0.05)'};transition:background 0.15s;`;
+    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line-1);cursor:pointer;background:${pending ? 'rgba(208,0,25,0.05)' : 'transparent'};transition:background 0.15s;`;
     div.onmouseover = () => div.style.background = 'var(--bg-subtle)';
-    div.onmouseout  = () => div.style.background = n.is_read ? 'transparent' : 'rgba(208,0,25,0.05)';
+    div.onmouseout  = () => div.style.background = pending ? 'rgba(208,0,25,0.05)' : 'transparent';
     div.onclick     = () => readNotif(n.id, n);
 
     div.innerHTML = `
@@ -2714,7 +2667,7 @@ function renderNotifications() {
       <div style="flex:1;min-width:0;">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);margin-bottom:0.2rem;display:flex;align-items:center;gap:0.5rem;">
           ${n.title}
-          ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--brand-red);display:inline-block;flex-shrink:0;"></span>' : ''}
+          ${pending ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--brand-red);display:inline-block;flex-shrink:0;"></span>' : ''}
         </div>
         <div style="font-size:0.78rem;color:var(--fg-3);line-height:1.5;margin-bottom:0.3rem;white-space:pre-line;">${n.message}</div>
         ${n.status ? `<span style="font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.2em 0.55em;border-radius:5px;">${n.status.replace('inprogress','in progress').replace(/_/g,' ')}</span>` : ''}
@@ -2764,6 +2717,17 @@ async function readNotif(id, n) {
     if (panel) panel.style.display = 'none';
     showSection('bookings', null);
     setTimeout(() => openBookingDetails(n.booking_id), 150);
+  } else if (n.return_request_id) {
+    // Opening a claim notification lands on that specific claim in Screen 3
+    // (My Requests), not just the returns tab.
+    notifOpen = false;
+    const panel = document.getElementById('notif-panel');
+    if (panel) panel.style.display = 'none';
+    showSection('returns', null);
+    setTimeout(() => {
+      setReturnsTab('requests');
+      openReturnDetails(n.return_request_id);
+    }, 150);
   }
 }
 
@@ -3357,6 +3321,7 @@ const returnsData = {
     id: {{ r.id }},
     kind: '{{ r.kind }}',
     subject: {{ r.subject_label|tojson }},
+    origin: {{ r.origin_label|tojson }},
     reasons: {{ (r.reasons.split(',') if r.reasons else [])|tojson }},
     other_reason_text: {{ (r.other_reason_text or '')|tojson }},
     desired_outcome: '{{ r.desired_outcome }}',
@@ -3367,7 +3332,18 @@ const returnsData = {
     decision_reason: {{ (r.decision_reason or '')|tojson }},
     resolution: {{ (r.resolution or '')|tojson }},
     refund_amount: {{ r.refund_amount if r.refund_amount else 'null' }},
-    created_at: '{{ r.created_at.strftime("%b %d, %Y at %I:%M %p") }}'
+    awaiting_customer_info: {{ 'true' if r.awaiting_customer_info else 'false' }},
+    info_request_note: {{ (r.info_request_note or '')|tojson }},
+    info_provided_at: {{ ("'" + r.info_provided_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.info_provided_at else 'null' }},
+    item_returned: {{ 'true' if r.item_returned else 'false' }},
+    item_returned_at: {{ ("'" + r.item_returned_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.item_returned_at else 'null' }},
+    redo_date: {{ ("'" + r.redo_date.strftime("%A, %b %d") + "'") if r.redo_date else 'null' }},
+    redo_time: {{ ("'" + r.redo_time.strftime("%I:%M %p").lstrip('0') + "'") if r.redo_time else 'null' }},
+    redo_mechanic_name: {{ (r.redo_mechanic_name or '')|tojson }},
+    created_at: '{{ r.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
+    decided_at: {{ ("'" + r.decided_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.decided_at else 'null' }},
+    resolved_at: {{ ("'" + r.resolved_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.resolved_at else 'null' }},
+    cancelled_at: {{ ("'" + r.cancelled_at.strftime("%b %d, %Y at %I:%M %p") + "'") if r.cancelled_at else 'null' }}
   }{% if not loop.last %},{% endif %}
   {% endfor %}
 };
@@ -3419,6 +3395,23 @@ const RETURN_REASONS = {
 };
 
 // ── Screen 1: what can be claimed ──
+let _returnsActiveTab = 'claim';
+
+function setReturnsTab(tab) {
+  _returnsActiveTab = tab;
+  const isClaim = tab === 'claim';
+  document.getElementById('returns-tab-claim').style.display = isClaim ? 'block' : 'none';
+  document.getElementById('returns-tab-requests').style.display = isClaim ? 'none' : 'block';
+  document.getElementById('returns-tab-btn-claim').style.borderBottomColor = isClaim ? 'var(--brand-red)' : 'transparent';
+  document.getElementById('returns-tab-btn-claim').style.color = isClaim ? 'var(--fg-1)' : 'var(--fg-3)';
+  document.getElementById('returns-tab-btn-requests').style.borderBottomColor = isClaim ? 'transparent' : 'var(--brand-red)';
+  document.getElementById('returns-tab-btn-requests').style.color = isClaim ? 'var(--fg-3)' : 'var(--fg-1)';
+  document.getElementById('returns-tab-sub').textContent = isClaim
+    ? 'What can be claimed — pick an order or a completed service to start a request.'
+    : 'Everything you have filed, newest first.';
+  if (isClaim) renderClaimableLists(); else renderMyRequests();
+}
+
 function renderClaimableLists() {
   renderClaimableOrders();
   renderClaimableBookings();
@@ -3820,90 +3813,222 @@ async function doSubmitReturnForm(outcome, itemRows, reasonTicks, otherText) {
   btn.textContent = 'Submit Request';
 }
 
-// ── Request details / history ──
-const RETURN_STATUS_COLORS = {
-  submitted:     { bg: '#fef9c3', color: '#713f12', border: '#eab308' },
-  under_review:  { bg: '#e0e7ff', color: '#3730a3', border: '#6366f1' },
-  approved:      { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
-  denied:        { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
-  resolved:      { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
-  cancelled:     { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
+// ── Screen 3: My Requests ──
+// One shared vocabulary for both sides — the customer and the admin must
+// never be looking at two different names for the same state. This exact
+// function (and its 11 labels) is duplicated verbatim in
+// admin_dashboard.html; keep the two in lockstep.
+function returnStatusLabel(r) {
+  if (r.status === 'submitted') return 'Submitted';
+  if (r.awaiting_customer_info) return 'Waiting on you';
+  if (r.status === 'under_review') return 'Under review';
+  if (r.status === 'denied') return 'Declined';
+  if (r.status === 'cancelled') return 'Cancelled';
+  if (r.status === 'approved') {
+    if (r.kind === 'product' && !r.item_returned) return 'Waiting for your item';
+    if (r.kind === 'service' && r.resolution === 'redo_service' && r.redo_date) return 'Back job booked';
+    return 'Approved';
+  }
+  if (r.status === 'resolved') {
+    if (r.resolution === 'refund') return 'Refunded';
+    if (r.resolution === 'replacement') return 'Replacement on the way';
+    return 'Closed';
+  }
+  return r.status;
+}
+
+const RETURN_STATUS_LABEL_COLORS = {
+  'Submitted':              { bg: '#fef9c3', color: '#713f12', border: '#eab308' },
+  'Under review':           { bg: '#e0e7ff', color: '#3730a3', border: '#6366f1' },
+  'Waiting on you':         { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
+  'Approved':               { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
+  'Waiting for your item':  { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
+  'Replacement on the way': { bg: '#cffafe', color: '#155e75', border: '#06b6d4' },
+  'Back job booked':        { bg: '#ede9fe', color: '#5b21b6', border: '#8b5cf6' },
+  'Refunded':               { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
+  'Declined':               { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
+  'Closed':                 { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
+  'Cancelled':              { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
 };
-let _currentReturnDetailId = null;
 
-function openReturnDetails(id) {
-  const r = returnsData[id];
-  if (!r) return;
-  _currentReturnDetailId = id;
+function returnOutcomeLine(r) {
+  const opt = (RETURN_OUTCOMES[r.kind] || []).find(o => o.value === r.desired_outcome);
+  const title = opt ? opt.title : r.desired_outcome.replace(/_/g, ' ');
+  return (r.desired_outcome === 'refund' && r.requested_refund_amount)
+    ? `${title} (₱${Number(r.requested_refund_amount).toFixed(2)})` : title;
+}
 
-  document.getElementById('rd-ref').textContent = 'RMA-' + String(r.id).padStart(3, '0');
-  document.getElementById('rd-subject').textContent = (r.kind === 'product' ? 'Product: ' : 'Service: ') + r.subject;
+// Customer-language timeline — what happened, in plain words, not a system log.
+function returnTimelineEntries(r) {
+  const entries = [{ time: r.created_at, text: `You filed ${r.kind === 'product' ? 'a return' : 'a warranty claim'} for ${r.subject}.` }];
 
-  const sc = RETURN_STATUS_COLORS[r.status] || RETURN_STATUS_COLORS.submitted;
-  document.getElementById('rd-status-badge').innerHTML = `
-    <span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.4em 0.9em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
-      ${r.status.replace('_', ' ')}
-    </span>`;
+  if (r.status === 'submitted') {
+    entries.push({ time: r.created_at, text: 'Waiting for the shop to start reviewing.' });
+  }
+  if (r.status === 'under_review' || (r.awaiting_customer_info || r.info_provided_at)) {
+    entries.push({ time: r.created_at, text: 'The shop is checking your photos and the order record.' });
+  }
+  if (r.awaiting_customer_info) {
+    entries.push({ time: r.created_at, text: r.info_request_note || 'The shop asked for more information before it can decide.' });
+  }
+  if (r.info_provided_at) {
+    entries.push({ time: r.info_provided_at, text: 'You sent the extra information the shop asked for.' });
+  }
+  if (r.status === 'denied') {
+    entries.push({ time: r.decided_at, text: `Not approved. ${r.decision_reason || ''}`.trim() });
+  }
+  if (r.status === 'approved' || r.status === 'resolved') {
+    if (r.desired_outcome === 'refund' || r.resolution === 'refund') {
+      if (r.kind === 'product') {
+        entries.push({ time: r.decided_at, text: 'Approved — return the item to the shop so we can release the refund.' });
+      } else {
+        entries.push({ time: r.decided_at, text: 'Approved — your refund is being prepared.' });
+      }
+    } else if (r.resolution === 'redo_service' || r.desired_outcome === 'redo_service') {
+      entries.push({ time: r.decided_at, text: 'Approved — the back job will be scheduled with the shop.' });
+    } else if (r.resolution === 'replacement' || r.desired_outcome === 'replacement') {
+      entries.push({ time: r.decided_at, text: 'Approved — return the item to the shop so we can send the replacement.' });
+    }
+  }
+  if (r.item_returned_at) {
+    entries.push({ time: r.item_returned_at, text: 'The shop marked your returned item as received.' });
+  }
+  if (r.redo_date && r.redo_time) {
+    entries.push({ time: r.decided_at, text: `Back job booked for ${r.redo_date}, ${r.redo_time}${r.redo_mechanic_name ? ' with ' + r.redo_mechanic_name : ''}.` });
+  }
+  if (r.status === 'resolved') {
+    if (r.resolution === 'refund' && r.refund_amount) {
+      entries.push({ time: r.resolved_at, text: `₱${Number(r.refund_amount).toFixed(2)} refunded to your original payment method.` });
+    } else if (r.resolution === 'replacement') {
+      entries.push({ time: r.resolved_at, text: 'Your replacement has shipped.' });
+    } else if (r.resolution === 'redo_service') {
+      entries.push({ time: r.resolved_at, text: 'Your back job is complete.' });
+    } else {
+      entries.push({ time: r.resolved_at, text: 'This request is done.' });
+    }
+  }
+  if (r.status === 'cancelled') {
+    entries.push({ time: r.cancelled_at, text: 'You cancelled this request.' });
+  }
+  return entries;
+}
 
+function myRequestCardHTML(r) {
+  const ref = 'RMA-' + String(r.id).padStart(3, '0');
+  const statusLabel = returnStatusLabel(r);
+  const sc = RETURN_STATUS_LABEL_COLORS[statusLabel] || RETURN_STATUS_LABEL_COLORS['Submitted'];
   const reasonLabels = r.reasons.filter(c => c !== 'other').map(c => {
     const found = (RETURN_REASONS[r.kind] || []).find(x => x[0] === c);
     return found ? found[1] : c;
   });
   if (r.other_reason_text) reasonLabels.push(r.other_reason_text);
-  document.getElementById('rd-category').textContent = reasonLabels.join('; ') || '—';
 
-  const outcomeOpt = (RETURN_OUTCOMES[r.kind] || []).find(o => o.value === r.desired_outcome);
-  document.getElementById('rd-outcome').textContent = outcomeOpt
-    ? (r.desired_outcome === 'refund' && r.requested_refund_amount ? `${outcomeOpt.title} (₱${Number(r.requested_refund_amount).toFixed(2)})` : outcomeOpt.title)
-    : r.desired_outcome.replace(/_/g, ' ');
+  const photosHTML = (r.photos && r.photos.length)
+    ? `<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.6rem;">${r.photos.map(p =>
+        `<a href="/static/return_evidence/${p}" target="_blank"><img src="/static/return_evidence/${p}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);"></a>`
+      ).join('')}</div>` : '';
 
-  const mechWrap = document.getElementById('rd-mechanic-wrap');
-  if (r.requested_mechanic_name) {
-    mechWrap.style.display = 'block';
-    mechWrap.textContent = `Requested (not guaranteed): ${r.requested_mechanic_name} to handle it`;
-  } else {
-    mechWrap.style.display = 'none';
-  }
+  const timeline = returnTimelineEntries(r);
+  const timelineHTML = `<div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid var(--line-2);display:flex;flex-direction:column;gap:0.45rem;">
+    ${timeline.map(e => `
+      <div style="display:flex;gap:0.6rem;font-size:0.78rem;">
+        <div style="color:var(--fg-3);white-space:nowrap;min-width:118px;">${e.time || ''}</div>
+        <div style="color:var(--fg-2);line-height:1.5;">${e.text}</div>
+      </div>`).join('')}
+  </div>`;
 
-  const photosWrap = document.getElementById('rd-photos-wrap');
-  if (r.photos && r.photos.length) {
-    photosWrap.style.display = 'block';
-    document.getElementById('rd-photos').innerHTML = r.photos.map(p =>
-      `<a href="/static/return_evidence/${p}" target="_blank"><img src="/static/return_evidence/${p}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);"></a>`
-    ).join('');
-  } else {
-    photosWrap.style.display = 'none';
-  }
+  const cancelHTML = (r.status === 'submitted' || r.status === 'under_review') ? `
+    <button type="button" onclick="cancelReturnRequest(${r.id})" style="margin-top:0.75rem;padding:0.5rem 0.9rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#b91c1c;font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Cancel This Request</button>
+  ` : '';
 
-  const decisionWrap = document.getElementById('rd-decision-wrap');
-  if (r.status === 'denied' || r.status === 'approved' || r.status === 'resolved') {
-    decisionWrap.style.display = 'block';
-    const resolutionOpt = r.resolution ? (RETURN_OUTCOMES[r.kind] || []).find(o => o.value === r.resolution) : null;
-    const outcomeText = resolutionOpt ? resolutionOpt.title : (r.resolution || '').replace(/_/g, ' ');
-    const amountText = r.resolution === 'refund' && r.refund_amount ? ` (₱${Number(r.refund_amount).toFixed(2)})` : '';
-    const statusLine = r.status === 'denied' ? 'Not approved' :
-      (r.status === 'resolved' ? `Done — ${outcomeText}${amountText}` : `Approved — ${outcomeText}${amountText}`);
-    document.getElementById('rd-decision').innerHTML = `<strong>${statusLine}</strong><br>${r.decision_reason || ''}`;
-  } else {
-    decisionWrap.style.display = 'none';
-  }
+  const infoFormHTML = r.awaiting_customer_info ? `
+    <div style="margin-top:0.85rem;padding:0.85rem;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:#78350f;margin-bottom:0.5rem;">${r.info_request_note || 'The shop needs more information.'}</div>
+      <textarea id="info-text-${r.id}" placeholder="Type your answer here..." style="width:100%;min-height:60px;padding:0.5rem;border:1px solid var(--line-2);border-radius:8px;font-family:inherit;font-size:0.8rem;resize:vertical;"></textarea>
+      <input type="file" id="info-photos-${r.id}" accept="image/*" multiple style="margin-top:0.5rem;font-size:0.76rem;">
+      <button type="button" onclick="submitReturnInfo(${r.id})" style="display:block;margin-top:0.6rem;padding:0.5rem 0.9rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Send Reply</button>
+    </div>
+  ` : '';
 
-  document.getElementById('rd-cancel-wrap').style.display =
-    (r.status === 'submitted' || r.status === 'under_review') ? 'block' : 'none';
+  return `
+    <div class="card" id="my-request-card-${r.id}" style="padding:1.1rem 1.25rem;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--brand-red);letter-spacing:0.04em;">${ref}</div>
+          <div style="font-size:0.8rem;color:var(--fg-1);font-weight:600;">${r.kind === 'product' ? 'Spare part' : 'Service'} — ${r.subject}</div>
+          <div style="font-size:0.74rem;color:var(--fg-3);">${r.origin}</div>
+        </div>
+        <span style="font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.4em 0.8em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};white-space:nowrap;">${statusLabel}</span>
+      </div>
 
-  document.getElementById('modal-return-details').classList.add('open');
+      <div style="margin-top:0.7rem;font-size:0.82rem;color:var(--fg-1);"><strong>Asked for:</strong> ${returnOutcomeLine(r)}${r.requested_mechanic_name ? ` — requested ${r.requested_mechanic_name} (not guaranteed)` : ''}</div>
+      <div style="margin-top:0.25rem;font-size:0.8rem;color:var(--fg-2);"><strong>Why:</strong> ${reasonLabels.join('; ') || '—'}</div>
+      ${photosHTML}
+      ${infoFormHTML}
+      ${timelineHTML}
+      ${cancelHTML}
+    </div>`;
 }
 
-async function cancelReturnRequest() {
-  if (!_currentReturnDetailId) return;
+function renderMyRequests() {
+  const list = document.getElementById('my-requests-list');
+  const all = Object.values(returnsData).sort((a, b) => b.id - a.id);
+  if (!all.length) {
+    list.innerHTML = `<div class="card" style="padding:2rem 1rem;text-align:center;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);margin-bottom:0.4rem;">Nothing filed yet</div>
+      <div style="font-size:0.82rem;color:var(--fg-3);margin-bottom:0.9rem;">Requests you file for an order or a completed service will show up here.</div>
+      <button type="button" class="pic-upload-btn" onclick="setReturnsTab('claim')" style="padding:0.55rem 1.1rem;">See What Can Be Claimed</button>
+    </div>`;
+    return;
+  }
+  list.innerHTML = all.map(myRequestCardHTML).join('');
+}
+
+function openReturnDetails(id) {
+  const r = returnsData[id];
+  if (!r) return;
+  setReturnsTab('requests');
+  setTimeout(() => {
+    const el = document.getElementById(`my-request-card-${id}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const prevTransition = el.style.transition;
+    el.style.transition = 'box-shadow 0.3s ease';
+    el.style.boxShadow = '0 0 0 3px var(--brand-red)';
+    setTimeout(() => { el.style.boxShadow = ''; el.style.transition = prevTransition; }, 1600);
+  }, 60);
+}
+
+async function cancelReturnRequest(id) {
   if (!confirm('Cancel this request? You can file a new one for this order or service afterward.')) return;
   try {
-    const res = await fetch(`/returns/${_currentReturnDetailId}/cancel`, { method: 'POST' });
+    const res = await fetch(`/returns/${id}/cancel`, { method: 'POST' });
     const data = await res.json();
     if (data.success) {
       window.location.reload();
     } else {
       alert(data.error || 'Could not cancel this request.');
+    }
+  } catch (e) {
+    alert('Network error — please try again.');
+  }
+}
+
+async function submitReturnInfo(id) {
+  const textEl = document.getElementById(`info-text-${id}`);
+  const photosEl = document.getElementById(`info-photos-${id}`);
+  const fd = new FormData();
+  fd.append('text', textEl ? textEl.value : '');
+  if (photosEl && photosEl.files) {
+    for (const f of photosEl.files) fd.append('photos', f);
+  }
+  try {
+    const res = await fetch(`/returns/${id}/add-info`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Could not send your reply.');
     }
   } catch (e) {
     alert('Network error — please try again.');
@@ -4041,25 +4166,23 @@ function renderNextInLine() {
   el.innerHTML = `<strong>${free.name}</strong> · ${free.specialization}, next available for ${windowText}`;
 }
 
-// Loose keyword match between a mechanic's specialization and the customer's
-// selected services — e.g. specialization "Brakes" matches "Brake Cleaning"
-// and "Brake Pad Replacement". Returns the matching service names.
-// Trims a trailing "s" so "Brakes" (a specialization category) still matches
-// "Brake Cleaning" / "Brake Pad Replacement" (singular in the service names).
-function singularize(word) {
-  return word.length > 4 && word.endsWith('s') ? word.slice(0, -1) : word;
-}
+// The six specializations, matched against the service catalogue — the
+// overlaps (e.g. FI Cleaning under both General Service and Electronics &
+// Diagnostics) are deliberate, so this is an exact lookup against the
+// declared coverage table, not a guess at word roots. Identical to
+// SPECIALIZATION_COVERAGE in service_duration.py; keep the two in lockstep.
+const SPECIALIZATION_COVERAGE = {
+  'General Service': ['Change Oil', 'Full Maintenance Package', 'CVT Upgrade', 'CVT Cleaning', 'FI Cleaning'],
+  'Engine Overhaul': ['Overhaul', 'Top Overhaul', 'Tune-Up', 'Throttle Body Cleaning'],
+  'Electronics & Diagnostics': ['Diagnostic (API Tech / MST)', 'Remap', 'FI Cleaning', 'Throttle Body Cleaning'],
+  'Electrical': ['General Rewiring', 'Horn Installation', 'Diagnostic (API Tech / MST)'],
+  'Brakes': ['Brake Cleaning', 'Change Brake Pad'],
+  'Suspension & Steering': ['Suspension Tuning', 'Ball Race Installation', 'Rubber Link Stopper'],
+};
 
 function specializationMatches(mechanic, serviceNames) {
-  const spec = (mechanic.specialization || '').toLowerCase().trim();
-  if (!spec) return [];
-  const specWords = spec.split(/\s+/).filter(w => w.length > 3).map(singularize);
-  return serviceNames.filter(name => {
-    const n = name.toLowerCase();
-    if (n.includes(spec)) return true;
-    const nWords = n.split(/\s+/).map(singularize);
-    return specWords.some(sw => nWords.some(nw => nw.includes(sw) || sw.includes(nw)));
-  });
+  const covered = SPECIALIZATION_COVERAGE[mechanic.specialization] || [];
+  return serviceNames.filter(name => covered.includes(name));
 }
 
 function serviceDurationMinutes(name) {

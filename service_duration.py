@@ -37,6 +37,26 @@ MULTIDAY_MIN_DAYS = 3   # both multi-day services currently share this range —
 MULTIDAY_MAX_DAYS = 5   # if a future one needs a different range, move these onto the Service row
 MULTIDAY_LABEL = f'{MULTIDAY_MIN_DAYS}–{MULTIDAY_MAX_DAYS} working days'
 
+# The six mechanic specializations, matched against the service catalogue.
+# The overlaps are deliberate — coverage is scored, not exclusive (e.g. FI
+# Cleaning sits under both General Service and Electronics & Diagnostics).
+# This is the single source both the admin specialization dropdown and the
+# customer booking flow's "best mechanic for this job" recommendation read —
+# changing a mechanic's specialization changes what they're recommended for
+# immediately, since neither side caches a copy of this mapping.
+MECHANIC_SPECIALIZATIONS = [
+    'General Service', 'Engine Overhaul', 'Electronics & Diagnostics',
+    'Electrical', 'Brakes', 'Suspension & Steering',
+]
+SPECIALIZATION_COVERAGE = {
+    'General Service': ['Change Oil', 'Full Maintenance Package', 'CVT Upgrade', 'CVT Cleaning', 'FI Cleaning'],
+    'Engine Overhaul': ['Overhaul', 'Top Overhaul', 'Tune-Up', 'Throttle Body Cleaning'],
+    'Electronics & Diagnostics': ['Diagnostic (API Tech / MST)', 'Remap', 'FI Cleaning', 'Throttle Body Cleaning'],
+    'Electrical': ['General Rewiring', 'Horn Installation', 'Diagnostic (API Tech / MST)'],
+    'Brakes': ['Brake Cleaning', 'Change Brake Pad'],
+    'Suspension & Steering': ['Suspension Tuning', 'Ball Race Installation', 'Rubber Link Stopper'],
+}
+
 
 def ph_now():
     return datetime.utcnow() + timedelta(hours=8)
