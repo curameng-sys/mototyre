@@ -6,7 +6,8 @@ only the new duration columns are set."""
 import pymysql
 from service_duration import SEED_DURATIONS, DEFAULT_DURATION_MIN
 
-conn = pymysql.connect(host='localhost', user='root', password='', database='mototyre')
+from db_conn import get_pymysql_connection
+conn = get_pymysql_connection()
 cursor = conn.cursor()
 
 for table, col, definition in [

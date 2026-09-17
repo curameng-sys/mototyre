@@ -14,7 +14,8 @@ the app keeps them independent."""
 
 import pymysql
 
-conn = pymysql.connect(host='localhost', user='root', password='', database='mototyre')
+from db_conn import get_pymysql_connection
+conn = get_pymysql_connection()
 cursor = conn.cursor()
 
 # Rename the existing columns to assigned_*

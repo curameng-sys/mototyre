@@ -4,7 +4,8 @@ customer claim against either an order (product arrived wrong) or a booking
 
 import pymysql
 
-conn = pymysql.connect(host='localhost', user='root', password='', database='mototyre')
+from db_conn import get_pymysql_connection
+conn = get_pymysql_connection()
 cursor = conn.cursor()
 
 try:
