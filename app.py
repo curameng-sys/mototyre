@@ -34,7 +34,7 @@ import threading
 # One source of truth for the database location — every other place that
 # needs host/user/password (like the local-dev auto-create below) derives it
 # from this instead of keeping a second, separately-maintained copy.
-DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre')
+DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre').strip()
 
 def _ensure_database():
     """Local-dev convenience only: creates the database if it doesn't exist

@@ -39,7 +39,7 @@ import threading
 
 # Same DATABASE_URL env var and same default as app.py — one database, read
 # identically by both apps, never two separately-maintained connection strings.
-DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre')
+DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre').strip()
 
 admin_app = Flask(__name__, template_folder='templates', static_folder='static')
 # A hosted database (Aiven, etc.) requires an SSL connection; a local XAMPP

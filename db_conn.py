@@ -8,7 +8,7 @@ import os
 from urllib.parse import urlparse
 import pymysql
 
-DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre')
+DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre').strip()
 
 
 def get_pymysql_connection():
