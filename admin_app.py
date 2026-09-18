@@ -526,6 +526,23 @@ def booking_finish_time(b):
 admin_app.jinja_env.globals['booking_finish_time'] = booking_finish_time
 
 
+def is_booking_overdue(b, now):
+    """A booking is overdue when its window has fully passed but nobody ever
+    marked it completed or cancelled — the shop-side signal that a no-show
+    or a forgotten status update needs a human look. Multi-day jobs (Full/Top
+    Overhaul) run on a different, days-long lifecycle, so they're excluded
+    here rather than flagged the moment their drop-off slot passes."""
+    if b.is_multiday:
+        return False
+    if b.status not in ('confirmed', 'in_progress', 'inprogress'):
+        return False
+    finish = booking_finish_time(b)
+    return datetime.combine(b.date, finish) < now
+
+
+admin_app.jinja_env.globals['is_booking_overdue'] = is_booking_overdue
+
+
 def _generate_otp(length=6):
     return "".join(random.choices(string.digits, k=length))
 

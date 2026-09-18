@@ -721,6 +721,9 @@
                   <td>
                     {% if all_same_status %}
                       <span class="badge badge-{{ b.status|replace('_','') }}">{{ b.status|replace('_',' ')|title }}</span>
+                      {% if is_booking_overdue(b, now) %}
+                      <span class="badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;margin-left:0.3rem;" title="The scheduled time has passed without this being marked completed or cancelled.">Overdue</span>
+                      {% endif %}
                     {% else %}
                       <span style="font-size:0.7rem;color:var(--muted);">Mixed statuses</span>
                     {% endif %}
