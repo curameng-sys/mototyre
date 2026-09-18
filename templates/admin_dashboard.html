@@ -3173,6 +3173,25 @@
         </div>`;
     }
 
+    function hourLabel(h) {
+      const period = h < 12 ? 'a' : 'p';
+      let hh = h % 12;
+      if (hh === 0) hh = 12;
+      return hh + period;
+    }
+
+    const hourHeader = `
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem;">
+        <div style="width:110px;flex-shrink:0;"></div>
+        <div style="position:relative;flex:1;height:14px;">
+          ${hourMarks.map((h, idx) => {
+            const isFirst = idx === 0, isLast = idx === hourMarks.length - 1;
+            const align = isFirst ? 'left:0;' : isLast ? 'left:100%;transform:translateX(-100%);' : `left:${pct(h * 60)}%;transform:translateX(-50%);`;
+            return `<div style="position:absolute;top:0;${align}font-size:0.62rem;color:var(--muted);font-weight:700;white-space:nowrap;">${hourLabel(h)}</div>`;
+          }).join('')}
+        </div>
+      </div>`;
+
     const rows = data.timeline.map(t => rowHTML(t.mechanic, t.specialization, t.bars)).join('');
     const unassignedRow = data.unassigned_bars.length ? rowHTML('Unassigned', null, data.unassigned_bars) : '';
     const freeLine = data.free_all_day.length
@@ -3182,7 +3201,7 @@
     return `
       <div style="margin-bottom:1.3rem;">
         <div style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Mechanic Timeline</div>
-        ${rows}${unassignedRow}${freeLine}
+        ${hourHeader}${rows}${unassignedRow}${freeLine}
       </div>`;
   }
 
