@@ -298,7 +298,12 @@
     .svc-row:last-child { border-bottom-color: transparent; }
     .svc-row:hover { background: var(--bg-subtle); }
     .svc-row.selected { background: rgba(208,0,25,0.08); border: 1.5px solid var(--brand-red); }
-    .svc-row input[type="checkbox"] { flex-shrink: 0; width: 16px; height: 16px; margin-top: 0.15rem; accent-color: var(--brand-red); cursor: pointer; }
+    .svc-row input[type="checkbox"].svc-check-input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+    .svc-check-box { flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--line-2); background: var(--bg-page); display: flex; align-items: center; justify-content: center; transition: background 0.15s, border-color 0.15s; align-self: center; }
+    .svc-check-box svg { opacity: 0; transform: scale(0.5); transition: opacity 0.15s, transform 0.15s; color: #fff; }
+    .svc-check-input:checked + .svc-check-box { background: var(--brand-red); border-color: var(--brand-red); }
+    .svc-check-input:checked + .svc-check-box svg { opacity: 1; transform: scale(1); }
+    .svc-row:hover .svc-check-box { border-color: var(--brand-red-border); }
     .svc-row .svc-name { flex: 1; min-width: 0; text-align: left; line-height: 1.4; word-break: break-word; align-self: center; }
     .svc-row .svc-dur { flex-shrink: 0; font-family: 'Syne', sans-serif; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em; color: var(--fg-3); background: var(--bg-subtle); border: 1px solid var(--line-2); border-radius: 99px; padding: 0.2rem 0.55rem; white-space: nowrap; align-self: center; }
     .svc-row.selected .svc-dur { color: var(--brand-red); border-color: var(--brand-red-border); background: var(--bg-page); }
@@ -2805,8 +2810,16 @@ function renderServiceChecklist(items) {
 
     const cb = document.createElement('input');
     cb.type = 'checkbox';
+    cb.className = 'svc-check-input';
     cb.checked = checked;
-    cb.onchange = () => toggleServiceSelection(s.name, cb.checked);
+    cb.onchange = () => {
+      label.classList.toggle('selected', cb.checked);
+      toggleServiceSelection(s.name, cb.checked);
+    };
+
+    const checkBox = document.createElement('span');
+    checkBox.className = 'svc-check-box';
+    checkBox.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'svc-name';
@@ -2817,6 +2830,7 @@ function renderServiceChecklist(items) {
     durSpan.textContent = s.duration_label;
 
     label.appendChild(cb);
+    label.appendChild(checkBox);
     label.appendChild(nameSpan);
     label.appendChild(durSpan);
     wrap.appendChild(label);
