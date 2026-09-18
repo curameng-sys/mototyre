@@ -292,6 +292,16 @@
     .mech-toggle-card .mech-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; color: var(--fg-1); }
     .mech-toggle-card .mech-card-sub { font-size: 0.68rem; color: var(--fg-3); }
     .mech-toggle-card.active { background: rgba(208,0,25,0.1); border-color: var(--brand-red); }
+
+    /* ── SERVICE CHECKLIST ROW ── */
+    .svc-row { display: flex; align-items: flex-start; gap: 0.65rem; padding: 0.6rem 0.85rem; cursor: pointer; font-size: 0.85rem; color: var(--fg-1); margin: 2px; border-radius: 8px; border: 1.5px solid transparent; border-bottom: 1.5px solid var(--line-1); transition: background 0.15s, border-color 0.15s; text-align: left; }
+    .svc-row:last-child { border-bottom-color: transparent; }
+    .svc-row:hover { background: var(--bg-subtle); }
+    .svc-row.selected { background: rgba(208,0,25,0.08); border: 1.5px solid var(--brand-red); }
+    .svc-row input[type="checkbox"] { flex-shrink: 0; width: 16px; height: 16px; margin-top: 0.15rem; accent-color: var(--brand-red); cursor: pointer; }
+    .svc-row .svc-name { flex: 1; min-width: 0; text-align: left; line-height: 1.4; word-break: break-word; align-self: center; }
+    .svc-row .svc-dur { flex-shrink: 0; font-family: 'Syne', sans-serif; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em; color: var(--fg-3); background: var(--bg-subtle); border: 1px solid var(--line-2); border-radius: 99px; padding: 0.2rem 0.55rem; white-space: nowrap; align-self: center; }
+    .svc-row.selected .svc-dur { color: var(--brand-red); border-color: var(--brand-red-border); background: var(--bg-page); }
     .mech-toggle-card.active .mech-card-title { color: var(--brand-red); }
 
     .mech-picker-item { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.5rem 0.7rem; border: 1.5px solid var(--line-2); border-radius: 8px; cursor: pointer; background: var(--bg-page); transition: all 0.15s; }
@@ -2791,12 +2801,7 @@ function renderServiceChecklist(items) {
     const label = document.createElement('label');
     // Border is always 1.5px so a pick never shifts the row layout — only its
     // color/fill changes, which is what makes a selected row pop at a glance.
-    label.style.cssText = 'display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.85rem;'
-      + 'cursor:pointer;font-size:0.85rem;color:var(--fg-1);margin:2px;border-radius:8px;'
-      + 'transition:background 0.15s,border-color 0.15s;'
-      + (checked
-          ? 'background:rgba(208,0,25,0.1);border:1.5px solid var(--brand-red);'
-          : 'background:transparent;border:1.5px solid transparent;border-bottom:1.5px solid var(--line-1);border-radius:0;');
+    label.className = 'svc-row' + (checked ? ' selected' : '');
 
     const cb = document.createElement('input');
     cb.type = 'checkbox';
@@ -2804,11 +2809,11 @@ function renderServiceChecklist(items) {
     cb.onchange = () => toggleServiceSelection(s.name, cb.checked);
 
     const nameSpan = document.createElement('span');
-    nameSpan.style.flex = '1';
+    nameSpan.className = 'svc-name';
     nameSpan.textContent = s.name;
 
     const durSpan = document.createElement('span');
-    durSpan.style.cssText = 'font-size:0.72rem;color:var(--fg-3);white-space:nowrap;';
+    durSpan.className = 'svc-dur';
     durSpan.textContent = s.duration_label;
 
     label.appendChild(cb);
