@@ -152,8 +152,9 @@ def _send_gmail(to, subject, html_body):
     def _do_send():
         try:
             _get_gmail_service().users().messages().send(userId="me", body={"raw": raw}).execute()
+            print(f"[GMAIL ADMIN] Sent to {to}: {subject}", flush=True)
         except Exception as e:
-            print(f"[GMAIL ADMIN] Send failed: {e}")
+            print(f"[GMAIL ADMIN] Send failed to {to}: {e}", flush=True)
     threading.Thread(target=_do_send, daemon=True).start()
 
 def send_otp_email(email, otp, purpose="login"):

@@ -74,9 +74,9 @@ def send_gmail_html(to: str, subject: str, html_body: str):
             _get_service().users().messages().send(
                 userId="me", body={"raw": raw}
             ).execute()
-            print(f"[GMAIL] Sent to {to}: {subject}")
+            print(f"[GMAIL] Sent to {to}: {subject}", flush=True)
         except Exception as e:
-            print(f"[GMAIL] Failed to {to}: {e}")
+            print(f"[GMAIL] Failed to {to}: {e}", flush=True)
 
     threading.Thread(target=_do, daemon=True).start()
 
