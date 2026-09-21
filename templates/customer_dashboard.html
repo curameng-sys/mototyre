@@ -352,6 +352,7 @@
     .btn-cancel-modal:hover { background: var(--line-1); }
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastPop { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); border-radius: 3px; }
@@ -4443,15 +4444,15 @@ function showToast(msg, type) {
     : type === 'warning' ? '#d97706'
     : '#2563eb';
   const t = document.createElement('div');
-  t.style.cssText = `position:fixed;bottom:1.75rem;left:50%;transform:translateX(-50%);
-    background:var(--bg-page);border:1px solid var(--line-2);border-left:3px solid ${accent};
-    border-radius:10px;padding:0.7rem 1.1rem;font-family:'Syne',sans-serif;font-size:0.82rem;
-    color:var(--fg-1);box-shadow:0 4px 20px rgba(28,24,20,0.25);z-index:9999;
-    animation:fadeUp 0.2s ease both;white-space:nowrap;transition:opacity 0.4s;`;
+  t.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:var(--bg-page);border:1px solid var(--line-2);border-left:5px solid ${accent};
+    border-radius:14px;padding:1.25rem 2rem;font-family:'Syne',sans-serif;font-size:1.1rem;
+    font-weight:600;color:var(--fg-1);box-shadow:0 10px 40px rgba(28,24,20,0.35);z-index:9999;
+    animation:toastPop 0.25s ease both;max-width:min(90vw,420px);text-align:center;transition:opacity 0.4s;`;
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; }, 3500);
-  setTimeout(() => t.remove(), 4000);
+  setTimeout(() => { t.style.opacity = '0'; }, 2200);
+  setTimeout(() => t.remove(), 2600);
 }
 
 /* ══ REALTIME POLLING ══ */
