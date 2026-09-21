@@ -1127,6 +1127,16 @@ def _return_origin_label(rr):
     return f"{booking.service} — {booking.date.strftime('%b %d, %Y')}" if booking else '—'
 
 
+def booking_service_price(service_str):
+    """Sum the catalog price for every service in a booking's (possibly combined,
+    comma-separated) service string — a plain name lookup misses combo bookings."""
+    names = split_service_names(service_str)
+    if not names:
+        return 0
+    found = {s.name: s.price for s in Service.query.filter(Service.name.in_(names), Service.is_active == True).all()}
+    return sum(found.get(n, 0) for n in names)
+
+
 def _resolve_service_combo(names):
     """names: requested service names. Looks them up against the active Service
     catalog and returns service_duration.combine_services()'s dict — unmatched
@@ -2134,19 +2144,7 @@ def pay_booking(bid):
     if booking.status not in ['pending', 'confirmed']:
         flash('This booking cannot be paid online.', 'warning')
         return redirect(url_for('customer_dashboard'))
-    SERVICE_PRICES = {
-        'Oil Change': 350, 'Tire Change – Front': 150, 'Tire Change – Rear': 150,
-        'Tire Change – Both': 250, 'Brake Inspection': 100, 'Brake Pad Replacement': 300,
-        'Chain Cleaning & Lube': 150, 'Chain Replacement': 400, 'Spark Plug Replacement': 200,
-        'Battery Check & Replacement': 250, 'General Checkup': 200, 'Full Tune-up': 800,
-        'CVT Cleaning': 500, 'FI Cleaning': 600, 'ECU Remapping': 1500,
-        'Full Overhaul': 3000, 'Overhaul': 2500,
-    }
-    amount = 500
-    for service_name, price in SERVICE_PRICES.items():
-        if service_name.lower() in booking.service.lower():
-            amount = price
-            break
+    amount = booking_service_price(booking.service)
     description = f"MotoTyre Booking #{booking.id}: {booking.service}"
     result = create_gcash_payment(amount=amount, description=description, booking_id=booking.id, origin=request.host_url)
     if result["success"]:
