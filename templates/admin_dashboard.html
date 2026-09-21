@@ -4382,7 +4382,7 @@
   function confirmCancelBooking() {
     if (_cancelBookingFormId) {
       document.getElementById('modal-cancel-booking').style.display = 'none';
-      document.getElementById(_cancelBookingFormId).submit();
+      submitBookingStatusForm(_cancelBookingFormId);
     }
   }
 
@@ -4396,7 +4396,30 @@
   function confirmStartService() {
     if (_startServiceFormId) {
       document.getElementById('modal-start-service').style.display = 'none';
-      document.getElementById(_startServiceFormId).submit();
+      submitBookingStatusForm(_startServiceFormId);
+    }
+  }
+
+  // Same endpoint as the modal-less flows below, but as AJAX (X-Requested-With)
+  // so a stray flash message never gets queued into the session and leaking
+  // onto whatever admin page is opened next.
+  async function submitBookingStatusForm(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: new FormData(form),
+      });
+      const data = await res.json();
+      if (data.success) {
+        location.reload();
+      } else {
+        alert(data.error || 'Could not update the booking status.');
+      }
+    } catch (e) {
+      alert('Network error. Please try again.');
     }
   }
 

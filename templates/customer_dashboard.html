@@ -3329,6 +3329,7 @@ async function confirmOrderReceived() {
     _confirmOrderId = null;
     closeModal('modal-order-details');
     openOrderDetails(parseInt(orderId));
+    showToast('Order marked as received!', 'success');
   } else {
     alert(data.message || 'Something went wrong.');
     btn.disabled = false;

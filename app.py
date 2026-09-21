@@ -1494,6 +1494,9 @@ def cart_checkout():
         send_notification(admin.id, 'New Order Received',
             f'{current_user.fullname} placed an order for ₱{total:.2f}.', type='order', status='pending')
 
+    # submitCartOrder() reloads the page on success, so a flash here is picked
+    # up by that reload the same way the profile-update toasts are.
+    flash('Order placed successfully!', 'success')
     return jsonify({'success': True, 'gcash': False})
 
 
