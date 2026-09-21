@@ -821,7 +821,7 @@
               </span>
               <input type="password" name="password" id="password" placeholder="Create a strong password" required
                 minlength="8" maxlength="12"
-                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,12}"
+                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,12}"
                 title="8–12 chars: uppercase, lowercase, number, special char">
               <button type="button" class="pass-toggle" onclick="togglePass('password', this)">SHOW</button>
             </div>
@@ -830,7 +830,7 @@
               <div class="pass-check" id="chk-upper"><div class="dot"></div> Uppercase letter</div>
               <div class="pass-check" id="chk-lower"><div class="dot"></div> Lowercase letter</div>
               <div class="pass-check" id="chk-num">  <div class="dot"></div> Number</div>
-              <div class="pass-check" id="chk-sym">  <div class="dot"></div> Special character (@$!%*?&amp;)</div>
+              <div class="pass-check" id="chk-sym">  <div class="dot"></div> Special character (@$!%*?&amp;_)</div>
             </div>
           </div>
 
@@ -1017,7 +1017,7 @@
     set('chk-upper', /[A-Z]/.test(v));
     set('chk-lower', /[a-z]/.test(v));
     set('chk-num',   /\d/.test(v));
-    set('chk-sym',   /[@$!%*?&]/.test(v));
+    set('chk-sym',   /[@$!%*?&_]/.test(v));
   });
 
   function togglePass(id, btn) {
