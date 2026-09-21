@@ -4434,6 +4434,26 @@ function renderMechanicProfileCard() {
 setMechanicMode('shop'); // default: the first card, per spec
 loadMechanics();
 
+// Global so the order/profile/etc. flash toasts (and confirm-received) can
+// call it too — not just the realtime-polling code below, which used to be
+// the only caller when this lived inside that IIFE.
+function showToast(msg, type) {
+  const accent = (type === 'booking' || type === 'error') ? 'var(--brand-red)'
+    : type === 'success' ? '#16a34a'
+    : type === 'warning' ? '#d97706'
+    : '#2563eb';
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:1.75rem;left:50%;transform:translateX(-50%);
+    background:var(--bg-page);border:1px solid var(--line-2);border-left:3px solid ${accent};
+    border-radius:10px;padding:0.7rem 1.1rem;font-family:'Syne',sans-serif;font-size:0.82rem;
+    color:var(--fg-1);box-shadow:0 4px 20px rgba(28,24,20,0.25);z-index:9999;
+    animation:fadeUp 0.2s ease both;white-space:nowrap;transition:opacity 0.4s;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; }, 3500);
+  setTimeout(() => t.remove(), 4000);
+}
+
 /* ══ REALTIME POLLING ══ */
 (function() {
   const POLL_MS = 20000;
@@ -4443,23 +4463,6 @@ loadMechanics();
   }
   function bookingBadgeClass(status) { return 'badge badge-' + status; }
   function orderBadgeClass(status)   { return 'badge badge-' + status.replace(/_/g, ''); }
-
-  function showToast(msg, type) {
-    const accent = (type === 'booking' || type === 'error') ? 'var(--brand-red)'
-      : type === 'success' ? '#16a34a'
-      : type === 'warning' ? '#d97706'
-      : '#2563eb';
-    const t = document.createElement('div');
-    t.style.cssText = `position:fixed;bottom:1.75rem;left:50%;transform:translateX(-50%);
-      background:var(--bg-page);border:1px solid var(--line-2);border-left:3px solid ${accent};
-      border-radius:10px;padding:0.7rem 1.1rem;font-family:'Syne',sans-serif;font-size:0.82rem;
-      color:var(--fg-1);box-shadow:0 4px 20px rgba(28,24,20,0.25);z-index:9999;
-      animation:fadeUp 0.2s ease both;white-space:nowrap;transition:opacity 0.4s;`;
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; }, 3500);
-    setTimeout(() => t.remove(), 4000);
-  }
 
   function updateBadge(el, cls, text) {
     if (!el) return;
