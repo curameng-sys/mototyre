@@ -2180,6 +2180,7 @@ def payment_success():
             if order and order.status == 'awaiting_payment':
                 order.status = 'confirmed'
                 db.session.commit()
+                flash('GCash payment successful — order confirmed!', 'success')
                 items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
                 _is_ship   = order.delivery_method == 'ship'
                 _dest      = shipping_destination(order.ship_address)
@@ -2203,6 +2204,7 @@ def payment_success():
             if booking and booking.status == 'pending':
                 booking.status = 'confirmed'
                 db.session.commit()
+                flash('GCash payment successful — booking confirmed!', 'success')
         except Exception as e:
             print(f"[payment/success] booking error: {e}")
 
@@ -2247,6 +2249,7 @@ def payment_failed():
                 db.session.commit()
         except:
             db.session.rollback()
+    flash('GCash payment was not completed, so nothing was placed.', 'warning')
     return redirect(safe_return_origin(request.args.get('origin')) + '/customer/dashboard')
 
 
