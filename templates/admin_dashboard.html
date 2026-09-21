@@ -268,7 +268,8 @@
     /* ═══════════════════════════════════════
        STATUS FORM (inline update)
     ═══════════════════════════════════════ */
-    .status-form { display: inline-flex; gap: 0.35rem; align-items: center; }
+    .status-form { display: inline-flex; flex-wrap: wrap; gap: 0.2rem 0.35rem; align-items: center; }
+    .status-form .status-note { flex-basis: 100%; white-space: normal; line-height: 1.35; }
     .status-form select { padding: 0.25rem 0.45rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.72rem; background: #fff; color: var(--text); outline: none; font-family: inherit; }
     .status-form select option { background: #fff; color: var(--text); }
     .status-form button { padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: #f3f4f6; color: var(--text); font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: background 0.15s; font-family: inherit; }
@@ -468,6 +469,8 @@
     <a href="{{ url_for('walk_in') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Walk-In</a>
     <a href="#" onclick="showSection('parts', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span> Parts Purchase</a>
     <a href="#" onclick="showSection('transactions', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Transactions</a>
+    {% set unread_feedback_count = all_feedback|selectattr('is_read', 'equalto', false)|list|length %}
+    <a href="#" onclick="showSection('feedback', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span> Feedback {% if unread_feedback_count %}<span id="feedback-nav-badge" style="margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;">{{ unread_feedback_count }}</span>{% endif %}</a>
     <div class="sidebar-label">Analytics</div>
     <a href="#" onclick="showSection('reports', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Reports & Sales</a>
     <a href="#" onclick="showSection('archive', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span> Archive</a>
@@ -517,7 +520,7 @@
           <div class="stat-value">{{ total_orders }}</div><div class="stat-label">Total Orders</div>
         </div>
         <div class="stat-card green">
-          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-icon" style="font-size:20px;font-weight:700;line-height:1;">₱</div>
           <div class="stat-value">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div>
         </div>
         <div class="stat-card orange">
@@ -530,12 +533,12 @@
           <div class="card-head"><h5>Bookings by Status</h5></div>
           <div class="card-body">
             <div class="chart-bar-wrap">
-              {% set booking_statuses = [('pending','bar-pending'),('confirmed','bar-confirmed'),('completed','bar-completed'),('cancelled','bar-cancelled')] %}
+              {% set booking_statuses = [('in_progress','bar-pending'),('confirmed','bar-confirmed'),('completed','bar-completed'),('cancelled','bar-cancelled')] %}
               {% for status, cls in booking_statuses %}
                 {% set count = booking_status_counts.get(status, 0) %}
                 {% set pct = ((count / total_bookings * 100)|int) if total_bookings > 0 else 0 %}
                 <div class="chart-bar-item">
-                  <span class="bar-label">{{ status|title }}</span>
+                  <span class="bar-label">{{ status|replace('_',' ')|title }}</span>
                   <div class="chart-bar-track"><div class="chart-bar-fill {{ cls }}" data-width="{{ pct }}"></div></div>
                   <span class="bar-val">{{ count }}</span>
                 </div>
@@ -546,7 +549,7 @@
         <div class="card">
           <div class="card-head"><h5>Pending Actions</h5></div>
           <div class="card-body">
-            <div class="pending-box"><span>Pending Bookings</span><span class="pending-num" style="color:var(--warning);">{{ booking_status_counts.get('pending', 0) }}</span></div>
+            <div class="pending-box"><span>In Progress Bookings</span><span class="pending-num" style="color:var(--warning);">{{ booking_status_counts.get('in_progress', 0) }}</span></div>
             <div class="pending-box"><span>Pending Orders</span><span class="pending-num" style="color:var(--blue);">{{ order_status_counts.get('pending', 0) }}</span></div>
             <div class="pending-box"><span>New Users Today</span><span class="pending-num" style="color:var(--green);">{{ new_users_today }}</span></div>
           </div>
@@ -991,7 +994,7 @@
           <div class="stat-value" id="rq-counter-waiting-part">0</div><div class="stat-label">Waiting For The Part Back</div>
         </div>
         <div class="stat-card green">
-          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-icon" style="font-size:20px;font-weight:700;line-height:1;">₱</div>
           <div class="stat-value" id="rq-counter-pesos-approved">₱0.00</div><div class="stat-label">Approved, Not Yet Released</div>
         </div>
         <div class="stat-card red">
@@ -1134,7 +1137,7 @@
                   </select>
                   <button type="submit">Save</button>
                   {% if o.delivery_method != 'ship' and (o.payment_method or '')|lower != 'gcash' and o.status == 'shipped' %}
-                    <span style="font-size:0.62rem;color:var(--muted);white-space:nowrap;">Complete on Billing page</span>
+                    <span class="status-note" style="font-size:0.62rem;color:var(--muted);">Complete on Billing page</span>
                   {% endif %}
                 </form>
                 {% endif %}
@@ -1401,7 +1404,7 @@
       </div>
       <div class="stats-grid">
         <div class="stat-card red">
-          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-icon" style="font-size:20px;font-weight:700;line-height:1;">₱</div>
           <div class="stat-value">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div>
         </div>
         <div class="stat-card blue">
@@ -1635,6 +1638,48 @@
         <div id="txn-table-wrap">
           <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><p>Loading transactions…</p></div>
         </div>
+      </div>
+    </section>
+
+    <!-- FEEDBACK -->
+    <section id="sec-feedback" class="page-section">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Customer <span class="accent">Feedback</span></div>
+          <div class="page-sub">Submitted from the "Feedback" form on the public website.</div>
+        </div>
+      </div>
+      <div class="card">
+        {% if all_feedback %}
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead><tr><th>Customer</th><th>Service</th><th>Rating</th><th>Feedback</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+              {% for f in all_feedback %}
+              <tr id="fb-row-{{ f.id }}" style="{% if not f.is_read %}background:#fef2f2;{% endif %}">
+                <td>
+                  <div style="font-weight:600;color:var(--text);">{{ f.name or 'Anonymous' }}</div>
+                  {% if f.email %}<div style="font-size:0.72rem;color:var(--muted);">{{ f.email }}</div>{% endif %}
+                </td>
+                <td>{{ f.service or '—' }}</td>
+                <td><span style="color:#f59e0b;letter-spacing:1px;">{{ '★' * f.rating }}{{ '☆' * (5 - f.rating) }}</span></td>
+                <td style="max-width:320px;white-space:normal;">{{ f.message }}</td>
+                <td class="date-cell" style="font-size:0.78rem;color:var(--muted);">{{ f.created_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                <td>
+                  {% if not f.is_read %}
+                  <button class="btn-action-edit" onclick="markFeedbackRead({{ f.id }})">Mark Read</button>
+                  {% else %}
+                  <span style="font-size:0.72rem;color:var(--muted);">Read</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><p>No feedback submitted yet.</p></div>
+        {% endif %}
       </div>
     </section>
 
@@ -4412,6 +4457,24 @@
   // ── User "Manage" dropdown (Deactivate / Red Flag / Banned) ──
   let _userMenuUid = null;
 
+  async function markFeedbackRead(fid) {
+    try {
+      const res  = await fetch(`/feedback/${fid}/read`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        const row = document.getElementById('fb-row-' + fid);
+        if (row) row.style.background = '';
+        const cell = row ? row.querySelector('td:last-child') : null;
+        if (cell) cell.innerHTML = '<span style="font-size:0.72rem;color:var(--muted);">Read</span>';
+        const badge = document.getElementById('feedback-nav-badge');
+        if (badge) {
+          const n = parseInt(badge.textContent) - 1;
+          if (n > 0) badge.textContent = n; else badge.remove();
+        }
+      }
+    } catch (e) {}
+  }
+
   function toggleUserMenu(event, btn) {
     event.stopPropagation();
     const menu = document.getElementById('user-manage-menu');
@@ -5370,7 +5433,7 @@ function _renderTxnStats(data) {
     'Sale': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
     'Online': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'
   };
-  const revSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+  const revSvg = '<span style="font-size:20px;font-weight:700;line-height:1;">₱</span>';
   let html = `<div class="stat-card blue"><div class="stat-icon">${revSvg}</div><div class="stat-value">₱${total.toLocaleString('en-PH',{minimumFractionDigits:2})}</div><div class="stat-label">Total Revenue</div></div>`;
   ['Job Order','Sale','Online'].forEach(type => {
     html += `<div class="stat-card ${colors[type]}"><div class="stat-icon">${svgIcons[type]}</div><div class="stat-value">${byType[type]||0}</div><div class="stat-label">${type} Transactions</div></div>`;

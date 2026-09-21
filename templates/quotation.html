@@ -42,7 +42,7 @@
     .search-box input:focus{border-color:rgba(255,255,255,.3);}
     .search-box input::placeholder{color:#6b7280;}
 
-    .product-grid{flex:1;overflow-y:auto;padding:.5rem 0;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.12) transparent;}
+    .product-grid{display:flex;flex-direction:column;flex:1;overflow-y:auto;padding:.5rem 0;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.12) transparent;}
     .product-card{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.5rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;gap:.75rem;background:#fff;}
     .product-card:hover{background:#fef2f2;}
 

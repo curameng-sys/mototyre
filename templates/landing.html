@@ -649,27 +649,27 @@
       </div>
     </div>
     <div class="contact-grid">
-      <div class="contact-card">
+      <a class="contact-card" href="https://www.google.com/maps/search/?api=1&query=Saranay+Rd%2C+Brgy+171+Bagumbong%2C+Caloocan+City%2C+Metro+Manila+1421" target="_blank" rel="noopener">
         <div class="contact-icon"><i data-lucide="map-pin" style="width:20px;height:20px"></i></div>
         <div>
           <div class="contact-lbl">LOCATION</div>
           <div class="contact-val">Saranay Rd, Brgy 171 Bagumbong, Caloocan City, Metro Manila 1421</div>
         </div>
-      </div>
-      <div class="contact-card">
+      </a>
+      <a class="contact-card" href="tel:+639152698366">
         <div class="contact-icon"><i data-lucide="phone" style="width:20px;height:20px"></i></div>
         <div>
           <div class="contact-lbl">CALL / TEXT</div>
           <div class="contact-val">0915 269 8366</div>
         </div>
-      </div>
-      <div class="contact-card">
+      </a>
+      <a class="contact-card" href="{{ FACEBOOK_PAGE_URL }}" target="_blank" rel="noopener">
         <div class="contact-icon"><i data-lucide="facebook" style="width:20px;height:20px"></i></div>
         <div>
           <div class="contact-lbl">FACEBOOK</div>
           <div class="contact-val">MotoTyres North Caloocan</div>
         </div>
-      </div>
+      </a>
     </div>
   </div>
 </section>
@@ -691,16 +691,16 @@
         <div class="form-grid2">
           <div class="form-field">
             <label class="form-label">Your Name</label>
-            <input class="form-input" type="text" placeholder="Juan Dela Cruz" oninput="this.value=this.value.replace(/[^A-Za-z\s]/g,'')">
+            <input class="form-input" id="fb-name" type="text" placeholder="Juan Dela Cruz" oninput="this.value=this.value.replace(/[^A-Za-z\s]/g,'')">
           </div>
           <div class="form-field">
             <label class="form-label">Email (optional)</label>
-            <input class="form-input" type="email" placeholder="juan@email.com">
+            <input class="form-input" id="fb-email" type="email" placeholder="juan@email.com">
           </div>
         </div>
         <div class="form-field">
           <label class="form-label">Service Used</label>
-          <select class="form-select">
+          <select class="form-select" id="fb-service">
             <option value="" disabled selected>Select a service...</option>
             <option>Oil Change</option>
             <option>Tire Fitting</option>
@@ -711,7 +711,7 @@
         </div>
         <div class="form-field">
           <label class="form-label">Rating</label>
-          <div class="star-rating">
+          <div class="star-rating" id="fb-rating">
             <input type="radio" id="s5" name="rating" value="5"><label for="s5">★</label>
             <input type="radio" id="s4" name="rating" value="4"><label for="s4">★</label>
             <input type="radio" id="s3" name="rating" value="3"><label for="s3">★</label>
@@ -721,9 +721,10 @@
         </div>
         <div class="form-field">
           <label class="form-label">Your Feedback</label>
-          <textarea class="form-textarea" rows="4" placeholder="Tell us about your experience..."></textarea>
+          <textarea class="form-textarea" id="fb-message" rows="4" placeholder="Tell us about your experience..."></textarea>
         </div>
-        <button class="btn-primary" onclick="submitFeedback()" style="width:100%;justify-content:center;">
+        <div id="fb-error" style="display:none;color:#dc2626;font-size:14px;margin-bottom:12px;"></div>
+        <button class="btn-primary" id="fb-submit-btn" onclick="submitFeedback()" style="width:100%;justify-content:center;">
           Submit Feedback <i data-lucide="send" style="width:16px;height:16px"></i>
         </button>
       </div>
@@ -761,9 +762,57 @@
   document.getElementById('footer-year').textContent = new Date().getFullYear();
 
   // Feedback
-  function submitFeedback() {
-    document.getElementById('formContent').style.display = 'none';
-    document.getElementById('feedbackSuccess').style.display = 'block';
+  async function submitFeedback() {
+    const errEl = document.getElementById('fb-error');
+    const btn   = document.getElementById('fb-submit-btn');
+    errEl.style.display = 'none';
+
+    const ratingInput = document.querySelector('#fb-rating input[name="rating"]:checked');
+    const payload = {
+      name:    document.getElementById('fb-name').value.trim(),
+      email:   document.getElementById('fb-email').value.trim(),
+      service: document.getElementById('fb-service').value,
+      rating:  ratingInput ? parseInt(ratingInput.value) : 0,
+      message: document.getElementById('fb-message').value.trim(),
+    };
+
+    if (!payload.rating) {
+      errEl.textContent = 'Please pick a star rating.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!payload.message) {
+      errEl.textContent = 'Please write your feedback.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = 'Sending…';
+
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('formContent').style.display = 'none';
+        document.getElementById('feedbackSuccess').style.display = 'block';
+      } else {
+        errEl.textContent = data.error || 'Something went wrong. Please try again.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+      }
+    } catch (e) {
+      errEl.textContent = 'Network error. Please try again.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+    }
   }
 
   // Mobile nav

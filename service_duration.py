@@ -346,9 +346,10 @@ def get_ph_holidays(year):
 
 
 def is_working_day(d):
-    """A 'working day' is any day the shop is actually open — Sunday and PH
-    holidays are out, same rule the customer calendar uses to grey out dates."""
-    return d.weekday() != 6 and d.isoformat() not in get_ph_holidays(d.year)
+    """A 'working day' is any day the shop is actually open — the shop runs
+    every day of the week; only PH holidays are out, same rule the customer
+    calendar uses to grey out dates."""
+    return d.isoformat() not in get_ph_holidays(d.year)
 
 
 def add_working_days(start_date, days):

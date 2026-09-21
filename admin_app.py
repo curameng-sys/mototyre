@@ -319,6 +319,17 @@ class Service(db.Model):
     created_at  = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class Feedback(db.Model):
+    id         = db.Column(db.Integer, primary_key=True)
+    name       = db.Column(db.String(100), default='')
+    email      = db.Column(db.String(150), default='')
+    service    = db.Column(db.String(100), default='')
+    rating     = db.Column(db.Integer, default=0)
+    message    = db.Column(db.Text, default='')
+    is_read    = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+
+
 class WalkInCustomer(db.Model):
     __tablename__ = 'walkin_customer'
     id               = db.Column(db.Integer, primary_key=True)
@@ -791,12 +802,18 @@ def admin_dashboard():
                     'payment': str(o.payment_method or 'cash')}
         for o in all_orders + archived_orders
     })
+    _booking_status_counts = dict(db.session.query(Booking.status, func.count(Booking.id)).filter(Booking.is_archived == False).group_by(Booking.status).all())
+    # 'inprogress' (no underscore) is a legacy spelling some old rows may carry;
+    # fold it into 'in_progress' so every view of this count reads one number.
+    if 'inprogress' in _booking_status_counts:
+        _booking_status_counts['in_progress'] = _booking_status_counts.get('in_progress', 0) + _booking_status_counts.pop('inprogress')
+
     return render_template('admin_dashboard.html',
-        total_bookings=Booking.query.count(),
-        total_orders=Order.query.count(),
+        total_bookings=Booking.query.filter_by(is_archived=False).count(),
+        total_orders=Order.query.filter_by(is_archived=False).filter(Order.items.any()).count(),
         total_users=User.query.count(),
         total_revenue=f'{_total_rev:,.2f}',
-        booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).filter(Booking.is_archived == False).group_by(Booking.status).all()),
+        booking_status_counts=_booking_status_counts,
         order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
         top_services=db.session.query(Booking.service, func.count(Booking.id).label('count')).group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all(),
         new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
@@ -809,10 +826,21 @@ def admin_dashboard():
         mechanic_specializations=MECHANIC_SPECIALIZATIONS,
         archived_orders=archived_orders,
         archived_bookings=Booking.query.filter_by(is_archived=True).order_by(Booking.created_at.desc()).all(),
+        all_feedback=Feedback.query.order_by(Feedback.is_read.asc(), Feedback.created_at.desc()).all(),
         order_ship_json=order_ship_json,
         now=ph_now(),
         today=ph_now().date(),
     )
+
+
+@admin_app.route('/feedback/<int:fid>/read', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def mark_feedback_read(fid):
+    fb = Feedback.query.get_or_404(fid)
+    fb.is_read = True
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 def _notify_customer(booking, title, body, priority=False, status=None, collapse_minutes=None):
@@ -1241,6 +1269,43 @@ def _fix1_preview(booking, on_duty_names):
     return {'available': False, 'mechanic': preferred, 'reason': f'{preferred} is busy then too.'}
 
 
+def _fix2_slot_on_day(d, duration, mechanic, exclude_id, min_start=None):
+    """Every slot on one day for one mechanic, checked against that day's
+    shop/mechanic schedule fetched ONCE — not re-queried per slot. Calls the
+    exact same validate_booking() every other booking path uses, just fed
+    pre-gathered data instead of letting it (via _check_admin_booking_request)
+    re-fetch that data on every single slot attempt. Returns the first free
+    start-minute, or None."""
+    shop_q = Booking.query.filter(Booking.date == d, Booking.status != 'cancelled')
+    shop_q = shop_q.filter(Booking.id != exclude_id)
+    shop_intervals = _gather_intervals(shop_q)
+    daily_count = len(shop_intervals)
+    shop_intervals = shop_intervals + _gather_blocked_intervals(d)
+
+    _, _, on_duty = get_on_duty_mechanics(d)
+    mechanic_status = 'available' if any(m.name == mechanic for m in on_duty) else 'off duty'
+
+    mech_q = Booking.query.filter(
+        Booking.assigned_mechanic_name == mechanic, Booking.date == d, Booking.status != 'cancelled',
+    )
+    mech_q = mech_q.filter(Booking.id != exclude_id)
+    mechanic_intervals = _gather_intervals(mech_q)
+
+    daily_cap = get_daily_cap(d)
+
+    for slot in all_slot_starts():
+        if min_start is not None and slot <= min_start:
+            continue
+        ok, _ = validate_booking(
+            slot, duration, shop_intervals, daily_count,
+            require_slot_grid=True, daily_cap=daily_cap,
+            mechanic_name=mechanic, mechanic_status=mechanic_status, mechanic_intervals=mechanic_intervals,
+        )
+        if ok:
+            return slot
+    return None
+
+
 def _fix2_preview(booking):
     """Fix #2: keep the assigned mechanic, move the time — a later slot the
     same day first, then the first workable date within 14 days."""
@@ -1250,24 +1315,20 @@ def _fix2_preview(booking):
     duration = booking.duration_minutes or DEFAULT_DURATION_MIN
     start_min = booking.time.hour * 60 + booking.time.minute
 
-    for slot in all_slot_starts():
-        if slot <= start_min:
-            continue
-        ok, _ = _check_admin_booking_request(booking.date, slot, duration, exclude_id=booking.id, mechanic_name=mechanic)
-        if ok:
-            return {'available': True, 'date': booking.date.isoformat(), 'time': minutes_to_hhmm(slot),
-                    'label': f"{booking.date.strftime('%b %d')} at {minutes_to_ampm(slot)}", 'same_day': True}
+    slot = _fix2_slot_on_day(booking.date, duration, mechanic, booking.id, min_start=start_min)
+    if slot is not None:
+        return {'available': True, 'date': booking.date.isoformat(), 'time': minutes_to_hhmm(slot),
+                'label': f"{booking.date.strftime('%b %d')} at {minutes_to_ampm(slot)}", 'same_day': True}
 
     d = booking.date
     for _ in range(14):
         d = d + timedelta(days=1)
         if not is_working_day(d):
             continue
-        for slot in all_slot_starts():
-            ok, _ = _check_admin_booking_request(d, slot, duration, exclude_id=booking.id, mechanic_name=mechanic)
-            if ok:
-                return {'available': True, 'date': d.isoformat(), 'time': minutes_to_hhmm(slot),
-                        'label': f"{d.strftime('%b %d')} at {minutes_to_ampm(slot)}", 'same_day': False}
+        slot = _fix2_slot_on_day(d, duration, mechanic, booking.id)
+        if slot is not None:
+            return {'available': True, 'date': d.isoformat(), 'time': minutes_to_hhmm(slot),
+                    'label': f"{d.strftime('%b %d')} at {minutes_to_ampm(slot)}", 'same_day': False}
     return {'available': False}
 
 
@@ -1283,6 +1344,36 @@ def _fix3_preview(booking, on_duty):
         if _mechanic_free_at(m.name, booking.date, start_min, end_min, booking.id):
             return {'available': True, 'mechanic': m.name, 'specialization': m.specialization}
     return {'available': False}
+
+
+def _compute_day_clash_ids(the_date, bookings=None):
+    """Lightweight companion to _compute_day_clashes — just the set of clashing
+    booking IDs, skipping the per-clash fix previews (each of which can walk
+    up to 14 days of slot checks). Callers that only need to know WHICH
+    bookings are clashing — like the month calendar's badge dots — should use
+    this instead of paying for fixes they'll never render. Same detection
+    logic as _compute_day_clashes, kept in sync by hand since it's short."""
+    if bookings is None:
+        bookings = Booking.query.filter(Booking.date == the_date, Booking.status != 'cancelled').order_by(Booking.time).all()
+    else:
+        bookings = [b for b in bookings if b.status != 'cancelled']
+
+    _, _, on_duty = get_on_duty_mechanics(the_date)
+    on_duty_names = {m.name for m in on_duty}
+
+    by_mechanic = {}
+    for b in bookings:
+        if b.assigned_mechanic_name:
+            by_mechanic.setdefault(b.assigned_mechanic_name, []).append(b)
+    overlap_causes = {}
+    for blist in by_mechanic.values():
+        overlap_causes.update(_mechanic_overlap_causes(blist))
+
+    clash_ids = set()
+    for b in bookings:
+        if b.id in overlap_causes or not b.assigned_mechanic_name or b.assigned_mechanic_name not in on_duty_names:
+            clash_ids.add(b.id)
+    return clash_ids
 
 
 def _compute_day_clashes(the_date, bookings=None):
@@ -1847,7 +1938,7 @@ def api_month_schedule():
         # assigned, or a booking sitting on someone no longer on duty — the
         # exact same definition the Day panel's Clashes-to-resolve list uses,
         # computed once here and reused for the badge and every chip.
-        clashing_ids = {c['id'] for c in _compute_day_clashes(d, bookings=day_bookings)}
+        clashing_ids = _compute_day_clash_ids(d, bookings=day_bookings)
 
         chips = []
         for b in day_bookings[:3]:
@@ -1965,9 +2056,14 @@ def _return_line_items(rr):
     if rr.kind != 'product':
         return []
     rows = ReturnRequestItem.query.filter_by(return_request_id=rr.id).all()
+    if not rows:
+        return []
+    items_by_id = {i.id: i for i in OrderItem.query.filter(
+        OrderItem.id.in_([row.order_item_id for row in rows])
+    ).all()}
     out = []
     for row in rows:
-        item = OrderItem.query.get(row.order_item_id)
+        item = items_by_id.get(row.order_item_id)
         if not item:
             continue
         out.append({
@@ -2046,6 +2142,15 @@ def api_returns():
 
         origin, motorcycle, origin_date, claim_value, original_mechanic = None, None, None, None, None
         line_items = _return_line_items(r)
+        # Built from the same batch-fetched orders/bookings/line_items already
+        # in scope here — matches _return_subject_label()'s logic exactly,
+        # without paying for its own fresh queries on every single row.
+        if r.kind == 'product':
+            names = [f"{li['name']} ×{li['quantity']}" for li in line_items]
+            subject = ', '.join(names) if names else (f'ORD-{r.order_id:03d}' if r.order_id else 'an order')
+        else:
+            subject_booking = bookings.get(r.booking_id) if r.booking_id else None
+            subject = subject_booking.service if subject_booking else 'a service'
         if r.kind == 'product' and r.order_id in orders:
             o = orders[r.order_id]
             origin = f'ORD-{r.order_id:03d}'
@@ -2091,7 +2196,7 @@ def api_returns():
             'origin_date': origin_date,
             'claim_value': claim_value,
             'original_mechanic': original_mechanic,
-            'subject': _return_subject_label(r),
+            'subject': subject,
             'line_items': line_items,
             'reasons': reason_labels,
             'other_reason_text': r.other_reason_text,

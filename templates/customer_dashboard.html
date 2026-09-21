@@ -294,18 +294,18 @@
     .mech-toggle-card.active { background: rgba(208,0,25,0.1); border-color: var(--brand-red); }
 
     /* ── SERVICE CHECKLIST ROW ── */
-    .svc-row { display: flex; align-items: flex-start; gap: 0.65rem; padding: 0.6rem 0.85rem; cursor: pointer; font-size: 0.85rem; color: var(--fg-1); margin: 2px; border-radius: 8px; border: 1.5px solid transparent; border-bottom: 1.5px solid var(--line-1); transition: background 0.15s, border-color 0.15s; text-align: left; }
+    .svc-row { display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0.85rem; cursor: pointer; font-size: 0.85rem; color: var(--fg-1); margin: 2px; border-radius: 8px; border: 1.5px solid transparent; border-bottom: 1.5px solid var(--line-1); transition: background 0.15s, border-color 0.15s; text-align: left; }
     .svc-row:last-child { border-bottom-color: transparent; }
     .svc-row:hover { background: var(--bg-subtle); }
     .svc-row.selected { background: rgba(208,0,25,0.08); border: 1.5px solid var(--brand-red); }
-    .svc-row input[type="checkbox"].svc-check-input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
-    .svc-check-box { flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--line-2); background: var(--bg-page); display: flex; align-items: center; justify-content: center; transition: background 0.15s, border-color 0.15s; align-self: center; }
-    .svc-check-box svg { opacity: 0; transform: scale(0.5); transition: opacity 0.15s, transform 0.15s; color: #fff; }
+    .svc-row input[type="checkbox"].svc-check-input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; padding: 0; pointer-events: none; }
+    .svc-check-box { flex-shrink: 0; width: 20px; height: 20px; margin: 0; border-radius: 6px; border: 1.5px solid var(--line-2); background: var(--bg-page); display: flex; align-items: center; justify-content: center; transition: background 0.15s, border-color 0.15s; }
+    .svc-check-box svg { display: block; opacity: 0; transform: scale(0.5); transition: opacity 0.15s, transform 0.15s; color: #fff; }
     .svc-check-input:checked + .svc-check-box { background: var(--brand-red); border-color: var(--brand-red); }
     .svc-check-input:checked + .svc-check-box svg { opacity: 1; transform: scale(1); }
     .svc-row:hover .svc-check-box { border-color: var(--brand-red-border); }
-    .svc-row .svc-name { flex: 1; min-width: 0; text-align: left; line-height: 1.4; word-break: break-word; align-self: center; }
-    .svc-row .svc-dur { flex-shrink: 0; font-family: 'Syne', sans-serif; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em; color: var(--fg-3); background: var(--bg-subtle); border: 1px solid var(--line-2); border-radius: 99px; padding: 0.2rem 0.55rem; white-space: nowrap; align-self: center; }
+    .svc-row .svc-name { flex: 1; min-width: 0; text-align: left; line-height: 1.4; word-break: break-word; margin: 0; }
+    .svc-row .svc-dur { flex-shrink: 0; font-family: 'Syne', sans-serif; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em; color: var(--fg-3); background: var(--bg-subtle); border: 1px solid var(--line-2); border-radius: 99px; padding: 0.2rem 0.55rem; white-space: nowrap; }
     .svc-row.selected .svc-dur { color: var(--brand-red); border-color: var(--brand-red-border); background: var(--bg-page); }
     .mech-toggle-card.active .mech-card-title { color: var(--brand-red); }
 
@@ -553,6 +553,19 @@
   </style>
 </head>
 <body>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    var flashed = {{ messages|tojson }};
+    flashed.forEach(function (pair) {
+      showToast(pair[1], pair[0] === 'danger' ? 'error' : pair[0]);
+    });
+  });
+</script>
+{% endif %}
+{% endwith %}
 
 <!-- ═══ TOP NAVBAR ═══ -->
 <nav class="top-nav">
@@ -1535,7 +1548,7 @@
 
   <!-- Cash Option -->
   <div id="opt-cash" onclick="selectPayment('cash')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(21,128,61,0.1);border:2px solid var(--green);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:0.75rem;">
-    <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#16a34a;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+    <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#16a34a;font-size:24px;font-weight:700;line-height:1;">₱</div>
     <div style="flex:1;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.95rem;">Cash</div>
       <div style="font-size:0.78rem;color:var(--fg-3);margin-top:2px;">Pay in-store upon pickup</div>
@@ -2083,11 +2096,11 @@ function isHoliday(dateStr) {
   return holidays[dateStr] || null;
 }
 
-// A "working day" is any day the shop is actually open — same rule the calendar
-// itself uses to grey out a date (Sunday, or a PH holiday).
+// A "working day" is any day the shop is actually open — the shop runs every
+// day of the week; only a PH holiday greys out a date on the calendar.
 function isWorkingDay(dateObj) {
   const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
-  return dateObj.getDay() !== 0 && !isHoliday(dateStr);
+  return !isHoliday(dateStr);
 }
 
 // Steps forward `days` working days from `startDate` (a Date, e.g. the drop-off
@@ -2317,20 +2330,11 @@ async function renderCalendar() {
     const pastClosing = isToday && nowMinutes >= lastSlotMinutes;
     const isQueued = bookingQueue.some(b => b.date === dateStr);
     const holidayName = isHoliday(dateStr);
-    const isSunday = dateObj.getDay() === 0;
     const isBeyondMaxYear = currentYear > 2026;
 
     if (dateObj < today || isBeyondMaxYear) {
       cell.classList.add('past');
       cell.title = dateObj < today ? 'Past date' : 'Booking not yet available for this year';
-    } else if (isSunday) {
-      // Closed on Sundays
-      cell.classList.add('past');
-      cell.style.position = 'relative';
-      cell.title = 'Closed — Sunday';
-      cell.style.background = 'var(--bg-subtle)';
-      // Small "SUN" label
-      cell.innerHTML = `<span>${d}</span><span style="display:block;font-size:0.45rem;color:#ef4444;letter-spacing:0.05em;font-family:'Syne',sans-serif;font-weight:700;margin-top:1px;">SUN</span>`;
     } else if (holidayName) {
       // Philippine holiday
       cell.classList.add('past');
@@ -2351,7 +2355,7 @@ async function renderCalendar() {
       cell.onclick = () => selectDate(dateStr, d, cell);
     }
 
-    if (isQueued && !isSunday && !holidayName) {
+    if (isQueued && !holidayName) {
       cell.style.outline = '2px solid rgba(29,78,216,0.7)';
       cell.style.outlineOffset = '-2px';
     }
@@ -2638,7 +2642,7 @@ function renderNotifications() {
     booking:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
     order:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
     mechanic: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
-    cost:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    cost:     '<span style="display:inline-block;font-size:18px;font-weight:700;line-height:1;">₱</span>',
     update:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
     reminder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
   };
@@ -4440,7 +4444,10 @@ loadMechanics();
   function orderBadgeClass(status)   { return 'badge badge-' + status.replace(/_/g, ''); }
 
   function showToast(msg, type) {
-    const accent = type === 'booking' ? 'var(--brand-red)' : '#2563eb';
+    const accent = (type === 'booking' || type === 'error') ? 'var(--brand-red)'
+      : type === 'success' ? '#16a34a'
+      : type === 'warning' ? '#d97706'
+      : '#2563eb';
     const t = document.createElement('div');
     t.style.cssText = `position:fixed;bottom:1.75rem;left:50%;transform:translateX(-50%);
       background:var(--bg-page);border:1px solid var(--line-2);border-left:3px solid ${accent};

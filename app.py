@@ -101,6 +101,10 @@ PAYMONGO_API_URL = "https://api.paymongo.com/v1"
 # doesn't break every time a dev tunnel URL changes or expires.
 BASE_URL = os.getenv("BASE_URL", "").rstrip("/")
 
+# The shop's real Facebook Page, linked from the landing page's contact
+# section. Set via env var so it can be corrected without a code change.
+FACEBOOK_PAGE_URL = os.getenv("FACEBOOK_PAGE_URL", "https://www.facebook.com/share/19Uyin8Xay/")
+
 # Hosts the customer is allowed to be redirected back to after payment.
 # ALLOWED_ORIGIN lets a deployed host (Render, etc.) add itself without a
 # code change — set it in that service's environment to its own public URL.
@@ -537,6 +541,17 @@ class Service(db.Model):
     created_at  = db.Column(db.DateTime, default=ph_now)
 
 
+class Feedback(db.Model):
+    id         = db.Column(db.Integer, primary_key=True)
+    name       = db.Column(db.String(100), default='')
+    email      = db.Column(db.String(150), default='')
+    service    = db.Column(db.String(100), default='')
+    rating     = db.Column(db.Integer, default=0)
+    message    = db.Column(db.Text, default='')
+    is_read    = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=ph_now)
+
+
 class Notification(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -788,11 +803,33 @@ def cleanup_abandoned_gcash_orders():
 
 @app.route('/')
 def home():
-    return render_template('landing.html')
+    return render_template('landing.html', FACEBOOK_PAGE_URL=FACEBOOK_PAGE_URL)
 
 @app.route('/products')
 def products():
     return render_template('Products.html')
+
+
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    data = request.get_json(silent=True) or {}
+    name    = clean_str(data.get('name', ''), max_len=100)
+    email   = clean_str(data.get('email', ''), max_len=150)
+    service = clean_str(data.get('service', ''), max_len=100)
+    message = clean_str(data.get('message', ''), max_len=2000)
+    rating  = clean_int(data.get('rating'), default=0)
+
+    if email and not is_valid_email(email):
+        return jsonify({'success': False, 'error': 'Please enter a valid email address.'}), 400
+    if rating < 1 or rating > 5:
+        return jsonify({'success': False, 'error': 'Please pick a star rating.'}), 400
+    if not message:
+        return jsonify({'success': False, 'error': 'Please write your feedback.'}), 400
+
+    fb = Feedback(name=name, email=email, service=service, rating=rating, message=message)
+    db.session.add(fb)
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @app.route('/login', methods=['GET', 'POST'])

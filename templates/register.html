@@ -848,7 +848,7 @@
               <button type="button" class="pass-toggle" onclick="togglePass('confirm-password', this)">SHOW</button>
             </div>
             <div class="pass-checklist">
-              <div class="pass-check" id="chk-match"><div class="dot"></div> Passwords do not match</div>
+              <div class="pass-check" id="chk-match"><div class="dot"></div> <span id="chk-match-text">Passwords do not match</span></div>
             </div>
           </div>
 
@@ -981,22 +981,29 @@
       document.getElementById('reg-email').value;
   });
 
-  document.getElementById('confirm-password').addEventListener('input', function () {
-    const pw = document.getElementById('password').value;
-    const el = document.getElementById('chk-match');
-    if (!this.value) { el.classList.remove('ok','fail'); this.setCustomValidity(''); return; }
-    if (pw !== this.value) {
+  function checkPasswordMatch() {
+    const pw   = document.getElementById('password').value;
+    const cpw  = document.getElementById('confirm-password');
+    const el   = document.getElementById('chk-match');
+    const text = document.getElementById('chk-match-text');
+    if (!cpw.value) {
+      el.classList.remove('ok','fail');
+      text.textContent = 'Passwords do not match';
+      cpw.setCustomValidity('');
+      return;
+    }
+    if (pw !== cpw.value) {
       el.classList.add('fail'); el.classList.remove('ok');
-      this.setCustomValidity('Passwords do not match.');
+      text.textContent = 'Passwords do not match';
+      cpw.setCustomValidity('Passwords do not match.');
     } else {
       el.classList.add('ok'); el.classList.remove('fail');
-      this.setCustomValidity('');
+      text.textContent = 'Passwords match';
+      cpw.setCustomValidity('');
     }
-  });
-  document.getElementById('password').addEventListener('input', function () {
-    const cpw = document.getElementById('confirm-password');
-    if (cpw.value) cpw.dispatchEvent(new Event('input'));
-  });
+  }
+  document.getElementById('confirm-password').addEventListener('input', checkPasswordMatch);
+  document.getElementById('password').addEventListener('input', checkPasswordMatch);
 
   document.getElementById('password').addEventListener('input', function () {
     const v = this.value;
