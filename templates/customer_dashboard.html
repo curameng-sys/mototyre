@@ -294,7 +294,7 @@
     .mech-toggle-card.active { background: rgba(208,0,25,0.1); border-color: var(--brand-red); }
 
     /* ── SERVICE CHECKLIST ROW ── */
-    .svc-row { display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0.85rem; cursor: pointer; font-size: 0.85rem; color: var(--fg-1); margin: 2px; border-radius: 8px; border: 1.5px solid transparent; border-bottom: 1.5px solid var(--line-1); transition: background 0.15s, border-color 0.15s; text-align: left; }
+    .svc-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.65rem; padding: 0.6rem 0.85rem; cursor: pointer; font-size: 0.85rem; color: var(--fg-1); margin: 2px; border-radius: 8px; border: 1.5px solid transparent; border-bottom: 1.5px solid var(--line-1); transition: background 0.15s, border-color 0.15s; text-align: left; }
     .svc-row:last-child { border-bottom-color: transparent; }
     .svc-row:hover { background: var(--bg-subtle); }
     .svc-row.selected { background: rgba(208,0,25,0.08); border: 1.5px solid var(--brand-red); }
@@ -304,7 +304,7 @@
     .svc-check-input:checked + .svc-check-box { background: var(--brand-red); border-color: var(--brand-red); }
     .svc-check-input:checked + .svc-check-box svg { opacity: 1; transform: scale(1); }
     .svc-row:hover .svc-check-box { border-color: var(--brand-red-border); }
-    .svc-row .svc-name { flex: 1; min-width: 0; text-align: left; line-height: 1.4; word-break: break-word; margin: 0; font-family: 'Syne', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.01em; font-size: 0.8rem; }
+    .svc-row .svc-name { flex: 1; min-width: 0; text-align: left; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; font-family: 'Syne', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.01em; font-size: 0.8rem; }
     .svc-row .svc-dur { flex-shrink: 0; font-family: 'Syne', sans-serif; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-3); background: var(--bg-subtle); border: 1px solid var(--line-2); border-radius: 99px; padding: 0.2rem 0.55rem; white-space: nowrap; }
     .svc-row.selected .svc-dur { color: var(--brand-red); border-color: var(--brand-red-border); background: var(--bg-page); }
     .mech-toggle-card.active .mech-card-title { color: var(--brand-red); }
