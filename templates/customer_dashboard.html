@@ -294,7 +294,10 @@
     .mech-toggle-card.active { background: rgba(208,0,25,0.1); border-color: var(--brand-red); }
 
     /* ── SERVICE CHECKLIST ROW ── */
-    .svc-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.65rem; padding: 0.6rem 0.85rem; cursor: pointer; font-size: 0.85rem; color: var(--fg-1); margin: 2px; border-radius: 8px; border: 1.5px solid transparent; border-bottom: 1.5px solid var(--line-1); transition: background 0.15s, border-color 0.15s; text-align: left; }
+    /* .form-group label {display:block} outranks a plain .svc-row selector on
+       specificity, which was forcing the checkbox onto its own line — scope
+       to .form-group so this wins without needing !important. */
+    .form-group .svc-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.65rem; padding: 0.6rem 0.85rem; cursor: pointer; font-size: 0.85rem; color: var(--fg-1); margin: 2px; border-radius: 8px; border: 1.5px solid transparent; border-bottom: 1.5px solid var(--line-1); transition: background 0.15s, border-color 0.15s; text-align: left; }
     .svc-row:last-child { border-bottom-color: transparent; }
     .svc-row:hover { background: var(--bg-subtle); }
     .svc-row.selected { background: rgba(208,0,25,0.08); border: 1.5px solid var(--brand-red); }
