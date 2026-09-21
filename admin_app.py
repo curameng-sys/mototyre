@@ -7,7 +7,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
-from sqlalchemy import func, and_, not_
+from sqlalchemy import func, and_, or_, not_
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -2729,8 +2729,8 @@ def update_order_status(oid):
     _pay = (order.payment_method or '').lower()
     _is_pickup = order.delivery_method != 'ship'
 
-    if new_status == 'completed' and _pay == 'cash' and _is_pickup:
-        msg = 'Cash pick-up orders are completed on the Billing page when the customer pays at the counter.'
+    if new_status == 'completed' and _is_pickup:
+        msg = 'Pick-up orders are completed on the Billing page when the customer picks it up.'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'error': msg}), 400
         flash(msg, 'danger')
@@ -2760,16 +2760,16 @@ def update_order_status(oid):
             flash(msg, 'danger')
             return redirect(url_for('admin_dashboard'))
 
-    # Pick-up orders follow a fixed sequence.
-    #   GCash (prepaid):  confirmed -> processing -> shipped (ready for pickup) -> completed
-    #   Cash  (pay at counter): pending/awaiting_payment -> confirmed -> processing ->
-    #                           shipped (ready for pickup) (completed happens on the Billing page)
+    # Pick-up orders follow a fixed sequence — confirmed -> processing -> shipped
+    # (ready for pickup) — for both payment methods; "completed" only ever
+    # happens on the Billing page, GCash included, since that's the one place
+    # that marks an order actually handed over.
     if _is_pickup:
         if _pay == 'gcash':
             allowed_next = {
                 'confirmed':  {'processing', 'shipped', 'cancelled'},
                 'processing': {'shipped', 'cancelled'},
-                'shipped':    {'completed', 'cancelled'},
+                'shipped':    {'cancelled'},
             }
         else:
             allowed_next = {
@@ -3549,19 +3549,24 @@ def payments():
             ~JobOrder.id.in_(paid_jo_ids) if paid_jo_ids else True
         ).order_by(JobOrder.created_at.desc()).all()
 
+        # Only bookings the mechanic has actually started — a merely-confirmed
+        # booking has no work done yet, so there's nothing to bill for it.
         pending_bookings = Booking.query.filter(
-            Booking.status.in_(['confirmed', 'in_progress', 'inprogress']),
+            Booking.status.in_(['in_progress', 'inprogress']),
             Booking.payment_method.in_(['cash', None]),
             Booking.walkin_customer_id == None,
             Booking.is_archived == False
         ).order_by(Booking.created_at.desc()).all()
 
+        # The item has to actually be ready before there's anything to do here —
+        # cash still needs the payment collected, GCash (prepaid) just needs to
+        # be handed over, but a merely-confirmed order isn't prepared yet and
+        # has nothing to act on.
         pending_orders = Order.query.filter(
-            Order.payment_method == 'cash',
             Order.delivery_method == 'pickup',
-            Order.status.in_(['pending', 'awaiting_payment', 'confirmed', 'shipped']),
+            Order.status == 'shipped',
             Order.walkin_customer_id == None,
-            Order.is_archived == False
+            Order.is_archived == False,
         ).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
 
         history_jos      = []
@@ -3582,7 +3587,7 @@ def payments():
                             .order_by(Booking.created_at.desc()).limit(50).all())
 
         history_orders = (Order.query
-                          .filter(Order.payment_method == 'cash', Order.delivery_method == 'pickup',
+                          .filter(Order.payment_method.in_(['cash', 'gcash']), Order.delivery_method == 'pickup',
                                   Order.status == 'completed')
                           .filter(Order.items.any())
                           .order_by(Order.created_at.desc()).limit(50).all())
@@ -3715,15 +3720,16 @@ def billing_order_complete(oid):
     order = Order.query.get_or_404(oid)
     if order.status == 'completed':
         return jsonify({'success': False, 'error': 'Order already completed'}), 400
-    if order.payment_method != 'cash' or order.delivery_method != 'pickup':
-        return jsonify({'success': False, 'error': 'Only cash pick-up orders can be billed here'}), 400
+    if order.delivery_method != 'pickup':
+        return jsonify({'success': False, 'error': 'Only pick-up orders can be billed here'}), 400
+    is_cash = (order.payment_method or 'cash') == 'cash'
     order.status = 'completed'
     if not order.delivered_at:
         order.delivered_at = ph_now()
     db.session.commit()
-    send_notification(order.user_id, 'Order Completed!',
-        f'Your order ORD-{order.id:03d} has been picked up and payment collected. Thank you!',
-        type='order', status='completed')
+    body = (f'Your order ORD-{order.id:03d} has been picked up and payment collected. Thank you!' if is_cash
+            else f'Your order ORD-{order.id:03d} has been picked up. Thank you!')
+    send_notification(order.user_id, 'Order Completed!', body, type='order', status='completed')
     return jsonify({'success': True, 'ref': f'ORD-{order.id:03d}', 'amount': order.total_amount})
 
 

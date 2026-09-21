@@ -3649,10 +3649,10 @@ function updateRfOutcomeFooter() {
 // 3 · Why
 function renderRfReasonsSection() {
   document.getElementById('rf-reasons-list').innerHTML = RETURN_REASONS[_rfKind].map(([code, label, needsPhoto]) => `
-    <label style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border:1px solid var(--line-2);border-radius:8px;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.83rem;cursor:pointer;">
-      <input type="checkbox" class="rf-reason-tick" value="${code}" onchange="onRfReasonChange()">
-      <span style="flex:1;">${label}</span>
-      ${needsPhoto ? '<span style="font-size:0.64rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:0.1rem 0.4rem;white-space:nowrap;">needs a photo</span>' : ''}
+    <label style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border:1px solid var(--line-2);border-radius:8px;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.83rem;cursor:pointer;width:100%;box-sizing:border-box;">
+      <input type="checkbox" class="rf-reason-tick" value="${code}" onchange="onRfReasonChange()" style="flex-shrink:0;margin:0;">
+      <span style="flex:1;min-width:0;text-align:left;">${label}</span>
+      ${needsPhoto ? '<span style="flex-shrink:0;font-size:0.64rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:0.1rem 0.4rem;white-space:nowrap;">needs a photo</span>' : ''}
     </label>`).join('');
   document.getElementById('rf-other-wrap').style.display = 'none';
   document.getElementById('rf-other-count').textContent = '0 / 500';

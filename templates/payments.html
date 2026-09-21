@@ -275,8 +275,8 @@
     {% endif %}
   </div>
 
-  {# ── ONLINE CASH PICK-UPS ── #}
-  <div class="sec-label">Online Cash Pick-ups <span class="sec-count">{{ pending_orders|length }}</span></div>
+  {# ── ONLINE PICK-UPS ── #}
+  <div class="sec-label">Online Pick-ups <span class="sec-count">{{ pending_orders|length }}</span></div>
   <div class="tbl-wrap">
     {% if pending_orders %}
     <table>
@@ -295,8 +295,16 @@
             <div class="sub">{% for item in o.items[:2] %}{{ item.product.name if item.product else 'Unknown' }} ×{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}{% if o.items|length > 2 %} +{{ o.items|length - 2 }} more{% endif %}</div>
           </td>
           <td><span class="amount">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
-          <td><span class="badge b-pending">{{ 'Ready For Pickup' if o.status == 'shipped' else o.status|replace('_',' ')|title }}</span></td>
           <td>
+            <span class="badge b-pending">{{ 'Ready For Pickup' if o.status == 'shipped' else o.status|replace('_',' ')|title }}</span>
+            {% if (o.payment_method or '')|lower == 'gcash' %}<div class="sub" style="margin-top:.2rem;">GCash · already paid</div>{% endif %}
+          </td>
+          <td>
+            {% if (o.payment_method or '')|lower == 'gcash' %}
+            <button class="btn-collect btn-collect-ord" onclick="markPickedUp({{ o.id }}, 'ORD-{{ '%03d'|format(o.id) }}', this)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Mark Picked Up
+            </button>
+            {% else %}
             <button class="btn-collect btn-collect-ord"
               data-type="order"
               data-id="{{ o.id }}"
@@ -308,6 +316,7 @@
               onclick="openBillingModal(this)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Collect
             </button>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -629,6 +638,28 @@ async function submitBilling() {
 function doneSuccess() {
   document.getElementById('success-overlay').classList.remove('open');
   location.reload();
+}
+
+async function markPickedUp(orderId, ref, btn) {
+  if (!confirm(`Mark ${ref} as picked up? It's already paid via GCash — this just confirms the customer took it.`)) return;
+  btn.disabled = true;
+  const original = btn.innerHTML;
+  btn.innerHTML = 'Marking…';
+  try {
+    const res  = await fetch(`/billing/order/${orderId}/complete`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+    const data = await res.json();
+    if (data.success) {
+      location.reload();
+    } else {
+      alert(data.error || 'Could not mark this order as picked up.');
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  } catch (e) {
+    alert('Network error. Please try again.');
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
 }
 
 function filterHistory() {

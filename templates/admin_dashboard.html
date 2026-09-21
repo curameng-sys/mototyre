@@ -1108,45 +1108,18 @@
                       <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
                       <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
                       <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
-                    {% elif (o.payment_method or '')|lower == 'gcash' %}
-                      {# GCash pick-up: prepaid, so completed can be set here #}
-                      {% if o.status == 'shipped' %}
-                        <option value="shipped" selected>Ready to Pick Up</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% elif o.status == 'processing' %}
-                        <option value="processing" selected>Processing</option>
-                        <option value="shipped">Ready to Pick Up</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% else %}
-                        <option value="{{ o.status }}" selected>{{ o.status|replace('_',' ')|title }}</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Ready to Pick Up</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% endif %}
                     {% else %}
-                      {# Cash pick-up: paid at the counter on the Billing page #}
-                      {% if o.status == 'confirmed' %}
-                        <option value="confirmed" selected>Confirmed</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Ready to Pick Up</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% elif o.status == 'processing' %}
-                        <option value="processing" selected>Processing</option>
-                        <option value="shipped">Ready to Pick Up</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% elif o.status == 'shipped' %}
-                        <option value="shipped" selected>Ready to Pick Up</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% else %}
-                        <option value="{{ o.status }}" selected>{{ o.status|replace('_',' ')|title }}</option>
-                        <option value="confirmed">Confirm Order</option>
-                        <option value="cancelled">Cancelled</option>
-                      {% endif %}
+                      {# Pick-up, cash or GCash: same four steps either way.
+                         Completed happens on the Billing page once the
+                         customer actually picks it up — never from here. #}
+                      <option value="confirmed"  {% if o.status=='confirmed' %}selected{% endif %}>Confirmed</option>
+                      <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
+                      <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Ready to Pick Up</option>
+                      <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     {% endif %}
                   </select>
                   <button type="submit">Save</button>
-                  {% if o.delivery_method != 'ship' and (o.payment_method or '')|lower != 'gcash' and o.status == 'shipped' %}
+                  {% if o.delivery_method != 'ship' and o.status == 'shipped' %}
                     <span class="status-note" style="font-size:0.62rem;color:var(--muted);">Complete on Billing page</span>
                   {% endif %}
                 </form>
