@@ -2761,20 +2761,22 @@ def update_order_status(oid):
             return redirect(url_for('admin_dashboard'))
 
     # Pick-up orders follow a fixed sequence.
-    #   GCash (prepaid):  confirmed -> shipped (ready for pickup) -> completed
-    #   Cash  (pay at counter): pending/awaiting_payment -> confirmed -> shipped (ready for pickup)
-    #                           (completed happens on the Billing page)
+    #   GCash (prepaid):  confirmed -> processing -> shipped (ready for pickup) -> completed
+    #   Cash  (pay at counter): pending/awaiting_payment -> confirmed -> processing ->
+    #                           shipped (ready for pickup) (completed happens on the Billing page)
     if _is_pickup:
         if _pay == 'gcash':
             allowed_next = {
-                'confirmed': {'shipped', 'cancelled'},
-                'shipped':   {'completed', 'cancelled'},
+                'confirmed':  {'processing', 'shipped', 'cancelled'},
+                'processing': {'shipped', 'cancelled'},
+                'shipped':    {'completed', 'cancelled'},
             }
         else:
             allowed_next = {
                 'pending':          {'confirmed', 'cancelled'},
                 'awaiting_payment': {'confirmed', 'cancelled'},
-                'confirmed':        {'shipped', 'cancelled'},
+                'confirmed':        {'processing', 'shipped', 'cancelled'},
+                'processing':       {'shipped', 'cancelled'},
                 'shipped':          {'cancelled'},
             }
         if order.status in allowed_next and new_status != order.status and new_status not in allowed_next[order.status]:
@@ -3176,24 +3178,6 @@ def delete_mechanic(mid):
     db.session.commit()
     return jsonify({'success': True, 'unassigned_count': unassigned_count})
 
-
-@admin_app.route('/add-staff', methods=['POST'])
-@login_required
-def add_staff():
-    if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    email = request.form['email']
-    if User.query.filter_by(email=email).first():
-        flash('Email already exists.', 'danger')
-        return redirect(url_for('admin_dashboard'))
-    staff = User(fullname=request.form['fullname'], email=email,
-                 phone=request.form['phone'], role='staff', email_verified=True)
-    staff.set_password(request.form['password'])
-    db.session.add(staff)
-    db.session.commit()
-    flash(f'Staff account for {staff.fullname} created!', 'success')
-    return redirect(url_for('admin_dashboard'))
 
 
 @admin_app.route('/user/<int:uid>/delete', methods=['POST'])
@@ -4760,23 +4744,6 @@ def unarchive_booking(bid):
     db.session.commit()
     flash(f'Booking #{booking.id} restored.', 'success')
     return redirect(url_for('admin_dashboard'))
-
-
-@admin_app.route('/staff/dashboard')
-@login_required
-def staff_dashboard():
-    if current_user.role != 'staff':
-        return redirect(url_for('admin_dashboard'))
-    return render_template('staff_dashboard.html',
-        all_bookings=Booking.query.order_by(Booking.created_at.desc()).all(),
-        all_orders=Order.query.order_by(Order.created_at.desc()).all(),
-        all_customers=User.query.filter_by(role='customer').all(),
-        all_products=Product.query.all(),
-        recent_bookings=Booking.query.order_by(Booking.created_at.desc()).limit(5).all(),
-        today=date.today(),
-        booking_status_counts=dict(db.session.query(Booking.status, func.count(Booking.id)).group_by(Booking.status).all()),
-        order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all())
-    )
 
 
 with admin_app.app_context():

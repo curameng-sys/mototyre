@@ -1114,8 +1114,13 @@
                         <option value="shipped" selected>Ready to Pick Up</option>
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
+                      {% elif o.status == 'processing' %}
+                        <option value="processing" selected>Processing</option>
+                        <option value="shipped">Ready to Pick Up</option>
+                        <option value="cancelled">Cancelled</option>
                       {% else %}
                         <option value="{{ o.status }}" selected>{{ o.status|replace('_',' ')|title }}</option>
+                        <option value="processing">Processing</option>
                         <option value="shipped">Ready to Pick Up</option>
                         <option value="cancelled">Cancelled</option>
                       {% endif %}
@@ -1123,6 +1128,11 @@
                       {# Cash pick-up: paid at the counter on the Billing page #}
                       {% if o.status == 'confirmed' %}
                         <option value="confirmed" selected>Confirmed</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Ready to Pick Up</option>
+                        <option value="cancelled">Cancelled</option>
+                      {% elif o.status == 'processing' %}
+                        <option value="processing" selected>Processing</option>
                         <option value="shipped">Ready to Pick Up</option>
                         <option value="cancelled">Cancelled</option>
                       {% elif o.status == 'shipped' %}
@@ -1219,16 +1229,15 @@
       <div class="page-header">
         <div class="page-header-left">
           <div class="page-title">Manage <span class="accent">Users</span></div>
-          <div class="page-sub">View all registered customers and staff accounts.</div>
+          <div class="page-sub">View all registered customer accounts.</div>
         </div>
       </div>
       <div class="filter-bar">
         <input type="text" placeholder="Search name or email..." oninput="filterTable('users-table', this.value)">
         <select onchange="filterTableByCol('users-table', 5, this.value)">
           <option value="">All Roles</option>
-          <option>customer</option><option>staff</option><option>admin</option>
+          <option>customer</option><option>admin</option>
         </select>
-        <button class="btn-primary-custom" onclick="openModal('modal-add-staff')">+ Add Staff</button>
       </div>
       <div class="card">
         {% if all_users %}
@@ -1962,23 +1971,6 @@
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-service')">Cancel</button>
         <button type="submit" class="btn-primary-custom">Save Changes</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ADD STAFF MODAL -->
-<div class="modal-overlay" id="modal-add-staff">
-  <div class="modal-box">
-    <h5>Add Staff Account</h5>
-    <form method="POST" action="{{ url_for('add_staff') }}" onsubmit="return validateAdminProfileForm(this)">
-      <div class="form-group"><label>Full Name</label><input type="text" name="fullname" placeholder="e.g. Juan dela Cruz" required oninput="this.value=this.value.replace(/[0-9]/g,'')"></div>
-      <div class="form-group"><label>Email Address</label><input type="email" name="email" placeholder="staff@mototyre.com" required></div>
-      <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" placeholder="09xx xxx xxxx" required maxlength="11" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)"></div>
-      <div class="form-group"><label>Temporary Password</label><input type="password" name="password" placeholder="Min. 8 characters" required minlength="8"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn-cancel" onclick="closeModal('modal-add-staff')">Cancel</button>
-        <button type="submit" class="btn-primary-custom">Create Staff Account</button>
       </div>
     </form>
   </div>
