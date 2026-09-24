@@ -231,7 +231,11 @@
     /* ── FORMS ── */
     .form-group { margin-bottom: 1.1rem; }
     .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--fg-2); margin-bottom: 0.4rem; font-family: 'Syne', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--fg-1); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.15s; outline: none; }
+    /* Excludes checkbox/radio — those get stretched to the same width:100%
+       as a text field otherwise, which blows up any flex row (a "pick one"
+       address/delivery option, a "save as default" tickbox) it sits in. */
+    .form-group input:not([type="checkbox"]):not([type="radio"]),
+    .form-group select, .form-group textarea { width: 100%; background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--fg-1); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: border-color 0.15s; outline: none; }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--brand-red); box-shadow: 0 0 0 3px var(--brand-red-soft); }
     .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
     .profile-field-hint { font-size: 0.72rem; color: var(--fg-3); margin-top: 0.3rem; }
@@ -4048,12 +4052,46 @@ function updateRfOutcomeFooter() {
 
 // 3 · Why
 function renderRfReasonsSection() {
-  document.getElementById('rf-reasons-list').innerHTML = RETURN_REASONS[_rfKind].map(([code, label, needsPhoto]) => `
-    <label style="display:flex;flex-wrap:nowrap;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border:1px solid var(--line-2);border-radius:8px;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.83rem;cursor:pointer;width:100%;box-sizing:border-box;">
-      <input type="checkbox" class="rf-reason-tick" value="${code}" onchange="onRfReasonChange()" style="flex-shrink:0;margin:0;">
-      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</span>
-      ${needsPhoto ? '<span style="flex-shrink:0;font-size:0.64rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:0.1rem 0.4rem;white-space:nowrap;">needs a photo</span>' : ''}
-    </label>`).join('');
+  const wrap = document.getElementById('rf-reasons-list');
+  wrap.innerHTML = '';
+  // Same svc-row component the service checklist uses — proven to stay on
+  // one line and align correctly, unlike this section's old bespoke markup.
+  RETURN_REASONS[_rfKind].forEach(([code, label, needsPhoto]) => {
+    const row = document.createElement('label');
+    row.className = 'svc-row';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'svc-check-input rf-reason-tick';
+    cb.value = code;
+    cb.onchange = () => {
+      row.classList.toggle('selected', cb.checked);
+      onRfReasonChange();
+    };
+
+    const checkBox = document.createElement('span');
+    checkBox.className = 'svc-check-box';
+    checkBox.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'svc-name';
+    nameSpan.textContent = label;
+
+    row.appendChild(cb);
+    row.appendChild(checkBox);
+    row.appendChild(nameSpan);
+
+    if (needsPhoto) {
+      const dur = document.createElement('span');
+      dur.className = 'svc-dur';
+      dur.style.color = '#92400e';
+      dur.style.background = '#fef3c7';
+      dur.style.borderColor = '#f59e0b';
+      dur.textContent = 'needs a photo';
+      row.appendChild(dur);
+    }
+    wrap.appendChild(row);
+  });
   document.getElementById('rf-other-wrap').style.display = 'none';
   document.getElementById('rf-other-count').textContent = '0 / 500';
 }
