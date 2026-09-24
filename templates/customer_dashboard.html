@@ -380,7 +380,7 @@
     /* ── MODAL ── */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     .modal-overlay.open { display: flex; }
-    .modal-box { background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px; padding: 2rem; width: 420px; max-width: 95vw; animation: fadeUp 0.2s ease both; }
+    .modal-box { background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px; padding: 2rem; width: 420px; max-width: 95vw; max-height: 90vh; overflow-y: auto; animation: fadeUp 0.2s ease both; }
     .modal-box h5 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.04em; margin-bottom: 1.25rem; color: var(--fg-1); }
     .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
     .btn-cancel-modal { background: var(--bg-subtle); border: 1px solid var(--line-2); color: var(--fg-1); padding: 0.6rem 1.25rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
