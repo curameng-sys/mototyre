@@ -7,7 +7,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date, time
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -26,6 +26,9 @@ from service_duration import (
     add_working_days, MULTIDAY_MIN_DAYS, MULTIDAY_MAX_DAYS,
 )
 from gmail_helper import send_gmail_html as _send_gmail, send_otp_email
+from delivery_zones import (DELIVERY_ZONE_BARANGAYS, DELIVERY_ZONE_CITIES,
+    is_in_delivery_zone, format_delivery_address)
+from cloud_storage import upload_image
 import os, uuid, random, string, base64, requests
 from urllib.parse import quote, urlparse
 import pymysql
@@ -104,6 +107,12 @@ BASE_URL = os.getenv("BASE_URL", "").rstrip("/")
 # The shop's real Facebook Page, linked from the landing page's contact
 # section. Set via env var so it can be corrected without a code change.
 FACEBOOK_PAGE_URL = os.getenv("FACEBOOK_PAGE_URL", "https://www.facebook.com/share/19Uyin8Xay/")
+
+# Same idea, for the shop's phone number and hours — surfaced on the "Talk to
+# the Shop" prompt once a customer hits the replacement limit.
+SHOP_PHONE         = os.getenv("SHOP_PHONE", "+639152698366")
+SHOP_PHONE_DISPLAY = os.getenv("SHOP_PHONE_DISPLAY", "0915 269 8366")
+SHOP_HOURS         = os.getenv("SHOP_HOURS", "Open daily, 8:00 AM to 6:30 PM")
 
 # Hosts the customer is allowed to be redirected back to after payment.
 # ALLOWED_ORIGIN lets a deployed host (Render, etc.) add itself without a
@@ -417,6 +426,16 @@ class User(db.Model, UserMixin):
     is_flagged       = db.Column(db.Boolean, default=False)
     bookings         = db.relationship('Booking', backref='customer', lazy=True)
     orders           = db.relationship('Order', backref='customer', lazy=True)
+    # A structured default for replacement-claim shipping — separate from the
+    # free-text `address` above, which was never split into city/barangay and
+    # so can't be checked against the delivery zone. Only ever set once a
+    # customer files a replacement claim and ticks "save as my default".
+    default_delivery_name     = db.Column(db.String(100))
+    default_delivery_mobile   = db.Column(db.String(20))
+    default_delivery_city     = db.Column(db.String(50))
+    default_delivery_barangay = db.Column(db.String(50))
+    default_delivery_street   = db.Column(db.String(255))
+    default_delivery_zip      = db.Column(db.String(10))
 
     def set_password(self, pw):   self.password_hash = generate_password_hash(pw)
     def check_password(self, pw): return check_password_hash(self.password_hash, pw)
@@ -611,6 +630,18 @@ class ReturnRequest(db.Model):
     redo_mechanic_name = db.Column(db.String(100))
     redo_booking_id    = db.Column(db.Integer, nullable=True)  # the real, zero-charge Booking this back job writes into the shop calendar
     internal_notes     = db.Column(db.Text)  # shop-only — never surfaced to the customer
+    replacement_shipped_at  = db.Column(db.DateTime)  # replacement left the shop, on its way to the customer
+    replacement_arrived_at  = db.Column(db.DateTime)  # replacement delivered to the address below
+    completed_at            = db.Column(db.DateTime)  # customer confirmed receipt — the actual end of a replacement claim
+    # Where a replacement ships — captured once, at filing time, so a later
+    # change to the account's own address never silently redirects a claim
+    # that's already in flight.
+    delivery_name     = db.Column(db.String(100))
+    delivery_mobile   = db.Column(db.String(20))
+    delivery_city      = db.Column(db.String(50))
+    delivery_barangay = db.Column(db.String(50))
+    delivery_street    = db.Column(db.String(255))
+    delivery_zip       = db.Column(db.String(10))
 
 
 class ReturnRequestItem(db.Model):
@@ -1083,6 +1114,9 @@ def customer_dashboard():
     for r in returns:
         r.subject_label = _return_subject_label(r)
         r.origin_label = _return_origin_label(r)
+        r.delivery_address_label = (format_delivery_address(
+            r.delivery_name, r.delivery_mobile, r.delivery_street, r.delivery_barangay, r.delivery_city, r.delivery_zip)
+            if r.delivery_street else None)
 
     open_claims = ReturnRequest.query.filter(
         ReturnRequest.user_id == current_user.id, ReturnRequest.status.in_(OPEN_RETURN_STATUSES)
@@ -1093,11 +1127,59 @@ def customer_dashboard():
     for o in orders:
         o.return_window = return_window_info('product', o.delivered_at) if o.status in ('delivered', 'completed') else None
         o.open_claim = open_by_order.get(o.id)
+        o.replacement_stats = _order_replacement_stats(o) if o.return_window else None
     for b in bookings:
         b.return_window = return_window_info('service', b.completed_at) if b.status == 'completed' else None
         b.open_claim = open_by_booking.get(b.id)
+    default_delivery_eligible = bool(current_user.default_delivery_city and
+        is_in_delivery_zone(current_user.default_delivery_city, current_user.default_delivery_barangay))
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders,
-                           products=products, services=services, returns=returns)
+                           products=products, services=services, returns=returns,
+                           delivery_zone_barangays=DELIVERY_ZONE_BARANGAYS,
+                           delivery_zone_cities=DELIVERY_ZONE_CITIES,
+                           default_delivery_eligible=default_delivery_eligible,
+                           shop_phone=SHOP_PHONE, shop_phone_display=SHOP_PHONE_DISPLAY,
+                           shop_hours=SHOP_HOURS, facebook_page_url=FACEBOOK_PAGE_URL)
+
+
+# A replacement only spends one of the two chances once the shop actually
+# approves it — everything from that point through delivery still counts,
+# since the remedy already happened; a denial or a self-cancel never does.
+REPLACEMENT_COUNTS_STATUSES = {'approved', 'replacement_shipped', 'replacement_arrived', 'completed', 'resolved'}
+REPLACEMENT_LIMIT_PER_ORDER = 2
+
+
+def _order_replacement_stats(order):
+    reqs = ReturnRequest.query.filter(
+        ReturnRequest.order_id == order.id,
+        or_(ReturnRequest.desired_outcome == 'replacement', ReturnRequest.resolution == 'replacement'),
+    ).order_by(ReturnRequest.created_at.asc()).all()
+
+    approved_count = sum(1 for r in reqs if r.status in REPLACEMENT_COUNTS_STATUSES)
+    has_pending = any(r.status in ('submitted', 'under_review') for r in reqs)
+
+    requests_shown = []
+    for r in reqs:
+        if r.status == 'cancelled':
+            continue
+        if r.status in REPLACEMENT_COUNTS_STATUSES:
+            tag = 'counts'
+        elif r.status == 'denied':
+            tag = 'rejected'
+        else:
+            tag = 'under_review'
+        requests_shown.append({
+            'ref': f'RMA-{r.id:03d}', 'tag': tag,
+            'reason': r.decision_reason if tag == 'rejected' else None,
+        })
+
+    return {
+        'approved_count': approved_count,
+        'limit': REPLACEMENT_LIMIT_PER_ORDER,
+        'limit_reached': approved_count >= REPLACEMENT_LIMIT_PER_ORDER,
+        'has_pending': has_pending,
+        'requests': requests_shown,
+    }
 
 
 def _return_subject_label(rr):
@@ -1603,12 +1685,20 @@ def upload_profile_pic():
     if not file or file.filename == '':
         flash('No file selected.', 'danger')
     elif allowed_file(file.filename):
-        ext      = file.filename.rsplit('.', 1)[1].lower()
-        filename = f"{current_user.id}_{uuid.uuid4().hex}.{ext}"
-        folder   = os.path.join(app.root_path, 'static', 'profile_pics')
-        os.makedirs(folder, exist_ok=True)
-        file.save(os.path.join(folder, filename))
-        current_user.profile_pic = filename
+        cloud_url = upload_image(file, 'profile_pics')
+        if cloud_url:
+            # A full URL, not a bare filename — the template tells the two
+            # apart by whether it starts with "http".
+            current_user.profile_pic = cloud_url
+        else:
+            # Cloudinary isn't configured — same local-disk behavior as
+            # before, which Render wipes on every deploy.
+            ext      = file.filename.rsplit('.', 1)[1].lower()
+            filename = f"{current_user.id}_{uuid.uuid4().hex}.{ext}"
+            folder   = os.path.join(app.root_path, 'static', 'profile_pics')
+            os.makedirs(folder, exist_ok=True)
+            file.save(os.path.join(folder, filename))
+            current_user.profile_pic = filename
         db.session.commit()
         db.session.refresh(current_user)
         flash('Profile picture updated!', 'success')
@@ -1653,9 +1743,10 @@ def return_window_info(kind, reference_dt):
 
 def _save_return_photos(files):
     """Images only, up to RETURN_PHOTOS_MAX, each under RETURN_PHOTO_MAX_BYTES.
-    Returns (saved_filenames, skipped_count) — never raises on a bad file,
-    just leaves it out, since the client already told the customer which
-    ones didn't make it."""
+    Returns (saved, skipped_count) — never raises on a bad file, just leaves
+    it out, since the client already told the customer which ones didn't
+    make it. Each saved entry is a Cloudinary URL when configured, else a
+    bare local filename (the old behavior, which a later deploy wipes)."""
     folder = os.path.join(app.root_path, 'static', 'return_evidence')
     saved, skipped = [], 0
     for file in files[:RETURN_PHOTOS_MAX]:
@@ -1669,6 +1760,10 @@ def _save_return_photos(files):
         file.seek(0)
         if size > RETURN_PHOTO_MAX_BYTES:
             skipped += 1
+            continue
+        cloud_url = upload_image(file, 'return_evidence')
+        if cloud_url:
+            saved.append(cloud_url)
             continue
         ext = file.filename.rsplit('.', 1)[1].lower()
         filename = f"{current_user.id}_{uuid.uuid4().hex}.{ext}"
@@ -1748,6 +1843,9 @@ def create_return_request():
             ).first()
             if existing_open:
                 errors.append(f'Request RMA-{existing_open.id:03d} is already open for this order.')
+            elif desired_outcome == 'replacement' and _order_replacement_stats(order)['limit_reached']:
+                errors.append(f'This item has already used both of its {REPLACEMENT_LIMIT_PER_ORDER} approved '
+                               f'replacements. Please contact the shop directly so we can sort it out together.')
 
             try:
                 raw_items = _json.loads(request.form.get('items_json', '[]'))
@@ -1783,8 +1881,53 @@ def create_return_request():
                 requested_mechanic_name = booking.assigned_mechanic_name
         what = booking.service if booking else 'your appointment'
 
+    # Delivery address — only matters for a product replacement; nothing
+    # ships for a refund or a service warranty claim, so this step is
+    # skipped (and never required) for anything else.
+    address_mode = clean_str(request.form.get('address_mode', ''), max_len=10)
+    delivery_fields = {}
+    if kind == 'product' and desired_outcome == 'replacement':
+        if address_mode == 'default':
+            u = current_user
+            if not (u.default_delivery_city and is_in_delivery_zone(u.default_delivery_city, u.default_delivery_barangay)):
+                errors.append('Your saved default address is outside the delivery area — please use a different address for this claim.')
+            else:
+                delivery_fields = {
+                    'delivery_name': u.default_delivery_name, 'delivery_mobile': u.default_delivery_mobile,
+                    'delivery_city': u.default_delivery_city, 'delivery_barangay': u.default_delivery_barangay,
+                    'delivery_street': u.default_delivery_street, 'delivery_zip': u.default_delivery_zip,
+                }
+        elif address_mode == 'custom':
+            d_name   = clean_str(request.form.get('delivery_name', ''), max_len=100)
+            d_mobile = clean_str(request.form.get('delivery_mobile', ''), max_len=13)
+            d_city   = clean_str(request.form.get('delivery_city', ''), max_len=50)
+            d_brgy   = clean_str(request.form.get('delivery_barangay', ''), max_len=50)
+            d_street = clean_str(request.form.get('delivery_street', ''), max_len=255)
+            d_zip    = clean_str(request.form.get('delivery_zip', ''), max_len=10)
+            if not (d_name and d_mobile and d_street):
+                errors.append('Please fill in the full delivery address.')
+            elif not is_valid_phone(d_mobile):
+                errors.append('Invalid delivery mobile number.')
+            elif not is_in_delivery_zone(d_city, d_brgy):
+                errors.append('We only deliver replacements within North Caloocan or Northern Quezon City.')
+            else:
+                delivery_fields = {
+                    'delivery_name': d_name, 'delivery_mobile': d_mobile, 'delivery_city': d_city,
+                    'delivery_barangay': d_brgy, 'delivery_street': d_street, 'delivery_zip': d_zip,
+                }
+        else:
+            errors.append('Please choose a delivery address for the replacement.')
+
     if errors:
         return jsonify({'success': False, 'errors': errors}), 400
+
+    if address_mode == 'custom' and delivery_fields and request.form.get('save_as_default') == 'on':
+        current_user.default_delivery_name     = delivery_fields['delivery_name']
+        current_user.default_delivery_mobile   = delivery_fields['delivery_mobile']
+        current_user.default_delivery_city     = delivery_fields['delivery_city']
+        current_user.default_delivery_barangay = delivery_fields['delivery_barangay']
+        current_user.default_delivery_street   = delivery_fields['delivery_street']
+        current_user.default_delivery_zip      = delivery_fields['delivery_zip']
 
     saved_filenames, _skipped = _save_return_photos(incoming_photos)
 
@@ -1801,6 +1944,7 @@ def create_return_request():
         reasons=','.join(reasons), other_reason_text=other_text if 'other' in reasons else None,
         desired_outcome=desired_outcome, requested_mechanic_name=requested_mechanic_name,
         requested_refund_amount=requested_refund_amount, photos=','.join(saved_filenames) or None,
+        **delivery_fields,
     )
     db.session.add(rr)
     db.session.flush()
@@ -1890,6 +2034,45 @@ def add_return_info(rid):
             type='booking' if rr.kind == 'service' else 'order', status=rr.status,
         )
     return jsonify({'success': True})
+
+
+@app.route('/returns/<int:rid>/confirm-received', methods=['POST'])
+@login_required
+def confirm_return_received(rid):
+    """The customer's own 'I got it' — the only way a replacement claim
+    reaches Completed on its own, since a part marked 'arrived' just means
+    it's sitting at the shop, not that it's actually in the customer's hands
+    yet. Staff has their own equivalent button for a walk-in pickup."""
+    rr = ReturnRequest.query.filter_by(id=rid, user_id=current_user.id).first_or_404()
+    if rr.resolution != 'replacement' or rr.status != 'replacement_arrived':
+        return jsonify({'success': False, 'error': 'This claim is not waiting on a pickup.'}), 400
+
+    rr.status = 'completed'
+    rr.completed_at = ph_now()
+    db.session.commit()
+
+    ref = f'RMA-{rr.id:03d}'
+    subject = _return_subject_label(rr)
+    title = 'Replacement received — thank you!'
+    body = f'You confirmed receipt of your replacement for {subject} ({ref}). Thanks for choosing MotoTyre North Caloocan!'
+    send_notification(current_user.id, title, body,
+                       type='booking' if rr.kind == 'service' else 'order', status='completed', return_request_id=rr.id)
+    if current_user.email:
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+          <p>Hi {current_user.fullname},</p>
+          <p>{body}</p>
+          <p>— MotoTyre North Caloocan</p>
+        </div>"""
+        _send_gmail(current_user.email, f'{title} — MotoTyre', html)
+
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(
+            admin.id, f'Replacement confirmed received — {ref}',
+            f'{current_user.fullname} confirmed receipt of the replacement for {subject} ({ref}).',
+            type='booking' if rr.kind == 'service' else 'order', status='completed',
+        )
+    return jsonify({'success': True, 'new_status': 'completed'})
 
 
 @app.route('/api/booked-slots')

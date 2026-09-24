@@ -596,7 +596,7 @@
 
     <div class="nav-avatar" onclick="showSection('profile', null)" title="Account Settings">
       {% if current_user.profile_pic %}
-        <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="Profile">
+        <img src="{{ current_user.profile_pic if current_user.profile_pic.startswith('http') else url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="{{ current_user.fullname[0].upper() }}" onerror="this.replaceWith(document.createTextNode(this.alt))">
       {% else %}
         {{ current_user.fullname[0].upper() }}
       {% endif %}
@@ -1158,7 +1158,14 @@
         <div style="font-size:0.8rem;color:var(--fg-2);line-height:1.55;">We return what you paid. <strong>The part isn't replaced and the work isn't redone</strong> — book again separately if you still need it.</div>
       </div>
     </div>
-    <div style="font-size:0.78rem;color:var(--fg-3);margin-bottom:1.5rem;">Parts are returnable within <strong>7 days</strong> of delivery. Services carry a <strong>15-day warranty</strong> from the day the job was completed.</div>
+    <div style="font-size:0.78rem;color:var(--fg-3);margin-bottom:1rem;">Parts are returnable within <strong>7 days</strong> of delivery. Services carry a <strong>15-day warranty</strong> from the day the job was completed.</div>
+
+    <div style="background:#fefce8;border:1px solid #eab308;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.5rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:#713f12;margin-bottom:0.3rem;">⚠ Replacement limit: 2 requests per item</div>
+      <div style="font-size:0.78rem;color:#854d0e;line-height:1.55;">
+        If a part is defective, you can ask for a replacement up to <strong>2 times</strong>. Only <strong>approved</strong> replacements count — if the shop declines a request (for example, because the damage came from misuse or improper installation), it doesn't use up one of your chances. If the same item is defective a third time after 2 approved replacements, you won't be able to submit a request online anymore — you and the shop will need to talk it over and agree on what to do next.
+      </div>
+    </div>
 
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Spare Parts Orders</div>
     <div id="claimable-orders-list" style="display:flex;flex-direction:column;gap:0.7rem;margin-bottom:1.85rem;"></div>
@@ -1186,7 +1193,7 @@
             <div class="pic-upload-wrap">
               <div class="pic-preview" id="picPreview">
                 {% if current_user.profile_pic %}
-                  <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="Profile">
+                  <img src="{{ current_user.profile_pic if current_user.profile_pic.startswith('http') else url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="{{ current_user.fullname[0].upper() }}" onerror="this.replaceWith(document.createTextNode(this.alt))">
                 {% else %}
                   {{ current_user.fullname[0].upper() }}
                 {% endif %}
@@ -1397,12 +1404,12 @@
 
     <form id="return-form" onsubmit="return submitReturnForm(event)">
       <div class="form-group" id="rf-section-items">
-        <label>1 · Which items</label>
+        <label data-step-title="Which items">1 · Which items</label>
         <div id="rf-items-list" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
       </div>
 
       <div class="form-group">
-        <label>2 · What do you want us to do</label>
+        <label data-step-title="What do you want us to do">2 · What do you want us to do</label>
         <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:0.55rem 0.8rem;font-size:0.76rem;color:#7c2d12;margin-bottom:0.6rem;">
           Pick one — <strong>never both</strong>: either we put it right, or we give your money back.
         </div>
@@ -1417,8 +1424,63 @@
         <div id="rf-refund-footer" style="margin-top:0.6rem;padding:0.55rem 0.8rem;border-radius:8px;font-size:0.85rem;font-weight:700;"></div>
       </div>
 
+      <div class="form-group" id="rf-section-delivery" style="display:none;">
+        <label data-step-title="Delivery Address">3 · Delivery Address</label>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.55rem 0.8rem;font-size:0.76rem;color:#1e3a8a;margin-bottom:0.6rem;">
+          We deliver only within North Caloocan (Barangays 165 to 188) and Northern Quezon City (Districts 2, 5, and 6).
+        </div>
+
+        <label style="display:flex;align-items:flex-start;gap:0.55rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.85rem;cursor:{{ 'pointer' if default_delivery_eligible else 'not-allowed' }};padding:0.7rem 0.8rem;border:1.5px solid var(--line-2);border-radius:8px;margin-bottom:0.5rem;{{ '' if default_delivery_eligible else 'opacity:0.5;' }}">
+          <input type="radio" name="rf-address-mode" value="default" id="rf-address-default" onchange="onRfAddressModeChange()" {{ 'disabled' if not default_delivery_eligible }} style="margin-top:0.2rem;flex-shrink:0;">
+          <span style="flex:1;">
+            <strong>Use my default address</strong>
+            {% if default_delivery_eligible %}
+              <span style="display:inline-block;margin-left:0.4rem;font-size:0.66rem;font-weight:700;color:#15803d;background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:0.05rem 0.4rem;">DEFAULT</span>
+              <div style="margin-top:0.3rem;color:var(--fg-2);">
+                {{ current_user.default_delivery_name }}<br>
+                {{ current_user.default_delivery_street }}, Brgy. {{ current_user.default_delivery_barangay }}<br>
+                {{ current_user.default_delivery_city }} {{ current_user.default_delivery_zip }}<br>
+                {{ current_user.default_delivery_mobile }}
+              </div>
+            {% else %}
+              <div style="margin-top:0.3rem;color:var(--fg-3);">{{ 'No default address saved yet.' if not current_user.default_delivery_city else 'Your saved default address is outside the delivery area.' }}</div>
+            {% endif %}
+          </span>
+        </label>
+
+        <label style="display:flex;align-items:flex-start;gap:0.55rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.85rem;cursor:pointer;padding:0.7rem 0.8rem;border:1.5px solid var(--line-2);border-radius:8px;">
+          <input type="radio" name="rf-address-mode" value="custom" id="rf-address-custom" onchange="onRfAddressModeChange()" style="margin-top:0.2rem;flex-shrink:0;">
+          <span style="flex:1;">
+            <strong>Use a different address</strong>
+            <div id="rf-address-custom-fields" style="display:none;margin-top:0.6rem;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                <div><label style="font-weight:400;text-transform:uppercase;font-size:0.66rem;color:var(--fg-3);">Full Name</label><input type="text" id="rf-delivery-name" placeholder="Juan Dela Cruz"></div>
+                <div><label style="font-weight:400;text-transform:uppercase;font-size:0.66rem;color:var(--fg-3);">Mobile Number</label><input type="text" id="rf-delivery-mobile" placeholder="09XX XXX XXXX"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;">
+                <div><label style="font-weight:400;text-transform:uppercase;font-size:0.66rem;color:var(--fg-3);">City</label>
+                  <select id="rf-delivery-city" onchange="onRfDeliveryCityChange()">
+                    <option value="">Select city</option>
+                    {% for c in delivery_zone_cities %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div><label style="font-weight:400;text-transform:uppercase;font-size:0.66rem;color:var(--fg-3);">Barangay</label>
+                  <select id="rf-delivery-barangay" onchange="updateRfSummary()"><option value="">Select city first</option></select>
+                </div>
+              </div>
+              <div style="margin-top:0.5rem;"><label style="font-weight:400;text-transform:uppercase;font-size:0.66rem;color:var(--fg-3);">House No. and Street</label><input type="text" id="rf-delivery-street" placeholder="Blk 3 Lot 7 Sampaguita St." oninput="updateRfSummary()"></div>
+              <div style="margin-top:0.5rem;max-width:140px;"><label style="font-weight:400;text-transform:uppercase;font-size:0.66rem;color:var(--fg-3);">Zip Code</label><input type="text" id="rf-delivery-zip" placeholder="1116" maxlength="4"></div>
+              <label style="display:flex;align-items:center;gap:0.4rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.78rem;margin-top:0.6rem;cursor:pointer;">
+                <input type="checkbox" id="rf-delivery-save-default"> Save as my default address
+              </label>
+            </div>
+          </span>
+        </label>
+        <div id="rf-delivery-error" style="display:none;margin-top:0.5rem;padding:0.5rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:0.78rem;color:#7f1d1d;"></div>
+      </div>
+
       <div class="form-group">
-        <label>3 · Why</label>
+        <label data-step-title="Why">3 · Why</label>
         <div id="rf-reasons-list" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
         <div id="rf-other-wrap" style="display:none;margin-top:0.5rem;">
           <textarea id="rf-other-text" rows="3" maxlength="500" placeholder="What went wrong? (Tagalog/Taglish is fine)" oninput="updateOtherCharCount()"></textarea>
@@ -1427,7 +1489,7 @@
       </div>
 
       <div class="form-group">
-        <label>4 · Photos of the Problem</label>
+        <label data-step-title="Photos of the Problem">4 · Photos of the Problem</label>
         <div id="rf-dropzone" ondrop="handleReturnPhotoDrop(event)" ondragover="event.preventDefault()" ondragenter="event.preventDefault()" onclick="document.getElementById('rf-photos-input').click()" style="border:2px dashed var(--line-2);border-radius:10px;padding:1.4rem 1rem;text-align:center;cursor:pointer;font-size:0.8rem;color:var(--fg-3);">
           Drag photos here, or tap to choose — images only, up to 5 photos, 5MB each.
         </div>
@@ -1437,7 +1499,7 @@
       </div>
 
       <div class="form-group">
-        <label>5 · Check Before Sending</label>
+        <label data-step-title="Check Before Sending">5 · Check Before Sending</label>
         <div id="rf-summary" style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.9rem 1rem;font-size:0.83rem;color:var(--fg-1);line-height:1.6;"></div>
       </div>
 
@@ -1446,6 +1508,36 @@
         <button type="submit" class="btn-submit" id="rf-submit-btn">Submit Request</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ═══ TALK TO THE SHOP — shown once an item hits its replacement limit ═══ -->
+<div class="modal-overlay" id="modal-talk-to-shop" onclick="if (event.target === this) closeTalkToShopModal()">
+  <div class="modal-box" style="width:420px;max-width:92vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <h5 style="margin:0;">Let's talk about this item</h5>
+      <button type="button" onclick="closeTalkToShopModal()" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+    </div>
+    <div style="font-size:0.85rem;color:var(--fg-2);line-height:1.6;margin-bottom:1.1rem;">
+      This item from that order has already had 2 approved replacements. Since it's defective again, please reach out so we can check it together in person and decide what to do next.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.6rem;">
+      <a href="tel:{{ shop_phone }}" style="display:flex;align-items:center;gap:0.65rem;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;text-decoration:none;color:var(--fg-1);">
+        <span style="font-size:1.2rem;">📞</span>
+        <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;">Call or Text</div><div style="font-size:0.78rem;color:var(--fg-3);">{{ shop_phone_display }}</div></div>
+      </a>
+      <a href="{{ facebook_page_url }}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.65rem;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;text-decoration:none;color:var(--fg-1);">
+        <span style="font-size:1.2rem;">💬</span>
+        <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;">Facebook Messenger</div><div style="font-size:0.78rem;color:var(--fg-3);">MotoTyre North Caloocan</div></div>
+      </a>
+      <div style="display:flex;align-items:center;gap:0.65rem;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;">
+        <span style="font-size:1.2rem;">🏬</span>
+        <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;">Visit the Shop</div><div style="font-size:0.78rem;color:var(--fg-3);">{{ shop_hours }}</div></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel-modal" onclick="closeTalkToShopModal()">Close</button>
+    </div>
   </div>
 </div>
 
@@ -1912,6 +2004,18 @@
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   document.getElementById(id).style.display = '';
+}
+
+function openTalkToShopModal() {
+  document.getElementById('modal-talk-to-shop').classList.add('open');
+  document.addEventListener('keydown', _talkToShopEscHandler);
+}
+function closeTalkToShopModal() {
+  document.getElementById('modal-talk-to-shop').classList.remove('open');
+  document.removeEventListener('keydown', _talkToShopEscHandler);
+}
+function _talkToShopEscHandler(e) {
+  if (e.key === 'Escape') closeTalkToShopModal();
 }
 
 function goToStep(stepId) {
@@ -3141,7 +3245,8 @@ const ordersData = {
     delivery_method: {{ (o.delivery_method or "pickup")|tojson }},
     created_at: '{{ o.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
     return_window: {{ ({'expired': o.return_window.expired, 'days_left': o.return_window.days_left, 'label': o.return_window.label} if o.return_window else none)|tojson }},
-    open_claim: {{ ({'id': o.open_claim.id, 'ref': 'RMA-%03d'|format(o.open_claim.id)} if o.open_claim else none)|tojson }},
+    open_claim: {{ ({'id': o.open_claim.id, 'ref': 'RMA-%03d'|format(o.open_claim.id), 'status': o.open_claim.status} if o.open_claim else none)|tojson }},
+    replacement_stats: {{ (o.replacement_stats or none)|tojson }},
     items: [
       {% for item in o.items %}
       {
@@ -3370,6 +3475,10 @@ const returnsData = {
     created_at: '{{ r.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
     decided_at: {{ (r.decided_at.strftime("%b %d, %Y at %I:%M %p") if r.decided_at else none)|tojson }},
     resolved_at: {{ (r.resolved_at.strftime("%b %d, %Y at %I:%M %p") if r.resolved_at else none)|tojson }},
+    replacement_shipped_at: {{ (r.replacement_shipped_at.strftime("%b %d, %Y at %I:%M %p") if r.replacement_shipped_at else none)|tojson }},
+    replacement_arrived_at: {{ (r.replacement_arrived_at.strftime("%b %d, %Y at %I:%M %p") if r.replacement_arrived_at else none)|tojson }},
+    completed_at: {{ (r.completed_at.strftime("%b %d, %Y at %I:%M %p") if r.completed_at else none)|tojson }},
+    delivery_address: {{ (r.delivery_address_label or '')|tojson }},
     cancelled_at: {{ (r.cancelled_at.strftime("%b %d, %Y at %I:%M %p") if r.cancelled_at else none)|tojson }}
   }{% if not loop.last %},{% endif %}
   {% endfor %}
@@ -3396,6 +3505,12 @@ const RETURN_OUTCOMES = {
       consequence: "You'll need to book again separately if you still need it." },
   ],
 };
+
+// Delivery zone for a replacement — city -> allowed barangays. Populates the
+// barangay dropdown once a city is picked, and matches what the server
+// itself validates against, so a customer never fills this in only to have
+// the whole claim rejected on submit.
+const DELIVERY_ZONE_BARANGAYS = {{ delivery_zone_barangays|tojson }};
 
 // "Why" checklist (section 3): [code, label, needs_photo]. A reason needs a
 // photo when it's something a photo could actually prove.
@@ -3448,7 +3563,13 @@ function claimBadgeHTML(w) {
   return `<span class="badge" style="background:${w.expired ? '#fee2e2' : '#dbeafe'};color:${w.expired ? '#7f1d1d' : '#1e3a8a'};border:1px solid ${w.expired ? '#ef4444' : '#3b82f6'};">${w.label}</span>`;
 }
 
-function claimActionHTML(openClaim, expired, onStart) {
+function claimActionHTML(openClaim, expired, onStart, stats) {
+  if (stats && stats.limit_reached) {
+    return `<button type="button" onclick="openTalkToShopModal()" style="padding:0.5rem 1rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Talk to the Shop</button>`;
+  }
+  if (openClaim && (openClaim.status === 'submitted' || openClaim.status === 'under_review')) {
+    return `<button type="button" disabled title="Open your requests tab to see it" onclick="openReturnDetails(${openClaim.id})" style="padding:0.5rem 1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;opacity:0.75;">Request under review</button>`;
+  }
   if (openClaim) {
     return `<a href="#" onclick="openReturnDetails(${openClaim.id}); return false;" style="font-size:0.82rem;font-weight:700;color:var(--brand-red);">Request ${openClaim.ref} open →</a>`;
   }
@@ -3456,6 +3577,31 @@ function claimActionHTML(openClaim, expired, onStart) {
     return `<div style="font-size:0.76rem;color:var(--fg-3);max-width:220px;text-align:right;">Message the shop directly — we'll look at it case by case.</div>`;
   }
   return `<button type="button" class="pic-upload-btn" onclick="${onStart}" style="padding:0.5rem 1rem;">Start a Claim</button>`;
+}
+
+// Two-bar counter + past-requests list shown on a claimable order card, for
+// the "up to 2 approved replacements per item" rule.
+function replacementLimitHTML(stats) {
+  if (!stats || !stats.requests.length) return '';
+  const bars = Array.from({ length: stats.limit }, (_, i) => {
+    const filled = i < stats.approved_count;
+    const color = filled ? (stats.limit_reached ? '#dc2626' : 'var(--brand-red)') : 'var(--line-2)';
+    return `<div style="flex:1;height:6px;border-radius:3px;background:${color};"></div>`;
+  }).join('');
+  const leftText = stats.limit_reached ? '' : ` (${stats.limit - stats.approved_count} left)`;
+  const tagHTML = r => {
+    if (r.tag === 'counts') return `<div style="font-size:0.74rem;color:#15803d;">${r.ref} — Approved · counts</div>`;
+    if (r.tag === 'rejected') return `
+      <div style="font-size:0.74rem;color:var(--fg-3);"><span style="text-decoration:line-through;">${r.ref} — Rejected</span> · doesn't count${r.reason ? ` — <span style="font-style:italic;">${r.reason}</span>` : ''}</div>`;
+    return `<div style="font-size:0.74rem;color:#a16207;">${r.ref} — Under review</div>`;
+  };
+  return `
+    <div style="margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed var(--line-1);">
+      <div style="font-size:0.75rem;font-weight:700;color:${stats.limit_reached ? '#b91c1c' : 'var(--fg-2)'};margin-bottom:0.3rem;">Approved replacements: ${stats.approved_count} of ${stats.limit}${leftText}</div>
+      <div style="display:flex;gap:0.3rem;margin-bottom:0.4rem;">${bars}</div>
+      <div style="display:flex;flex-direction:column;gap:0.2rem;">${stats.requests.map(tagHTML).join('')}</div>
+      ${stats.limit_reached ? `<div style="margin-top:0.5rem;padding:0.5rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:0.76rem;color:#b91c1c;">This item has used both of its ${stats.limit} approved replacements. Please talk to the shop so we can sort it out together.</div>` : ''}
+    </div>`;
 }
 
 function renderClaimableOrders() {
@@ -3477,8 +3623,9 @@ function renderClaimableOrders() {
       ${o.items.map(it => `<div style="font-size:0.78rem;color:var(--fg-2);">${it.product_name} &times;${it.quantity} — &#8369;${it.subtotal.toFixed(2)}</div>`).join('')}
       <div style="border-top:1px solid var(--line-1);margin-top:0.5rem;padding-top:0.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
         <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">Total &#8369;${o.total.toFixed(2)}</span>
-        ${claimActionHTML(o.open_claim, o.return_window.expired, `openReturnForm('product', ${o.id})`)}
+        ${claimActionHTML(o.open_claim, o.return_window.expired, `openReturnForm('product', ${o.id})`, o.replacement_stats)}
       </div>
+      ${replacementLimitHTML(o.replacement_stats)}
     </div>`).join('');
 }
 
@@ -3529,11 +3676,22 @@ function openReturnForm(kind, id) {
     ? `Return Request — ORD-${String(id).padStart(3,'0')}`
     : `Warranty Request — ${_rfBooking.service}`;
 
+  document.querySelectorAll('input[name="rf-address-mode"]').forEach(r => r.checked = false);
+  document.getElementById('rf-address-custom-fields').style.display = 'none';
+  ['rf-delivery-name', 'rf-delivery-mobile', 'rf-delivery-street', 'rf-delivery-zip'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('rf-delivery-city').value = '';
+  document.getElementById('rf-delivery-barangay').innerHTML = '<option value="">Select city first</option>';
+  document.getElementById('rf-delivery-save-default').checked = false;
+  document.getElementById('rf-delivery-error').style.display = 'none';
+
   renderRfItemsSection();
   renderReturnOutcomeCards(_rfKind);
   renderRfReasonsSection();
   renderRfPhotosSection();
   updateRfOutcomeFooter();
+  updateRfDeliveryVisibility();
   updateRfSummary();
 
   document.getElementById('modal-return-form').classList.add('open');
@@ -3557,16 +3715,16 @@ function renderRfItemsSection() {
   if (_rfKind !== 'product') { section.style.display = 'none'; return; }
   section.style.display = 'block';
   document.getElementById('rf-items-list').innerHTML = _rfOrder.items.map(it => `
-    <div style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0.75rem;border:1px solid var(--line-2);border-radius:8px;">
-      <input type="checkbox" id="rf-item-tick-${it.id}" onchange="onRfItemTick(${it.id})">
+    <div style="display:flex;flex-wrap:nowrap;align-items:center;gap:0.7rem;padding:0.6rem 0.75rem;border:1px solid var(--line-2);border-radius:8px;">
+      <input type="checkbox" id="rf-item-tick-${it.id}" onchange="onRfItemTick(${it.id})" style="flex-shrink:0;width:16px;height:16px;margin:0;">
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:600;font-size:0.85rem;">${it.product_name}</div>
-        <div style="font-size:0.74rem;color:var(--fg-3);">&#8369;${it.unit_price.toFixed(2)} each &middot; bought ${it.quantity}</div>
+        <div style="font-weight:600;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${it.product_name}</div>
+        <div style="font-size:0.74rem;color:var(--fg-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">&#8369;${it.unit_price.toFixed(2)} each &middot; bought ${it.quantity}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:0.4rem;">
-        <button type="button" onclick="stepRfItemQty(${it.id}, -1, ${it.quantity})" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line-2);background:#fff;cursor:pointer;">−</button>
-        <span id="rf-item-qty-${it.id}" style="min-width:20px;text-align:center;font-weight:700;">0</span>
-        <button type="button" onclick="stepRfItemQty(${it.id}, 1, ${it.quantity})" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line-2);background:#fff;cursor:pointer;">+</button>
+      <div style="flex-shrink:0;display:flex;flex-wrap:nowrap;align-items:center;gap:0.4rem;">
+        <button type="button" onclick="stepRfItemQty(${it.id}, -1, ${it.quantity})" style="flex-shrink:0;width:26px;height:26px;border-radius:6px;border:1px solid var(--line-2);background:#fff;cursor:pointer;">−</button>
+        <span id="rf-item-qty-${it.id}" style="flex-shrink:0;min-width:20px;text-align:center;font-weight:700;">0</span>
+        <button type="button" onclick="stepRfItemQty(${it.id}, 1, ${it.quantity})" style="flex-shrink:0;width:26px;height:26px;border-radius:6px;border:1px solid var(--line-2);background:#fff;cursor:pointer;">+</button>
       </div>
     </div>`).join('');
 }
@@ -3613,6 +3771,44 @@ function selectReturnOutcome(value) {
   document.getElementById('rf-outcome').value = value;
   renderReturnOutcomeCards(_rfKind);
   updateRfOutcomeFooter();
+  updateRfDeliveryVisibility();
+  updateRfSummary();
+}
+
+// Delivery address (section 3, replacement claims only) — hidden entirely
+// for a refund or a service claim, since nothing ships in either case.
+function updateRfDeliveryVisibility() {
+  const outcome = document.getElementById('rf-outcome').value;
+  const show = _rfKind === 'product' && outcome === 'replacement';
+  document.getElementById('rf-section-delivery').style.display = show ? 'block' : 'none';
+  renumberReturnFormSteps();
+}
+
+function renumberReturnFormSteps() {
+  const groups = document.querySelectorAll('#return-form > .form-group');
+  let n = 0;
+  groups.forEach(g => {
+    if (g.style.display === 'none') return;
+    n++;
+    const label = g.querySelector('label[data-step-title]');
+    if (label) label.textContent = `${n} · ${label.dataset.stepTitle}`;
+  });
+}
+
+function onRfAddressModeChange() {
+  const mode = document.querySelector('input[name="rf-address-mode"]:checked');
+  document.getElementById('rf-address-custom-fields').style.display =
+    (mode && mode.value === 'custom') ? 'block' : 'none';
+  updateRfSummary();
+}
+
+function onRfDeliveryCityChange() {
+  const city = document.getElementById('rf-delivery-city').value;
+  const brgySel = document.getElementById('rf-delivery-barangay');
+  const brgys = DELIVERY_ZONE_BARANGAYS[city] || [];
+  brgySel.innerHTML = city
+    ? brgys.map(b => `<option value="${b}">${b}</option>`).join('')
+    : '<option value="">Select city first</option>';
   updateRfSummary();
 }
 
@@ -3654,9 +3850,9 @@ function updateRfOutcomeFooter() {
 // 3 · Why
 function renderRfReasonsSection() {
   document.getElementById('rf-reasons-list').innerHTML = RETURN_REASONS[_rfKind].map(([code, label, needsPhoto]) => `
-    <label style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border:1px solid var(--line-2);border-radius:8px;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.83rem;cursor:pointer;width:100%;box-sizing:border-box;">
+    <label style="display:flex;flex-wrap:nowrap;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border:1px solid var(--line-2);border-radius:8px;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.83rem;cursor:pointer;width:100%;box-sizing:border-box;">
       <input type="checkbox" class="rf-reason-tick" value="${code}" onchange="onRfReasonChange()" style="flex-shrink:0;margin:0;">
-      <span style="flex:1;min-width:0;text-align:left;">${label}</span>
+      <span style="flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</span>
       ${needsPhoto ? '<span style="flex-shrink:0;font-size:0.64rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:0.1rem 0.4rem;white-space:nowrap;">needs a photo</span>' : ''}
     </label>`).join('');
   document.getElementById('rf-other-wrap').style.display = 'none';
@@ -3758,9 +3954,25 @@ function updateRfSummary() {
         : 'How a refund is released: 5 to 7 banking days to your original payment method.')
     : (outcome ? 'No money is returned — we are replacing the part or redoing the job.' : '');
 
+  let deliveryLine = '';
+  if (_rfKind === 'product' && outcome === 'replacement') {
+    const mode = document.querySelector('input[name="rf-address-mode"]:checked');
+    let text = '(no delivery address chosen yet)';
+    if (mode && mode.value === 'default') {
+      text = '{{ (current_user.default_delivery_street or "") }}, {{ (current_user.default_delivery_barangay or "") }}, {{ (current_user.default_delivery_city or "") }}'.trim();
+    } else if (mode && mode.value === 'custom') {
+      const street = document.getElementById('rf-delivery-street').value.trim();
+      const brgy = document.getElementById('rf-delivery-barangay').value;
+      const city = document.getElementById('rf-delivery-city').value;
+      text = (street || brgy || city) ? `${street}, ${brgy}, ${city}` : text;
+    }
+    deliveryLine = `<div style="margin-top:0.3rem;"><strong>Deliver to:</strong> ${text}</div>`;
+  }
+
   summary.innerHTML = `
     <div><strong>${_rfKind === 'product' ? 'Items' : 'Service'}:</strong> ${itemsLine}</div>
     <div style="margin-top:0.3rem;"><strong>Asking for:</strong> ${askLine}</div>
+    ${deliveryLine}
     <div style="margin-top:0.3rem;"><strong>Reasons:</strong> ${reasonsLine}</div>
     <div style="margin-top:0.3rem;"><strong>Photos:</strong> ${_rfPhotos.length}</div>
     ${explainer ? `<div style="margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed var(--line-2);color:var(--fg-2);font-size:0.78rem;">${explainer}</div>` : ''}
@@ -3789,12 +4001,33 @@ function submitReturnForm(e) {
   const needsPhoto = reasonTicks.some(c => reasonMeta[c]);
   if (needsPhoto && _rfPhotos.length === 0) errors.push('The reason you picked needs at least one photo of the problem.');
 
+  let addressFields = null;
+  if (_rfKind === 'product' && outcome === 'replacement') {
+    const mode = document.querySelector('input[name="rf-address-mode"]:checked');
+    if (!mode) {
+      errors.push('Please choose a delivery address for the replacement.');
+    } else if (mode.value === 'custom') {
+      const name   = document.getElementById('rf-delivery-name').value.trim();
+      const mobile = document.getElementById('rf-delivery-mobile').value.trim();
+      const city   = document.getElementById('rf-delivery-city').value;
+      const brgy   = document.getElementById('rf-delivery-barangay').value;
+      const street = document.getElementById('rf-delivery-street').value.trim();
+      const zip    = document.getElementById('rf-delivery-zip').value.trim();
+      if (!name || !mobile || !street) errors.push('Please fill in the full delivery address.');
+      else if (!city || !brgy) errors.push('Please choose a city and barangay within the delivery area.');
+      addressFields = { mode: 'custom', name, mobile, city, barangay: brgy, street, zip,
+                         save_default: document.getElementById('rf-delivery-save-default').checked };
+    } else {
+      addressFields = { mode: 'default' };
+    }
+  }
+
   if (errors.length) {
     showRfErrors(errors);
     return false;
   }
 
-  doSubmitReturnForm(outcome, itemRows, reasonTicks, otherText);
+  doSubmitReturnForm(outcome, itemRows, reasonTicks, otherText, addressFields);
   return false;
 }
 
@@ -3805,7 +4038,7 @@ function showRfErrors(errors) {
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-async function doSubmitReturnForm(outcome, itemRows, reasonTicks, otherText) {
+async function doSubmitReturnForm(outcome, itemRows, reasonTicks, otherText, addressFields) {
   const btn = document.getElementById('rf-submit-btn');
   btn.disabled = true;
   btn.textContent = 'Submitting…';
@@ -3821,6 +4054,18 @@ async function doSubmitReturnForm(outcome, itemRows, reasonTicks, otherText) {
   } else {
     fd.append('booking_id', _rfBooking.id);
     if (document.getElementById('rf-want-mechanic').checked) fd.append('requested_mechanic', 'yes');
+  }
+  if (addressFields) {
+    fd.append('address_mode', addressFields.mode);
+    if (addressFields.mode === 'custom') {
+      fd.append('delivery_name', addressFields.name);
+      fd.append('delivery_mobile', addressFields.mobile);
+      fd.append('delivery_city', addressFields.city);
+      fd.append('delivery_barangay', addressFields.barangay);
+      fd.append('delivery_street', addressFields.street);
+      fd.append('delivery_zip', addressFields.zip);
+      if (addressFields.save_default) fd.append('save_as_default', 'on');
+    }
   }
   _rfPhotos.forEach(f => fd.append('photos', f));
 
@@ -3858,9 +4103,11 @@ function returnStatusLabel(r) {
   }
   if (r.status === 'resolved') {
     if (r.resolution === 'refund') return 'Refunded';
-    if (r.resolution === 'replacement') return 'Replacement on the way';
     return 'Closed';
   }
+  if (r.status === 'replacement_shipped') return 'Replacement on the way';
+  if (r.status === 'replacement_arrived') return 'Replacement has arrived';
+  if (r.status === 'completed') return 'Completed';
   return r.status;
 }
 
@@ -3871,12 +4118,21 @@ const RETURN_STATUS_LABEL_COLORS = {
   'Approved':               { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
   'Waiting for your item':  { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
   'Replacement on the way': { bg: '#cffafe', color: '#155e75', border: '#06b6d4' },
+  'Replacement has arrived': { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
+  'Completed':              { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
   'Back job booked':        { bg: '#ede9fe', color: '#5b21b6', border: '#8b5cf6' },
   'Refunded':               { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
   'Declined':               { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
   'Closed':                 { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
   'Cancelled':              { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
 };
+
+// A photo saved before Cloudinary was wired up is a bare local filename
+// (this app's own disk, wiped by Render on every deploy); one saved since
+// is already a full Cloudinary URL and needs no local prefix.
+function returnPhotoUrl(p) {
+  return p.startsWith('http') ? p : `/static/return_evidence/${p}`;
+}
 
 function returnOutcomeLine(r) {
   const opt = (RETURN_OUTCOMES[r.kind] || []).find(o => o.value === r.desired_outcome);
@@ -3904,7 +4160,7 @@ function returnTimelineEntries(r) {
   if (r.status === 'denied') {
     entries.push({ time: r.decided_at, text: `Not approved. ${r.decision_reason || ''}`.trim() });
   }
-  if (r.status === 'approved' || r.status === 'resolved') {
+  if (r.status === 'approved' || r.status === 'resolved' || r.status === 'replacement_shipped' || r.status === 'replacement_arrived' || r.status === 'completed') {
     if (r.desired_outcome === 'refund' || r.resolution === 'refund') {
       if (r.kind === 'product') {
         entries.push({ time: r.decided_at, text: 'Approved — return the item to the shop so we can release the refund.' });
@@ -3926,13 +4182,20 @@ function returnTimelineEntries(r) {
   if (r.status === 'resolved') {
     if (r.resolution === 'refund' && r.refund_amount) {
       entries.push({ time: r.resolved_at, text: `₱${Number(r.refund_amount).toFixed(2)} refunded to your original payment method.` });
-    } else if (r.resolution === 'replacement') {
-      entries.push({ time: r.resolved_at, text: 'Your replacement has shipped.' });
     } else if (r.resolution === 'redo_service') {
       entries.push({ time: r.resolved_at, text: 'Your back job is complete.' });
     } else {
       entries.push({ time: r.resolved_at, text: 'This request is done.' });
     }
+  }
+  if (r.replacement_shipped_at) {
+    entries.push({ time: r.replacement_shipped_at, text: `Your replacement is on the way. It will arrive at ${r.delivery_address || 'your address'}.` });
+  }
+  if (r.replacement_arrived_at) {
+    entries.push({ time: r.replacement_arrived_at, text: `Your replacement has arrived at ${r.delivery_address || 'your address'}.` });
+  }
+  if (r.completed_at) {
+    entries.push({ time: r.completed_at, text: 'You confirmed receipt of your replacement. Thanks for choosing MotoTyre!' });
   }
   if (r.status === 'cancelled') {
     entries.push({ time: r.cancelled_at, text: 'You cancelled this request.' });
@@ -3952,7 +4215,7 @@ function myRequestCardHTML(r) {
 
   const photosHTML = (r.photos && r.photos.length)
     ? `<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.6rem;">${r.photos.map(p =>
-        `<a href="/static/return_evidence/${p}" target="_blank"><img src="/static/return_evidence/${p}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);"></a>`
+        `<a href="${returnPhotoUrl(p)}" target="_blank"><img src="${returnPhotoUrl(p)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);"></a>`
       ).join('')}</div>` : '';
 
   const timeline = returnTimelineEntries(r);
@@ -3966,6 +4229,10 @@ function myRequestCardHTML(r) {
 
   const cancelHTML = (r.status === 'submitted' || r.status === 'under_review') ? `
     <button type="button" onclick="cancelReturnRequest(${r.id})" style="margin-top:0.75rem;padding:0.5rem 0.9rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#b91c1c;font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Cancel This Request</button>
+  ` : '';
+
+  const confirmReceivedHTML = (r.resolution === 'replacement' && r.status === 'replacement_arrived') ? `
+    <button type="button" onclick="confirmReturnReceived(${r.id})" style="margin-top:0.75rem;padding:0.5rem 0.9rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">I Received My Replacement</button>
   ` : '';
 
   const infoFormHTML = r.awaiting_customer_info ? `
@@ -3994,6 +4261,7 @@ function myRequestCardHTML(r) {
       ${infoFormHTML}
       ${timelineHTML}
       ${cancelHTML}
+      ${confirmReceivedHTML}
     </div>`;
 }
 
@@ -4035,6 +4303,22 @@ async function cancelReturnRequest(id) {
       window.location.reload();
     } else {
       alert(data.error || 'Could not cancel this request.');
+    }
+  } catch (e) {
+    alert('Network error — please try again.');
+  }
+}
+
+async function confirmReturnReceived(id) {
+  if (!confirm('Confirm that you received your replacement? This cannot be undone.')) return;
+  try {
+    const res = await fetch(`/returns/${id}/confirm-received`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Replacement received — thank you!', 'success');
+      window.location.reload();
+    } else {
+      alert(data.error || 'Could not confirm receipt.');
     }
   } catch (e) {
     alert('Network error — please try again.');

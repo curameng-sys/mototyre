@@ -332,6 +332,37 @@
       box-shadow: 0 0 0 3px var(--brand-red-soft), 0 3px 10px rgba(28,24,20,0.18);
     }
 
+    .moto-dropdown {
+      display: none;
+      position: absolute;
+      left: 0; right: 0; top: calc(100% + 4px);
+      background: var(--bg-page);
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--radius-md);
+      box-shadow: 0 8px 24px rgba(28,24,20,0.18);
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 20;
+    }
+    .moto-dropdown.open { display: block; }
+    .moto-group-label {
+      position: sticky; top: 0;
+      background: var(--bg-subtle, #f5f4f2);
+      padding: 0.35rem 0.9rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--fg-3);
+    }
+    .moto-option {
+      padding: 0.5rem 0.9rem;
+      font-size: 0.83rem;
+      color: var(--fg-1);
+      cursor: pointer;
+    }
+    .moto-option:hover, .moto-option.active { background: var(--brand-red-soft, #fdecec); }
+    .moto-no-results { padding: 0.6rem 0.9rem; font-size: 0.8rem; color: var(--fg-3); }
+
     .field select.no-icon { padding-left: 1rem; }
     .field .select-wrap { position: relative; }
     .field .select-wrap::after {
@@ -804,7 +835,9 @@
                   <path d="M15 6h-2L8 10l3 3.5L15 17l2-3 3 .5V10z"/>
                 </svg>
               </span>
-              <input type="text" name="model" placeholder="Honda Click 125i" maxlength="100">
+              <input type="text" name="model" id="motorcycle-model-input" placeholder="Honda Click 125i" maxlength="100"
+                autocomplete="off" oninput="filterMotorcycleModels()" onfocus="filterMotorcycleModels()">
+              <div id="motorcycle-model-dropdown" class="moto-dropdown"></div>
             </div>
           </div>
 
@@ -945,6 +978,67 @@
 </main>
 
 <script>
+  // ── Motorcycle model autocomplete ──
+  const MOTORCYCLE_MODELS = {
+    'Honda': ['Click 125i', 'Click 160', 'BeAT', 'BeAT Street', 'Genio', 'Giorno+', 'ADV 160', 'ADV 350',
+      'PCX 160', 'Airblade 160', 'Forza 350', 'Wave RSX', 'XRM125 DSX', 'XRM125 Motard', 'RS125',
+      'Supra GTR150', 'TMX 125 Alpha', 'TMX Supremo', 'Winner X', 'CB150X', 'CBR150R', 'XR150L',
+      'CRF150L', 'CB650R', 'Rebel 500'],
+    'Yamaha': ['Mio i 125', 'Mio Sporty', 'Mio Soul i 125', 'Mio Gravis', 'Mio Gear', 'Mio Aerox',
+      'Aerox 155', 'NMAX 155', 'XMAX 300', 'Fazzio', 'Sniper 155', 'Sniper 150', 'Sight', 'FZi',
+      'YTX 125', 'XTZ 125', 'PG-1', 'XSR155', 'MT-15', 'YZF-R15', 'YZF-R3', 'MT-03', 'WR155R'],
+    'Suzuki': ['Raider R150 Fi', 'Raider J 115 Fi', 'Smash 115', 'Skydrive Sport', 'Burgman Street 125',
+      'Avenis', 'Gixxer 150', 'Gixxer SF 250', 'GSX-S150', 'GSX-R150', 'V-Strom 250'],
+    'Kawasaki': ['Barako II 175', 'CT100', 'CT125', 'Fury 125 RR', 'Rouser NS125', 'Rouser NS160',
+      'Rouser RS200', 'Dominar 400', 'W175', 'KLX 150', 'KLX 230', 'Ninja ZX-25R', 'Ninja 400',
+      'Z400', 'Z650', 'Ninja 650'],
+    'Kymco': ['Like 150i', 'Super 8', 'Visar 110', 'Xciting S 400', 'AK550'],
+    'SYM': ['Jet X 150', 'RV1-2', 'Bonus 110', 'Husky ADV 150'],
+    'Vespa': ['S 125', 'Primavera 150', 'Sprint 150', 'GTS 300'],
+    'KTM': ['Duke 200', 'Duke 390', 'RC 200', 'RC 390', '390 Adventure'],
+    'CFMoto': ['150NK', '300NK', '300SR', '450SR', '700CL-X'],
+    'Royal Enfield': ['Hunter 350', 'Classic 350', 'Meteor 350', 'Himalayan 450', 'Interceptor 650'],
+    'TVS': ['Dazz', 'XL100', 'Apache RTR 160', 'Apache RTR 200', 'Ntorq 125'],
+    'Rusi': ['Classic 250', 'Sigma 125', 'Macho 150', 'Rapid 110'],
+    'Motorstar': ['Xplorer X150', 'Easy Rider 150', 'Cafe 400', 'Nicess 110'],
+    'Keeway': ['RKS 150', 'Superlight 200', 'Cafe Racer 152'],
+  };
+
+  function filterMotorcycleModels() {
+    const input = document.getElementById('motorcycle-model-input');
+    const dropdown = document.getElementById('motorcycle-model-dropdown');
+    const q = input.value.trim().toLowerCase();
+
+    let html = '';
+    let matches = 0;
+    for (const [brand, models] of Object.entries(MOTORCYCLE_MODELS)) {
+      const brandMatches = models.filter(m => !q || `${brand} ${m}`.toLowerCase().includes(q));
+      if (!brandMatches.length) continue;
+      matches += brandMatches.length;
+      html += `<div class="moto-group-label">${brand.toUpperCase()}</div>`;
+      html += brandMatches.map(m => {
+        const full = `${brand} ${m}`;
+        const escAttr = full.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        return `<div class="moto-option" data-value="${escAttr}" onmousedown="selectMotorcycleModel(this.dataset.value)">${full}</div>`;
+      }).join('');
+    }
+    dropdown.innerHTML = matches ? html : '<div class="moto-no-results">No matching model — you can still type your own.</div>';
+    dropdown.classList.add('open');
+  }
+
+  function selectMotorcycleModel(value) {
+    document.getElementById('motorcycle-model-input').value = value;
+    document.getElementById('motorcycle-model-dropdown').classList.remove('open');
+  }
+
+  document.addEventListener('click', function (e) {
+    const wrap = document.getElementById('motorcycle-model-input');
+    const dropdown = document.getElementById('motorcycle-model-dropdown');
+    if (wrap && dropdown && !wrap.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.remove('open');
+    }
+  });
+
   // ── Panel switching ──
   function switchPanel(name) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));

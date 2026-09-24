@@ -21,7 +21,8 @@ ALLOWED_RETURN_OUTCOMES   = {'refund', 'replacement', 'redo_service'}
 # Which "put it right" option applies depends on kind: a spare part gets a
 # replacement shipped, a service gets redone (a "back job") at no charge.
 RETURN_OUTCOMES_BY_KIND = {'product': {'replacement', 'refund'}, 'service': {'redo_service', 'refund'}}
-ALLOWED_RETURN_STATUSES   = {'submitted', 'under_review', 'approved', 'denied', 'resolved', 'cancelled'}
+ALLOWED_RETURN_STATUSES   = {'submitted', 'under_review', 'approved', 'denied', 'resolved',
+                             'replacement_arrived', 'completed', 'cancelled'}
 # Every open-claim status — the ones that block filing a second claim
 # against the same order/booking until this one is resolved, denied, or
 # cancelled.

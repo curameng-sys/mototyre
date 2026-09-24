@@ -23,6 +23,8 @@ from io import BytesIO
 from security import (clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_booking_status, validate_order_status,
     ALLOWED_RETURN_OUTCOMES, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
 from order_notifications import order_status_message, with_stamp, shipping_destination
+from delivery_zones import format_delivery_address
+from cloud_storage import upload_image
 from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDAY_INTAKE_MIN,
     compute_finish_time, mechanic_origin_note, compute_finish_minutes, all_slot_starts,
     SHOP_CLOSE_MIN, mechanic_overlaps, minutes_to_ampm, hhmm_to_minutes, minutes_to_hhmm,
@@ -191,6 +193,12 @@ class User(db.Model, UserMixin):
     is_flagged       = db.Column(db.Boolean, default=False)
     bookings         = db.relationship('Booking', backref='customer', lazy=True)
     orders           = db.relationship('Order', backref='customer', lazy=True)
+    default_delivery_name     = db.Column(db.String(100))
+    default_delivery_mobile   = db.Column(db.String(20))
+    default_delivery_city     = db.Column(db.String(50))
+    default_delivery_barangay = db.Column(db.String(50))
+    default_delivery_street   = db.Column(db.String(255))
+    default_delivery_zip      = db.Column(db.String(10))
 
     def set_password(self, pw):   self.password_hash = generate_password_hash(pw)
     def check_password(self, pw): return check_password_hash(self.password_hash, pw)
@@ -458,6 +466,15 @@ class ReturnRequest(db.Model):
     redo_mechanic_name = db.Column(db.String(100))
     redo_booking_id    = db.Column(db.Integer, nullable=True)  # the real, zero-charge Booking this back job writes into the shop calendar
     internal_notes     = db.Column(db.Text)  # shop-only — the customer never sees this
+    replacement_shipped_at  = db.Column(db.DateTime)  # replacement left the shop, on its way to the customer
+    replacement_arrived_at  = db.Column(db.DateTime)  # replacement delivered to the address below
+    completed_at            = db.Column(db.DateTime)  # customer confirmed receipt — the actual end of a replacement claim
+    delivery_name      = db.Column(db.String(100))
+    delivery_mobile    = db.Column(db.String(20))
+    delivery_city       = db.Column(db.String(50))
+    delivery_barangay  = db.Column(db.String(50))
+    delivery_street     = db.Column(db.String(255))
+    delivery_zip        = db.Column(db.String(10))
 
 
 class ReturnRequestItem(db.Model):
@@ -830,6 +847,7 @@ def admin_dashboard():
         order_ship_json=order_ship_json,
         now=ph_now(),
         today=ph_now().date(),
+        customer_origin=BASE_URL,
     )
 
 
@@ -2165,7 +2183,11 @@ def api_returns():
             claim_value = b.total_amount
             original_mechanic = b.assigned_mechanic_name
 
-        is_open = r.status in OPEN_RETURN_STATUSES
+        # OPEN_RETURN_STATUSES (security.py) is narrower on purpose — it only
+        # governs whether a second claim can be filed. A replacement sitting
+        # at 'arrived' still needs the shop to hand it over, so it belongs in
+        # this queue's own "Open" tab even though a new claim isn't blocked.
+        is_open = r.status in OPEN_RETURN_STATUSES or r.status in ('replacement_shipped', 'replacement_arrived')
         is_unreviewed = r.status in ('submitted', 'under_review') and not r.awaiting_customer_info
         overdue = is_unreviewed and working_days_between(r.created_at.date(), today) >= 1
 
@@ -2183,7 +2205,7 @@ def api_returns():
         if r.kind == 'product': filter_counts['parts'] += 1
         if r.kind == 'service': filter_counts['services'] += 1
         if r.desired_outcome == 'refund': filter_counts['refund_asked'] += 1
-        if r.status in ('resolved', 'denied', 'cancelled'): filter_counts['closed'] += 1
+        if r.status in ('resolved', 'denied', 'cancelled', 'completed'): filter_counts['closed'] += 1
 
         items.append({
             'id': r.id, 'ref': _return_ref(r),
@@ -2225,6 +2247,11 @@ def api_returns():
             'created_at': r.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
             'decided_at': r.decided_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.decided_at else None,
             'resolved_at': r.resolved_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.resolved_at else None,
+            'replacement_shipped_at': r.replacement_shipped_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.replacement_shipped_at else None,
+            'replacement_arrived_at': r.replacement_arrived_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.replacement_arrived_at else None,
+            'completed_at': r.completed_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.completed_at else None,
+            'delivery_address': format_delivery_address(r.delivery_name, r.delivery_mobile, r.delivery_street,
+                                                          r.delivery_barangay, r.delivery_city, r.delivery_zip) if r.delivery_street else None,
             'cancelled_at': r.cancelled_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.cancelled_at else None,
         })
 
@@ -2573,10 +2600,12 @@ def schedule_return_redo(rid):
 @require_admin_or_staff
 def resolve_return_request(rid):
     """Marks an approved claim's remedy as actually carried out — the refund
-    was issued, the replacement sent, the back job redone. A product claim
-    can't resolve until its item is marked received; a back job can't
-    resolve until it's been scheduled — carrying out a remedy that was never
-    actually delivered isn't something this button can paper over."""
+    was issued, the back job redone, or (for a replacement) the part shipped
+    out. A product claim can't resolve until its item is marked received; a
+    back job can't resolve until it's been scheduled — carrying out a remedy
+    that was never actually delivered isn't something this button can paper
+    over. A replacement only reaches "on the way" here — see mark_return_arrived
+    for the delivery step, and complete_return_request for the finish line."""
     rr = ReturnRequest.query.get_or_404(rid)
     if rr.status != 'approved':
         return jsonify({'success': False, 'error': 'Only an approved claim can be marked resolved.'}), 400
@@ -2584,9 +2613,19 @@ def resolve_return_request(rid):
         return jsonify({'success': False, 'error': "Mark the item received first — the part hasn't come back yet."}), 400
     if rr.kind == 'service' and rr.resolution == 'redo_service' and not rr.redo_date:
         return jsonify({'success': False, 'error': 'Schedule the back job first.'}), 400
+    if rr.resolution == 'replacement' and not rr.delivery_street:
+        return jsonify({'success': False, 'error': 'This claim has no delivery address on file — contact the customer directly.'}), 400
 
-    rr.status = 'resolved'
-    rr.resolved_at = ph_now()
+    # A replacement isn't done once it's sent — it isn't real until the
+    # customer actually has it in hand, so this step only gets it as far as
+    # "on the way." Refund and redo-service have no such in-between:
+    # releasing the money or redoing the job IS the whole remedy.
+    if rr.resolution == 'replacement':
+        rr.status = 'replacement_shipped'
+        rr.replacement_shipped_at = ph_now()
+    else:
+        rr.status = 'resolved'
+        rr.resolved_at = ph_now()
 
     # The back job is a real appointment on the shop's calendar — closing the
     # claim closes that booking too, so the mechanic's day reflects it.
@@ -2604,13 +2643,66 @@ def resolve_return_request(rid):
         title = f'Your refund of ₱{rr.refund_amount:,.2f} has been released'
         body = f'Your refund for {subject} ({ref}) — ₱{rr.refund_amount:,.2f} — has been released to your original payment method.'
     elif rr.resolution == 'replacement':
-        title = 'Your replacement has shipped'
-        body = f'The replacement for {subject} ({ref}) is on its way — checked before it left.'
+        addr = format_delivery_address(rr.delivery_name, rr.delivery_mobile, rr.delivery_street,
+                                        rr.delivery_barangay, rr.delivery_city, rr.delivery_zip)
+        title = 'Your replacement is on the way'
+        body = f'The replacement for {subject} ({ref}) is on its way. It will arrive at {addr}.'
     else:
         title = 'Your back job is complete'
         body = f'The redo for {subject} ({ref}) is done.'
     emailed = _notify_return_customer(rr, title, body, priority=False)
-    return jsonify({'success': True, 'emailed': emailed, 'message': 'Marked resolved — customer notified.'})
+    msg = 'Marked on the way — customer notified.' if rr.resolution == 'replacement' else 'Marked resolved — customer notified.'
+    return jsonify({'success': True, 'emailed': emailed, 'message': msg})
+
+
+@admin_app.route('/returns/<int:rid>/mark-arrived', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def mark_return_arrived(rid):
+    """The delivery step between 'on the way' and 'completed' — the part has
+    actually reached the customer's address, but the finish line is still
+    them (or staff, in person) confirming it's actually in hand."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    if rr.resolution != 'replacement' or rr.status != 'replacement_shipped':
+        return jsonify({'success': False, 'error': 'This claim is not currently on the way.'}), 400
+    rr.status = 'replacement_arrived'
+    rr.replacement_arrived_at = ph_now()
+    db.session.commit()
+
+    ref = _return_ref(rr)
+    subject = _return_subject_label(rr)
+    addr = format_delivery_address(rr.delivery_name, rr.delivery_mobile, rr.delivery_street,
+                                    rr.delivery_barangay, rr.delivery_city, rr.delivery_zip)
+    emailed = _notify_return_customer(
+        rr, 'Your replacement has arrived',
+        f'The replacement for {subject} ({ref}) has arrived at {addr}.',
+        priority=False,
+    )
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Marked arrived — customer notified.'})
+
+
+@admin_app.route('/returns/<int:rid>/complete', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def complete_return_request(rid):
+    """Staff-side fallback for the same finish line the customer's own
+    'I received it' button reaches — a walk-in customer picking the part up
+    in person may never touch the app, so the shop needs its own way to
+    close this out instead of leaving it stuck at 'arrived' forever."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    if rr.resolution != 'replacement' or rr.status != 'replacement_arrived':
+        return jsonify({'success': False, 'error': 'This claim is not waiting on a pickup.'}), 400
+    rr.status = 'completed'
+    rr.completed_at = ph_now()
+    db.session.commit()
+    ref = _return_ref(rr)
+    subject = _return_subject_label(rr)
+    emailed = _notify_return_customer(
+        rr, 'Replacement handed over',
+        f'The replacement for {subject} ({ref}) has been handed over. Thanks for choosing MotoTyre North Caloocan!',
+        priority=False,
+    )
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Marked completed — customer notified.'})
 
 
 @admin_app.route('/api/all-bookings')
@@ -3290,12 +3382,16 @@ def upload_profile_pic():
     if not file or file.filename == '':
         flash('No file selected.', 'danger')
     elif allowed_file(file.filename):
-        ext      = file.filename.rsplit('.', 1)[1].lower()
-        filename = f"{current_user.id}_{uuid.uuid4().hex}.{ext}"
-        folder   = os.path.join(admin_app.root_path, 'static', 'profile_pics')
-        os.makedirs(folder, exist_ok=True)
-        file.save(os.path.join(folder, filename))
-        current_user.profile_pic = filename
+        cloud_url = upload_image(file, 'profile_pics')
+        if cloud_url:
+            current_user.profile_pic = cloud_url
+        else:
+            ext      = file.filename.rsplit('.', 1)[1].lower()
+            filename = f"{current_user.id}_{uuid.uuid4().hex}.{ext}"
+            folder   = os.path.join(admin_app.root_path, 'static', 'profile_pics')
+            os.makedirs(folder, exist_ok=True)
+            file.save(os.path.join(folder, filename))
+            current_user.profile_pic = filename
         db.session.commit()
         flash('Profile picture updated!', 'success')
     else:
@@ -4810,6 +4906,47 @@ with admin_app.app_context():
         db.session.commit()
     except Exception:
         db.session.rollback()
+    try:
+        from sqlalchemy import text as _text7
+        db.session.execute(_text7("ALTER TABLE return_request ADD COLUMN replacement_arrived_at DATETIME DEFAULT NULL"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        from sqlalchemy import text as _text8
+        db.session.execute(_text8("ALTER TABLE return_request ADD COLUMN completed_at DATETIME DEFAULT NULL"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    for _col, _ddl in [
+        ('replacement_shipped_at', 'DATETIME DEFAULT NULL'),
+        ('delivery_name', 'VARCHAR(100) DEFAULT NULL'),
+        ('delivery_mobile', 'VARCHAR(20) DEFAULT NULL'),
+        ('delivery_city', 'VARCHAR(50) DEFAULT NULL'),
+        ('delivery_barangay', 'VARCHAR(50) DEFAULT NULL'),
+        ('delivery_street', 'VARCHAR(255) DEFAULT NULL'),
+        ('delivery_zip', 'VARCHAR(10) DEFAULT NULL'),
+    ]:
+        try:
+            from sqlalchemy import text as _text9
+            db.session.execute(_text9(f"ALTER TABLE return_request ADD COLUMN {_col} {_ddl}"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    for _col, _ddl in [
+        ('default_delivery_name', 'VARCHAR(100) DEFAULT NULL'),
+        ('default_delivery_mobile', 'VARCHAR(20) DEFAULT NULL'),
+        ('default_delivery_city', 'VARCHAR(50) DEFAULT NULL'),
+        ('default_delivery_barangay', 'VARCHAR(50) DEFAULT NULL'),
+        ('default_delivery_street', 'VARCHAR(255) DEFAULT NULL'),
+        ('default_delivery_zip', 'VARCHAR(10) DEFAULT NULL'),
+    ]:
+        try:
+            from sqlalchemy import text as _text10
+            db.session.execute(_text10(f"ALTER TABLE user ADD COLUMN {_col} {_ddl}"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 with admin_app.app_context():
     try:

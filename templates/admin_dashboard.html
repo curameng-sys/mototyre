@@ -482,7 +482,7 @@
       <div class="sidebar-greeting" style="margin-top:0.5rem;">
         <div class="avatar">
           {% if current_user.profile_pic %}
-            <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+            <img src="{{ current_user.profile_pic if current_user.profile_pic.startswith('http') else url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="{{ current_user.fullname[0].upper() }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.replaceWith(document.createTextNode(this.alt))">
           {% else %}
             {{ current_user.fullname[0].upper() }}
           {% endif %}
@@ -1759,7 +1759,7 @@
               <div class="pic-upload-wrap">
                 <div class="pic-preview" id="picPreview">
                   {% if current_user.profile_pic %}
-                    <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="Profile">
+                    <img src="{{ current_user.profile_pic if current_user.profile_pic.startswith('http') else url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="{{ current_user.fullname[0].upper() }}" onerror="this.replaceWith(document.createTextNode(this.alt))">
                   {% else %}
                     {{ current_user.fullname[0].upper() }}
                   {% endif %}
@@ -2338,6 +2338,17 @@
 </script>
 
 <script>
+  // Return-evidence photos are uploaded through the customer app's own disk
+  // (a separate Render service from this admin app), so a bare /static/...
+  // path 404s here — it has to point back at that origin.
+  const CUSTOMER_ORIGIN = {{ customer_origin|tojson }};
+  // A photo saved before Cloudinary was wired up is a bare local filename
+  // (served from the customer app's own, Render-wiped disk); one saved
+  // since is already a full Cloudinary URL and needs no origin prefix.
+  function returnPhotoUrl(p) {
+    return p.startsWith('http') ? p : `${CUSTOMER_ORIGIN}/static/return_evidence/${p}`;
+  }
+
   function showSection(name, el) {
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
@@ -3544,9 +3555,11 @@
     }
     if (r.status === 'resolved') {
       if (r.resolution === 'refund') return 'Refunded';
-      if (r.resolution === 'replacement') return 'Replacement on the way';
       return 'Closed';
     }
+    if (r.status === 'replacement_shipped') return 'Replacement on the way';
+    if (r.status === 'replacement_arrived') return 'Replacement has arrived';
+    if (r.status === 'completed') return 'Completed';
     return r.status;
   }
 
@@ -3557,6 +3570,8 @@
     'Approved':               { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
     'Waiting for your item':  { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
     'Replacement on the way': { bg: '#cffafe', color: '#155e75', border: '#06b6d4' },
+    'Replacement has arrived': { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
+    'Completed':              { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
     'Back job booked':        { bg: '#ede9fe', color: '#5b21b6', border: '#8b5cf6' },
     'Refunded':               { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
     'Declined':               { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
@@ -3633,12 +3648,12 @@
 
   function returnFilterMatch(r, key) {
     switch (key) {
-      case 'open': return ['submitted', 'under_review', 'approved'].includes(r.status);
+      case 'open': return ['submitted', 'under_review', 'approved', 'replacement_shipped', 'replacement_arrived'].includes(r.status);
       case 'needs_review': return (r.status === 'submitted' || r.status === 'under_review') && !r.awaiting_customer_info;
       case 'parts': return r.kind === 'product';
       case 'services': return r.kind === 'service';
       case 'refund_asked': return r.desired_outcome === 'refund';
-      case 'closed': return ['resolved', 'denied', 'cancelled'].includes(r.status);
+      case 'closed': return ['resolved', 'denied', 'cancelled', 'completed'].includes(r.status);
       default: return true;
     }
   }
@@ -3668,7 +3683,7 @@
       : `<span style="color:#b45309;font-weight:700;">${returnOutcomeLabel(r.kind, r.desired_outcome)}</span>`;
     const photosHTML = r.photos.length
       ? `<div style="display:flex;gap:0.25rem;">${r.photos.slice(0,3).map(p =>
-          `<img src="/static/return_evidence/${p}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">`).join('')}${r.photos.length > 3 ? `<span style="font-size:0.7rem;color:var(--muted);align-self:center;">+${r.photos.length - 3}</span>` : ''}</div>`
+          `<img src="${returnPhotoUrl(p)}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">`).join('')}${r.photos.length > 3 ? `<span style="font-size:0.7rem;color:var(--muted);align-self:center;">+${r.photos.length - 3}</span>` : ''}</div>`
       : '<span style="color:var(--muted);">—</span>';
     const ageHTML = r.overdue
       ? `<span style="color:#b91c1c;font-weight:700;">${returnAgeLabel(r)} — overdue</span>`
@@ -3681,9 +3696,11 @@
       if (r.kind === 'product' && !r.item_returned) actionLabel = 'Mark Part Received';
       else if (r.kind === 'service' && r.resolution === 'redo_service' && !r.redo_date) actionLabel = 'Schedule';
       else if (r.resolution === 'refund') actionLabel = `Release ₱${Number(r.refund_amount || 0).toFixed(2)}`;
-      else if (r.resolution === 'replacement') actionLabel = 'Mark Replacement Sent';
+      else if (r.resolution === 'replacement') actionLabel = 'Mark Replacement Shipped';
       else actionLabel = 'Back Job Done';
     }
+    else if (r.status === 'replacement_shipped') actionLabel = 'Mark Arrived';
+    else if (r.status === 'replacement_arrived') actionLabel = 'Mark Handed Over';
 
     return `
       <tr>
@@ -3736,6 +3753,9 @@
     if (r.item_returned_at) entries.push({ time: r.item_returned_at, text: 'Item marked received at the shop.' });
     if (r.redo_date) entries.push({ time: r.decided_at, text: `Back job scheduled for ${r.redo_date}${r.redo_time ? ' ' + r.redo_time : ''}${r.redo_mechanic_name ? ' with ' + r.redo_mechanic_name : ''}.` });
     if (r.resolved_at) entries.push({ time: r.resolved_at, text: 'Marked resolved — remedy carried out.' });
+    if (r.replacement_shipped_at) entries.push({ time: r.replacement_shipped_at, text: `Replacement shipped — on its way to ${r.delivery_address || 'the customer'}.` });
+    if (r.replacement_arrived_at) entries.push({ time: r.replacement_arrived_at, text: `Replacement has arrived at ${r.delivery_address || 'the customer'}.` });
+    if (r.completed_at) entries.push({ time: r.completed_at, text: 'Completed — replacement confirmed received.' });
     if (r.cancelled_at) entries.push({ time: r.cancelled_at, text: 'Cancelled by the customer.' });
     return entries.sort((a, b) => new Date(a.time || 0) - new Date(b.time || 0));
   }
@@ -3861,7 +3881,7 @@
     const sc = RETURN_STATUS_LABEL_COLORS[statusLabel] || RETURN_STATUS_LABEL_COLORS['Submitted'];
     const photosHTML = r.photos.length
       ? `<div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">${r.photos.map(p =>
-          `<img src="/static/return_evidence/${p}" onclick="openReturnLightbox('/static/return_evidence/${p}')" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;">`).join('')}</div>`
+          `<img src="${returnPhotoUrl(p)}" onclick="openReturnLightbox('${returnPhotoUrl(p)}')" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;">`).join('')}</div>`
       : '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">No photos submitted.</div>';
     const lineItemsHTML = r.line_items.length ? `
       <div style="margin-top:0.4rem;font-size:0.82rem;color:var(--text);">
@@ -3968,7 +3988,7 @@
       } else if (r.resolution === 'replacement') {
         actionsHTML = `
           <div style="margin-top:0.9rem;">
-            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">Mark Replacement Sent</button>
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">Mark Replacement Shipped</button>
           </div>`;
       } else {
         actionsHTML = `
@@ -3976,6 +3996,21 @@
             <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">Back Job Done</button>
           </div>`;
       }
+    } else if (r.status === 'replacement_shipped') {
+      actionsHTML = `
+        <div style="margin-top:0.9rem;">
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">On its way to ${r.delivery_address || 'the customer'}.</div>
+          <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="markReturnArrived(${r.id})">Mark Arrived</button>
+        </div>`;
+    } else if (r.status === 'replacement_arrived') {
+      // The customer's own "I received it" button gets it to Completed on
+      // its own — this is only the counter fallback for a walk-in pickup
+      // where the customer never touches the app.
+      actionsHTML = `
+        <div style="margin-top:0.9rem;">
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Delivered to ${r.delivery_address || 'the customer'} — waiting on them to confirm receipt, or close it out here yourself.</div>
+          <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="completeReturn(${r.id})">Mark Handed Over</button>
+        </div>`;
     }
 
     const sectionHead = label => `<div style="font-size:0.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin:1rem 0 0.4rem;">${label}</div>`;
@@ -4003,6 +4038,11 @@
       </div>
       ${lineItemsHTML}
       ${mechanicHTML}
+
+      ${r.delivery_address ? `
+      ${sectionHead('Delivery Address')}
+      <div style="font-size:0.85rem;color:var(--text);">${r.delivery_address}</div>
+      ` : ''}
 
       ${sectionHead('Why')}
       ${reasonsHTML}
@@ -4138,6 +4178,26 @@
       const data = await res.json();
       if (data.success) { showToast(data.message || 'Marked resolved.', 'success'); closeModal('modal-return-review'); loadReturns(); }
       else showToast(data.error || 'Could not mark resolved.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  async function markReturnArrived(rid) {
+    if (!confirm('Mark this replacement as arrived at the delivery address? The customer will be emailed.')) return;
+    try {
+      const res = await fetch(`/returns/${rid}/mark-arrived`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Marked arrived.', 'success'); closeModal('modal-return-review'); loadReturns(); }
+      else showToast(data.error || 'Could not mark arrived.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  async function completeReturn(rid) {
+    if (!confirm('Mark this replacement as handed over to the customer?')) return;
+    try {
+      const res = await fetch(`/returns/${rid}/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Marked completed.', 'success'); closeModal('modal-return-review'); loadReturns(); }
+      else showToast(data.error || 'Could not mark completed.', 'error');
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
 
