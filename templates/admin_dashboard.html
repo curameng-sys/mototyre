@@ -2923,18 +2923,24 @@
   // point of this dashboard — which of those two is really limiting the day.
   let _capacityRosterSize = 0;
 
+  let _capLoadSeq = 0;
   async function loadCapacity() {
     const dateInput = document.getElementById('day-schedule-date');
     if (!dateInput.value) dateInput.value = todayISO();
+    const seq = ++_capLoadSeq;
     let data;
     try {
       const res = await fetch(`/api/capacity?date=${dateInput.value}`);
       data = await res.json();
     } catch (e) {
-      document.getElementById('cap-bottleneck-text').textContent = 'Could not load capacity data.';
+      if (seq === _capLoadSeq) document.getElementById('cap-bottleneck-text').textContent = 'Could not load capacity data.';
       return;
     }
     if (data.error) return;
+    // A slower, earlier request landing after a faster, later one would
+    // otherwise stomp the just-saved number back to what it was before —
+    // only the most recently *initiated* load is allowed to actually paint.
+    if (seq !== _capLoadSeq) return;
 
     _capacityRosterSize = data.roster_size;
     const slider = document.getElementById('cap-mechanic-slider');
@@ -2964,11 +2970,17 @@
       `${_capacityRosterSize} on the roster · ${slider.value} working today`;
   }
 
+  let _capStepSaveTimer = null;
   function stepCap(delta) {
     const input = document.getElementById('cap-daily-input');
     const next = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
     input.value = next;
-    saveCapacity('daily_cap', next);
+    // Debounced: clicking +/- rapidly used to fire one save+reload per click,
+    // and those overlapping requests could land out of order and stomp the
+    // number back to a stale value mid-click — the "glitch." Only the last
+    // click in a burst actually hits the server now.
+    clearTimeout(_capStepSaveTimer);
+    _capStepSaveTimer = setTimeout(() => saveCapacity('daily_cap', next), 350);
   }
 
   async function saveCapacity(field, value) {
