@@ -1538,7 +1538,43 @@ def cart_checkout():
     items_data      = data['items']
     delivery_method = data.get('delivery_method', 'pickup')
     payment_method  = data.get('payment_method', 'cash')
-    ship_address    = data.get('ship_address', '')
+
+    ship_address = ''
+    if delivery_method == 'ship':
+        address_mode = clean_str(data.get('address_mode', ''), max_len=10)
+        if address_mode == 'default':
+            u = current_user
+            if not (u.default_delivery_city and is_in_delivery_zone(u.default_delivery_city, u.default_delivery_barangay)):
+                return jsonify({'success': False, 'error': 'Your saved default address is outside the delivery area — please use a different address.'}), 400
+            ship_name, ship_mobile = u.default_delivery_name, u.default_delivery_mobile
+            ship_city, ship_barangay = u.default_delivery_city, u.default_delivery_barangay
+            ship_street, ship_zip = u.default_delivery_street, u.default_delivery_zip
+        elif address_mode == 'custom':
+            ship_name     = clean_str(data.get('ship_name', ''), max_len=100)
+            ship_mobile   = clean_str(data.get('ship_mobile', ''), max_len=13)
+            ship_city     = clean_str(data.get('ship_city', ''), max_len=50)
+            ship_barangay = clean_str(data.get('ship_barangay', ''), max_len=50)
+            ship_street   = clean_str(data.get('ship_street', ''), max_len=255)
+            ship_zip      = clean_str(data.get('ship_zip', ''), max_len=10)
+            if not (ship_name and ship_mobile and ship_street):
+                return jsonify({'success': False, 'error': 'Please fill in the full delivery address.'}), 400
+            if not is_valid_phone(ship_mobile):
+                return jsonify({'success': False, 'error': 'Invalid delivery mobile number.'}), 400
+            if not is_in_delivery_zone(ship_city, ship_barangay):
+                return jsonify({'success': False, 'error': 'We only deliver within North Caloocan or Northern Quezon City.'}), 400
+            if data.get('save_as_default'):
+                current_user.default_delivery_name     = ship_name
+                current_user.default_delivery_mobile   = ship_mobile
+                current_user.default_delivery_city     = ship_city
+                current_user.default_delivery_barangay = ship_barangay
+                current_user.default_delivery_street   = ship_street
+                current_user.default_delivery_zip      = ship_zip
+        else:
+            return jsonify({'success': False, 'error': 'Please choose a delivery address.'}), 400
+        # Kept as the same "name / mobile / street line" shape the rest of the
+        # app already parses (shipping_destination(), the receipt email) —
+        # just with the barangay folded into that third line.
+        ship_address = f"{ship_name}\n{ship_mobile}\n{ship_street}, Brgy. {ship_barangay}, {ship_city}, Metro Manila {ship_zip}"
 
     resolved = []
     for item in items_data:

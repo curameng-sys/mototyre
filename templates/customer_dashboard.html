@@ -237,6 +237,38 @@
     .profile-field-hint { font-size: 0.72rem; color: var(--fg-3); margin-top: 0.3rem; }
     .form-group select option { background: var(--bg-page); color: var(--fg-1); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
+    .moto-field-wrap { position: relative; }
+    .moto-dropdown {
+      display: none;
+      position: absolute;
+      left: 0; right: 0; top: calc(100% + 4px);
+      background: var(--bg-page);
+      border: 1px solid var(--line-2);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(28,24,20,0.18);
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 20;
+    }
+    .moto-dropdown.open { display: block; }
+    .moto-group-label {
+      position: sticky; top: 0;
+      background: var(--bg-subtle);
+      padding: 0.35rem 0.9rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--fg-3);
+    }
+    .moto-option {
+      padding: 0.5rem 0.9rem;
+      font-size: 0.83rem;
+      color: var(--fg-1);
+      cursor: pointer;
+    }
+    .moto-option:hover, .moto-option.active { background: var(--brand-red-soft); }
+    .moto-no-results { padding: 0.6rem 0.9rem; font-size: 0.8rem; color: var(--fg-3); }
     .btn-submit { background: var(--brand-red); color: #fff; border: none; padding: 0.7rem 1.75rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.5rem; }
     .btn-submit:hover { background: var(--brand-red); transform: translateY(-2px); box-shadow: var(--shadow-red); }
     .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -879,9 +911,11 @@
           <!-- Vehicle information -->
           <div class="appt-section-label">Vehicle Information</div>
           <div class="form-grid">
-            <div class="form-group">
+            <div class="form-group moto-field-wrap">
               <label>Motorcycle Model</label>
-              <input type="text" id="moto-model" value="" placeholder="Honda Click 125i">
+              <input type="text" id="moto-model" value="" placeholder="Honda Click 125i" autocomplete="off"
+                oninput="filterMotorcycleModels()" onfocus="filterMotorcycleModels()">
+              <div id="motorcycle-model-dropdown" class="moto-dropdown"></div>
             </div>
             <div class="form-group">
               <label>Odometer <span style="color:var(--fg-3);font-size:0.72rem;">(km)</span></label>
@@ -1602,34 +1636,77 @@
       </div>
 
       <div id="shipping-form" style="display:none;">
-        <div class="form-group">
-          <label>Full Name</label>
-          <input type="text" id="ship-name" placeholder="Juan Dela Cruz"
-            oninput="this.value=this.value.replace(/[^A-Za-zÑñ\s]/g,'')">
+        <div style="background:#fefce8;border:1px solid #eab308;border-radius:8px;padding:0.7rem 0.85rem;margin-bottom:1rem;font-size:0.78rem;color:#713f12;">
+          We deliver only within North Caloocan (Barangays 165 to 188) and Northern Quezon City (Districts 2, 5, and 6). For other areas, choose Shop Pickup.
         </div>
-        <div class="form-group">
-          <label>Mobile Number</label>
-          <input type="tel" id="ship-mobile" placeholder="09XX XXX XXXX"
-            oninput="this.value=this.value.replace(/\D/g,'').slice(0,12)" maxlength="12">
-        </div>
-        <div class="form-group">
-          <label>Street Address</label>
-          <input type="text" id="ship-street" placeholder="123 Rizal St.">
-        </div>
-        <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
-          <div>
-            <label>City / Municipality</label>
-            <input type="text" id="ship-city" placeholder="Quezon City">
-          </div>
-          <div>
-            <label>Province</label>
-            <input type="text" id="ship-province" placeholder="Metro Manila">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>ZIP Code</label>
-          <input type="text" id="ship-zip" placeholder="1100">
-        </div>
+
+        <label style="display:flex;align-items:flex-start;gap:0.55rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.85rem;cursor:{{ 'pointer' if default_delivery_eligible else 'not-allowed' }};padding:0.7rem 0.8rem;border:1.5px solid var(--line-2);border-radius:8px;margin-bottom:0.5rem;{{ '' if default_delivery_eligible else 'opacity:0.5;' }}">
+          <input type="radio" name="ship-address-mode" value="default" id="ship-address-default" onchange="onShipAddressModeChange()" {{ 'disabled' if not default_delivery_eligible }} style="margin-top:0.2rem;flex-shrink:0;width:auto;">
+          <span style="flex:1;">
+            <strong>Use my default address</strong>
+            {% if default_delivery_eligible %}
+              <span style="display:inline-block;margin-left:0.4rem;font-size:0.66rem;font-weight:700;color:#15803d;background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:0.05rem 0.4rem;">DEFAULT</span>
+              <div style="margin-top:0.3rem;color:var(--fg-2);">
+                {{ current_user.default_delivery_name }}<br>
+                {{ current_user.default_delivery_street }}, Brgy. {{ current_user.default_delivery_barangay }}<br>
+                {{ current_user.default_delivery_city }}, Metro Manila {{ current_user.default_delivery_zip }}<br>
+                {{ current_user.default_delivery_mobile }}
+              </div>
+            {% else %}
+              <div style="margin-top:0.3rem;color:var(--fg-3);">{{ 'No default address saved yet.' if not current_user.default_delivery_city else 'Your saved default address is outside the delivery area.' }}</div>
+            {% endif %}
+          </span>
+        </label>
+
+        <label style="display:flex;align-items:flex-start;gap:0.55rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.85rem;cursor:pointer;padding:0.7rem 0.8rem;border:1.5px solid var(--line-2);border-radius:8px;">
+          <input type="radio" name="ship-address-mode" value="custom" id="ship-address-custom" onchange="onShipAddressModeChange()" style="margin-top:0.2rem;flex-shrink:0;width:auto;">
+          <span style="flex:1;">
+            <strong>Use a different address</strong>
+            <div id="ship-address-custom-fields" style="display:none;margin-top:0.6rem;">
+              <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="ship-name" placeholder="Juan Dela Cruz"
+                  oninput="this.value=this.value.replace(/[^A-Za-zÑñ\s]/g,'')">
+              </div>
+              <div class="form-group">
+                <label>Mobile Number</label>
+                <input type="tel" id="ship-mobile" placeholder="09XX XXX XXXX"
+                  oninput="this.value=this.value.replace(/\D/g,'').slice(0,12)" maxlength="12">
+              </div>
+              <div class="form-group">
+                <label>Street Address</label>
+                <input type="text" id="ship-street" placeholder="123 Rizal St.">
+              </div>
+              <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+                <div>
+                  <label>City / Municipality</label>
+                  <select id="ship-city" onchange="onShipCityChange()">
+                    <option value="">Select city</option>
+                    {% for c in delivery_zone_cities %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <label>Province</label>
+                  <input type="text" id="ship-province" value="Metro Manila" disabled>
+                </div>
+              </div>
+              <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+                <div>
+                  <label>Barangay</label>
+                  <select id="ship-barangay"><option value="">Select city first</option></select>
+                </div>
+                <div>
+                  <label>ZIP Code</label>
+                  <input type="text" id="ship-zip" placeholder="1100">
+                </div>
+              </div>
+              <label style="display:flex;align-items:center;gap:0.4rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.78rem;cursor:pointer;">
+                <input type="checkbox" id="ship-save-default" style="width:auto;"> Save as my default address
+              </label>
+            </div>
+          </span>
+        </label>
+        <div id="ship-address-error" style="display:none;margin-top:0.5rem;padding:0.5rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:0.78rem;color:#7f1d1d;"></div>
       </div>
 
       <div class="modal-actions">
@@ -1784,6 +1861,67 @@
 </div>
 
 <script>
+  // ── Motorcycle model autocomplete (Vehicle Information, booking form) ──
+  const MOTORCYCLE_MODELS = {
+    'Honda': ['Click 125i', 'Click 160', 'BeAT', 'BeAT Street', 'Genio', 'Giorno+', 'ADV 160', 'ADV 350',
+      'PCX 160', 'Airblade 160', 'Forza 350', 'Wave RSX', 'XRM125 DSX', 'XRM125 Motard', 'RS125',
+      'Supra GTR150', 'TMX 125 Alpha', 'TMX Supremo', 'Winner X', 'CB150X', 'CBR150R', 'XR150L',
+      'CRF150L', 'CB650R', 'Rebel 500'],
+    'Yamaha': ['Mio i 125', 'Mio Sporty', 'Mio Soul i 125', 'Mio Gravis', 'Mio Gear', 'Mio Aerox',
+      'Aerox 155', 'NMAX 155', 'XMAX 300', 'Fazzio', 'Sniper 155', 'Sniper 150', 'Sight', 'FZi',
+      'YTX 125', 'XTZ 125', 'PG-1', 'XSR155', 'MT-15', 'YZF-R15', 'YZF-R3', 'MT-03', 'WR155R'],
+    'Suzuki': ['Raider R150 Fi', 'Raider J 115 Fi', 'Smash 115', 'Skydrive Sport', 'Burgman Street 125',
+      'Avenis', 'Gixxer 150', 'Gixxer SF 250', 'GSX-S150', 'GSX-R150', 'V-Strom 250'],
+    'Kawasaki': ['Barako II 175', 'CT100', 'CT125', 'Fury 125 RR', 'Rouser NS125', 'Rouser NS160',
+      'Rouser RS200', 'Dominar 400', 'W175', 'KLX 150', 'KLX 230', 'Ninja ZX-25R', 'Ninja 400',
+      'Z400', 'Z650', 'Ninja 650'],
+    'Kymco': ['Like 150i', 'Super 8', 'Visar 110', 'Xciting S 400', 'AK550'],
+    'SYM': ['Jet X 150', 'RV1-2', 'Bonus 110', 'Husky ADV 150'],
+    'Vespa': ['S 125', 'Primavera 150', 'Sprint 150', 'GTS 300'],
+    'KTM': ['Duke 200', 'Duke 390', 'RC 200', 'RC 390', '390 Adventure'],
+    'CFMoto': ['150NK', '300NK', '300SR', '450SR', '700CL-X'],
+    'Royal Enfield': ['Hunter 350', 'Classic 350', 'Meteor 350', 'Himalayan 450', 'Interceptor 650'],
+    'TVS': ['Dazz', 'XL100', 'Apache RTR 160', 'Apache RTR 200', 'Ntorq 125'],
+    'Rusi': ['Classic 250', 'Sigma 125', 'Macho 150', 'Rapid 110'],
+    'Motorstar': ['Xplorer X150', 'Easy Rider 150', 'Cafe 400', 'Nicess 110'],
+    'Keeway': ['RKS 150', 'Superlight 200', 'Cafe Racer 152'],
+  };
+
+  function filterMotorcycleModels() {
+    const input = document.getElementById('moto-model');
+    const dropdown = document.getElementById('motorcycle-model-dropdown');
+    const q = input.value.trim().toLowerCase();
+
+    let html = '';
+    let matches = 0;
+    for (const [brand, models] of Object.entries(MOTORCYCLE_MODELS)) {
+      const brandMatches = models.filter(m => !q || `${brand} ${m}`.toLowerCase().includes(q));
+      if (!brandMatches.length) continue;
+      matches += brandMatches.length;
+      html += `<div class="moto-group-label">${brand.toUpperCase()}</div>`;
+      html += brandMatches.map(m => {
+        const full = `${brand} ${m}`;
+        const escAttr = full.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        return `<div class="moto-option" data-value="${escAttr}" onmousedown="selectMotorcycleModel(this.dataset.value)">${full}</div>`;
+      }).join('');
+    }
+    dropdown.innerHTML = matches ? html : '<div class="moto-no-results">No matching model — you can still type your own.</div>';
+    dropdown.classList.add('open');
+  }
+
+  function selectMotorcycleModel(value) {
+    document.getElementById('moto-model').value = value;
+    document.getElementById('motorcycle-model-dropdown').classList.remove('open');
+  }
+
+  document.addEventListener('click', function (e) {
+    const input = document.getElementById('moto-model');
+    const dropdown = document.getElementById('motorcycle-model-dropdown');
+    if (input && dropdown && !input.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.remove('open');
+    }
+  });
+
   function showSection(name, el) {
     if (name === 'book') loadMechanics();
     if (name === 'returns') setReturnsTab(_returnsActiveTab);
@@ -1872,9 +2010,15 @@
     if (cart.length === 0) { showCartToast('Your cart is empty'); return; }
     deliveryMethod = 'pickup';
     selectDelivery('pickup');
-    ['ship-name','ship-mobile','ship-street','ship-city','ship-province','ship-zip'].forEach(id => {
+    ['ship-name','ship-mobile','ship-street','ship-zip'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    document.getElementById('ship-city').value = '';
+    document.getElementById('ship-barangay').innerHTML = '<option value="">Select city first</option>';
+    document.getElementById('ship-save-default').checked = false;
+    document.querySelectorAll('input[name="ship-address-mode"]').forEach(r => r.checked = false);
+    document.getElementById('ship-address-custom-fields').style.display = 'none';
+    document.getElementById('ship-address-error').style.display = 'none';
     renderCartStep();
     goToStep('step-cart');
     document.getElementById('modal-order').classList.add('open');
@@ -1967,11 +2111,21 @@
     const btn = document.getElementById('confirm-pay-btn');
     btn.disabled = true;
     btn.textContent = 'Processing…';
-    const shipAddr = deliveryMethod === 'ship'
-      ? [document.getElementById('ship-name').value, document.getElementById('ship-mobile').value,
-         document.getElementById('ship-street').value + ', ' + document.getElementById('ship-city').value + ', ' +
-         document.getElementById('ship-province').value + ' ' + document.getElementById('ship-zip').value].join('\n')
-      : '';
+
+    let shipFields = {};
+    if (deliveryMethod === 'ship') {
+      const mode = document.querySelector('input[name="ship-address-mode"]:checked');
+      shipFields.address_mode = mode ? mode.value : '';
+      if (mode && mode.value === 'custom') {
+        shipFields.ship_name     = document.getElementById('ship-name').value;
+        shipFields.ship_mobile   = document.getElementById('ship-mobile').value;
+        shipFields.ship_street   = document.getElementById('ship-street').value;
+        shipFields.ship_city     = document.getElementById('ship-city').value;
+        shipFields.ship_barangay = document.getElementById('ship-barangay').value;
+        shipFields.ship_zip      = document.getElementById('ship-zip').value;
+        shipFields.save_as_default = document.getElementById('ship-save-default').checked;
+      }
+    }
     try {
       const res = await fetch('/customer/cart/checkout', {
         method: 'POST',
@@ -1980,7 +2134,7 @@
           items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
           delivery_method: deliveryMethod,
           payment_method: selectedPayment,
-          ship_address: shipAddr
+          ...shipFields
         })
       });
       const data = await res.json();
@@ -2069,20 +2223,47 @@ function selectDelivery(method) {
   }
 }
 
+function onShipAddressModeChange() {
+  const mode = document.querySelector('input[name="ship-address-mode"]:checked');
+  document.getElementById('ship-address-custom-fields').style.display =
+    (mode && mode.value === 'custom') ? 'block' : 'none';
+}
+
+function onShipCityChange() {
+  const city = document.getElementById('ship-city').value;
+  const brgySel = document.getElementById('ship-barangay');
+  const brgys = DELIVERY_ZONE_BARANGAYS[city] || [];
+  brgySel.innerHTML = city
+    ? brgys.map(b => `<option value="${b}">${b}</option>`).join('')
+    : '<option value="">Select city first</option>';
+}
+
 function updateCartTotal() {
   document.getElementById('cart-total').textContent = '₱' + getCartTotal().toFixed(2);
 }
 
 function goToShipping() {
+  const errEl = document.getElementById('ship-address-error');
+  errEl.style.display = 'none';
   if (deliveryMethod === 'ship') {
-    const fields = ['ship-name','ship-mobile','ship-street','ship-city','ship-province','ship-zip'];
-    for (const f of fields) {
-      if (!document.getElementById(f).value.trim()) {
-        document.getElementById(f).focus();
-        document.getElementById(f).style.borderColor = 'var(--brand-red)';
-        return;
+    const mode = document.querySelector('input[name="ship-address-mode"]:checked');
+    if (!mode) {
+      errEl.textContent = 'Please choose a delivery address.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (mode.value === 'custom') {
+      const fields = ['ship-name', 'ship-mobile', 'ship-street', 'ship-city', 'ship-barangay', 'ship-zip'];
+      for (const f of fields) {
+        if (!document.getElementById(f).value.trim()) {
+          document.getElementById(f).focus();
+          document.getElementById(f).style.borderColor = 'var(--brand-red)';
+          errEl.textContent = 'Please fill in the full delivery address.';
+          errEl.style.display = 'block';
+          return;
+        }
+        document.getElementById(f).style.borderColor = '';
       }
-      document.getElementById(f).style.borderColor = '';
     }
   }
   const total = getCartTotal();
@@ -2119,7 +2300,16 @@ function goToConfirm() {
   if (deliveryMethod === 'pickup') {
     deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#86efac;margin-bottom:0.25rem;"><span style="font-family:'Syne',sans-serif;font-weight:700;">Shop Pickup</span></div><div style="font-size:0.8rem;color:var(--fg-3);">MotoTyre North Caloocan<br>Saranay Rd, Brgy. 171 Bagumbong, Caloocan City</div>`;
   } else {
-    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#93c5fd;margin-bottom:0.25rem;"><span style="font-family:'Syne',sans-serif;font-weight:700;">Ship to Address</span></div><div style="font-size:0.8rem;color:var(--fg-3);">${document.getElementById('ship-name').value}<br>${document.getElementById('ship-mobile').value}<br>${document.getElementById('ship-street').value}, ${document.getElementById('ship-city').value},<br>${document.getElementById('ship-province').value} ${document.getElementById('ship-zip').value}</div>`;
+    const mode = document.querySelector('input[name="ship-address-mode"]:checked');
+    const addr = (mode && mode.value === 'default') ? DEFAULT_DELIVERY_ADDRESS : {
+      name: document.getElementById('ship-name').value,
+      mobile: document.getElementById('ship-mobile').value,
+      street: document.getElementById('ship-street').value,
+      city: document.getElementById('ship-city').value,
+      barangay: document.getElementById('ship-barangay').value,
+      zip: document.getElementById('ship-zip').value,
+    };
+    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#93c5fd;margin-bottom:0.25rem;"><span style="font-family:'Syne',sans-serif;font-weight:700;">Ship to Address</span></div><div style="font-size:0.8rem;color:var(--fg-3);">${addr.name}<br>${addr.mobile}<br>${addr.street}, Brgy. ${addr.barangay},<br>${addr.city}, Metro Manila ${addr.zip}</div>`;
   }
   goToStep('step-confirm');
 }
@@ -3318,16 +3508,17 @@ function openOrderDetails(orderId) {
   const isPickup = order.delivery_method === 'pickup';
   const steps      = isPickup
     ? ['confirmed', 'processing', 'ready_for_pickup', 'completed']
-    : ['confirmed', 'processing', 'shipped', 'delivered'];
+    : ['confirmed', 'processing', 'shipped', 'completed'];
   const stepLabels = isPickup
     ? { confirmed: 'Confirmed', processing: 'Processing', ready_for_pickup: 'Ready for Pickup', completed: 'Picked Up' }
-    : { confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', delivered: 'Delivered' };
-  const stepIcons = { confirmed: '', processing: '', ready_for_pickup: '', shipped: '', delivered: '', completed: '' };
+    : { confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', completed: 'Delivered' };
+  const stepIcons = { confirmed: '', processing: '', ready_for_pickup: '', shipped: '', completed: '' };
 
-  // Map backend statuses to pickup step keys
+  // Map backend statuses to pickup step keys — the backend only ever writes
+  // 'completed' as the terminal status for either delivery method, never a
+  // literal 'delivered', so ship needs no remap of its own.
   let resolvedStatus = order.status;
-  if (isPickup && order.status === 'shipped')   resolvedStatus = 'ready_for_pickup';
-  if (isPickup && order.status === 'delivered') resolvedStatus = 'completed';
+  if (isPickup && order.status === 'shipped') resolvedStatus = 'ready_for_pickup';
 
   const currentIdx = steps.indexOf(resolvedStatus);
   const isCancelled = order.status === 'cancelled';
@@ -3511,6 +3702,14 @@ const RETURN_OUTCOMES = {
 // itself validates against, so a customer never fills this in only to have
 // the whole claim rejected on submit.
 const DELIVERY_ZONE_BARANGAYS = {{ delivery_zone_barangays|tojson }};
+const DEFAULT_DELIVERY_ADDRESS = {
+  name: {{ (current_user.default_delivery_name or '')|tojson }},
+  mobile: {{ (current_user.default_delivery_mobile or '')|tojson }},
+  street: {{ (current_user.default_delivery_street or '')|tojson }},
+  city: {{ (current_user.default_delivery_city or '')|tojson }},
+  barangay: {{ (current_user.default_delivery_barangay or '')|tojson }},
+  zip: {{ (current_user.default_delivery_zip or '')|tojson }},
+};
 
 // "Why" checklist (section 3): [code, label, needs_photo]. A reason needs a
 // photo when it's something a photo could actually prove.
@@ -4098,6 +4297,7 @@ function returnStatusLabel(r) {
   if (r.status === 'cancelled') return 'Cancelled';
   if (r.status === 'approved') {
     if (r.kind === 'product' && !r.item_returned) return 'Waiting for your item';
+    if (r.kind === 'product' && r.item_returned && r.resolution === 'refund') return 'Item Received';
     if (r.kind === 'service' && r.resolution === 'redo_service' && r.redo_date) return 'Back job booked';
     return 'Approved';
   }
@@ -4117,6 +4317,7 @@ const RETURN_STATUS_LABEL_COLORS = {
   'Waiting on you':         { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
   'Approved':               { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
   'Waiting for your item':  { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
+  'Item Received':          { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
   'Replacement on the way': { bg: '#cffafe', color: '#155e75', border: '#06b6d4' },
   'Replacement has arrived': { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
   'Completed':              { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },

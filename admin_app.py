@@ -813,6 +813,25 @@ def admin_dashboard():
     _total_rev   = _order_rev + _booking_rev + _jo_rev
     all_orders      = Order.query.filter_by(is_archived=False).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
     archived_orders = Order.query.filter_by(is_archived=True).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
+
+    # A refund claim against an order overrides what the order's own row
+    # shows in Manage Orders — the customer doesn't care that fulfillment
+    # says "Completed" once the money is on its way back.
+    _refund_order_ids = [o.id for o in all_orders + archived_orders]
+    _refund_claims = {}
+    if _refund_order_ids:
+        for rr in ReturnRequest.query.filter(
+            ReturnRequest.order_id.in_(_refund_order_ids),
+            ReturnRequest.resolution == 'refund',
+        ).order_by(ReturnRequest.created_at.asc()).all():
+            _refund_claims[rr.order_id] = rr  # last one wins if more than one over time
+    for o in all_orders + archived_orders:
+        rr = _refund_claims.get(o.id)
+        o.refund_status_label = None
+        if rr and rr.status == 'resolved':
+            o.refund_status_label = 'Refunded'
+        elif rr and rr.status == 'approved' and rr.item_returned:
+            o.refund_status_label = 'Item Received'
     order_ship_json = json.dumps({
         str(o.id): {'delivery': str(o.delivery_method or 'pickup'),
                     'address': str(o.ship_address or ''),
@@ -825,7 +844,24 @@ def admin_dashboard():
     if 'inprogress' in _booking_status_counts:
         _booking_status_counts['in_progress'] = _booking_status_counts.get('in_progress', 0) + _booking_status_counts.pop('inprogress')
 
+    # Same three "nothing collected yet" queries the Billing page itself uses
+    # for its Pending tab — kept in lockstep so the sidebar count and the
+    # page it links to never disagree.
+    _paid_jo_ids = [r[0] for r in db.session.query(Payment.job_order_id).filter(Payment.job_order_id != None).all()]
+    _pending_billing_count = (
+        JobOrder.query.filter(JobOrder.status == 'in_progress',
+                               ~JobOrder.id.in_(_paid_jo_ids) if _paid_jo_ids else True).count()
+        + Booking.query.filter(Booking.status.in_(['in_progress', 'inprogress']),
+                                Booking.payment_method.in_(['cash', None]),
+                                Booking.walkin_customer_id == None,
+                                Booking.is_archived == False).count()
+        + Order.query.filter(Order.delivery_method == 'pickup', Order.status == 'shipped',
+                              Order.walkin_customer_id == None, Order.is_archived == False)
+                     .filter(Order.items.any()).count()
+    )
+
     return render_template('admin_dashboard.html',
+        pending_billing_count=_pending_billing_count,
         total_bookings=Booking.query.filter_by(is_archived=False).count(),
         total_orders=Order.query.filter_by(is_archived=False).filter(Order.items.any()).count(),
         total_users=User.query.count(),
@@ -3683,8 +3719,7 @@ def payments():
                             .order_by(Booking.created_at.desc()).limit(50).all())
 
         history_orders = (Order.query
-                          .filter(Order.payment_method.in_(['cash', 'gcash']), Order.delivery_method == 'pickup',
-                                  Order.status == 'completed')
+                          .filter(Order.payment_method.in_(['cash', 'gcash']), Order.status == 'completed')
                           .filter(Order.items.any())
                           .order_by(Order.created_at.desc()).limit(50).all())
 

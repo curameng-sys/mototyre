@@ -170,7 +170,7 @@
 <div class="main">
   <div class="page-header">
     <div class="page-title">BILLING <span class="accent">CENTER</span></div>
-    <div class="page-sub">Collect payment for bookings, job orders, and cash pick-up orders.</div>
+    <div class="page-sub">Collect payments for bookings, job orders, and orders paid through GCash or cash, whether for pickup or delivery.</div>
   </div>
 
   <!-- TABS -->
@@ -386,10 +386,10 @@
             <div class="sub">{{ o.items|length }} item(s)</div>
           </td>
           <td><span class="amount">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
-          <td><span class="badge b-cash">CASH</span></td>
+          <td><span class="badge b-{{ o.payment_method }}">{{ o.payment_method|upper }}</span></td>
           <td class="date-cell">{{ o.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o.created_at.strftime('%I:%M %p') }}</span></td>
           <td>
-            <button class="btn-receipt" onclick="printOrdReceipt('ORD-{{ '%03d'|format(o.id) }}', '{{ o.customer.fullname|e }}', '{{ o.customer.phone }}', {{ o.total_amount }}, '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}])">
+            <button class="btn-receipt" onclick="printOrdReceipt('ORD-{{ '%03d'|format(o.id) }}', '{{ o.customer.fullname|e }}', '{{ o.customer.phone }}', {{ o.total_amount }}, '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}], '{{ o.delivery_method }}')">
               Receipt
             </button>
           </td>
@@ -704,10 +704,11 @@ function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
   w.document.close();
 }
 
-function printOrdReceipt(ref, customer, phone, amount, method, date, items) {
+function printOrdReceipt(ref, customer, phone, amount, method, date, items, delivery) {
   const itemRows = items.map(i =>
     `<div class="row"><span>${i.name} ×${i.qty}</span><span>₱${(i.price * i.qty).toFixed(2)}</span></div>`
   ).join('');
+  const deliveryLabel = delivery === 'ship' ? 'Ship to Address' : 'Shop Pickup';
   const w = window.open('', '_blank', 'width=400,height=600');
   w.document.write(`<!DOCTYPE html><html><head><title>Receipt ${ref}</title>
   <style>
@@ -732,6 +733,7 @@ function printOrdReceipt(ref, customer, phone, amount, method, date, items) {
   <div class="row"><span>Customer</span><span>${customer}</span></div>
   <div class="row"><span>Phone</span><span>${phone}</span></div>
   <div class="row"><span>Payment</span><span>${method.toUpperCase()}</span></div>
+  <div class="row"><span>Delivery</span><span>${deliveryLabel}</span></div>
   <hr class="divider">
   ${itemRows}
   <hr class="divider">
