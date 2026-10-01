@@ -145,6 +145,10 @@
     .h-bkg{background:rgba(124,58,237,.2);color:#c4b5fd;}
     .h-jo {background:rgba(37,99,235,.2);color:#93c5fd;}
     .h-ord{background:rgba(16,185,129,.2);color:#6ee7b7;}
+    .h-sale{background:rgba(13,148,136,.2);color:#5eead4;}
+    .ref-sale{color:#0d9488;}
+    .hist-row.is-new{animation:newRowFade 2.5s ease forwards;}
+    @keyframes newRowFade{0%{background:rgba(22,163,74,.22);}100%{background:transparent;}}
 
     /* ── METHOD TAGS ── */
     .b-nomethod{background:rgba(107,114,128,.18);color:#9ca3af;border:1px solid rgba(107,114,128,.3);}
@@ -225,6 +229,7 @@
     <a href="?tab=history" class="tab {% if tab=='history' %}active{% endif %}">
       History
       {% if history_count > 0 %}<span style="margin-left:.4rem;background:rgba(107,114,128,.25);color:#d1d5db;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ history_count }}</span>{% endif %}
+      {% if instore_unseen_count > 0 %}<span title="New in-store sales" style="margin-left:.3rem;background:var(--red);color:#fff;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ instore_unseen_count }}</span>{% endif %}
     </a>
   </div>
 
@@ -456,17 +461,20 @@
         </tr>
         {% endfor %}
         {% for o in history_orders %}
-        <tr class="hist-row" data-s="{{ o.customer.fullname|lower }} ord-{{ '%03d'|format(o.id) }} {{ o.customer.phone }}">
-          <td><span class="h-type h-ord">ORD</span><span class="ref ref-ord">ORD-{{ '%03d'|format(o.id) }}</span></td>
+        {% set o_ref = ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) %}
+        {% set o_name = o.contact_name if o.is_instore else o.customer.fullname %}
+        {% set o_phone = '' if o.is_instore else o.customer.phone %}
+        <tr class="hist-row{% if o.id in new_instore_ids %} is-new{% endif %}" data-s="{{ o_name|lower }} {{ o_ref|lower }} {{ o_phone }}">
+          <td><span class="h-type {{ 'h-sale' if o.is_instore else 'h-ord' }}">{{ 'SALE' if o.is_instore else 'ORD' }}</span><span class="ref {{ 'ref-sale' if o.is_instore else 'ref-ord' }}">{{ o_ref }}</span></td>
           <td>
-            <div class="name">{{ o.customer.fullname }}</div>
+            <div class="name">{{ o_name }}</div>
             <div class="sub">{{ o.items|length }} item(s)</div>
           </td>
           <td><span class="amount">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
           <td><span class="badge b-{{ o.payment_method }}">{{ o.payment_method|upper }}</span></td>
           <td class="date-cell">{{ o.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o.created_at.strftime('%I:%M %p') }}</span></td>
           <td>
-            <button class="btn-receipt" onclick="printOrdReceipt('ORD-{{ '%03d'|format(o.id) }}', '{{ o.customer.fullname|e }}', '{{ o.customer.phone }}', {{ o.total_amount }}, '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}], '{{ o.delivery_method }}')">
+            <button class="btn-receipt" onclick="printOrdReceipt('{{ o_ref }}', '{{ o_name|e }}', '{{ o_phone }}', {{ o.total_amount }}, '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}], '{{ o.delivery_method }}', {{ 'true' if o.is_instore else 'false' }})">
               Receipt
             </button>
           </td>
@@ -840,11 +848,14 @@ function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
   w.document.close();
 }
 
-function printOrdReceipt(ref, customer, phone, amount, method, date, items, delivery) {
+function printOrdReceipt(ref, customer, phone, amount, method, date, items, delivery, isInstore) {
   const itemRows = items.map(i =>
     `<div class="row"><span>${i.name} ×${i.qty}</span><span>₱${(i.price * i.qty).toFixed(2)}</span></div>`
   ).join('');
-  const deliveryLabel = delivery === 'ship' ? 'Ship to Address' : 'Shop Pickup';
+  const deliveryRow = isInstore
+    ? `<div class="row"><span>Purchase type</span><span>In-store</span></div>`
+    : `<div class="row"><span>Delivery</span><span>${delivery === 'ship' ? 'Ship to Address' : 'Shop Pickup'}</span></div>`;
+  const phoneRow = isInstore ? '' : `<div class="row"><span>Phone</span><span>${phone}</span></div>`;
   const w = window.open('', '_blank', 'width=400,height=600');
   w.document.write(`<!DOCTYPE html><html><head><title>Receipt ${ref}</title>
   <style>
@@ -863,13 +874,13 @@ function printOrdReceipt(ref, customer, phone, amount, method, date, items, deli
   </style></head><body>
   <div class="logo">MOTO<span>TYRE</span></div>
   <div class="addr">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>0915 269 8366 · Mon–Sat 8AM–7PM</div>
-  <div class="title">Official Receipt — Order</div>
+  <div class="title">Official Receipt — ${isInstore ? 'In-Store' : 'Order'}</div>
   <div class="row"><span>Reference</span><span>${ref}</span></div>
   <div class="row"><span>Date</span><span>${date}</span></div>
   <div class="row"><span>Customer</span><span>${customer}</span></div>
-  <div class="row"><span>Phone</span><span>${phone}</span></div>
+  ${phoneRow}
   <div class="row"><span>Payment</span><span>${method.toUpperCase()}</span></div>
-  <div class="row"><span>Delivery</span><span>${deliveryLabel}</span></div>
+  ${deliveryRow}
   <hr class="divider">
   ${itemRows}
   <hr class="divider">

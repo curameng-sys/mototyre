@@ -319,6 +319,9 @@ class Order(db.Model):
     is_archived     = db.Column(db.Boolean, default=False)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
     delivered_at    = db.Column(db.DateTime, nullable=True)  # when status actually reached delivered/completed — the return window's start
+    contact_name    = db.Column(db.String(100), nullable=True)  # typed name for an in-store sale with no real account
+    is_instore      = db.Column(db.Boolean, default=False)      # created from In-Store Parts Purchase — gets a SALE- ref, not ORD-
+    instore_seen    = db.Column(db.Boolean, default=True)       # False only for a fresh in-store sale, until Billing History is opened
 
 
 class OrderItem(db.Model):
@@ -350,6 +353,15 @@ class Feedback(db.Model):
     message    = db.Column(db.Text, default='')
     is_read    = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+
+
+class AppState(db.Model):
+    """Tiny key/value store for single global values that don't belong to any
+    one row — e.g. when the admin last looked at Transaction History, used to
+    mark everything since then as new."""
+    __tablename__ = 'app_state'
+    key   = db.Column(db.String(50), primary_key=True)
+    value = db.Column(db.String(200))
 
 
 class WalkInCustomer(db.Model):
@@ -889,6 +901,8 @@ def admin_dashboard():
         + Booking.query.filter(Booking.status == 'completed', Booking.invoice_paid == False,
                                 Booking.invoice_payment_method == 'cash',
                                 Booking.is_archived == False).count()
+        # In-store sales nobody's opened History to see yet.
+        + Order.query.filter(Order.is_instore == True, Order.instore_seen == False).count()
     )
 
     _all_bookings_list = Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all()
@@ -4069,6 +4083,7 @@ def payments():
     # (billed entirely here in one step, no separate invoice ever sent).
     _quoted_booking_ids = {r[0] for r in db.session.query(Quotation.booking_id)
                            .filter(Quotation.booking_id.isnot(None)).all()}
+    _new_instore_ids = []
 
     if tab == 'pending':
         paid_jo_ids = [r[0] for r in db.session.query(Payment.job_order_id).filter(Payment.job_order_id != None).all()]
@@ -4160,6 +4175,14 @@ def payments():
                           .filter(Order.items.any())
                           .order_by(Order.created_at.desc()).limit(50).all())
 
+        # Rows the admin hasn't opened History since — highlighted once, then
+        # marked seen so the badge and highlight both clear together.
+        _new_instore_ids = [o.id for o in history_orders if o.is_instore and not o.instore_seen]
+        if _new_instore_ids:
+            Order.query.filter(Order.id.in_(_new_instore_ids)).update(
+                {Order.instore_seen: True}, synchronize_session=False)
+            db.session.commit()
+
     _counter_cash_count = Booking.query.filter(
         Booking.status == 'completed', Booking.invoice_paid == False,
         Booking.invoice_payment_method == 'cash', Booking.is_archived == False,
@@ -4177,6 +4200,8 @@ def payments():
         + Order.query.filter(Order.payment_method.in_(['cash', 'gcash']), Order.status == 'completed')
                      .filter(Order.items.any()).count()
     )
+    # Recomputed after any mark-seen above, so it's accurate whichever tab rendered.
+    _instore_unseen_count = Order.query.filter(Order.is_instore == True, Order.instore_seen == False).count()
 
     return render_template('payments.html',
         tab=tab,
@@ -4188,6 +4213,8 @@ def payments():
         history_orders=history_orders,
         counter_cash_count=_counter_cash_count,
         history_count=_history_count,
+        instore_unseen_count=_instore_unseen_count,
+        new_instore_ids=_new_instore_ids,
         all_services=Service.query.filter_by(is_active=True).all())
 
 
@@ -4321,11 +4348,29 @@ def billing_order_complete(oid):
     return jsonify({'success': True, 'ref': f'ORD-{order.id:03d}', 'amount': order.total_amount})
 
 
+def _get_app_state(key, default=None):
+    row = AppState.query.get(key)
+    return row.value if row else default
+
+
+def _set_app_state(key, value):
+    row = AppState.query.get(key)
+    if row:
+        row.value = value
+    else:
+        db.session.add(AppState(key=key, value=value))
+
+
 @admin_app.route('/api/transactions')
 @login_required
 @require_admin_or_staff
 def api_transactions():
     txns = []
+    _last_viewed_raw = _get_app_state('last_viewed_transactions_at')
+    try:
+        _last_viewed = datetime.fromisoformat(_last_viewed_raw) if _last_viewed_raw else None
+    except ValueError:
+        _last_viewed = None
 
     paid_jos = JobOrder.query.join(Payment, Payment.job_order_id == JobOrder.id).all()
     for jo in paid_jos:
@@ -4354,8 +4399,25 @@ def api_transactions():
             'total': o.total_amount,
         })
 
+    # In-Store Parts Purchase sales — a typed name, not a WalkInCustomer
+    # lookup, so they're tracked separately via is_instore rather than
+    # walkin_customer_id.
+    instore_orders = Order.query.filter(
+        Order.is_instore == True, Order.walkin_customer_id == None, Order.status == 'completed'
+    ).filter(Order.items.any()).all()
+    for o in instore_orders:
+        txns.append({
+            '_dt': o.created_at,
+            'ref': f'SALE-{o.id:03d}',
+            'type': 'Sale',
+            'customer': o.contact_name or 'Walk-in',
+            'payment': (o.payment_method or 'cash').upper(),
+            'status': 'Completed',
+            'total': o.total_amount,
+        })
+
     online_orders = Order.query.filter(
-        Order.walkin_customer_id == None, Order.status == 'completed'
+        Order.walkin_customer_id == None, Order.is_instore == False, Order.status == 'completed'
     ).filter(Order.items.any()).all()
     for o in online_orders:
         txns.append({
@@ -4380,7 +4442,10 @@ def api_transactions():
             'status': t['status'],
             'total': t['total'],
             'date': t['_dt'].strftime('%b %d, %Y'),
+            'is_new': bool(_last_viewed and t['_dt'] > _last_viewed),
         })
+    _set_app_state('last_viewed_transactions_at', ph_now().isoformat())
+    db.session.commit()
     return jsonify(result)
 
 
@@ -4445,10 +4510,14 @@ def pos_checkout():
                         type='order', status='completed')
 
     if new_cart_items:
+        customer_name = clean_str(data.get('customer_name', ''), max_len=100)
+        if not customer_id and not customer_name:
+            return jsonify({'success': False, 'error': 'Customer name is required.'}), 400
         uid = int(customer_id) if customer_id else current_user.id
         new_total = sum(item['quantity'] * float(item['unit_price']) for item in new_cart_items)
         order = Order(user_id=uid, total_amount=new_total, status='completed', payment_method=payment_method,
-                      delivered_at=ph_now())
+                      delivered_at=ph_now(), is_instore=True, instore_seen=False,
+                      contact_name=None if customer_id else customer_name)
         db.session.add(order)
         db.session.flush()
         order_id = order.id
@@ -5471,6 +5540,9 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN invoice_receipt_no VARCHAR(20) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN invoice_gcash_ref VARCHAR(50) DEFAULT NULL",
         "ALTER TABLE quotation ADD COLUMN decided_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN contact_name VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN is_instore TINYINT(1) DEFAULT 0",
+        "ALTER TABLE `order` ADD COLUMN instore_seen TINYINT(1) DEFAULT 1",
     ]:
         try:
             from sqlalchemy import text as _tmig2

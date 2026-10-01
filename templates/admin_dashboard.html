@@ -1097,14 +1097,16 @@
            </tr></thead>
             <tbody>
               {% for o in all_orders %}
+              {% set o_display_name = o.contact_name if o.is_instore else o.customer.fullname %}
+              {% set o_display_ref = ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) %}
               <tr>
                 <td style="white-space:nowrap;">
-                  <a href="#" onclick="viewOrder({{ o.id }}, '{{ o.customer.fullname|e }}', '{{ o.customer.email }}', '{{ o.customer.phone }}', '{{ o.customer.motorcycle_model or '' }}', '{{ o.customer.motorcycle_plate or '' }}', {{ o.total_amount }}, '{{ o.status }}', '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y — %I:%M %p') }}', {{ o.items|length }}); return false;"
+                  <a href="#" onclick="viewOrder({{ o.id }}, '{{ o_display_name|e }}', '{{ '' if o.is_instore else o.customer.email }}', '{{ '' if o.is_instore else o.customer.phone }}', '{{ o.customer.motorcycle_model or '' if not o.is_instore }}', '{{ o.customer.motorcycle_plate or '' if not o.is_instore }}', {{ o.total_amount }}, '{{ o.status }}', '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y — %I:%M %p') }}', {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
-                    ORD-{{ '%03d'|format(o.id) }}
+                    {{ o_display_ref }}
                   </a>
                 </td>
-                <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">{{ o.customer.fullname }}</td>
+                <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">{{ o_display_name }}</td>
                 <td style="overflow:hidden;">
                   {% if o.items %}
                     <span style="font-size:0.78rem;color:#374151;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -1488,8 +1490,8 @@
             <tbody>
               {% for o in all_orders[:10] %}
               <tr>
-                <td>ORD-{{ '%03d'|format(o.id) }}</td>
-                <td>{{ o.customer.fullname }}</td>
+                <td>{{ ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) }}</td>
+                <td>{{ o.contact_name if o.is_instore else o.customer.fullname }}</td>
                 <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
                 <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
                 <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
@@ -1509,7 +1511,7 @@
       <div class="page-header">
         <div class="page-header-left">
           <div class="page-title">In-Store <span class="accent">Parts Purchase</span></div>
-          <div class="page-sub">Process walk-in customer product purchases. Select items, set quantity, then process payment.</div>
+          <div class="page-sub">Process parts purchases for walk-in customers. Select items, set the quantity, then process the payment.</div>
         </div>
       </div>
 
@@ -1556,9 +1558,10 @@
 
               <!-- Customer name -->
               <div style="margin-bottom:0.65rem;">
-                <label style="font-size:0.72rem;color:var(--muted);font-family:inherit;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.3rem;">Customer Name</label>
-                <input type="text" id="parts-customer" placeholder="Walk-in (optional)"
+                <label style="font-size:0.72rem;color:var(--muted);font-family:inherit;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.3rem;">Customer Name *</label>
+                <input type="text" id="parts-customer" placeholder="Enter the customer's full name" oninput="onPartsCartChange()"
                   style="width:100%;padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#ffffff;color:var(--text);font-size:0.82rem;outline:none;">
+                <div id="parts-customer-error" style="display:none;color:var(--red);font-size:0.72rem;margin-top:0.3rem;">Enter the customer's name.</div>
               </div>
 
               <!-- Payment method -->
@@ -1577,8 +1580,8 @@
               </div>
 
               <!-- Process button -->
-              <button onclick="processPartsTxn()" id="parts-process-btn"
-                style="width:100%;padding:0.7rem;border:none;border-radius:8px;background:var(--green);color:#fff;font-family:inherit;font-weight:700;font-size:0.92rem;cursor:pointer;letter-spacing:0.02em;">
+              <button onclick="processPartsTxn()" id="parts-process-btn" disabled
+                style="width:100%;padding:0.7rem;border:none;border-radius:8px;background:var(--green);color:#fff;font-family:inherit;font-weight:700;font-size:0.92rem;cursor:not-allowed;letter-spacing:0.02em;opacity:0.5;">
                 Process Transaction
               </button>
             </div>
@@ -1732,8 +1735,8 @@
         <tbody>
           {% for o in archived_orders %}
           <tr>
-            <td style="font-weight:700;color:var(--blue);">ORD-{{ '%03d'|format(o.id) }}</td>
-            <td>{{ o.customer.fullname }}</td>
+            <td style="font-weight:700;color:var(--blue);">{{ ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) }}</td>
+            <td>{{ o.contact_name if o.is_instore else o.customer.fullname }}</td>
             <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
             <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
             <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
@@ -5582,6 +5585,7 @@ function _renderPartsCart() {
   if (!_partsCart.length) {
     wrap.innerHTML = '<div id="parts-cart-empty" style="text-align:center;padding:1.25rem 0;color:var(--muted);font-size:0.82rem;">Cart is empty</div>';
     document.getElementById('parts-total').textContent = '₱0.00';
+    onPartsCartChange();
     return;
   }
   wrap.innerHTML = _partsCart.map(item => {
@@ -5602,6 +5606,17 @@ function _renderPartsCart() {
   }).join('');
   const total = _partsCart.reduce((s, i) => s + i.price * i.qty, 0);
   document.getElementById('parts-total').textContent = '₱' + total.toLocaleString('en-PH', {minimumFractionDigits:2});
+  onPartsCartChange();
+}
+
+function onPartsCartChange() {
+  const btn  = document.getElementById('parts-process-btn');
+  const name = document.getElementById('parts-customer').value.trim();
+  const ok   = _partsCart.length > 0 && !!name;
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.5';
+  btn.style.cursor  = ok ? 'pointer' : 'not-allowed';
+  if (name) document.getElementById('parts-customer-error').style.display = 'none';
 }
 
 function setPartsPayment(method) {
@@ -5619,6 +5634,11 @@ function setPartsPayment(method) {
 
 function processPartsTxn() {
   if (!_partsCart.length) { showToast('Cart is empty.', 'error'); return; }
+  const customerName = document.getElementById('parts-customer').value.trim();
+  if (!customerName) {
+    document.getElementById('parts-customer-error').style.display = 'block';
+    return;
+  }
   const btn = document.getElementById('parts-process-btn');
   btn.disabled = true;
   btn.textContent = 'Processing…';
@@ -5628,6 +5648,7 @@ function processPartsTxn() {
     cart: cartSnapshot.map(i => ({product_id: i.id, quantity: i.qty, unit_price: i.price})),
     services: [],
     payment_method: _partsPayment,
+    customer_name: customerName,
   };
   fetch('/pos/checkout', {
     method: 'POST',
@@ -5636,10 +5657,9 @@ function processPartsTxn() {
   })
   .then(r => r.json())
   .then(data => {
-    btn.disabled = false;
     btn.textContent = 'Process Transaction';
-    if (!data.success) { showToast(data.error || 'Transaction failed.', 'error'); return; }
-    _showPartsReceipt(data.order_id, cartSnapshot, total);
+    if (!data.success) { showToast(data.error || 'Transaction failed.', 'error'); btn.disabled = false; return; }
+    _showPartsReceipt(data.order_id, cartSnapshot, total, customerName);
     clearPartsCart();
     loadPartsProducts(); // refresh stock
   })
@@ -5650,9 +5670,8 @@ function processPartsTxn() {
   });
 }
 
-function _showPartsReceipt(orderId, items, total) {
-  const customerName = document.getElementById('parts-customer').value.trim() || 'Walk-in Customer';
-  document.getElementById('receipt-order-ref').textContent  = orderId ? `Order ORD-${String(orderId).padStart(3,'0')}` : 'In-Store Sale';
+function _showPartsReceipt(orderId, items, total, customerName) {
+  document.getElementById('receipt-order-ref').textContent  = orderId ? `SALE-${String(orderId).padStart(3,'0')}` : 'In-Store Sale';
   document.getElementById('receipt-customer').textContent   = customerName;
   document.getElementById('receipt-total').textContent      = '₱' + total.toLocaleString('en-PH', {minimumFractionDigits:2});
   document.getElementById('receipt-payment').textContent    = _partsPayment === 'cash' ? 'Paid via Cash' : 'Paid via GCash';
@@ -5750,8 +5769,8 @@ function filterTxns() {
   }
 
   const rows = filtered.map(t => `
-    <tr>
-      <td style="font-weight:700;font-size:.8rem;color:var(--text);">${t.trx_id}</td>
+    <tr${t.is_new ? ' style="background:rgba(22,163,74,.08);"' : ''}>
+      <td style="font-weight:700;font-size:.8rem;color:var(--text);">${t.trx_id}${t.is_new ? ' <span style="display:inline-block;margin-left:.35rem;padding:.12rem .4rem;border-radius:5px;background:var(--green);color:#fff;font-size:.58rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;">New</span>' : ''}</td>
       <td style="font-size:.78rem;color:var(--muted);">${t.ref}</td>
       <td><span style="display:inline-block;padding:.2rem .55rem;border-radius:99px;font-size:.63rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;${typeColors[t.type]||''}">${t.type}</span></td>
       <td style="font-weight:600;color:var(--text);">${t.customer}</td>
