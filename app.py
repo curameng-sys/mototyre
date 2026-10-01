@@ -1,13 +1,14 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response
+from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date, time
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
+from contextlib import contextmanager
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -87,6 +88,13 @@ app.config.update(
 )
 
 db = SQLAlchemy(app)
+
+@app.context_processor
+def _inject_current_year():
+    """Makes {{ current_year }} available in every template — the footer
+    copyright line reads the real year instead of whatever was hardcoded
+    when that page was last touched."""
+    return {'current_year': datetime.now().year}
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -481,6 +489,9 @@ class Booking(db.Model):
     overrun_minutes  = db.Column(db.Integer, default=0)  # counter-staff-recorded extra time on top of duration_minutes
     was_rescheduled  = db.Column(db.Boolean, default=False)  # set once, first time this booking's date/time changes after creation
     completed_at     = db.Column(db.DateTime, nullable=True)  # when status actually reached completed — the warranty window's start
+    invoice_payment_method = db.Column(db.String(10), nullable=True)  # customer's pick on the post-completion invoice: 'cash' or 'gcash'
+    invoice_paid     = db.Column(db.Boolean, default=False)   # true once that invoice is actually settled (cash confirmed, or GCash succeeded)
+    invoice_paid_at  = db.Column(db.DateTime, nullable=True)
 
 
 class BlockedSlot(db.Model):
@@ -652,6 +663,36 @@ class ReturnRequestItem(db.Model):
     return_request_id = db.Column(db.Integer, db.ForeignKey('return_request.id'), nullable=False)
     order_item_id     = db.Column(db.Integer, nullable=False)
     quantity          = db.Column(db.Integer, nullable=False)
+
+
+class Quotation(db.Model):
+    """Mirrors admin_app.py's Quotation — read here only for a booking-linked
+    Inspection & Estimation quote, so the customer can see and decide on it."""
+    __tablename__ = 'quotation'
+    id               = db.Column(db.Integer, primary_key=True)
+    customer_name    = db.Column(db.String(100), nullable=False)
+    customer_phone   = db.Column(db.String(20), nullable=False)
+    motorcycle_model = db.Column(db.String(100))
+    motorcycle_plate = db.Column(db.String(20))
+    notes            = db.Column(db.Text)
+    total_amount     = db.Column(db.Float, default=0)
+    status           = db.Column(db.String(20), default='pending')
+    booking_id       = db.Column(db.Integer, nullable=True)
+    inspected_by     = db.Column(db.String(100), nullable=True)
+    created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    items            = db.relationship('QuotationItem', backref='quotation', lazy=True)
+
+
+class QuotationItem(db.Model):
+    __tablename__ = 'quotation_item'
+    id           = db.Column(db.Integer, primary_key=True)
+    quotation_id = db.Column(db.Integer, db.ForeignKey('quotation.id'), nullable=False)
+    item_type    = db.Column(db.String(10), default='service')
+    name         = db.Column(db.String(150), nullable=False)
+    quantity     = db.Column(db.Integer, default=1)
+    unit_price   = db.Column(db.Float, nullable=False)
+    locked       = db.Column(db.Boolean, default=False)
 
 
 @login_manager.user_loader
@@ -1128,9 +1169,22 @@ def customer_dashboard():
         o.return_window = return_window_info('product', o.delivered_at) if o.status in ('delivered', 'completed') else None
         o.open_claim = open_by_order.get(o.id)
         o.replacement_stats = _order_replacement_stats(o) if o.return_window else None
+    _booking_ids = [b.id for b in bookings]
+    _quotations_by_booking = {}
+    if _booking_ids:
+        for q in Quotation.query.filter(Quotation.booking_id.in_(_booking_ids)).order_by(Quotation.created_at.asc()).all():
+            _quotations_by_booking[q.booking_id] = q
     for b in bookings:
         b.return_window = return_window_info('service', b.completed_at) if b.status == 'completed' else None
         b.open_claim = open_by_booking.get(b.id)
+        q = _quotations_by_booking.get(b.id)
+        b.quotation_data = None if not q else {
+            'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
+            'original': sum(i.unit_price for i in q.items if i.locked),
+            'extra': sum(i.unit_price for i in q.items if not i.locked),
+            'total': q.total_amount,
+            'items': [{'name': i.name, 'price': i.unit_price, 'locked': i.locked} for i in q.items],
+        }
     default_delivery_eligible = bool(current_user.default_delivery_city and
         is_in_delivery_zone(current_user.default_delivery_city, current_user.default_delivery_barangay))
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders,
@@ -1279,6 +1333,42 @@ def _gather_blocked_intervals(booking_date):
     ]
 
 
+@contextmanager
+def _booking_day_lock(dates, timeout=10):
+    """Serializes booking creation per calendar date — the daily-cap and
+    mechanic-overlap checks below read the day's existing bookings, then a
+    separate INSERT+commit happens later; without this, two concurrent
+    requests for the same day can both pass the check before either has
+    committed and both get in, blowing past the cap or double-booking a
+    mechanic. Same problem as the stock race, just checked across a day's
+    worth of rows instead of one counter, so a single row lock can't cover
+    it — a MySQL named lock keyed by date can, across any number of rows.
+    Dates are locked in sorted order so two requests spanning the same
+    multi-day combo never deadlock waiting on each other in reverse order."""
+    names = sorted({f'mototyre_booking_day_{d.isoformat()}' for d in dates})
+    acquired = []
+    try:
+        for name in names:
+            got = db.session.execute(text("SELECT GET_LOCK(:name, :timeout)"),
+                                      {'name': name, 'timeout': timeout}).scalar()
+            if got != 1:
+                raise TimeoutError('The shop is busy updating this day — please try again in a moment.')
+            acquired.append(name)
+        # MySQL's default REPEATABLE READ takes its consistent snapshot at
+        # this transaction's first query — which may have already happened
+        # before the lock above (e.g. @login_required loading current_user).
+        # Without ending that transaction here, the "existing bookings"
+        # query right after this still sees the pre-lock snapshot and misses
+        # whatever the previous lock holder just committed, so the lock
+        # alone doesn't stop the race — it only serializes *when* each
+        # request reads, not *what* it sees.
+        db.session.commit()
+        yield
+    finally:
+        for name in acquired:
+            db.session.execute(text("SELECT RELEASE_LOCK(:name)"), {'name': name})
+
+
 def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_minutes, exclude_id=None):
     """THE call every booking-creation path in this app makes before touching
     the schedule. Gathers what service_duration.validate_booking() needs from
@@ -1297,6 +1387,11 @@ def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_mi
         shop_intervals.append((b_start, compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)))
     shop_intervals += _gather_blocked_intervals(booking_date)
 
+    # How many jobs the shop can actually run at once this day — the shop-wide
+    # slot capacity, independent of whether this particular request named a
+    # mechanic or not.
+    _, _, on_duty = get_on_duty_mechanics(booking_date)
+
     mechanic = None
     mechanic_status = None
     mechanic_intervals = None
@@ -1306,7 +1401,6 @@ def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_mi
             return None, 'That mechanic could not be found. Please choose someone else.'
         # On the roster AND individually available — a mechanic dialed out by
         # today's capacity slider reads the same as one marked off duty.
-        _, _, on_duty = get_on_duty_mechanics(booking_date)
         mechanic_status = 'available' if any(m.name == mechanic.name for m in on_duty) else 'off duty'
         mq = Booking.query.filter(
             Booking.assigned_mechanic_name == mechanic.name,
@@ -1322,7 +1416,7 @@ def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_mi
 
     ok, error = validate_booking(
         start_minutes, duration_minutes, shop_intervals, daily_count=len(shop_intervals),
-        daily_cap=get_daily_cap(booking_date),
+        daily_cap=get_daily_cap(booking_date), on_duty_count=len(on_duty),
         mechanic_name=(mechanic.name if mechanic else None),
         mechanic_status=mechanic_status, mechanic_intervals=mechanic_intervals,
     )
@@ -1359,38 +1453,40 @@ def book_service():
     start_min = booking_time.hour * 60 + booking_time.minute
     end_min   = compute_finish_minutes(start_min, combo['total_minutes'])
     mechanic_id = request.form.get('mechanic_id', '')
-    requested_mechanic, request_error = _check_booking_request(mechanic_id, booking_date, start_min, combo['total_minutes'])
-    if request_error:
-        flash(request_error, 'danger')
-        return redirect(url_for('customer_dashboard'))
 
-    service = combined_service_name(combo['names'])
-    odo_raw = clean_str(request.form.get('odometer', ''), max_len=10)
-    booking = Booking(
-        user_id=current_user.id,
-        service=service,
-        date=booking_date,
-        time=booking_time,
-        end_time=minutes_to_time(end_min),
-        duration_minutes=combo['total_minutes'],
-        is_multiday=combo['is_multiday'],
-        status='confirmed',
-        motorcycle_model=clean_str(request.form.get('motorcycle_model', ''), max_len=100),
-        motorcycle_plate=clean_str(request.form.get('motorcycle_plate', ''), max_len=20),
-        notes=clean_str(request.form.get('notes', ''), max_len=500),
-        contact_name=clean_str(request.form.get('contact_name', ''), max_len=100),
-        contact_mobile=clean_str(request.form.get('contact_mobile', ''), max_len=13),
-        odometer=int(odo_raw) if odo_raw.isdigit() else None,
-    )
-    if requested_mechanic:
-        # What the customer asked for — recorded once, never changed again —
-        # and it's also the initial assignment, since that's who's on it now.
-        booking.preferred_mechanic_name = requested_mechanic.name
-        booking.preferred_mechanic_specialization = requested_mechanic.specialization
-        booking.assigned_mechanic_name = requested_mechanic.name
-        booking.assigned_mechanic_specialization = requested_mechanic.specialization
-    db.session.add(booking)
-    db.session.commit()
+    with _booking_day_lock([booking_date]):
+        requested_mechanic, request_error = _check_booking_request(mechanic_id, booking_date, start_min, combo['total_minutes'])
+        if request_error:
+            flash(request_error, 'danger')
+            return redirect(url_for('customer_dashboard'))
+
+        service = combined_service_name(combo['names'])
+        odo_raw = clean_str(request.form.get('odometer', ''), max_len=10)
+        booking = Booking(
+            user_id=current_user.id,
+            service=service,
+            date=booking_date,
+            time=booking_time,
+            end_time=minutes_to_time(end_min),
+            duration_minutes=combo['total_minutes'],
+            is_multiday=combo['is_multiday'],
+            status='confirmed',
+            motorcycle_model=clean_str(request.form.get('motorcycle_model', ''), max_len=100),
+            motorcycle_plate=clean_str(request.form.get('motorcycle_plate', ''), max_len=20),
+            notes=clean_str(request.form.get('notes', ''), max_len=500),
+            contact_name=clean_str(request.form.get('contact_name', ''), max_len=100),
+            contact_mobile=clean_str(request.form.get('contact_mobile', ''), max_len=13),
+            odometer=int(odo_raw) if odo_raw.isdigit() else None,
+        )
+        if requested_mechanic:
+            # What the customer asked for — recorded once, never changed again —
+            # and it's also the initial assignment, since that's who's on it now.
+            booking.preferred_mechanic_name = requested_mechanic.name
+            booking.preferred_mechanic_specialization = requested_mechanic.specialization
+            booking.assigned_mechanic_name = requested_mechanic.name
+            booking.assigned_mechanic_specialization = requested_mechanic.specialization
+        db.session.add(booking)
+        db.session.commit()
     send_booking_confirmation_email(booking)
 
     cf = _booking_confirmation_facts(booking)
@@ -1429,68 +1525,84 @@ def book_multiple_services():
     # get grouped with anything else, even ones made later the same day.
     batch_id = str(uuid.uuid4()) if len(data['bookings']) > 1 else None
 
-    for idx, b in enumerate(data['bookings']):
+    # Every date this batch could touch, locked up front — a concurrent
+    # request for any of the same days has to wait for this whole batch to
+    # finish (not just one booking at a time), same reasoning as the single-
+    # booking path above.
+    _lock_dates = set()
+    for b in data['bookings']:
         try:
-            booking_date = datetime.strptime(b.get('date', ''), '%Y-%m-%d').date()
-            booking_time = datetime.strptime(b.get('time', ''), '%H:%M').time()
+            _lock_dates.add(datetime.strptime(b.get('date', ''), '%Y-%m-%d').date())
         except ValueError:
-            errors.append(f'Booking {idx+1}: invalid date/time')
-            continue
+            pass
 
-        booking_dt = datetime.combine(booking_date, booking_time)
-        if booking_dt <= ph_now():
-            errors.append(f'Booking {idx+1}: cannot book a past time slot')
-            continue
+    with _booking_day_lock(_lock_dates):
+        for idx, b in enumerate(data['bookings']):
+            try:
+                booking_date = datetime.strptime(b.get('date', ''), '%Y-%m-%d').date()
+                booking_time = datetime.strptime(b.get('time', ''), '%H:%M').time()
+            except ValueError:
+                errors.append(f'Booking {idx+1}: invalid date/time')
+                continue
 
-        service_names = b.get('services') or ([b.get('service')] if b.get('service') else [])
-        combo = _resolve_service_combo(service_names)
-        if not combo:
-            errors.append(f'Booking {idx+1}: at least one service is required')
-            continue
-        service = combined_service_name(combo['names'])
+            booking_dt = datetime.combine(booking_date, booking_time)
+            if booking_dt <= ph_now():
+                errors.append(f'Booking {idx+1}: cannot book a past time slot')
+                continue
 
-        start_min = booking_time.hour * 60 + booking_time.minute
-        end_min   = compute_finish_minutes(start_min, combo['total_minutes'])
-        mechanic_id = b.get('mechanic_id', '')
-        # Every prior booking in this same batch is already flushed to the DB
-        # by the time we get here, so this one query also catches a collision
-        # with an earlier item in the same submission — no separate bookkeeping needed.
-        requested_mechanic, request_error = _check_booking_request(mechanic_id, booking_date, start_min, combo['total_minutes'])
-        if request_error:
-            errors.append(f'Booking {idx+1}: {request_error}')
-            continue
+            service_names = b.get('services') or ([b.get('service')] if b.get('service') else [])
+            combo = _resolve_service_combo(service_names)
+            if not combo:
+                errors.append(f'Booking {idx+1}: at least one service is required')
+                continue
+            service = combined_service_name(combo['names'])
 
-        odo_raw = clean_str(str(b.get('odometer', '')), max_len=10)
-        booking = Booking(
-            user_id=current_user.id,
-            service=service,
-            date=booking_date,
-            time=booking_time,
-            end_time=minutes_to_time(end_min),
-            duration_minutes=combo['total_minutes'],
-            is_multiday=combo['is_multiday'],
-            status='confirmed',
-            motorcycle_model=clean_str(b.get('motorcycle_model', ''), max_len=100),
-            motorcycle_plate=clean_str(b.get('motorcycle_plate', ''), max_len=20),
-            notes=clean_str(b.get('notes', ''), max_len=500),
-            contact_name=clean_str(b.get('contact_name', ''), max_len=100),
-            contact_mobile=clean_str(b.get('contact_mobile', ''), max_len=13),
-            odometer=int(odo_raw) if odo_raw.isdigit() else None,
-            booking_batch=batch_id,
-        )
-        if requested_mechanic:
-            booking.preferred_mechanic_name = requested_mechanic.name
-            booking.preferred_mechanic_specialization = requested_mechanic.specialization
-            booking.assigned_mechanic_name = requested_mechanic.name
-            booking.assigned_mechanic_specialization = requested_mechanic.specialization
+            start_min = booking_time.hour * 60 + booking_time.minute
+            end_min   = compute_finish_minutes(start_min, combo['total_minutes'])
+            mechanic_id = b.get('mechanic_id', '')
+            # Every prior booking in this same batch is already flushed to the DB
+            # by the time we get here, so this one query also catches a collision
+            # with an earlier item in the same submission — no separate bookkeeping needed.
+            requested_mechanic, request_error = _check_booking_request(mechanic_id, booking_date, start_min, combo['total_minutes'])
+            if request_error:
+                errors.append(f'Booking {idx+1}: {request_error}')
+                continue
 
-        db.session.add(booking)
-        db.session.flush()
-        created.append(booking.id)
-        created_bookings.append(booking)  # facts computed once each below, after IDs are final
+            odo_raw = clean_str(str(b.get('odometer', '')), max_len=10)
+            booking = Booking(
+                user_id=current_user.id,
+                service=service,
+                date=booking_date,
+                time=booking_time,
+                end_time=minutes_to_time(end_min),
+                duration_minutes=combo['total_minutes'],
+                is_multiday=combo['is_multiday'],
+                status='confirmed',
+                motorcycle_model=clean_str(b.get('motorcycle_model', ''), max_len=100),
+                motorcycle_plate=clean_str(b.get('motorcycle_plate', ''), max_len=20),
+                notes=clean_str(b.get('notes', ''), max_len=500),
+                contact_name=clean_str(b.get('contact_name', ''), max_len=100),
+                contact_mobile=clean_str(b.get('contact_mobile', ''), max_len=13),
+                odometer=int(odo_raw) if odo_raw.isdigit() else None,
+                booking_batch=batch_id,
+            )
+            if requested_mechanic:
+                booking.preferred_mechanic_name = requested_mechanic.name
+                booking.preferred_mechanic_specialization = requested_mechanic.specialization
+                booking.assigned_mechanic_name = requested_mechanic.name
+                booking.assigned_mechanic_specialization = requested_mechanic.specialization
 
+            db.session.add(booking)
+            db.session.flush()
+            created.append(booking.id)
+            created_bookings.append(booking)  # facts computed once each below, after IDs are final
+
+        if created:
+            db.session.commit()
+
+    # Outside the lock — nothing below touches the day's bookings anymore,
+    # no reason to hold other customers' requests for this long.
     if created:
-        db.session.commit()
         facts = [_booking_confirmation_facts(b) for b in created_bookings]
         for booking in created_bookings:
             send_booking_confirmation_email(booking)
@@ -1577,12 +1689,22 @@ def cart_checkout():
         ship_address = f"{ship_name}\n{ship_mobile}\n{ship_street}, Brgy. {ship_barangay}, {ship_city}, Metro Manila {ship_zip}"
 
     resolved = []
-    for item in items_data:
-        product = Product.query.get(item['product_id'])
+    # Sorted by id so two concurrent checkouts touching the same products
+    # always lock them in the same order — otherwise two transactions each
+    # locking the same two products in opposite order can deadlock.
+    for item in sorted(items_data, key=lambda i: i['product_id']):
+        # FOR UPDATE holds this row's lock until commit, so a second
+        # concurrent checkout on the same product has to wait its turn
+        # instead of reading the same "1 left" stock and also passing —
+        # without this, two people buying the last unit at once could both
+        # succeed and drive stock negative.
+        product = Product.query.filter_by(id=item['product_id']).with_for_update().first()
         if not product:
+            db.session.rollback()
             return jsonify({'success': False, 'error': 'Product not found'}), 400
         qty = int(item['quantity'])
         if product.stock < qty:
+            db.session.rollback()
             return jsonify({'success': False, 'error': f'Not enough stock for {product.name}'}), 400
         resolved.append((product, qty))
 
@@ -1632,9 +1754,16 @@ def cart_checkout():
 @login_required
 @require_active_account
 def place_order():
-    product  = Product.query.get_or_404(clean_int(request.form.get('product_id', 0), default=0))
+    pid = clean_int(request.form.get('product_id', 0), default=0)
+    # FOR UPDATE — see cart_checkout()'s identical lock for why: without it,
+    # two people buying the last unit at the same moment can both pass this
+    # check and both succeed, driving stock negative.
+    product = Product.query.filter_by(id=pid).with_for_update().first()
+    if not product:
+        abort(404)
     quantity = clean_int(request.form.get('quantity', 1), default=1, min_val=1, max_val=9999)
     if product.stock < quantity:
+        db.session.rollback()
         flash('Not enough stock available.', 'danger')
         return redirect(url_for('customer_dashboard'))
 
@@ -2111,6 +2240,48 @@ def confirm_return_received(rid):
     return jsonify({'success': True, 'new_status': 'completed'})
 
 
+@app.route('/quotation/<int:qid>/decision', methods=['POST'])
+@login_required
+def quotation_decision(qid):
+    """The customer's approve/decline on an Inspection & Estimation quote —
+    the only way an 'awaiting_customer' quotation moves, answered from the
+    booking details modal it's attached to."""
+    q = Quotation.query.get_or_404(qid)
+    booking = Booking.query.filter_by(id=q.booking_id, user_id=current_user.id).first_or_404()
+    if q.status != 'awaiting_customer':
+        return jsonify({'success': False, 'error': 'This quotation has already been decided.'}), 400
+
+    decision = request.form.get('decision')
+    if decision not in ('approve', 'decline'):
+        return jsonify({'success': False, 'error': 'Invalid decision.'}), 400
+
+    q.status = 'approved' if decision == 'approve' else 'declined'
+    # The customer's own answer is what the shop was waiting on — no need to
+    # also wait for an admin to click "No extra work" before work starts.
+    if booking.status == 'inspection':
+        booking.status = 'in_progress'
+    db.session.commit()
+
+    ref = f'BKG-{booking.id:03d}'
+    verb = 'approved' if decision == 'approve' else 'declined'
+    if decision == 'approve':
+        progress_body = f'We started work on your {booking.service} and the approved extra work ({ref}).'
+    else:
+        progress_body = f'We started work on your {booking.service}. Extra work was not included.'
+    send_notification(booking.user_id, f'{booking.service} is now in progress', progress_body,
+                       type='booking', status='in_progress', booking_id=booking.id)
+
+    decision_title = (f'Quotation Approved ✅ — {booking.service} ({ref})' if decision == 'approve'
+                      else f'Quotation Declined — {booking.service} ({ref})')
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(
+            admin.id, decision_title,
+            f'{current_user.fullname} {verb} the quotation for {booking.service} ({ref}).',
+            type='quotation_decision', status=booking.status, booking_id=booking.id,
+        )
+    return jsonify({'success': True, 'new_status': q.status})
+
+
 @app.route('/api/booked-slots')
 @login_required
 def get_booked_slots():
@@ -2159,9 +2330,10 @@ def api_time_slots():
         now = ph_now()
         now_minutes = now.hour * 60 + now.minute
 
+    _, _, on_duty = get_on_duty_mechanics(slot_date)
     # Every fixed slot comes back, available or not — the customer sees why a
     # time is off instead of it just not being there.
-    slots = slot_statuses(combo['total_minutes'], intervals, now_minutes)
+    slots = slot_statuses(combo['total_minutes'], intervals, now_minutes, on_duty_count=len(on_duty))
     return jsonify({
         'slots': [{
             'time':      minutes_to_hhmm(s['start']),
@@ -2236,26 +2408,77 @@ def get_notifications():
     return_ids = {n.return_request_id for n in notifs if n.return_request_id}
     claims = {r.id: r for r in ReturnRequest.query.filter(ReturnRequest.id.in_(return_ids)).all()} if return_ids else {}
 
+    quotation_booking_ids = {n.booking_id for n in notifs if n.type == 'quotation' and n.booking_id}
+    quotations_by_booking = {}
+    bookings_by_id = {}
+    if quotation_booking_ids:
+        for q in Quotation.query.filter(Quotation.booking_id.in_(quotation_booking_ids)).order_by(Quotation.created_at.desc()).all():
+            quotations_by_booking.setdefault(q.booking_id, q)
+        for b in Booking.query.filter(Booking.id.in_(quotation_booking_ids)).all():
+            bookings_by_id[b.id] = b
+
+    item_type_labels = {'finding': 'Inspection finding', 'product': 'Part', 'service': 'Service'}
+
     def still_pending(n):
-        """Read is enough to clear most notifications, but two return
-        situations need the real-world thing done, not just a glance: the
-        shop waiting on more from the customer, or (for a product claim) the
-        part needing to come back before its remedy is carried out."""
+        """Read is enough to clear most notifications, but a few situations
+        need the real-world thing done, not just a glance: the shop waiting
+        on more from the customer, a product claim's part needing to come
+        back before its remedy is carried out, or a quotation still waiting
+        on the customer's approve/decline."""
         rr = claims.get(n.return_request_id) if n.return_request_id else None
         if rr:
             if rr.awaiting_customer_info:
                 return True
             if rr.kind == 'product' and rr.status == 'approved' and not rr.item_returned:
                 return True
+        if n.type == 'quotation':
+            q = quotations_by_booking.get(n.booking_id)
+            return bool(q and q.status == 'awaiting_customer')
         return not n.is_read
 
-    return jsonify([{
-        'id': n.id, 'title': n.title, 'message': n.message,
-        'type': n.type, 'status': n.status, 'is_read': n.is_read,
-        'priority': n.priority, 'booking_id': n.booking_id,
-        'return_request_id': n.return_request_id, 'still_pending': still_pending(n),
-        'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
-    } for n in notifs])
+    def quotation_payload(n):
+        q = quotations_by_booking.get(n.booking_id)
+        if not q:
+            return None, n.title, n.message
+        b = bookings_by_id.get(n.booking_id)
+        service = b.service if b else ''
+        ref = f'BKG-{n.booking_id:03d}'
+        original = sum(i.unit_price * i.quantity for i in q.items if i.locked)
+        extra = q.total_amount - original
+        payload = {
+            'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
+            'service': service, 'ref': ref,
+            'original': original, 'extra': extra, 'total': q.total_amount,
+            'sent_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
+            'items': [{'name': i.name, 'price': i.unit_price,
+                       'label': item_type_labels.get(i.item_type, 'Service'), 'locked': i.locked}
+                      for i in q.items],
+        }
+        if q.status == 'awaiting_customer':
+            title, message = n.title, n.message
+        elif q.status == 'approved':
+            title = f'Quotation for {service}'
+            message = f'✓ You approved ₱{q.total_amount:,.2f}.'
+        else:
+            title = f'Quotation for {service}'
+            message = f'You declined the extra work. Only {service} (₱{original:,.2f}).'
+        return payload, title, message
+
+    results = []
+    for n in notifs:
+        title, message = n.title, n.message
+        quotation = None
+        if n.type == 'quotation':
+            quotation, title, message = quotation_payload(n)
+        results.append({
+            'id': n.id, 'title': title, 'message': message,
+            'type': n.type, 'status': n.status, 'is_read': n.is_read,
+            'priority': n.priority, 'booking_id': n.booking_id,
+            'return_request_id': n.return_request_id, 'still_pending': still_pending(n),
+            'quotation': quotation,
+            'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+        })
+    return jsonify(results)
 
 
 @app.route('/api/notifications/<int:nid>/read', methods=['POST'])

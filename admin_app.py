@@ -62,6 +62,13 @@ db = SQLAlchemy(admin_app)
 login_manager = LoginManager(admin_app)
 login_manager.login_view = 'admin_login'
 
+@admin_app.context_processor
+def _inject_current_year():
+    """Makes {{ current_year }} available in every template — the footer
+    copyright line reads the real year instead of whatever was hardcoded
+    when that page was last touched."""
+    return {'current_year': datetime.now().year}
+
 # Gmail config
 
 GMAIL_SCOPES     = ["https://www.googleapis.com/auth/gmail.send"]
@@ -245,6 +252,9 @@ class Booking(db.Model):
     overrun_minutes  = db.Column(db.Integer, default=0)  # counter-staff-recorded extra time on top of duration_minutes
     was_rescheduled  = db.Column(db.Boolean, default=False)  # set once, first time this booking's date/time changes after creation
     completed_at     = db.Column(db.DateTime, nullable=True)  # when status actually reached completed — the warranty window's start
+    invoice_payment_method = db.Column(db.String(10), nullable=True)  # customer's pick on the post-completion invoice: 'cash' or 'gcash'
+    invoice_paid     = db.Column(db.Boolean, default=False)   # true once that invoice is actually settled (cash confirmed, or GCash succeeded)
+    invoice_paid_at  = db.Column(db.DateTime, nullable=True)
 
 
 class BlockedSlot(db.Model):
@@ -358,7 +368,12 @@ class Quotation(db.Model):
     motorcycle_plate = db.Column(db.String(20))
     notes            = db.Column(db.Text)
     total_amount     = db.Column(db.Float, default=0)
-    status           = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    # pending/accepted/rejected: the walk-in counter flow (admin decides).
+    # awaiting_customer/approved/declined: a booking-linked inspection quote
+    # sent remotely — the CUSTOMER decides, via the booking details modal.
+    status           = db.Column(db.String(20), default='pending')
+    booking_id       = db.Column(db.Integer, nullable=True)  # set only for an Inspection & Estimation quote
+    inspected_by     = db.Column(db.String(100), nullable=True)  # mechanic name from the Inspection tab
     created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     items            = db.relationship('QuotationItem', backref='quotation', lazy=True, cascade='all, delete-orphan')
@@ -368,10 +383,11 @@ class QuotationItem(db.Model):
     __tablename__ = 'quotation_item'
     id           = db.Column(db.Integer, primary_key=True)
     quotation_id = db.Column(db.Integer, db.ForeignKey('quotation.id'), nullable=False)
-    item_type    = db.Column(db.String(10), default='service')  # 'service' or 'product'
+    item_type    = db.Column(db.String(10), default='service')  # 'service', 'product', or 'finding'
     name         = db.Column(db.String(150), nullable=False)
     quantity     = db.Column(db.Integer, default=1)
     unit_price   = db.Column(db.Float, nullable=False)
+    locked       = db.Column(db.Boolean, default=False)  # the booked service row — can't be removed client-side
 
 
 class JobOrder(db.Model):
@@ -540,6 +556,9 @@ def booking_service_price(service_str):
         return 0
     found = {s.name: s.price for s in Service.query.filter(Service.name.in_(names), Service.is_active == True).all()}
     return sum(found.get(n, 0) for n in names)
+
+
+admin_app.jinja_env.globals['booking_service_price'] = booking_service_price
 
 
 def booking_finish_time(b):
@@ -860,6 +879,16 @@ def admin_dashboard():
                      .filter(Order.items.any()).count()
     )
 
+    _all_bookings_list = Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all()
+    _q_booking_ids = [b.id for b in _all_bookings_list]
+    _latest_quotations = {}
+    if _q_booking_ids:
+        # ordered oldest-first so the last write into the dict is the most recent quotation per booking
+        for q in Quotation.query.filter(Quotation.booking_id.in_(_q_booking_ids)).order_by(Quotation.created_at.asc()).all():
+            _latest_quotations[q.booking_id] = q
+    for b in _all_bookings_list:
+        b.quotation = _latest_quotations.get(b.id)
+
     return render_template('admin_dashboard.html',
         pending_billing_count=_pending_billing_count,
         total_bookings=Booking.query.filter_by(is_archived=False).count(),
@@ -871,7 +900,7 @@ def admin_dashboard():
         top_services=db.session.query(Booking.service, func.count(Booking.id).label('count')).group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all(),
         new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
         recent_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).limit(5).all(),
-        all_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all(),
+        all_bookings=_all_bookings_list,
         all_orders=all_orders,
         all_products=Product.query.all(),
         all_users=User.query.all(),
@@ -968,7 +997,7 @@ def update_booking_status(bid):
     if new_status == 'completed':
         flash('Bookings can only be completed via the Billing page.', 'danger')
         return redirect(url_for('admin_dashboard'))
-    if new_status in ('in_progress', 'inprogress') and datetime.combine(booking.date, booking.time) > ph_now():
+    if new_status in ('inspection', 'in_progress', 'inprogress') and datetime.combine(booking.date, booking.time) > ph_now():
         msg = f'This booking is scheduled for {booking.date.strftime("%b %d, %Y")} at {booking.time.strftime("%I:%M %p")} — it cannot be started before then.'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'error': msg}), 400
@@ -985,6 +1014,11 @@ def update_booking_status(bid):
         'confirmed': (
             f'Confirmed — {date_short} at {time_str}',
             f'Your {booking.service} appointment ({ref}) on {date_str} at {time_str} is confirmed. Please arrive 15 minutes early.',
+            False,
+        ),
+        'inspection': (
+            f'{booking.service} — inspection & estimation',
+            f'We started the inspection on your {booking.service} ({ref}). We will let you know if any extra work is needed.',
             False,
         ),
         'inprogress': (
@@ -1021,6 +1055,114 @@ def update_booking_status(bid):
         return jsonify({'success': True, 'new_status': new_status, 'message': 'Booking status updated!'})
     flash('Booking status updated!', 'success')
     return redirect(url_for('admin_dashboard'))
+
+
+@admin_app.route('/booking/<int:bid>/complete-invoice', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def complete_booking_invoice(bid):
+    """The Outbox's 'Mark as Completed & Send Invoice' button — closes out a
+    booking that went through Inspection & Estimation, billing exactly what
+    the customer agreed to (the full quotation if they approved, just the
+    booked service if they declined), and sends the invoice. Payment itself
+    is still collected separately afterward, same as every other booking —
+    this only marks the WORK done and tells the customer what they owe."""
+    booking = Booking.query.get_or_404(bid)
+    if booking.status == 'completed':
+        return jsonify({'success': False, 'error': 'This booking is already completed.'}), 400
+
+    q = Quotation.query.filter_by(booking_id=bid).order_by(Quotation.created_at.desc()).first()
+    if q:
+        locked_total = sum(i.unit_price * i.quantity for i in q.items if i.locked)
+        total = q.total_amount if q.status == 'approved' else locked_total
+    else:
+        total = booking_service_price(booking.service)
+
+    booking.status = 'completed'
+    booking.completed_at = ph_now()
+    booking.total_amount = total
+    booking.invoice_paid = False
+    booking.invoice_payment_method = None
+    db.session.commit()
+
+    ref = f'BKG-{booking.id:03d}'
+    inv_ref = f'INV-{booking.id:03d}'
+    title = f'Service Completed! 🎉 Invoice {inv_ref}'
+    message = f'Your {booking.service} ({ref}) is done. Please choose Cash or GCash to pay ₱{total:,.2f}.'
+    send_notification(booking.user_id, title, message, type='invoice', status='completed',
+                       booking_id=booking.id, priority=True)
+
+    customer = User.query.get(booking.user_id)
+    customer_first_name = (booking.contact_name if booking.walkin_customer_id
+                            else (customer.fullname if customer else 'the customer')).split(' ')[0]
+
+    if not booking.walkin_customer_id and customer and customer.email:
+        items_rows = ''
+        if q and q.items:
+            relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked]
+            items_rows = ''.join(
+                f'<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;">{i.name}</td>'
+                f'<td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">₱{i.unit_price:,.2f}</td></tr>'
+                for i in relevant
+            )
+        else:
+            items_rows = (f'<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;">{booking.service}</td>'
+                           f'<td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">₱{total:,.2f}</td></tr>')
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+          <p>Hi {customer.fullname},</p>
+          <p>Your {booking.service} ({ref}) is done. Here's your invoice {inv_ref}:</p>
+          <table style="width:100%;border-collapse:collapse;margin:12px 0;">{items_rows}</table>
+          <p style="font-size:1.1em;"><strong>Amount to pay: ₱{total:,.2f}</strong></p>
+          <p><a href="{BASE_URL}/customer/dashboard?open_booking={booking.id}"
+                style="display:inline-block;padding:10px 18px;background:#d00019;color:#fff;
+                       border-radius:6px;text-decoration:none;font-weight:bold;">Pay Invoice</a></p>
+          <p>You can pay by cash at the shop counter, or by GCash online.</p>
+          <p>— MotoTyre North Caloocan</p>
+        </div>"""
+        _send_gmail(customer.email, f'{title} — MotoTyre', html)
+
+    return jsonify({'success': True, 'ref': ref, 'total': total, 'customer_first_name': customer_first_name})
+
+
+@admin_app.route('/booking/<int:bid>/invoice/confirm-cash', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def confirm_invoice_cash(bid):
+    """The counter-side half of a cash invoice — the customer picked 'pay in
+    cash' from their own notification, but that's just a stated intent; the
+    invoice only actually closes once the cashier has the money in hand and
+    clicks this."""
+    booking = Booking.query.get_or_404(bid)
+    if booking.status != 'completed':
+        return jsonify({'success': False, 'error': 'This booking has not been completed yet.'}), 400
+    if booking.invoice_paid:
+        return jsonify({'success': False, 'error': 'This invoice is already paid.'}), 400
+    if booking.invoice_payment_method != 'cash':
+        return jsonify({'success': False, 'error': 'The customer has not chosen cash for this invoice.'}), 400
+
+    booking.invoice_paid = True
+    booking.invoice_paid_at = ph_now()
+    booking.payment_method = 'cash'
+    db.session.commit()
+
+    ref = f'BKG-{booking.id:03d}'
+    send_notification(
+        booking.user_id, 'Payment received ✅',
+        f'You paid ₱{booking.total_amount:,.2f} by cash for {booking.service} ({ref}). Thank you for choosing MotoTyre!',
+        type='invoice', status='paid', booking_id=booking.id,
+    )
+    customer = User.query.get(booking.user_id)
+    if not booking.walkin_customer_id and customer and customer.email:
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+          <p>Hi {customer.fullname},</p>
+          <p>You paid ₱{booking.total_amount:,.2f} by cash for {booking.service} ({ref}). Thank you for choosing MotoTyre North Caloocan!</p>
+          <p>— MotoTyre North Caloocan</p>
+        </div>"""
+        _send_gmail(customer.email, 'Payment received — MotoTyre', html)
+
+    return jsonify({'success': True})
 
 
 @admin_app.route('/booking/<int:bid>/assign-mechanic', methods=['POST'])
@@ -1153,13 +1295,16 @@ def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, 
         daily_count = len(shop_intervals)
         shop_intervals += _gather_blocked_intervals(booking_date)
 
+    # "On duty" is roster-count AND individually-available — not just the
+    # profile toggle — so a mechanic dialed out by the capacity slider reads
+    # exactly the same as one marked off duty on their own profile. Needed
+    # for the shop-wide slot capacity below regardless of whether a specific
+    # mechanic was named.
+    _, _, on_duty = get_on_duty_mechanics(booking_date)
+
     mechanic_status = None
     mechanic_intervals = None
     if mechanic_name:
-        # "On duty" is roster-count AND individually-available — not just the
-        # profile toggle — so a mechanic dialed out by the capacity slider
-        # reads exactly the same as one marked off duty on their own profile.
-        _, _, on_duty = get_on_duty_mechanics(booking_date)
         mechanic_status = 'available' if any(m.name == mechanic_name for m in on_duty) else 'off duty'
         mq = Booking.query.filter(
             Booking.assigned_mechanic_name == mechanic_name,
@@ -1172,7 +1317,7 @@ def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, 
 
     return validate_booking(
         start_minutes, duration_minutes, shop_intervals, daily_count,
-        require_slot_grid=require_slot_grid, daily_cap=get_daily_cap(booking_date),
+        require_slot_grid=require_slot_grid, daily_cap=get_daily_cap(booking_date), on_duty_count=len(on_duty),
         mechanic_name=mechanic_name, mechanic_status=mechanic_status, mechanic_intervals=mechanic_intervals,
     )
 
@@ -1352,7 +1497,7 @@ def _fix2_slot_on_day(d, duration, mechanic, exclude_id, min_start=None):
             continue
         ok, _ = validate_booking(
             slot, duration, shop_intervals, daily_count,
-            require_slot_grid=True, daily_cap=daily_cap,
+            require_slot_grid=True, daily_cap=daily_cap, on_duty_count=len(on_duty),
             mechanic_name=mechanic, mechanic_status=mechanic_status, mechanic_intervals=mechanic_intervals,
         )
         if ok:
@@ -2037,15 +2182,43 @@ def api_outbox():
     user_ids = {n.user_id for n in rows}
     users = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
 
+    quotation_decision_booking_ids = {n.booking_id for n in rows if n.type == 'quotation_decision' and n.booking_id}
+    quotations_by_booking = {}
+    if quotation_decision_booking_ids:
+        for q in Quotation.query.filter(Quotation.booking_id.in_(quotation_decision_booking_ids)).order_by(Quotation.created_at.desc()).all():
+            quotations_by_booking.setdefault(q.booking_id, q)
+
     def sort_key(n):
         return (0 if (n.priority and not n.is_read) else 1, -n.created_at.timestamp())
 
     rows.sort(key=sort_key)
 
+    def quotation_decision_payload(n, b):
+        q = quotations_by_booking.get(n.booking_id)
+        if not q or not b:
+            return None
+        locked_total = sum(i.unit_price * i.quantity for i in q.items if i.locked)
+        total = q.total_amount if q.status == 'approved' else locked_total
+        completed = b.status == 'completed'
+        customer_name = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown customer')
+        return {
+            'booking_id': b.id, 'ref': f'BKG-{b.id:03d}', 'service': b.service,
+            'customer_name': customer_name, 'motorcycle': b.motorcycle_model or '',
+            'decision': q.status, 'completed': completed,
+            'total': total, 'original': locked_total,
+            'items': [{'name': i.name, 'price': i.unit_price, 'locked': i.locked} for i in q.items],
+            'invoice_paid': bool(b.invoice_paid),
+            'invoice_payment_method': b.invoice_payment_method,
+        }
+
     items = []
+    needs_action_count = 0
     for n in rows:
         b = bookings.get(n.booking_id) if n.booking_id else None
         u = users.get(n.user_id)
+        qd = quotation_decision_payload(n, b) if n.type == 'quotation_decision' else None
+        if qd and not qd['completed']:
+            needs_action_count += 1
         items.append({
             'id': n.id,
             'customer': u.fullname if u else 'Unknown customer',
@@ -2057,11 +2230,12 @@ def api_outbox():
             'priority': n.priority,
             'booking_id': n.booking_id,
             'booking_date': b.date.isoformat() if b else None,
+            'quotation_decision': qd,
             'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
         })
 
     unread_count = Notification.query.filter_by(is_read=False).count()
-    return jsonify({'items': items, 'unread_count': unread_count})
+    return jsonify({'items': items, 'unread_count': unread_count, 'needs_action_count': needs_action_count})
 
 
 @admin_app.route('/api/outbox/<int:nid>/read', methods=['POST'])
@@ -2510,7 +2684,8 @@ def return_redo_availability(rid):
         now = ph_now()
         now_minutes = now.hour * 60 + now.minute
 
-    slots = slot_statuses(duration, intervals, now_minutes)
+    _, _, on_duty = get_on_duty_mechanics(the_date)
+    slots = slot_statuses(duration, intervals, now_minutes, on_duty_count=len(on_duty))
     return jsonify({
         'duration_minutes': duration,
         'service_name': service_name,
@@ -3531,7 +3706,24 @@ def quotation_new():
     products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
     services = Service.query.filter_by(is_active=True).order_by(Service.name).all()
     mechanics = Mechanic.query.order_by(Mechanic.name).all()
-    return render_template('quotation.html', products=products, services=services, mechanics=mechanics)
+    booking = None
+    booking_id = request.args.get('booking_id', type=int)
+    if booking_id:
+        b = Booking.query.get(booking_id)
+        if b:
+            customer_name = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else '')
+            customer_phone = b.contact_mobile if b.walkin_customer_id else (b.customer.phone if b.customer else '')
+            booking = {
+                'id': b.id, 'ref': f'BKG-{b.id:03d}',
+                'customer_name': customer_name or '',
+                'customer_phone': customer_phone or '',
+                'motorcycle_model': b.motorcycle_model or '',
+                'motorcycle_plate': b.motorcycle_plate or '',
+                'service_name': b.service,
+                'service_price': booking_service_price(b.service),
+            }
+    return render_template('quotation.html', products=products, services=services,
+                            mechanics=mechanics, booking=booking)
 
 
 @admin_app.route('/api/quotation/save', methods=['POST'])
@@ -3545,6 +3737,8 @@ def save_quotation():
     if not items:
         return jsonify({'success': False, 'error': 'No items in quotation'}), 400
     total = sum(float(i['unit_price']) * int(i['quantity']) for i in items)
+    booking_id = data.get('booking_id')
+    booking = Booking.query.get(booking_id) if booking_id else None
     q = Quotation(
         customer_name    = data.get('customer_name', '').strip(),
         customer_phone   = data.get('customer_phone', '').strip(),
@@ -3552,7 +3746,9 @@ def save_quotation():
         motorcycle_plate = data.get('motorcycle_plate', '').strip(),
         notes            = data.get('notes', '').strip(),
         total_amount     = total,
-        status           = 'pending',
+        status           = 'awaiting_customer' if booking else 'pending',
+        booking_id       = booking.id if booking else None,
+        inspected_by     = (data.get('inspected_by') or '').strip() or None,
         created_by       = current_user.id,
     )
     db.session.add(q)
@@ -3564,8 +3760,40 @@ def save_quotation():
             name         = i['name'],
             quantity     = int(i['quantity']),
             unit_price   = float(i['unit_price']),
+            locked       = bool(i.get('locked')),
         ))
     db.session.commit()
+
+    if booking:
+        ref = f'BKG-{booking.id:03d}'
+        locked_total = sum(float(i['unit_price']) * int(i['quantity']) for i in items if i.get('locked'))
+        title = 'Quotation ready: please respond'
+        message = f'During inspection of your {booking.service} ({ref}), the mechanic found additional work.'
+        send_notification(booking.user_id, title, message, type='quotation', status='awaiting_customer',
+                           booking_id=booking.id, priority=True)
+
+        customer = User.query.get(booking.user_id)
+        if customer and customer.email:
+            rows = ''.join(
+                f'<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;">{i["name"]}</td>'
+                f'<td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap;">'
+                f'₱{float(i["unit_price"]):,.2f}</td></tr>'
+                for i in items
+            )
+            html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+              <p>Hi {customer.fullname},</p>
+              <p>{message} Please review and approve or decline:</p>
+              <table style="width:100%;border-collapse:collapse;margin:12px 0;">{rows}</table>
+              <p>If you approve: <strong>₱{total:,.2f}</strong><br>
+                 If you decline: <strong>₱{locked_total:,.2f}</strong> (original service only)</p>
+              <p><a href="{BASE_URL}/customer/dashboard?open_booking={booking.id}"
+                    style="display:inline-block;padding:10px 18px;background:#d00019;color:#fff;
+                           border-radius:6px;text-decoration:none;font-weight:bold;">Review Quotation</a></p>
+              <p>— MotoTyre North Caloocan</p>
+            </div>"""
+            _send_gmail(customer.email, f'{title} — MotoTyre', html)
+
     return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}'})
 
 
@@ -4979,6 +5207,20 @@ with admin_app.app_context():
         try:
             from sqlalchemy import text as _text10
             db.session.execute(_text10(f"ALTER TABLE user ADD COLUMN {_col} {_ddl}"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    for _stmt in [
+        "ALTER TABLE quotation ADD COLUMN booking_id INT DEFAULT NULL",
+        "ALTER TABLE quotation ADD COLUMN inspected_by VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE quotation_item ADD COLUMN locked TINYINT(1) DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN invoice_payment_method VARCHAR(10) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN invoice_paid TINYINT(1) DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN invoice_paid_at DATETIME DEFAULT NULL",
+    ]:
+        try:
+            from sqlalchemy import text as _tmig2
+            db.session.execute(_tmig2(_stmt))
             db.session.commit()
         except Exception:
             db.session.rollback()

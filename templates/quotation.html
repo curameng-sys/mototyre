@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -16,11 +16,11 @@
     html,body{height:100vh;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);}
 
     /* TOPBAR */
-    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;height:56px;background:var(--panel);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;}
-    .topbar-brand{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.06em;color:#fff;display:flex;align-items:center;gap:.6rem;}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;height:56px;background:var(--panel);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;gap:1rem;}
+    .topbar-brand{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.06em;color:#fff;display:flex;align-items:center;gap:.6rem;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
     .topbar-brand span{color:var(--red);}
-    .badge-pill{background:rgba(208,0,25,.2);color:var(--red);font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.15rem .5rem;border-radius:4px;border:1px solid rgba(208,0,25,.3);}
-    .topbar-right{display:flex;align-items:center;gap:.75rem;}
+    .badge-pill{background:rgba(208,0,25,.2);color:var(--red);font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.15rem .5rem;border-radius:4px;border:1px solid rgba(208,0,25,.3);flex-shrink:0;}
+    .topbar-right{display:flex;align-items:center;gap:.75rem;flex-shrink:0;}
     .btn-back{display:flex;align-items:center;gap:.5rem;padding:.4rem .9rem;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#9ca3af;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-decoration:none;text-transform:uppercase;transition:all .15s;}
     .btn-back:hover{border-color:var(--red);color:#fff;background:rgba(208,0,25,.08);}
     .btn-view-all{display:flex;align-items:center;gap:.5rem;padding:.4rem .9rem;border-radius:8px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.3);color:#93c5fd;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-decoration:none;text-transform:uppercase;transition:all .15s;}
@@ -32,7 +32,7 @@
     /* LEFT */
     .catalog{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);background:var(--ink);}
     .catalog-header{padding:1rem 1.5rem .75rem;border-bottom:1px solid rgba(255,255,255,.08);background:var(--panel);flex-shrink:0;}
-    .tab-bar{display:flex;gap:.4rem;margin-bottom:.75rem;}
+    .tab-bar{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap;}
     .tab-btn{display:flex;align-items:center;gap:.4rem;padding:.45rem 1rem;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,.12);color:#9ca3af;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .15s;}
     .tab-btn:hover{color:#e5e7eb;border-color:rgba(255,255,255,.22);}
     .tab-btn.active{background:var(--red);border-color:var(--red);color:#fff;}
@@ -46,13 +46,15 @@
     .product-card{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.5rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;gap:.75rem;background:#fff;}
     .product-card:hover{background:#fef2f2;}
 
-    .services-panel{flex:1;overflow-y:auto;padding:1rem 1.5rem;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.12) transparent;}
+    .services-panel,.inspection-panel{flex:1;overflow-y:auto;padding:1rem 1.5rem;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.12) transparent;}
     .custom-svc-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;}
     .custom-svc-box label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.5rem;}
+    .custom-svc-box label:not(:first-child){margin-top:.85rem;}
     .custom-svc-row{display:flex;gap:.5rem;}
     .svc-inp{flex:1;padding:.5rem .75rem;background:#fff;border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;outline:none;transition:border-color .15s;}
     .svc-inp:focus{border-color:var(--red);}
     .svc-inp::placeholder{color:#9ca3af;}
+    textarea.svc-inp{resize:vertical;min-height:70px;}
     .btn-add-svc{padding:.5rem .9rem;border-radius:8px;background:var(--red);border:none;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .2s;white-space:nowrap;}
     .btn-add-svc:hover{background:#a8001a;}
     .service-item{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;cursor:pointer;transition:all .15s;margin-bottom:.5rem;}
@@ -60,6 +62,12 @@
     .svc-name{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--text);}
     .svc-desc{font-size:.72rem;color:var(--muted);margin-top:.15rem;}
     .svc-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.03em;color:var(--red);}
+
+    .findings-label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:1.25rem 0 .5rem;}
+    .finding-card{display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:#fff;border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;margin-bottom:.45rem;}
+    .finding-text{flex:1;min-width:0;font-size:.8rem;color:var(--text);}
+    .finding-price{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#111827;white-space:nowrap;}
+    .findings-empty{font-size:.8rem;color:var(--muted);text-align:center;padding:1rem 0;}
 
     /* RIGHT */
     .quote-panel{display:flex;flex-direction:column;background:#fff;overflow:hidden;}
@@ -74,6 +82,11 @@
     .field-inp::placeholder{color:#9ca3af;}
     .field-full{grid-column:1/-1;}
 
+    .booking-ref-box{background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+    .booking-ref-id{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.04em;color:var(--text);}
+    .booking-ref-sub{font-size:.76rem;color:var(--muted);margin-top:.1rem;}
+    .booking-ref-change{font-size:.72rem;font-weight:700;color:var(--blue);text-decoration:none;flex-shrink:0;font-family:'Syne',sans-serif;}
+
     /* Quote items */
     .quote-items{flex:1;overflow-y:auto;padding:.75rem 1.25rem;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.12) transparent;background:var(--surface);}
     .q-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;color:var(--muted);text-align:center;gap:.5rem;}
@@ -84,6 +97,7 @@
     .ci-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
     .ci-icon.product{background:rgba(208,0,25,.08);color:var(--red);border:1px solid rgba(208,0,25,.15);}
     .ci-icon.service{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
+    .ci-icon.finding{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}
     .ci-name{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .ci-unit{font-size:.7rem;color:var(--muted);margin-top:.1rem;}
     .ci-info{flex:1;min-width:0;}
@@ -93,6 +107,7 @@
     .qty-val{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;min-width:18px;text-align:center;color:var(--text);}
     .btn-del{width:22px;height:22px;border-radius:5px;background:transparent;border:1px solid transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;}
     .btn-del:hover{border-color:rgba(208,0,25,.3);color:var(--red);}
+    .locked-tag{font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:.1rem .4rem;margin-left:.4rem;white-space:nowrap;}
 
     /* Footer */
     .quote-footer{padding:1rem 1.25rem;border-top:1px solid var(--border);flex-shrink:0;background:#fff;}
@@ -110,6 +125,7 @@
     .btn-save:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
     .btn-clear{width:100%;padding:.55rem;background:#f9fafb;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;margin-top:.5rem;transition:all .15s;}
     .btn-clear:hover{border-color:rgba(208,0,25,.35);color:var(--red);}
+    .btn-clear:disabled{opacity:.4;cursor:not-allowed;}
 
     /* Modal */
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;}
@@ -155,11 +171,21 @@
 <body>
 
 <header class="topbar">
-  <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">New Quotation</span></div>
-  <div class="topbar-right">
-    <a href="{{ url_for('quotations_list') }}" class="btn-view-all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> All Quotations</a>
-    <a href="{{ url_for('admin_dashboard') }}" class="btn-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Dashboard</a>
-  </div>
+  {% if booking %}
+    <div class="topbar-brand">
+      <span style="color:#fff;">Quotation for booking <span style="color:var(--red);">#{{ booking.ref }}</span></span>
+      <span class="badge-pill">Status: Inspection &amp; Estimation</span>
+    </div>
+    <div class="topbar-right">
+      <a href="{{ url_for('admin_dashboard') }}" class="btn-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> <span>Manage Bookings</span></a>
+    </div>
+  {% else %}
+    <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">New Quotation</span></div>
+    <div class="topbar-right">
+      <a href="{{ url_for('quotations_list') }}" class="btn-view-all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> <span>All Quotations</span></a>
+      <a href="{{ url_for('admin_dashboard') }}" class="btn-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> <span>Dashboard</span></a>
+    </div>
+  {% endif %}
 </header>
 
 <div class="wrap">
@@ -168,10 +194,13 @@
   <div class="catalog">
     <div class="catalog-header">
       <div class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab('products',this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Products</button>
+        <button class="tab-btn {% if not booking %}active{% endif %}" onclick="switchTab('products',this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Products</button>
         <button class="tab-btn" onclick="switchTab('services',this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Services</button>
+        {% if booking %}
+        <button class="tab-btn active" onclick="switchTab('inspection',this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspection</button>
+        {% endif %}
       </div>
-      <div id="product-controls">
+      <div id="product-controls" style="{% if booking %}display:none;{% endif %}">
         <div style="display:flex;gap:.5rem;align-items:center;">
           <div class="search-box" style="flex:1;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -185,7 +214,7 @@
       </div>
     </div>
 
-    <div class="product-grid" id="products-panel">
+    <div class="product-grid" id="products-panel" style="{% if booking %}display:none;{% endif %}">
       {% for p in products %}
       <div class="product-card {% if p.stock == 0 %}out-of-stock{% endif %}"
            data-id="{{ p.id }}" data-name="{{ p.name|e }}"
@@ -237,6 +266,24 @@
         {% endif %}
       </div>
     </div>
+
+    {% if booking %}
+    <div class="inspection-panel" id="inspection-panel" style="display:block;">
+      <div class="custom-svc-box">
+        <label>Inspected By</label>
+        <input class="svc-inp" id="inspected-by" placeholder="Mechanic's name" style="width:100%;">
+        <label>What did the mechanic find?</label>
+        <textarea class="svc-inp" id="finding-desc" placeholder="e.g. Steering bearings are worn and loose" style="width:100%;"></textarea>
+        <label>Price</label>
+        <div class="custom-svc-row">
+          <input class="svc-inp" id="finding-price" type="number" min="0" placeholder="₱0.00" style="max-width:140px;">
+          <button class="btn-add-svc" onclick="addFinding()">+ Add to Quotation</button>
+        </div>
+      </div>
+      <div class="findings-label">Findings Added</div>
+      <div id="findings-list"><div class="findings-empty">No findings yet.</div></div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- RIGHT: QUOTE -->
@@ -244,20 +291,33 @@
     <div class="quote-header">
       <div class="quote-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--red);flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Quotation <span id="item-count" style="background:var(--red);color:#fff;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;padding:.15rem .5rem;border-radius:4px;">0</span></div>
 
-      <div class="info-grid">
-        <div>
-          <label class="field-label">Customer Name *</label>
-          <input class="field-inp" id="cust-name" placeholder="Juan dela Cruz" oninput="validateForm()">
+      {% if booking %}
+        <div class="booking-ref-box">
+          <div>
+            <div class="booking-ref-id">{{ booking.ref }}</div>
+            <div class="booking-ref-sub">{{ booking.customer_name }} · {{ booking.motorcycle_model or 'No motorcycle model' }}</div>
+          </div>
+          <a href="{{ url_for('quotation_new') }}" class="booking-ref-change">Change</a>
         </div>
-        <div>
-          <label class="field-label">Phone</label>
-          <input class="field-inp" id="cust-phone" placeholder="09XX XXX XXXX">
+        <input type="hidden" id="cust-name" value="{{ booking.customer_name }}">
+        <input type="hidden" id="cust-phone" value="{{ booking.customer_phone }}">
+        <input type="hidden" id="moto-model" value="{{ booking.motorcycle_model }}">
+      {% else %}
+        <div class="info-grid">
+          <div>
+            <label class="field-label">Customer Name *</label>
+            <input class="field-inp" id="cust-name" placeholder="Juan dela Cruz" oninput="validateForm()">
+          </div>
+          <div>
+            <label class="field-label">Phone</label>
+            <input class="field-inp" id="cust-phone" placeholder="09XX XXX XXXX">
+          </div>
+          <div>
+            <label class="field-label">Motorcycle Model</label>
+            <input class="field-inp" id="moto-model" placeholder="Honda Click 150i">
+          </div>
         </div>
-        <div>
-          <label class="field-label">Motorcycle Model</label>
-          <input class="field-inp" id="moto-model" placeholder="Honda Click 150i">
-        </div>
-      </div>
+      {% endif %}
     </div>
 
     <div class="quote-items" id="quote-items">
@@ -268,16 +328,21 @@
     </div>
 
     <div class="quote-footer">
-      <div class="total-row"><span>Subtotal</span><span id="subtotal">₱0.00</span></div>
+      {% if booking %}
+        <div class="total-row"><span>Original service</span><span id="original-total">₱0.00</span></div>
+        <div class="total-row"><span>Extra work</span><span id="extra-total">₱0.00</span></div>
+      {% else %}
+        <div class="total-row"><span>Subtotal</span><span id="subtotal">₱0.00</span></div>
+      {% endif %}
       <div class="total-row grand"><span>Estimated Total</span><span id="grand-total">₱0.00</span></div>
       <div class="notes-box">
         <label class="field-label">Notes</label>
         <textarea class="notes-inp" id="notes" placeholder="Additional notes or remarks..."></textarea>
       </div>
       <button class="btn-save" id="save-btn" onclick="saveQuotation()" disabled>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Save Quotation
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> {% if booking %}Save &amp; Send Quotation{% else %}Save Quotation{% endif %}
       </button>
-      <button class="btn-clear" onclick="clearAll()">× Clear All</button>
+      <button class="btn-clear" id="clear-btn" onclick="clearAll()">× Clear All</button>
     </div>
   </div>
 </div>
@@ -291,7 +356,7 @@
     </div>
     <div class="modal-body">
       <div class="modal-ref" id="modal-ref">QUO-000</div>
-      <div class="modal-sub">Quotation has been saved and is awaiting customer confirmation.</div>
+      <div class="modal-sub" id="modal-sub">Quotation has been saved and is awaiting customer confirmation.</div>
       <div class="modal-info">
         <div class="mi-row"><span>Customer</span><span id="modal-customer">—</span></div>
         <div class="mi-row"><span>Motorcycle</span><span id="modal-moto">—</span></div>
@@ -300,17 +365,41 @@
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn-modal-sec" onclick="newQuotation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Quote</button>
-      <a href="{{ url_for('quotations_list') }}" class="btn-modal-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> View All</a>
+      {% if booking %}
+        <a href="{{ url_for('admin_dashboard') }}" class="btn-modal-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Manage Bookings</a>
+      {% else %}
+        <button class="btn-modal-sec" onclick="newQuotation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Quote</button>
+        <a href="{{ url_for('quotations_list') }}" class="btn-modal-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> View All</a>
+      {% endif %}
     </div>
   </div>
 </div>
 
+{% if booking %}
+<!-- CLEAR ALL CONFIRM MODAL -->
+<div class="modal-overlay" id="clear-modal">
+  <div class="modal-box" style="width:380px;">
+    <div class="modal-body" style="padding:1.5rem;text-align:center;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--text);margin-bottom:.5rem;">Clear all findings, parts, and services?</div>
+      <div style="font-size:.82rem;color:var(--muted);">The booked service stays.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-modal-sec" onclick="closeClearModal()">Go back</button>
+      <button class="btn-modal-pri" onclick="confirmClearAll()">Yes, clear all</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
+  const HAS_BOOKING = {{ 'true' if booking else 'false' }};
   let items = [];
-  let currentTab = 'products';
+  {% if booking %}
+  items.push({ item_type: 'service', name: {{ booking.service_name|tojson }}, unit_price: {{ booking.service_price }}, quantity: 1, locked: true });
+  {% endif %}
+  let currentTab = HAS_BOOKING ? 'inspection' : 'products';
   let allProducts = [...document.querySelectorAll('#products-panel .product-card')];
 
   function switchTab(tab, btn) {
@@ -320,6 +409,8 @@
     document.getElementById('products-panel').style.display = tab === 'products' ? 'flex' : 'none';
     document.getElementById('services-panel').style.display  = tab === 'services'  ? 'block' : 'none';
     document.getElementById('product-controls').style.display = tab === 'products' ? 'block' : 'none';
+    const insp = document.getElementById('inspection-panel');
+    if (insp) insp.style.display = tab === 'inspection' ? 'block' : 'none';
   }
 
   function filterProducts() {
@@ -354,12 +445,47 @@
     document.getElementById('svc-price').value = '';
   }
 
+  function addFinding() {
+    const mechanic = document.getElementById('inspected-by').value.trim();
+    const desc  = document.getElementById('finding-desc').value.trim();
+    const price = parseFloat(document.getElementById('finding-price').value);
+    if (!desc) { toast('Describe what the mechanic found.', 'error'); return; }
+    if (isNaN(price) || price < 0) { toast('Enter a valid price.', 'error'); return; }
+    items.push({ item_type: 'finding', name: desc, unit_price: price, quantity: 1 });
+    document.getElementById('finding-desc').value  = '';
+    document.getElementById('finding-price').value = '';
+    renderItems();
+    toast('Finding added to quotation.');
+  }
+
   function addItem(item) {
-    const existing = items.find(i => i.name === item.name && i.item_type === item.item_type);
+    const existing = items.find(i => i.name === item.name && i.item_type === item.item_type && !i.locked);
     if (existing) { existing.quantity++; }
     else { items.push({ ...item }); }
     renderItems();
     toast(`${item.name} added.`);
+  }
+
+  function renderFindings() {
+    const list = document.getElementById('findings-list');
+    if (!list) return;
+    const findings = items.map((it, idx) => ({ ...it, idx })).filter(it => it.item_type === 'finding');
+    if (findings.length === 0) {
+      list.innerHTML = '<div class="findings-empty">No findings yet.</div>';
+      return;
+    }
+    list.innerHTML = findings.map(f => `
+      <div class="finding-card">
+        <div class="finding-text">${f.name}</div>
+        <div class="finding-price">₱${f.unit_price.toFixed(2)}</div>
+        <div class="btn-del" onclick="removeItem(${f.idx})"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+      </div>`).join('');
+  }
+
+  function updateClearBtnState() {
+    const btn = document.getElementById('clear-btn');
+    if (!btn || !HAS_BOOKING) return;
+    btn.disabled = items.filter(i => !i.locked).length === 0;
   }
 
   function renderItems() {
@@ -370,7 +496,7 @@
     if (items.length === 0) {
       if (!container.contains(empty)) container.appendChild(empty);
       empty.style.display = 'flex';
-      updateTotals(); validateForm(); return;
+      updateTotals(); validateForm(); renderFindings(); updateClearBtnState(); return;
     }
     empty.style.display = 'none';
 
@@ -380,12 +506,26 @@
     items.forEach((item, idx) => {
       const div = document.createElement('div');
       div.className = 'q-item';
+      if (item.locked) {
+        div.innerHTML = `
+          <div class="ci-icon service"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+          <div class="ci-info">
+            <div class="ci-name">${item.name}<span class="locked-tag">Booked · Locked</span></div>
+            <div class="ci-unit">₱${item.unit_price.toFixed(2)} each</div>
+          </div>
+          <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#111827;min-width:60px;text-align:right;">
+            ₱${(item.unit_price * item.quantity).toFixed(2)}
+          </div>`;
+        container.appendChild(div);
+        return;
+      }
+      const iconSvg = item.item_type === 'product'
+        ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'
+        : item.item_type === 'finding'
+        ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+        : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
       div.innerHTML = `
-        <div class="ci-icon ${item.item_type}">
-          ${item.item_type === 'product'
-            ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'
-            : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'}
-        </div>
+        <div class="ci-icon ${item.item_type}">${iconSvg}</div>
         <div class="ci-info">
           <div class="ci-name">${item.name}</div>
           <div class="ci-unit">₱${item.unit_price.toFixed(2)} each</div>
@@ -401,20 +541,31 @@
         </div>`;
       container.appendChild(div);
     });
-    updateTotals(); validateForm();
+    updateTotals(); validateForm(); renderFindings(); updateClearBtnState();
   }
 
   function changeQty(idx, delta) {
+    if (items[idx] && items[idx].locked) return;
     items[idx].quantity += delta;
     if (items[idx].quantity <= 0) items.splice(idx, 1);
     renderItems();
   }
 
-  function removeItem(idx) { items.splice(idx, 1); renderItems(); }
+  function removeItem(idx) {
+    if (items[idx] && items[idx].locked) return;
+    items.splice(idx, 1);
+    renderItems();
+  }
 
   function updateTotals() {
     const total = items.reduce((s,i) => s + i.unit_price * i.quantity, 0);
-    document.getElementById('subtotal').textContent   = `₱${total.toFixed(2)}`;
+    if (HAS_BOOKING) {
+      const original = items.filter(i => i.locked).reduce((s,i) => s + i.unit_price * i.quantity, 0);
+      document.getElementById('original-total').textContent = `₱${original.toFixed(2)}`;
+      document.getElementById('extra-total').textContent    = `₱${(total - original).toFixed(2)}`;
+    } else {
+      document.getElementById('subtotal').textContent = `₱${total.toFixed(2)}`;
+    }
     document.getElementById('grand-total').textContent = `₱${total.toFixed(2)}`;
   }
 
@@ -425,6 +576,11 @@
   }
 
   function clearAll() {
+    if (HAS_BOOKING) {
+      if (items.filter(i => !i.locked).length === 0) return;
+      document.getElementById('clear-modal').classList.add('open');
+      return;
+    }
     if (items.length === 0 && !document.getElementById('cust-name').value) return;
     if (!confirm('Clear all items and customer info?')) return;
     items = [];
@@ -435,13 +591,26 @@
     renderItems();
   }
 
+  function closeClearModal() { document.getElementById('clear-modal').classList.remove('open'); }
+
+  function confirmClearAll() {
+    items = items.filter(i => i.locked);
+    document.getElementById('notes').value = '';
+    const insp = document.getElementById('inspected-by');
+    if (insp) insp.value = '';
+    closeClearModal();
+    renderItems();
+    toast('Cleared. The booked service stays.');
+  }
+
   async function saveQuotation() {
     const name = document.getElementById('cust-name').value.trim();
     if (!name) { toast('Customer name is required.', 'error'); return; }
     if (items.length === 0) { toast('Add at least one item.', 'error'); return; }
 
     const btn = document.getElementById('save-btn');
-    btn.disabled = true; btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .7s linear infinite;vertical-align:middle;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Saving...';
+    const savingLabel = HAS_BOOKING ? 'Sending...' : 'Saving...';
+    btn.disabled = true; btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .7s linear infinite;vertical-align:middle;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> ${savingLabel}`;
 
     const payload = {
       customer_name:    name,
@@ -449,8 +618,12 @@
       motorcycle_model: document.getElementById('moto-model').value.trim(),
       motorcycle_plate: '',
       notes:            document.getElementById('notes').value.trim(),
-      items:            items.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price }))
+      items:            items.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price, locked: !!i.locked })),
     };
+    if (HAS_BOOKING) {
+      payload.booking_id   = {{ booking.id if booking else 'null' }};
+      payload.inspected_by = document.getElementById('inspected-by') ? document.getElementById('inspected-by').value.trim() : '';
+    }
 
     try {
       const res  = await fetch('/api/quotation/save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
@@ -462,16 +635,19 @@
         document.getElementById('modal-moto').textContent     = document.getElementById('moto-model').value.trim() || '—';
         document.getElementById('modal-items').textContent    = items.reduce((s,i)=>s+i.quantity,0) + ' item(s)';
         document.getElementById('modal-total').textContent    = `₱${total.toFixed(2)}`;
+        if (HAS_BOOKING) {
+          document.getElementById('modal-sub').textContent = 'Sent to the customer — waiting for them to approve or decline.';
+        }
         document.getElementById('success-modal').classList.add('open');
-        items = [];
+        if (!HAS_BOOKING) items = [];
         syncStock();
       } else {
         toast(data.error || 'Failed to save quotation.', 'error');
-        btn.disabled = false; btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Save Quotation';
+        btn.disabled = false; btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> ${HAS_BOOKING ? 'Save &amp; Send Quotation' : 'Save Quotation'}`;
       }
     } catch(e) {
       toast('Network error. Please try again.', 'error');
-      btn.disabled = false; btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Save Quotation';
+      btn.disabled = false; btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> ${HAS_BOOKING ? 'Save &amp; Send Quotation' : 'Save Quotation'}`;
     }
   }
 

@@ -1345,6 +1345,26 @@
     <!-- Status Timeline -->
     <div id="bd-timeline"></div>
 
+    <!-- Awaiting-decision prompt — only while the quotation is unanswered -->
+    <div id="bd-quotation-pending-box" style="display:none;margin-top:1rem;padding:1rem;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
+      <div style="font-size:0.82rem;color:#92400e;line-height:1.5;"><strong>The mechanic found additional work.</strong> Please approve or decline the quotation.</div>
+      <button type="button" onclick="document.getElementById('bd-quotation-wrap').scrollIntoView({behavior:'smooth',block:'center'})" style="margin-top:0.75rem;width:100%;padding:0.6rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Review quotation</button>
+    </div>
+
+    <!-- Inspection & Estimation quotation detail -->
+    <div id="bd-quotation-wrap" style="display:none;margin-top:1rem;padding:1rem;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:#6b21a8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.65rem;">Inspection Findings</div>
+      <div id="bd-quotation-items" style="margin-bottom:0.65rem;"></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-2);margin-bottom:0.2rem;"><span>Original service</span><span id="bd-quotation-original"></span></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-2);margin-bottom:0.5rem;"><span>Extra work</span><span id="bd-quotation-extra"></span></div>
+      <div style="display:flex;justify-content:space-between;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--fg-1);padding-top:0.5rem;border-top:1px solid #e9d5ff;margin-bottom:0.75rem;"><span>Estimated Total</span><span id="bd-quotation-total" style="color:var(--brand-red);"></span></div>
+      <div id="bd-quotation-actions" style="display:flex;gap:0.5rem;">
+        <button type="button" onclick="decideQuotation('decline')" style="flex:1;padding:0.6rem;background:#fff;border:1px solid var(--line-2);border-radius:8px;color:var(--fg-2);font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Decline</button>
+        <button type="button" onclick="decideQuotation('approve')" style="flex:1;padding:0.6rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Approve</button>
+      </div>
+      <div id="bd-quotation-decided" style="display:none;text-align:center;font-size:0.8rem;font-weight:700;font-family:'Syne',sans-serif;padding:0.5rem;"></div>
+    </div>
+
     <div id="bd-report-problem-wrap" style="display:none;margin-top:1rem;">
       <div id="bd-warranty-badge" style="text-align:center;font-size:0.76rem;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:0.5rem;"></div>
       <button type="button" id="bd-report-problem-btn" onclick="reportProblemForBooking()" style="width:100%;padding:0.65rem;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.25);border-radius:10px;color:var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Report a Problem With This Service</button>
@@ -1353,6 +1373,57 @@
 
     <div class="modal-actions" style="margin-top:1.5rem;">
       <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-booking-details')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FULL QUOTATION MODAL ═══ -->
+<div class="modal-overlay" id="modal-quotation-full" onclick="if (event.target === this) closeQuotationModal()">
+  <div class="modal-box" style="width:460px;max-width:95vw;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem;">
+      <div>
+        <h5 style="margin:0;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.04em;">QUOTATION</h5>
+        <div id="qf-subtitle" style="font-size:0.78rem;color:var(--fg-3);margin-top:0.2rem;"></div>
+      </div>
+      <button onclick="closeQuotationModal()" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;flex-shrink:0;">✕</button>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;position:relative;margin-bottom:1.25rem;">
+      <div style="position:absolute;top:14px;left:14px;right:14px;height:2px;background:var(--line-2);z-index:0;"></div>
+      <div style="position:absolute;top:14px;left:14px;height:2px;background:var(--green);z-index:1;width:33.33%;"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;z-index:2;flex:1;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--green);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#fff;">✓</div>
+        <div style="font-size:0.63rem;color:#14532d;margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:600;text-align:center;max-width:68px;">Confirmed</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;z-index:2;flex:1;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--green);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#fff;box-shadow:0 0 0 4px rgba(21,128,61,0.2);">2</div>
+        <div style="font-size:0.63rem;color:#14532d;margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:700;text-align:center;max-width:68px;">Inspection &amp; Estimation</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;z-index:2;flex:1;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--bg-subtle);border:2px solid var(--line-2);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--fg-2);">3</div>
+        <div style="font-size:0.63rem;color:var(--fg-2);margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:600;text-align:center;max-width:68px;">In Progress</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;z-index:2;flex:1;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--bg-subtle);border:2px solid var(--line-2);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--fg-2);">4</div>
+        <div style="font-size:0.63rem;color:var(--fg-2);margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:600;text-align:center;max-width:68px;">Completed</div>
+      </div>
+    </div>
+
+    <div style="padding:0.85rem 1rem;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;margin-bottom:1rem;font-size:0.82rem;color:#92400e;line-height:1.5;">
+      <strong>The mechanic found additional work.</strong> Nothing extra will be done unless you approve it.
+    </div>
+
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Your booked service</div>
+    <div id="qf-booked-service" style="margin-bottom:1rem;"></div>
+
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Extra work</div>
+    <div id="qf-extra-items" style="margin-bottom:1rem;"></div>
+
+    <div id="qf-totals"></div>
+
+    <div style="display:flex;gap:0.6rem;margin-top:1rem;">
+      <button type="button" id="qf-decline-btn" style="flex:1;padding:0.8rem;background:#fff;border:2px solid var(--brand-red);border-radius:10px;color:var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;">Decline</button>
+      <button type="button" id="qf-approve-btn" style="flex:1;padding:0.8rem;background:var(--brand-red);border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;">Approve</button>
     </div>
   </div>
 </div>
@@ -2975,6 +3046,53 @@ function renderNotifications() {
     });
 
     const pending = stillPending(n);
+
+    // Quotation notifications get their own richer card instead of the
+    // generic icon+title+message layout — a plain line can't show the
+    // itemized breakdown or the inline approve/decline buttons.
+    if (n.type === 'quotation' && n.quotation) {
+      const q = n.quotation;
+      const div = document.createElement('div');
+      div.className = 'notif-item';
+      const quoteIcon = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+      if (q.status === 'awaiting_customer') {
+        div.style.cssText = `padding:1rem 1.1rem;border-bottom:1px solid var(--line-1);border-left:3px solid var(--brand-red);background:#fff7f6;`;
+        div.innerHTML = `
+          <div style="display:flex;gap:0.6rem;align-items:flex-start;margin-bottom:0.6rem;">
+            <div style="width:34px;height:34px;border-radius:9px;background:rgba(208,0,25,0.1);color:var(--brand-red);display:flex;align-items:center;justify-content:center;flex-shrink:0;">${quoteIcon}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.84rem;color:var(--fg-1);display:flex;align-items:center;gap:0.4rem;">${n.title}<span style="width:7px;height:7px;border-radius:50%;background:var(--brand-red);display:inline-block;flex-shrink:0;"></span></div>
+              <div style="font-size:0.78rem;color:var(--fg-2);margin-top:0.25rem;line-height:1.45;">${n.message}</div>
+              <span style="display:inline-block;margin-top:0.4rem;font-size:0.62rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;background:var(--brand-red);color:#fff;padding:0.2em 0.6em;border-radius:5px;">Action Needed</span>
+            </div>
+          </div>
+          <div>${buildQuotationItemsHTML(q)}</div>
+          ${buildQuotationTotalsHTML(q)}
+          <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+            <button type="button" onclick="decideQuotation('decline', ${q.id})" style="flex:1;padding:0.55rem;background:#fff;border:1px solid var(--brand-red);border-radius:8px;color:var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Decline</button>
+            <button type="button" onclick="decideQuotation('approve', ${q.id})" style="flex:1;padding:0.55rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Approve ₱${q.total.toFixed(2)}</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.55rem;">
+            <a href="javascript:void(0)" onclick="openQuotationModal(${q.id})" style="font-size:0.74rem;font-weight:700;color:var(--brand-red);text-decoration:none;">View full quotation</a>
+            <span style="font-size:0.68rem;color:var(--fg-3);">${time}</span>
+          </div>`;
+      } else {
+        const approved = q.status === 'approved';
+        div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line-1);border-left:3px solid var(--brand-red);`;
+        div.innerHTML = `
+          <div style="width:38px;height:38px;border-radius:10px;background:rgba(208,0,25,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--brand-red);">${quoteIcon}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);margin-bottom:0.3rem;">${n.title}</div>
+            <span style="font-size:0.62rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;background:${approved ? '#dcfce7' : '#f3f4f6'};color:${approved ? '#166534' : '#6b7280'};padding:0.2em 0.6em;border-radius:5px;">${approved ? 'Approved' : 'Declined'}</span>
+            <div style="font-size:0.78rem;color:var(--fg-2);margin-top:0.4rem;">${n.message}</div>
+            <div style="font-size:0.7rem;color:#9ca3af;margin-top:0.3rem;">${time}</div>
+          </div>
+          <button onclick="deleteNotif(event, ${n.id})" style="background:none;border:none;color:#4b5563;font-size:0.9rem;cursor:pointer;padding:0.25rem;border-radius:6px;flex-shrink:0;align-self:flex-start;line-height:1;transition:all 0.15s;" onmouseover="this.style.color='#fca5a5';this.style.background='rgba(220,38,38,0.1)'" onmouseout="this.style.color='#4b5563';this.style.background='none'" title="Delete notification">✕</button>`;
+      }
+      list.appendChild(div);
+      return;
+    }
+
     const div = document.createElement('div');
     div.className = 'notif-item';
     div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line-1);cursor:pointer;background:${pending ? 'rgba(208,0,25,0.05)' : 'transparent'};transition:background 0.15s;`;
@@ -3301,7 +3419,8 @@ const bookingsData = {
     created_at: '{{ b.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
     total_amount: {{ b.total_amount or 0 }},
     return_window: {{ ({'expired': b.return_window.expired, 'days_left': b.return_window.days_left, 'label': b.return_window.label} if b.return_window else none)|tojson }},
-    open_claim: {{ ({'id': b.open_claim.id, 'ref': 'RMA-%03d'|format(b.open_claim.id)} if b.open_claim else none)|tojson }}
+    open_claim: {{ ({'id': b.open_claim.id, 'ref': 'RMA-%03d'|format(b.open_claim.id)} if b.open_claim else none)|tojson }},
+    quotation: {{ b.quotation_data|tojson }}
   }{% if not loop.last %},{% endif %}
   {% endfor %}
 };
@@ -3366,6 +3485,38 @@ function openBookingDetails(bookingId) {
     shopWrap.style.display  = 'block';
   }
 
+  // Inspection & Estimation quotation
+  const quotWrap = document.getElementById('bd-quotation-wrap');
+  if (booking.quotation) {
+    const q = booking.quotation;
+    quotWrap.style.display = 'block';
+    quotWrap.dataset.quotationId = q.id;
+    const extraItems = q.items.filter(it => !it.locked);
+    document.getElementById('bd-quotation-items').innerHTML = extraItems.length
+      ? extraItems.map(it => `<div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-1);margin-bottom:0.3rem;"><span>${it.name}</span><span>₱${it.price.toFixed(2)}</span></div>`).join('')
+      : '<div style="font-size:0.8rem;color:var(--fg-3);">No extra work found.</div>';
+    document.getElementById('bd-quotation-original').textContent = `₱${q.original.toFixed(2)}`;
+    document.getElementById('bd-quotation-extra').textContent    = `₱${q.extra.toFixed(2)}`;
+    document.getElementById('bd-quotation-total').textContent    = `₱${q.total.toFixed(2)}`;
+    const actions = document.getElementById('bd-quotation-actions');
+    const decided = document.getElementById('bd-quotation-decided');
+    const pendingBox = document.getElementById('bd-quotation-pending-box');
+    if (q.status === 'awaiting_customer') {
+      actions.style.display = 'flex';
+      decided.style.display = 'none';
+      pendingBox.style.display = 'block';
+    } else {
+      actions.style.display = 'none';
+      decided.style.display = 'block';
+      decided.textContent = q.status === 'approved' ? 'You approved this quotation.' : 'You declined this quotation.';
+      decided.style.color = q.status === 'approved' ? 'var(--green,#16a34a)' : 'var(--fg-2)';
+      pendingBox.style.display = 'none';
+    }
+  } else {
+    quotWrap.style.display = 'none';
+    document.getElementById('bd-quotation-pending-box').style.display = 'none';
+  }
+
   // Notes
   const notesWrap = document.getElementById('bd-notes-wrap');
   if (booking.notes) {
@@ -3377,15 +3528,21 @@ function openBookingDetails(bookingId) {
 
   // Status timeline
   const timeline = document.getElementById('bd-timeline');
-  const steps = ['confirmed', 'in_progress', 'completed'];
-  const stepLabels = { confirmed: 'Confirmed', in_progress: 'In Progress', completed: 'Completed' };
-  const stepIcons = { confirmed: '', in_progress: '', completed: '' };
+  const steps = ['confirmed', 'inspection', 'in_progress', 'completed'];
+  const stepLabels = { confirmed: 'Confirmed', inspection: 'Inspection & Estimation', in_progress: 'In Progress', completed: 'Completed' };
 
   // Normalize status
   let normalizedStatus = booking.status.toLowerCase().replace(' ', '_');
   if (normalizedStatus === 'inprogress') normalizedStatus = 'in_progress';
 
-  const currentIdx = steps.indexOf(normalizedStatus);
+  const quot = booking.quotation;
+  let currentIdx = steps.indexOf(normalizedStatus);
+  // Once the customer has answered the quotation, the booking visually
+  // advances to "In Progress" even though the shop hasn't clicked its own
+  // next-step button yet — the customer's part of this step is done.
+  if (normalizedStatus === 'inspection' && quot && (quot.status === 'approved' || quot.status === 'declined')) {
+    currentIdx = steps.indexOf('in_progress');
+  }
   const isCancelled = booking.status === 'cancelled';
 
   if (isCancelled) {
@@ -3397,15 +3554,22 @@ function openBookingDetails(bookingId) {
     timeline.innerHTML = `
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Booking Progress</div>
       <div style="display:flex;justify-content:space-between;position:relative;">
-        <div style="position:absolute;top:14px;left:20px;right:20px;height:2px;background:var(--line-2);z-index:0;"></div>
-        <div style="position:absolute;top:14px;left:20px;height:2px;background:var(--green);z-index:1;width:${currentIdx >= 0 ? (currentIdx / (steps.length - 1)) * 100 : 0}%;transition:width 0.3s;"></div>
+        <div style="position:absolute;top:14px;left:14px;right:14px;height:2px;background:var(--line-2);z-index:0;"></div>
+        <div style="position:absolute;top:14px;left:14px;height:2px;background:var(--green);z-index:1;width:${currentIdx > 0 ? (currentIdx / (steps.length - 1)) * 100 : 0}%;transition:width 0.3s;"></div>
         ${steps.map((step, i) => {
-          const done = i <= currentIdx;
+          const done = i < currentIdx;
           const active = i === currentIdx;
+          let subLabel = '';
+          if (step === 'inspection' && quot) {
+            if (quot.status === 'awaiting_customer') subLabel = `<div style="font-size:0.58rem;font-weight:700;color:#92400e;margin-top:0.15rem;">Awaiting your response</div>`;
+            else if (quot.status === 'approved') subLabel = `<div style="font-size:0.58rem;font-weight:700;color:#15803d;margin-top:0.15rem;">Approved</div>`;
+            else if (quot.status === 'declined') subLabel = `<div style="font-size:0.58rem;font-weight:700;color:#b91c1c;margin-top:0.15rem;">Declined</div>`;
+          }
           return `
-            <div style="display:flex;flex-direction:column;align-items:center;z-index:2;">
-              <div style="width:28px;height:28px;border-radius:50%;background:${done ? 'var(--green)' : 'var(--bg-subtle)'};border:2px solid ${done ? 'var(--green)' : 'var(--line-2)'};display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:${done ? '#fff' : 'var(--fg-2)'};${active ? 'box-shadow:0 0 0 4px rgba(21,128,61,0.2);' : ''}">${done ? '✓' : ''}</div>
-              <div style="font-size:0.68rem;color:${done ? '#14532d' : 'var(--fg-2)'};margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:${active ? '700' : '600'};text-align:center;max-width:60px;">${stepLabels[step]}</div>
+            <div style="display:flex;flex-direction:column;align-items:center;z-index:2;flex:1;">
+              <div style="width:28px;height:28px;border-radius:50%;background:${done || active ? 'var(--green)' : 'var(--bg-subtle)'};border:2px solid ${done || active ? 'var(--green)' : 'var(--line-2)'};display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:${done || active ? '#fff' : 'var(--fg-2)'};${active ? 'box-shadow:0 0 0 4px rgba(21,128,61,0.2);' : ''}">${done ? '✓' : (i + 1)}</div>
+              <div style="font-size:0.63rem;color:${done || active ? '#14532d' : 'var(--fg-2)'};margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:${active ? '700' : '600'};text-align:center;max-width:68px;">${stepLabels[step]}</div>
+              ${subLabel}
             </div>`;
         }).join('')}
       </div>`;
@@ -3427,6 +3591,16 @@ function openBookingDetails(bookingId) {
 
   document.getElementById('modal-booking-details').classList.add('open');
 }
+
+// A "Review Quotation" email link lands here with ?open_booking=ID so the
+// customer sees the relevant booking straight away instead of a blank dashboard.
+(function openBookingFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const bid = parseInt(params.get('open_booking'), 10);
+  if (bid && bookingsData[bid]) {
+    setTimeout(() => openBookingDetails(bid), 150);
+  }
+})();
 
 /* ══ ORDER DETAILS ══ */
 const ordersData = {
@@ -3910,6 +4084,97 @@ function reportProblemForBooking() {
   if (!_currentBookingDetailId) return;
   closeModal('modal-booking-details');
   openReturnForm('service', _currentBookingDetailId);
+}
+
+async function decideQuotation(decision, qidOverride) {
+  const wrap = document.getElementById('bd-quotation-wrap');
+  const qid = qidOverride || (wrap && wrap.dataset.quotationId);
+  if (!qid) return;
+  const msg = decision === 'approve'
+    ? 'Approve this quotation? The shop will do the extra work and bill the full amount.'
+    : 'Decline this quotation? The shop will proceed with just the booked service.';
+  if (!confirm(msg)) return;
+  try {
+    const res = await fetch(`/quotation/${qid}/decision`, {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `decision=${decision}`,
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Could not record your decision.');
+    }
+  } catch (e) {
+    alert('Network error — please try again.');
+  }
+}
+
+function buildQuotationItemsHTML(q) {
+  const locked = q.items.filter(it => it.locked);
+  const extra  = q.items.filter(it => !it.locked);
+  const row = (it, bg) => `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;padding:0.6rem 0.75rem;${bg ? `background:${bg};border-radius:8px;` : 'border-bottom:1px solid var(--line-2);'}margin-bottom:0.35rem;">
+      <div style="min-width:0;">
+        <div style="font-size:0.82rem;font-weight:${bg ? '600' : '400'};color:var(--fg-1);">${it.name}</div>
+        <div style="font-size:0.68rem;color:var(--fg-3);margin-top:0.1rem;">${bg ? 'Your booked service' : it.label}</div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
+    </div>`;
+  return locked.map(it => row(it, 'var(--bg-subtle)')).join('') + extra.map(it => row(it, null)).join('');
+}
+
+function buildQuotationTotalsHTML(q) {
+  return `
+    <div style="display:flex;gap:0.5rem;margin:0.6rem 0;">
+      <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.5rem 0.6rem;text-align:center;">
+        <div style="font-size:0.6rem;color:#166534;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">If you approve</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#166534;">₱${q.total.toFixed(2)}</div>
+      </div>
+      <div style="flex:1;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;padding:0.5rem 0.6rem;text-align:center;">
+        <div style="font-size:0.6rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">If you decline</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--fg-2);">₱${q.original.toFixed(2)}</div>
+      </div>
+    </div>`;
+}
+
+function openQuotationModal(qid) {
+  const n = notifications.find(x => x.quotation && x.quotation.id === qid);
+  if (!n) return;
+  const q = n.quotation;
+  document.getElementById('qf-subtitle').textContent =
+    `Booking ${q.ref} · ${q.service}${q.inspected_by ? ' · Inspected by ' + q.inspected_by : ''}`;
+  const locked = q.items.filter(it => it.locked);
+  document.getElementById('qf-booked-service').innerHTML = locked.map(it => `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;background:var(--bg-subtle);border-radius:8px;padding:0.65rem 0.8rem;">
+      <div><div style="font-size:0.85rem;font-weight:600;color:var(--fg-1);">${it.name}</div><div style="font-size:0.7rem;color:var(--fg-3);margin-top:0.1rem;">Already agreed at booking</div></div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
+    </div>`).join('');
+  const extra = q.items.filter(it => !it.locked);
+  document.getElementById('qf-extra-items').innerHTML = extra.length
+    ? extra.map(it => `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.8rem;border-bottom:1px solid var(--line-2);">
+        <div><div style="font-size:0.82rem;color:var(--fg-1);">${it.name}</div><div style="font-size:0.68rem;color:var(--fg-3);margin-top:0.1rem;">${it.label}</div></div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
+      </div>`).join('')
+    : '<div style="font-size:0.8rem;color:var(--fg-3);">No extra work found.</div>';
+  document.getElementById('qf-totals').innerHTML = buildQuotationTotalsHTML(q);
+
+  const declineBtn = document.getElementById('qf-decline-btn');
+  const approveBtn = document.getElementById('qf-approve-btn');
+  approveBtn.textContent = `Approve ₱${q.total.toFixed(2)}`;
+  declineBtn.onclick = () => decideQuotation('decline', q.id);
+  approveBtn.onclick = () => decideQuotation('approve', q.id);
+
+  document.getElementById('modal-quotation-full').classList.add('open');
+  document.addEventListener('keydown', _quotationModalEscHandler);
+}
+function closeQuotationModal() {
+  document.getElementById('modal-quotation-full').classList.remove('open');
+  document.removeEventListener('keydown', _quotationModalEscHandler);
+}
+function _quotationModalEscHandler(e) {
+  if (e.key === 'Escape') closeQuotationModal();
 }
 
 // 1 · Which items (parts only)

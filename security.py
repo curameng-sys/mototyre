@@ -10,7 +10,7 @@ from flask import abort
 
 # ─── WHITELISTS ──────────────────────────────────────────────────────────────
 
-ALLOWED_BOOKING_STATUSES = {'pending', 'confirmed', 'in_progress', 'inprogress', 'completed', 'cancelled', 'awaiting_payment', 'ready_for_pickup'}
+ALLOWED_BOOKING_STATUSES = {'pending', 'confirmed', 'inspection', 'in_progress', 'inprogress', 'completed', 'cancelled', 'awaiting_payment', 'ready_for_pickup'}
 ALLOWED_ORDER_STATUSES   = {'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'}
 ALLOWED_OTP_PURPOSES     = {'login', 'verify', 'reset'}
 

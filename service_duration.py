@@ -5,10 +5,11 @@ migration seed data, admin-side finish-time display) so a job's estimated length
 and every finish time computed from it agree everywhere — this module is the only
 place that turns a (start, duration) pair into a finish time.
 
-The shop is modeled as a single queue (one bay/mechanic-agnostic capacity) — the
-existing calendar/booked-slots system already worked this way (one booking blocks
-a time slot for everyone), we're just making the block duration-aware instead of a
-fixed one-hour box. "Preferred mechanic" stays a preference, not a separate lane.
+The shop's queue capacity at any one time slot is the number of mechanics on
+duty that day — up to that many jobs can run at once; the (N+1)th booking is
+what actually gets turned away. "Preferred mechanic" is additionally checked
+against that one person's own day, on top of (not instead of) the shop-wide
+capacity count.
 """
 
 from datetime import datetime, timedelta, time as _time
@@ -235,7 +236,7 @@ def mechanic_overlaps(a_start, a_end, b_start, b_end, turnover=MECHANIC_TURNOVER
     return a_start < (b_end + turnover) and (b_start - turnover) < a_end
 
 
-def slot_statuses(duration_minutes, existing_intervals, now_minutes=None):
+def slot_statuses(duration_minutes, existing_intervals, now_minutes=None, on_duty_count=1):
     """Every fixed slot from all_slot_starts(), always — each one marked
     available or not, with why. A card is never omitted just because it
     doesn't work for this job; the customer sees the reason instead.
@@ -244,11 +245,15 @@ def slot_statuses(duration_minutes, existing_intervals, now_minutes=None):
     for the day — end_min should already be break-adjusted (see
     compute_finish_minutes) so a job that straddles the break correctly blocks
     the whole time it's actually paused/running. now_minutes: if given (booking
-    for today), starts at/before now are marked 'past'.
+    for today), starts at/before now are marked 'past'. on_duty_count: how many
+    mechanics are on duty that day — a slot only turns 'booked' once that many
+    existing jobs already overlap it, matching validate_booking()'s own rule;
+    defaults to 1 (one booking per slot) for any caller that doesn't pass it.
 
     Returns a list of {'start', 'end', 'available', 'reason'} dicts, in order.
     reason is one of None (available), 'past', 'too_long', 'booked'."""
     d = duration_minutes if duration_minutes and duration_minutes > 0 else DEFAULT_DURATION_MIN
+    capacity = max(on_duty_count, 1)
     result = []
     for start in all_slot_starts():
         end = compute_finish_minutes(start, d)
@@ -258,7 +263,8 @@ def slot_statuses(duration_minutes, existing_intervals, now_minutes=None):
         if end > SHOP_CLOSE_MIN:
             result.append({'start': start, 'end': end, 'available': False, 'reason': 'too_long'})
             continue
-        if any(_overlaps(start, end, bs, be) for bs, be in existing_intervals):
+        overlap_count = sum(1 for bs, be in existing_intervals if _overlaps(start, end, bs, be))
+        if overlap_count >= capacity:
             result.append({'start': start, 'end': end, 'available': False, 'reason': 'booked'})
             continue
         result.append({'start': start, 'end': end, 'available': True, 'reason': None})
@@ -270,7 +276,7 @@ MAX_BOOKINGS_PER_DAY = 20  # shop policy cap — independent of whatever technic
 
 def validate_booking(start_minutes, duration_minutes, shop_intervals, daily_count,
                       require_slot_grid=True, mechanic_name=None, mechanic_status=None,
-                      mechanic_intervals=None, daily_cap=MAX_BOOKINGS_PER_DAY):
+                      mechanic_intervals=None, daily_cap=MAX_BOOKINGS_PER_DAY, on_duty_count=1):
     """THE routine every booking path calls before it's allowed to touch the
     schedule — customer self-booking, an admin reschedule, a mechanic
     reassignment, a walk-in. The admin UI pre-filtering what it shows is a
@@ -287,10 +293,15 @@ def validate_booking(start_minutes, duration_minutes, shop_intervals, daily_coun
       3. hard 6:30 PM finish (the lunch pause is already baked into every
          finish time by compute_finish_minutes, not checked separately here)
       4. the shop's daily booking cap
-      5. no collision with another booking already on the shop's queue that day
+      5. no more bookings already overlapping this window than there are
+         mechanics on duty that day — on_duty_count=1 (the default) keeps
+         the old one-booking-per-slot behavior for any caller that doesn't
+         pass a real roster count
       6. if a specific mechanic is named: they must be on today's on-duty
          roster, and free for the whole window plus the 15-minute turnover
-         gap on both sides against everything else already on their day."""
+         gap on both sides against everything else already on their day —
+         checked in addition to #5, never instead of it, so naming a
+         mechanic can only narrow a slot down, never widen it."""
     end_minutes = compute_finish_minutes(start_minutes, duration_minutes)
 
     if require_slot_grid and start_minutes not in all_slot_starts():
@@ -302,10 +313,11 @@ def validate_booking(start_minutes, duration_minutes, shop_intervals, daily_coun
                         f'closing ({minutes_to_ampm(SHOP_CLOSE_MIN)}). Please pick an earlier time.')
     if daily_count >= daily_cap:
         return False, f'This day already has the most bookings the shop takes ({daily_cap}). Please choose another date.'
-    for b_start, b_end in shop_intervals:
-        if start_minutes < b_end and b_start < end_minutes:
-            return False, (f'That time slot is already taken '
-                            f'(booked {minutes_to_ampm(b_start)}–{minutes_to_ampm(b_end)}).')
+    overlapping = [(b_start, b_end) for b_start, b_end in shop_intervals
+                   if start_minutes < b_end and b_start < end_minutes]
+    if len(overlapping) >= max(on_duty_count, 1):
+        return False, (f'That time slot is fully booked — all {max(on_duty_count, 1)} mechanic(s) on duty '
+                        f'already have something between {minutes_to_ampm(start_minutes)} and {minutes_to_ampm(end_minutes)}.')
     if mechanic_name:
         if mechanic_status != 'available':
             return False, f'{mechanic_name} is not on duty for this booking.'
