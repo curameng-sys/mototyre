@@ -78,6 +78,7 @@
     .item-icon{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;}
     .item-icon.product{background:rgba(208,0,25,.1);color:var(--red);}
     .item-icon.service{background:rgba(37,99,235,.1);color:#2563eb;}
+    .item-icon.finding{background:rgba(217,119,6,.12);color:#d97706;}
     .item-name{flex:1;color:#374151;}
     .item-qty{color:var(--muted);font-size:.75rem;}
     .item-price{font-family:'Syne',sans-serif;font-weight:700;color:#111827;}
@@ -136,7 +137,7 @@
 <header class="topbar">
   <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">Job Orders</span></div>
   <div class="topbar-right">
-    <a href="{{ url_for('quotations_list') }}" class="btn-action btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Quotations</a>
+    <a href="{{ url_for('walk_in') }}" class="btn-action btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Walk-In</a>
     <a href="{{ url_for('admin_dashboard') }}" class="btn-action btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Dashboard</a>
   </div>
 </header>
@@ -233,7 +234,7 @@
         <tr id="jo-row-{{ jo.id }}" {% if new_jo and jo.id == new_jo.id %}class="new-jo-highlight"{% endif %}>
           <td>
             <span class="ref-code">JO-{{ '%03d'|format(jo.id) }}</span>
-            {% if jo.quotation_id %}<div class="from-quot"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> QUO-{{ '%03d'|format(jo.quotation_id) }}</div>{% endif %}
+            {% if jo.quotation_id %}<a href="{{ url_for('walk_in', view_quotation=jo.quotation_id) }}" class="from-quot" style="text-decoration:none;cursor:pointer;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> QUO-{{ '%03d'|format(jo.quotation_id) }}</a>{% endif %}
           </td>
           <td>
             <div class="cust-name">{{ jo.customer_name }}</div>
@@ -302,7 +303,7 @@
               {% for item in jo.items %}
               <div class="item-line">
                 <div class="item-icon {{ item.item_type }}">
-                  {% if item.item_type == 'product' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>{% else %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>{% endif %}
+                  {% if item.item_type == 'product' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>{% elif item.item_type == 'finding' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>{% else %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>{% endif %}
                 </div>
                 <span class="item-name">{{ item.name }}</span>
                 <span class="item-qty">x{{ item.quantity }}</span>

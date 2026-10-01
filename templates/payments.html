@@ -146,6 +146,48 @@
     .h-jo {background:rgba(37,99,235,.2);color:#93c5fd;}
     .h-ord{background:rgba(16,185,129,.2);color:#6ee7b7;}
 
+    /* ── METHOD TAGS ── */
+    .b-nomethod{background:rgba(107,114,128,.18);color:#9ca3af;border:1px solid rgba(107,114,128,.3);}
+    .b-counter {background:rgba(217,119,6,.18);color:#fbbf24;border:1px solid rgba(217,119,6,.35);}
+    .b-gwait   {background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);}
+    .btn-record-cash{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .85rem;border-radius:8px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:none;background:var(--green);color:#fff;transition:all .15s;}
+    .btn-record-cash:hover{background:#15803d;}
+    .waiting-note{font-size:.75rem;color:var(--muted);}
+
+    /* ── RECORD CASH MODAL ── */
+    .quick-amt-row{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem;}
+    .quick-amt-btn{padding:.35rem .7rem;border-radius:7px;border:1px solid var(--border);background:#f9fafb;color:#374151;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;transition:all .15s;}
+    .quick-amt-btn:hover{border-color:var(--green);color:var(--green);}
+    .change-box{border-radius:10px;padding:.75rem .9rem;margin:.75rem 0;display:flex;justify-content:space-between;align-items:center;font-family:'Syne',sans-serif;}
+    .change-box.ok{background:rgba(22,163,74,.1);border:1px solid rgba(22,163,74,.3);}
+    .change-box.short{background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);}
+    .change-box.empty{background:#f9fafb;border:1px solid var(--border);}
+    .change-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+    .change-val{font-size:1.1rem;font-weight:800;color:#15803d;}
+    .change-box.short .change-val{color:#b91c1c;font-size:.85rem;}
+    .change-box.empty .change-val{color:var(--muted);font-size:.8rem;font-weight:600;}
+
+    /* ── RECEIPT MODAL ── */
+    .receipt-box{background:#fff;border-radius:16px;width:100%;max-width:400px;overflow:hidden;}
+    #receipt-print-area{padding:1.5rem 1.75rem;}
+    .rcpt-logo{text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.1em;color:#111827;}
+    .rcpt-logo span{color:var(--red);}
+    .rcpt-addr{text-align:center;font-size:.7rem;color:var(--muted);margin:.2rem 0 .9rem;}
+    .rcpt-title{text-align:center;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:.5rem 0;border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);margin-bottom:.8rem;}
+    .rcpt-row{display:flex;justify-content:space-between;font-size:.78rem;padding:.18rem 0;}
+    .rcpt-row span:first-child{color:var(--muted);}
+    .rcpt-row span:last-child{font-weight:700;color:#111827;}
+    .rcpt-dash{border:none;border-top:1px dashed var(--border);margin:.6rem 0;}
+    .rcpt-total{display:flex;justify-content:space-between;align-items:center;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin:.3rem 0;}
+    .rcpt-footer{text-align:center;font-size:.76rem;color:var(--muted);margin-top:1rem;}
+    .rcpt-actions{display:flex;gap:.6rem;padding:1rem 1.75rem;border-top:1px solid var(--border);}
+
+    @media print {
+      body * { visibility: hidden; }
+      #receipt-print-area, #receipt-print-area * { visibility: visible; }
+      #receipt-print-area { position: absolute; top: 0; left: 0; width: 100%; }
+      #receipt-print-area .bill-close { display: none; }
+    }
     @media(max-width:900px){.main{padding:1.25rem 1rem;} thead th:nth-child(3),td:nth-child(3){display:none;} }
     @media(max-width:640px){
       .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -180,47 +222,81 @@
       {% set cnt = pending_bookings|length + pending_jos|length + pending_orders|length %}
       {% if cnt > 0 %}<span style="margin-left:.4rem;background:var(--red);color:#fff;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ cnt }}</span>{% endif %}
     </a>
-    <a href="?tab=history" class="tab {% if tab=='history' %}active{% endif %}">History</a>
+    <a href="?tab=history" class="tab {% if tab=='history' %}active{% endif %}">
+      History
+      {% if history_count > 0 %}<span style="margin-left:.4rem;background:rgba(107,114,128,.25);color:#d1d5db;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ history_count }}</span>{% endif %}
+    </a>
   </div>
 
   {% if tab == 'pending' %}
+
+  <div class="search-wrap">
+    <div class="search-box">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="pending-search" placeholder="Search customer, reference…" oninput="filterPending()">
+    </div>
+  </div>
 
   {# ── CUSTOMER BOOKINGS ── #}
   <div class="sec-label">Customer Bookings <span class="sec-count">{{ pending_bookings|length }}</span></div>
   <div class="tbl-wrap">
     {% if pending_bookings %}
-    <table>
-      <thead><tr><th>Booking #</th><th>Customer</th><th>Service</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead>
+    <table id="pending-bkg-table">
+      <thead><tr><th>Reference</th><th>Customer</th><th>Amount</th><th>Method</th><th>Date</th><th></th></tr></thead>
       <tbody>
         {% for b in pending_bookings %}
         {% set svc_price = namespace(val=0) %}
         {% for s in all_services if s.name == b.service %}{% set svc_price.val = s.price %}{% endfor %}
+        {% set row_amount = b.total_amount if (b.is_invoice_flow and b.total_amount) else svc_price.val %}
         {% set b_items %}[{"name":{{ b.service|tojson }},"qty":1,"price":{{ svc_price.val }}}]{% endset %}
-        <tr>
+        {% set cust_name = b.contact_name if b.walkin_customer_id else (b.contact_name or b.customer.fullname) %}
+        <tr class="pending-row" data-s="{{ cust_name|lower }} bkg-{{ '%03d'|format(b.id) }}">
           <td><span class="ref ref-bkg">BKG-{{ '%03d'|format(b.id) }}</span></td>
           <td>
-            <div class="name">{{ b.contact_name or b.customer.fullname }}</div>
-            <div class="sub">{{ b.customer.phone }}</div>
-            {% if b.motorcycle_model %}<div class="sub">{{ b.motorcycle_model }}{% if b.motorcycle_plate %} · {{ b.motorcycle_plate }}{% endif %}</div>{% endif %}
+            <div class="name">{{ cust_name }}</div>
+            <div class="sub">{{ b.service }}{% if b.is_invoice_flow and b.extra_item_count %} + {{ b.extra_item_count }} extra item{{ 's' if b.extra_item_count != 1 else '' }}{% endif %}</div>
+          </td>
+          <td><span class="amount">₱{{ '%.2f'|format(row_amount) }}</span></td>
+          <td>
+            {% if b.is_invoice_flow %}
+              {% if b.invoice_payment_method == 'cash' %}
+                <span class="badge b-counter">Pay at Counter</span>
+              {% elif b.invoice_payment_method == 'gcash' %}
+                <span class="badge b-gwait">GCash · Waiting</span>
+              {% else %}
+                <span class="badge b-nomethod">No Method Yet</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td class="date-cell">
+            {% if b.is_invoice_flow %}
+              {{ (b.completed_at or b.created_at).strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ (b.completed_at or b.created_at).strftime('%I:%M %p') }}</span>
+            {% else %}
+              {{ b.date.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ b.time.strftime('%I:%M %p') }}</span>
+            {% endif %}
           </td>
           <td>
-            <div style="font-weight:600;color:#fff;">{{ b.service }}</div>
-            {% if svc_price.val > 0 %}<div class="sub">₱{{ '%.2f'|format(svc_price.val) }}</div>{% endif %}
-          </td>
-          <td class="date-cell">{{ b.date.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ b.time.strftime('%I:%M %p') }}</span></td>
-          <td><span class="badge b-booking">{{ b.status|replace('_',' ')|title }}</span></td>
-          <td>
+            {% if b.is_invoice_flow %}
+              {% if b.invoice_payment_method == 'cash' %}
+                <button class="btn-record-cash" onclick="openRecordCashModal({{ b.id }})">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Record Cash
+                </button>
+              {% else %}
+                <span class="waiting-note">Waiting for customer</span>
+              {% endif %}
+            {% else %}
             <button class="btn-collect btn-collect-bkg"
               data-type="booking"
               data-id="{{ b.id }}"
               data-ref="BKG-{{ '%03d'|format(b.id) }}"
-              data-customer="{{ (b.contact_name or b.customer.fullname)|e }}"
+              data-customer="{{ cust_name|e }}"
               data-mechanic=""
               data-amount="{{ svc_price.val }}"
               data-items='{{ b_items }}'
               onclick="openBillingModal(this)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Collect
             </button>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -240,7 +316,7 @@
       <tbody>
         {% for jo in pending_jos %}
         {% set jo_items %}[{% for item in jo.items %}{"name":{{ item.name|tojson }},"qty":{{ item.quantity }},"price":{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}]{% endset %}
-        <tr>
+        <tr class="pending-row" data-s="{{ jo.customer_name|lower }} jo-{{ '%03d'|format(jo.id) }}">
           <td><span class="ref ref-jo">JO-{{ '%03d'|format(jo.id) }}</span></td>
           <td>
             <div class="name">{{ jo.customer_name }}</div>
@@ -284,7 +360,7 @@
       <tbody>
         {% for o in pending_orders %}
         {% set ord_items %}[{% for item in o.items %}{"name":{{ (item.product.name if item.product else 'Unknown')|tojson }},"qty":{{ item.quantity }},"price":{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}]{% endset %}
-        <tr>
+        <tr class="pending-row" data-s="{{ o.customer.fullname|lower }} ord-{{ '%03d'|format(o.id) }}">
           <td><span class="ref ref-ord">ORD-{{ '%03d'|format(o.id) }}</span></td>
           <td>
             <div class="name">{{ o.customer.fullname }}</div>
@@ -362,17 +438,18 @@
         </tr>
         {% endfor %}
         {% for b in history_bookings %}
-        <tr class="hist-row" data-s="{{ (b.contact_name or b.customer.fullname)|lower }} bkg-{{ '%03d'|format(b.id) }} {{ b.customer.phone }}">
+        {% set used_method = b.invoice_payment_method or b.payment_method %}
+        <tr class="hist-row" data-bid="{{ b.id }}" data-s="{{ (b.contact_name or b.customer.fullname)|lower }} bkg-{{ '%03d'|format(b.id) }} {{ b.customer.phone }}{% if b.invoice_receipt_no %} {{ b.invoice_receipt_no|lower }}{% endif %} inv-{{ '%03d'|format(b.id) }}">
           <td><span class="h-type h-bkg">BKG</span><span class="ref ref-bkg">BKG-{{ '%03d'|format(b.id) }}</span></td>
           <td>
             <div class="name">{{ b.contact_name or b.customer.fullname }}</div>
-            <div class="sub">{{ b.service }}</div>
+            <div class="sub">{{ b.service }}{% if b.extra_item_count %} + {{ b.extra_item_count }} extra item{{ 's' if b.extra_item_count != 1 else '' }}{% endif %}</div>
           </td>
           <td><span class="amount">₱{{ '%.2f'|format(b.total_amount) }}</span></td>
-          <td><span class="badge b-{{ b.payment_method }}">{{ b.payment_method|upper }}</span></td>
-         <td class="date-cell">{{ b.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ b.created_at.strftime('%I:%M %p') }}</span></td>
+          <td><span class="badge b-{{ used_method }}">{{ used_method|upper }}</span></td>
+         <td class="date-cell">{{ b.paid_at_display.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ b.paid_at_display.strftime('%I:%M %p') }}</span></td>
           <td>
-            <button class="btn-receipt" onclick="printBkgReceipt('BKG-{{ '%03d'|format(b.id) }}', '{{ (b.contact_name or b.customer.fullname)|e }}', '{{ b.customer.phone }}', '{{ b.service }}', {{ b.total_amount }}, '{{ b.payment_method }}', '{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}')">
+            <button class="btn-receipt" onclick="openReceiptModal({{ b.id }})">
               Receipt
             </button>
           </td>
@@ -474,6 +551,65 @@
     <button class="btn-done" onclick="doneSuccess()">Done</button>
   </div>
 </div>
+
+<!-- ── RECORD CASH PAYMENT MODAL ── -->
+<div class="bill-overlay" id="rc-overlay" onclick="if(event.target===this)closeRecordCashModal()">
+  <div class="bill-box">
+    <div class="bill-head">
+      <div>
+        <div class="bill-head-title">RECORD CASH PAYMENT</div>
+        <div class="bill-ref" id="rc-subtitle"></div>
+      </div>
+      <button class="bill-close" onclick="closeRecordCashModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="bill-body">
+      <div class="bill-error-banner" id="rc-error-banner" style="display:none;"></div>
+      <div class="bill-items" id="rc-items"></div>
+      <div class="bill-total-row" style="margin-bottom:1rem;">
+        <span class="bill-total-label">Amount Due</span>
+        <span class="bill-total-val" id="rc-total" style="color:var(--red);">₱0.00</span>
+      </div>
+      <div class="bill-section-label">Cash received</div>
+      <input type="number" id="rc-cash-input" class="bill-input" placeholder="0.00" min="0" step="0.01" oninput="updateChangeBox()">
+      <div class="quick-amt-row" id="rc-quick-amounts"></div>
+      <div class="change-box empty" id="rc-change-box">
+        <span class="change-label">Change</span>
+        <span class="change-val" id="rc-change-val">Enter the cash received</span>
+      </div>
+    </div>
+    <div class="bill-foot">
+      <button class="btn-cancel-bill" onclick="closeRecordCashModal()">Cancel</button>
+      <button class="btn-mark-paid" id="rc-confirm-btn" disabled onclick="submitRecordCash()">Confirm ₱0.00 received</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RECEIPT MODAL ── -->
+<div class="bill-overlay" id="receipt-overlay" onclick="if(event.target===this)closeReceiptModal()">
+  <div class="receipt-box">
+    <div id="receipt-print-area">
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="bill-close" onclick="closeReceiptModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="rcpt-logo">MOTO<span>TYRE</span></div>
+      <div class="rcpt-addr">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>0915 269 8366</div>
+      <div class="rcpt-title" id="rcpt-title">OFFICIAL RECEIPT — SERVICE</div>
+      <div id="rcpt-details"></div>
+      <hr class="rcpt-dash">
+      <div id="rcpt-items"></div>
+      <hr class="rcpt-dash">
+      <div class="rcpt-total"><span>TOTAL</span><span id="rcpt-total-val"></span></div>
+      <div id="rcpt-payment"></div>
+      <div class="rcpt-footer">Thank you for choosing MotoTyre!</div>
+    </div>
+    <div class="rcpt-actions">
+      <button class="btn-cancel-bill" onclick="closeReceiptModal()">Close</button>
+      <button class="btn-mark-paid" style="flex:1;" onclick="printReceipt()">Print</button>
+    </div>
+  </div>
+</div>
+
+<div id="bottom-toast" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:.7rem 1.25rem;border-radius:10px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:600;z-index:9500;box-shadow:0 10px 30px rgba(0,0,0,.3);"></div>
 
 <script>
 let _bill = {};
@@ -743,6 +879,179 @@ function printOrdReceipt(ref, customer, phone, amount, method, date, items, deli
   </body></html>`);
   w.document.close();
 }
+
+function filterPending() {
+  const q = document.getElementById('pending-search').value.toLowerCase().trim();
+  document.querySelectorAll('.pending-row').forEach(r => {
+    r.style.display = !q || r.dataset.s.includes(q) ? '' : 'none';
+  });
+}
+
+function showBottomToast(msg) {
+  const el = document.getElementById('bottom-toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+/* ── RECORD CASH ── */
+let _rcBooking = null;
+
+function buildQuickAmounts(due) {
+  const r100 = Math.ceil(due / 100) * 100;
+  const a1 = r100 > due ? r100 : due + 100;
+  return [due, a1, a1 + 100];
+}
+
+async function openRecordCashModal(bid) {
+  const res = await fetch(`/api/booking/${bid}/invoice-data`);
+  const inv = await res.json();
+  _rcBooking = inv;
+
+  document.getElementById('rc-subtitle').textContent = `${inv.ref} · ${inv.customer_name} · Invoice ${inv.inv_ref}`;
+  document.getElementById('rc-items').innerHTML = inv.items.map(i =>
+    `<div class="bill-item-row"><span class="bill-item-name">${i.name}</span><span class="bill-item-price">₱${i.price.toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>`
+  ).join('');
+  document.getElementById('rc-total').textContent = '₱' + inv.total.toLocaleString('en-PH', {minimumFractionDigits:2});
+  document.getElementById('rc-confirm-btn').textContent = `Confirm ₱${inv.total.toLocaleString('en-PH', {minimumFractionDigits:2})} received`;
+  document.getElementById('rc-cash-input').value = '';
+  document.getElementById('rc-error-banner').style.display = 'none';
+
+  const quickWrap = document.getElementById('rc-quick-amounts');
+  quickWrap.innerHTML = buildQuickAmounts(inv.total).map(a =>
+    `<button type="button" class="quick-amt-btn" onclick="document.getElementById('rc-cash-input').value=${a};updateChangeBox();">₱${a.toLocaleString('en-PH',{minimumFractionDigits:2})}</button>`
+  ).join('');
+
+  updateChangeBox();
+  document.getElementById('rc-overlay').classList.add('open');
+  document.addEventListener('keydown', _rcEscHandler);
+}
+
+function closeRecordCashModal() {
+  document.getElementById('rc-overlay').classList.remove('open');
+  document.removeEventListener('keydown', _rcEscHandler);
+}
+function _rcEscHandler(e) { if (e.key === 'Escape') closeRecordCashModal(); }
+
+function updateChangeBox() {
+  if (!_rcBooking) return;
+  const due = _rcBooking.total;
+  const val = document.getElementById('rc-cash-input').value;
+  const box = document.getElementById('rc-change-box');
+  const valEl = document.getElementById('rc-change-val');
+  const btn = document.getElementById('rc-confirm-btn');
+  if (val === '') {
+    box.className = 'change-box empty';
+    valEl.textContent = 'Enter the cash received';
+    btn.disabled = true;
+    return;
+  }
+  const received = parseFloat(val) || 0;
+  if (received < due) {
+    box.className = 'change-box short';
+    valEl.textContent = `Short by ₱${(due - received).toLocaleString('en-PH',{minimumFractionDigits:2})}`;
+    btn.disabled = true;
+  } else {
+    box.className = 'change-box ok';
+    valEl.textContent = `₱${(received - due).toLocaleString('en-PH',{minimumFractionDigits:2})}`;
+    btn.disabled = false;
+  }
+}
+
+async function submitRecordCash() {
+  if (!_rcBooking) return;
+  const btn = document.getElementById('rc-confirm-btn');
+  const received = parseFloat(document.getElementById('rc-cash-input').value) || 0;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = 'Processing…';
+  try {
+    const fd = new FormData();
+    fd.append('cash_received', received);
+    const res = await fetch(`/booking/${_rcBooking.booking_id}/invoice/record-cash`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      const toast = `Payment recorded. ${data.customer_first_name} was notified.`;
+      window.location.href = `?tab=history&highlight=${_rcBooking.booking_id}&toast=${encodeURIComponent(toast)}`;
+    } else {
+      document.getElementById('rc-error-banner').textContent = data.error || 'Could not record this payment.';
+      document.getElementById('rc-error-banner').style.display = 'flex';
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  } catch (e) {
+    document.getElementById('rc-error-banner').textContent = 'Network error. Please try again.';
+    document.getElementById('rc-error-banner').style.display = 'flex';
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+/* ── RECEIPT ── */
+async function openReceiptModal(bid) {
+  const res = await fetch(`/api/booking/${bid}/invoice-data`);
+  const inv = await res.json();
+
+  document.getElementById('rcpt-title').textContent = 'OFFICIAL RECEIPT — SERVICE';
+  const rows = [
+    ['Receipt No.', inv.receipt_no || '—'],
+    ['Reference', inv.ref],
+    ['Invoice', inv.inv_ref],
+    ['Date paid', inv.paid_at || inv.completed_at || '—'],
+    ['Customer', inv.customer_name],
+    ['Phone', inv.customer_phone || '—'],
+    ['Motorcycle', inv.motorcycle || '—'],
+    ['Mechanic', inv.mechanic || '—'],
+  ];
+  document.getElementById('rcpt-details').innerHTML = rows.map(([l, v]) =>
+    `<div class="rcpt-row"><span>${l}</span><span>${v}</span></div>`).join('');
+
+  document.getElementById('rcpt-items').innerHTML = inv.items.map(i =>
+    `<div class="rcpt-row"><span>${i.name}</span><span>₱${i.price.toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>`).join('');
+
+  document.getElementById('rcpt-total-val').textContent = '₱' + inv.total.toLocaleString('en-PH', {minimumFractionDigits:2});
+
+  let paymentHtml = `<div class="rcpt-row"><span>Payment</span><span>${(inv.payment_method || '').toUpperCase()}</span></div>`;
+  if (inv.payment_method === 'cash') {
+    if (inv.cash_received != null) paymentHtml += `<div class="rcpt-row"><span>Cash received</span><span>₱${inv.cash_received.toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>`;
+    if (inv.change != null) paymentHtml += `<div class="rcpt-row"><span>Change</span><span>₱${inv.change.toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>`;
+  } else if (inv.payment_method === 'gcash' && inv.gcash_ref) {
+    paymentHtml += `<div class="rcpt-row"><span>GCash Ref.</span><span>${inv.gcash_ref}</span></div>`;
+  }
+  document.getElementById('rcpt-payment').innerHTML = paymentHtml;
+
+  document.getElementById('receipt-overlay').classList.add('open');
+  document.addEventListener('keydown', _rcptEscHandler);
+}
+
+function closeReceiptModal() {
+  document.getElementById('receipt-overlay').classList.remove('open');
+  document.removeEventListener('keydown', _rcptEscHandler);
+}
+function _rcptEscHandler(e) { if (e.key === 'Escape') closeReceiptModal(); }
+
+function printReceipt() {
+  window.print();
+}
+
+/* ── HIGHLIGHT + AUTO-OPEN RECEIPT AFTER RECORDING CASH ── */
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const hl = params.get('highlight');
+  const toast = params.get('toast');
+  if (toast) showBottomToast(decodeURIComponent(toast));
+  if (hl) {
+    const row = document.querySelector(`.hist-row[data-bid="${hl}"]`);
+    if (row) {
+      row.style.transition = 'background 0.3s';
+      row.style.background = 'rgba(22,163,74,.15)';
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => { row.style.background = ''; }, 2500);
+    }
+    openReceiptModal(parseInt(hl, 10));
+  }
+})();
 </script>
 </body>
 </html>

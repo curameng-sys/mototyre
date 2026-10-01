@@ -255,6 +255,10 @@ class Booking(db.Model):
     invoice_payment_method = db.Column(db.String(10), nullable=True)  # customer's pick on the post-completion invoice: 'cash' or 'gcash'
     invoice_paid     = db.Column(db.Boolean, default=False)   # true once that invoice is actually settled (cash confirmed, or GCash succeeded)
     invoice_paid_at  = db.Column(db.DateTime, nullable=True)
+    invoice_cash_received = db.Column(db.Float, nullable=True)
+    invoice_change        = db.Column(db.Float, nullable=True)
+    invoice_receipt_no    = db.Column(db.String(20), nullable=True)
+    invoice_gcash_ref     = db.Column(db.String(50), nullable=True)
 
 
 class BlockedSlot(db.Model):
@@ -376,6 +380,7 @@ class Quotation(db.Model):
     inspected_by     = db.Column(db.String(100), nullable=True)  # mechanic name from the Inspection tab
     created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    decided_at       = db.Column(db.DateTime, nullable=True)  # when approved/declined — set once, never on conversion
     items            = db.relationship('QuotationItem', backref='quotation', lazy=True, cascade='all, delete-orphan')
 
 
@@ -877,6 +882,13 @@ def admin_dashboard():
         + Order.query.filter(Order.delivery_method == 'pickup', Order.status == 'shipped',
                               Order.walkin_customer_id == None, Order.is_archived == False)
                      .filter(Order.items.any()).count()
+        # Invoices waiting at the counter — the customer told us they're
+        # paying cash, so this is actual work for the cashier, same as the
+        # queries above. Invoices still waiting on the customer to even pick
+        # a method aren't counted here; there's nothing for the shop to do yet.
+        + Booking.query.filter(Booking.status == 'completed', Booking.invoice_paid == False,
+                                Booking.invoice_payment_method == 'cash',
+                                Booking.is_archived == False).count()
     )
 
     _all_bookings_list = Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all()
@@ -1125,14 +1137,16 @@ def complete_booking_invoice(bid):
     return jsonify({'success': True, 'ref': ref, 'total': total, 'customer_first_name': customer_first_name})
 
 
-@admin_app.route('/booking/<int:bid>/invoice/confirm-cash', methods=['POST'])
+@admin_app.route('/booking/<int:bid>/invoice/record-cash', methods=['POST'])
 @login_required
 @require_admin_or_staff
-def confirm_invoice_cash(bid):
+def record_invoice_cash(bid):
     """The counter-side half of a cash invoice — the customer picked 'pay in
-    cash' from their own notification, but that's just a stated intent; the
-    invoice only actually closes once the cashier has the money in hand and
-    clicks this."""
+    cash' from their own notification (or is paying in person), but that's
+    just a stated intent; the invoice only actually closes once the cashier
+    has counted the money and records it here. Used by both the Billing
+    Center's full Record Cash modal (counts change) and the Outbox's quick
+    confirm (passes the exact total, no change)."""
     booking = Booking.query.get_or_404(bid)
     if booking.status != 'completed':
         return jsonify({'success': False, 'error': 'This booking has not been completed yet.'}), 400
@@ -1140,10 +1154,19 @@ def confirm_invoice_cash(bid):
         return jsonify({'success': False, 'error': 'This invoice is already paid.'}), 400
     if booking.invoice_payment_method != 'cash':
         return jsonify({'success': False, 'error': 'The customer has not chosen cash for this invoice.'}), 400
+    try:
+        received = float(request.form.get('cash_received', booking.total_amount))
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid amount.'}), 400
+    if received < booking.total_amount:
+        return jsonify({'success': False, 'error': 'Cash received is less than the amount due.'}), 400
 
     booking.invoice_paid = True
     booking.invoice_paid_at = ph_now()
     booking.payment_method = 'cash'
+    booking.invoice_cash_received = received
+    booking.invoice_change = round(received - booking.total_amount, 2)
+    booking.invoice_receipt_no = f'OR-{booking.id:06d}'
     db.session.commit()
 
     ref = f'BKG-{booking.id:03d}'
@@ -1153,6 +1176,8 @@ def confirm_invoice_cash(bid):
         type='invoice', status='paid', booking_id=booking.id,
     )
     customer = User.query.get(booking.user_id)
+    customer_first_name = (booking.contact_name if booking.walkin_customer_id
+                            else (customer.fullname if customer else 'the customer')).split(' ')[0]
     if not booking.walkin_customer_id and customer and customer.email:
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
@@ -1162,7 +1187,48 @@ def confirm_invoice_cash(bid):
         </div>"""
         _send_gmail(customer.email, 'Payment received — MotoTyre', html)
 
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'ref': ref, 'receipt_no': booking.invoice_receipt_no,
+                     'customer_first_name': customer_first_name, 'change': booking.invoice_change})
+
+
+@admin_app.route('/api/booking/<int:bid>/invoice-data')
+@login_required
+@require_admin_or_staff
+def api_booking_invoice_data(bid):
+    """Single source of truth for a booking's invoice/receipt — feeds the
+    Billing Center's Record Cash modal (pre-payment) and Receipt modal
+    (post-payment) alike, so they can never show different numbers."""
+    booking = Booking.query.get_or_404(bid)
+    q = Quotation.query.filter_by(booking_id=bid).order_by(Quotation.created_at.desc()).first()
+    if q:
+        relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked]
+        items = [{'name': i.name, 'price': i.unit_price} for i in relevant]
+        mechanic = q.inspected_by
+    else:
+        items = [{'name': booking.service, 'price': booking.total_amount}]
+        mechanic = booking.assigned_mechanic_name
+    customer = None if booking.walkin_customer_id else User.query.get(booking.user_id)
+    customer_name = booking.contact_name if booking.walkin_customer_id else (customer.fullname if customer else 'Unknown customer')
+    customer_phone = booking.contact_mobile if booking.walkin_customer_id else (customer.phone if customer else '')
+    # Old-style, pre-invoice-flow completions were billed and paid in one
+    # step on this same page — they have no invoice_payment_method on file,
+    # but booking.payment_method still says how they actually paid.
+    is_paid = booking.status == 'completed' and (booking.invoice_paid or not booking.invoice_payment_method)
+    payment_method_used = booking.invoice_payment_method or (booking.payment_method if is_paid else None)
+    paid_at = booking.invoice_paid_at or (booking.completed_at if is_paid else None)
+    return jsonify({
+        'booking_id': booking.id, 'ref': f'BKG-{booking.id:03d}', 'inv_ref': f'INV-{booking.id:03d}',
+        'receipt_no': booking.invoice_receipt_no or (f'OR-{booking.id:06d}' if is_paid else None),
+        'service': booking.service,
+        'customer_name': customer_name, 'customer_phone': customer_phone or '',
+        'motorcycle': booking.motorcycle_model or '', 'mechanic': mechanic or '',
+        'items': items, 'total': booking.total_amount,
+        'paid': is_paid, 'payment_method': payment_method_used,
+        'cash_received': booking.invoice_cash_received, 'change': booking.invoice_change,
+        'gcash_ref': booking.invoice_gcash_ref,
+        'paid_at': paid_at.strftime('%b %d, %Y %I:%M %p') if paid_at else None,
+        'completed_at': booking.completed_at.strftime('%b %d, %Y %I:%M %p') if booking.completed_at else None,
+    })
 
 
 @admin_app.route('/booking/<int:bid>/assign-mechanic', methods=['POST'])
@@ -3801,12 +3867,98 @@ def save_quotation():
 @login_required
 @require_admin_or_staff
 def quotations_list():
+    """Two separate worlds under one page: booking-linked quotations from
+    Inspection & Estimation (the customer answers remotely, in their own
+    notifications) and walk-in quotations (the customer answers at the
+    counter, so the admin records it here). They use different status
+    vocabularies and never cross over — a booking quotation never becomes a
+    Job Order, a walk-in one never touches a booking."""
+    section = request.args.get('section', 'online')
+    if section not in ('online', 'walkin'):
+        section = 'online'
     status_filter = request.args.get('status', 'all')
-    q = Quotation.query
-    if status_filter != 'all':
-        q = q.filter_by(status=status_filter)
-    quotations = q.order_by(Quotation.created_at.desc()).all()
-    return render_template('quotations_list.html', quotations=quotations, status_filter=status_filter)
+
+    online_base = Quotation.query.filter(Quotation.booking_id.isnot(None))
+    walkin_base = Quotation.query.filter(Quotation.booking_id.is_(None))
+
+    def count(base, values):
+        return base.filter(Quotation.status.in_(values)).count()
+
+    online_counts = {
+        'awaiting_customer': count(online_base, ['awaiting_customer']),
+        'approved':          count(online_base, ['approved']),
+        'declined':          count(online_base, ['declined']),
+    }
+    walkin_counts = {
+        'pending':  count(walkin_base, ['pending']),
+        'approved': count(walkin_base, ['approved', 'accepted']),
+        'declined': count(walkin_base, ['declined', 'rejected']),
+    }
+    online_total = online_base.count()
+    walkin_total = walkin_base.count()
+
+    base = online_base if section == 'online' else walkin_base
+    status_values = {
+        'online': {'awaiting_customer': ['awaiting_customer'], 'approved': ['approved'], 'declined': ['declined']},
+        'walkin': {'pending': ['pending'], 'approved': ['approved', 'accepted'], 'declined': ['declined', 'rejected']},
+    }[section]
+    if status_filter != 'all' and status_filter in status_values:
+        base = base.filter(Quotation.status.in_(status_values[status_filter]))
+    quotations = base.order_by(Quotation.created_at.desc()).all()
+
+    booking_ids = {q.booking_id for q in quotations if q.booking_id}
+    bookings_by_id = {b.id: b for b in Booking.query.filter(Booking.id.in_(booking_ids)).all()} if booking_ids else {}
+    quot_ids = [q.id for q in quotations]
+    jo_by_quot = {}
+    if quot_ids:
+        for jo in JobOrder.query.filter(JobOrder.quotation_id.in_(quot_ids)).all():
+            jo_by_quot[jo.quotation_id] = jo
+    for q in quotations:
+        q.linked_booking = bookings_by_id.get(q.booking_id) if q.booking_id else None
+        q.linked_jo = jo_by_quot.get(q.id)
+
+    return render_template('quotations_list.html', quotations=quotations, section=section,
+                           status_filter=status_filter, online_total=online_total, walkin_total=walkin_total,
+                           online_counts=online_counts, walkin_counts=walkin_counts)
+
+
+@admin_app.route('/quotation/<int:qid>/withdraw', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def withdraw_quotation(qid):
+    """Pulls back a booking quotation before the customer has answered —
+    the booking returns to Inspection & Estimation as if it was never sent,
+    so the shop can redo it (wrong price, missing item, etc.)."""
+    quot = Quotation.query.get_or_404(qid)
+    if not quot.booking_id:
+        return jsonify({'success': False, 'error': 'Only booking quotations can be withdrawn.'}), 400
+    if quot.status != 'awaiting_customer':
+        return jsonify({'success': False, 'error': 'This quotation can no longer be withdrawn.'}), 400
+    booking_id = quot.booking_id
+    QuotationItem.query.filter_by(quotation_id=quot.id).delete()
+    db.session.delete(quot)
+    Notification.query.filter_by(booking_id=booking_id, type='quotation').delete()
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@admin_app.route('/quotation/<int:qid>/approve', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def approve_walkin_quotation(qid):
+    """The counter-side equivalent of the customer's own approve/decline —
+    a walk-in quotation has no app for the customer to answer in, so the
+    admin records what they said in person. Approving doesn't create the Job
+    Order by itself; that's a separate, deliberate 'Convert to JO' step."""
+    quot = Quotation.query.get_or_404(qid)
+    if quot.booking_id:
+        return jsonify({'success': False, 'error': 'Booking-linked quotations are answered by the customer.'}), 400
+    if quot.status != 'pending':
+        return jsonify({'success': False, 'error': 'This quotation has already been decided.'}), 400
+    quot.status = 'approved'
+    quot.decided_at = ph_now()
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @admin_app.route('/quotation/<int:qid>/convert', methods=['POST'])
@@ -3814,8 +3966,11 @@ def quotations_list():
 @require_admin_or_staff
 def convert_quotation(qid):
     quot = Quotation.query.get_or_404(qid)
-    if quot.status != 'pending':
-        flash('Only pending quotations can be converted.', 'danger')
+    if quot.status not in ('approved', 'accepted'):
+        flash('Only approved quotations can be converted.', 'danger')
+        return redirect(url_for('quotations_list'))
+    if JobOrder.query.filter_by(quotation_id=quot.id).first():
+        flash('This quotation already has a Job Order.', 'danger')
         return redirect(url_for('quotations_list'))
     jo = JobOrder(
         quotation_id     = quot.id,
@@ -3838,7 +3993,8 @@ def convert_quotation(qid):
             quantity     = qi.quantity,
             unit_price   = qi.unit_price,
         ))
-    quot.status = 'accepted'
+    # Status stays 'approved' — whether it already has a Job Order is read
+    # fresh from JobOrder.quotation_id, not tracked as a separate status.
     db.session.commit()
     flash(f'Quotation QUO-{quot.id:03d} converted to Job Order JO-{jo.id:03d}.', 'success')
     return redirect(url_for('job_orders'))
@@ -3849,7 +4005,12 @@ def convert_quotation(qid):
 @require_admin_or_staff
 def reject_quotation(qid):
     quot = Quotation.query.get_or_404(qid)
-    quot.status = 'rejected'
+    if quot.booking_id:
+        return jsonify({'success': False, 'error': 'Booking-linked quotations are answered by the customer.'}), 400
+    if quot.status != 'pending':
+        return jsonify({'success': False, 'error': 'This quotation has already been decided.'}), 400
+    quot.status = 'declined'
+    quot.decided_at = ph_now()
     db.session.commit()
     return jsonify({'success': True})
 
@@ -3902,6 +4063,13 @@ def update_job_order_status(jid):
 def payments():
     tab = request.args.get('tab', 'pending')
 
+    # Bookings that went through Inspection & Estimation have a Quotation row
+    # — that's what separates "new" invoice-flow completions (billed via the
+    # Outbox + this page's Record Cash) from "old" on-the-spot completions
+    # (billed entirely here in one step, no separate invoice ever sent).
+    _quoted_booking_ids = {r[0] for r in db.session.query(Quotation.booking_id)
+                           .filter(Quotation.booking_id.isnot(None)).all()}
+
     if tab == 'pending':
         paid_jo_ids = [r[0] for r in db.session.query(Payment.job_order_id).filter(Payment.job_order_id != None).all()]
         pending_jos = JobOrder.query.filter(
@@ -3916,7 +4084,33 @@ def payments():
             Booking.payment_method.in_(['cash', None]),
             Booking.walkin_customer_id == None,
             Booking.is_archived == False
-        ).order_by(Booking.created_at.desc()).all()
+        ).all()
+        for b in pending_bookings:
+            b.is_invoice_flow = False
+
+        # Completed-but-unpaid invoices from the Inspection & Estimation flow
+        # — the customer may or may not have picked a method yet.
+        pending_invoices = Booking.query.filter(
+            Booking.status == 'completed',
+            Booking.invoice_paid == False,
+            Booking.walkin_customer_id == None,
+            Booking.is_archived == False,
+            Booking.id.in_(_quoted_booking_ids) if _quoted_booking_ids else False,
+        ).all()
+        _inv_quotations = {}
+        if pending_invoices:
+            for q in Quotation.query.filter(Quotation.booking_id.in_([b.id for b in pending_invoices])) \
+                                     .order_by(Quotation.created_at.asc()).all():
+                _inv_quotations[q.booking_id] = q
+        for b in pending_invoices:
+            b.is_invoice_flow = True
+            q = _inv_quotations.get(b.id)
+            b.extra_item_count = len([i for i in q.items if not i.locked]) if (q and q.status == 'approved') else 0
+
+        pending_bookings = sorted(
+            pending_bookings + pending_invoices,
+            key=lambda b: b.completed_at or b.created_at, reverse=True,
+        )
 
         # The item has to actually be ready before there's anything to do here —
         # cash still needs the payment collected, GCash (prepaid) just needs to
@@ -3941,15 +4135,48 @@ def payments():
                        .join(Payment, Payment.job_order_id == JobOrder.id)
                        .order_by(Payment.paid_at.desc()).limit(50).all())
 
-        history_bookings = (Booking.query
-                            .filter(Booking.status == 'completed', Booking.total_amount > 0,
-                                    Booking.is_archived == False, Booking.walkin_customer_id == None)
-                            .order_by(Booking.created_at.desc()).limit(50).all())
+        _booking_history_q = Booking.query.filter(
+            Booking.status == 'completed', Booking.total_amount > 0,
+            Booking.is_archived == False, Booking.walkin_customer_id == None)
+        if _quoted_booking_ids:
+            _booking_history_q = _booking_history_q.filter(
+                db.or_(~Booking.id.in_(_quoted_booking_ids), Booking.invoice_paid == True))
+        history_bookings = _booking_history_q.order_by(
+            func.coalesce(Booking.invoice_paid_at, Booking.completed_at, Booking.created_at).desc()
+        ).limit(50).all()
+        _hist_booking_ids = [b.id for b in history_bookings]
+        _hist_quotations = {}
+        if _hist_booking_ids:
+            for q in Quotation.query.filter(Quotation.booking_id.in_(_hist_booking_ids)) \
+                                     .order_by(Quotation.created_at.asc()).all():
+                _hist_quotations[q.booking_id] = q
+        for b in history_bookings:
+            q = _hist_quotations.get(b.id)
+            b.extra_item_count = len([i for i in q.items if not i.locked]) if (q and q.status == 'approved') else 0
+            b.paid_at_display = b.invoice_paid_at or b.completed_at or b.created_at
 
         history_orders = (Order.query
                           .filter(Order.payment_method.in_(['cash', 'gcash']), Order.status == 'completed')
                           .filter(Order.items.any())
                           .order_by(Order.created_at.desc()).limit(50).all())
+
+    _counter_cash_count = Booking.query.filter(
+        Booking.status == 'completed', Booking.invoice_paid == False,
+        Booking.invoice_payment_method == 'cash', Booking.is_archived == False,
+    ).count()
+
+    _booking_history_count_q = Booking.query.filter(
+        Booking.status == 'completed', Booking.total_amount > 0,
+        Booking.is_archived == False, Booking.walkin_customer_id == None)
+    if _quoted_booking_ids:
+        _booking_history_count_q = _booking_history_count_q.filter(
+            db.or_(~Booking.id.in_(_quoted_booking_ids), Booking.invoice_paid == True))
+    _history_count = (
+        JobOrder.query.join(Payment, Payment.job_order_id == JobOrder.id).count()
+        + _booking_history_count_q.count()
+        + Order.query.filter(Order.payment_method.in_(['cash', 'gcash']), Order.status == 'completed')
+                     .filter(Order.items.any()).count()
+    )
 
     return render_template('payments.html',
         tab=tab,
@@ -3959,6 +4186,8 @@ def payments():
         history_jos=history_jos,
         history_bookings=history_bookings,
         history_orders=history_orders,
+        counter_cash_count=_counter_cash_count,
+        history_count=_history_count,
         all_services=Service.query.filter_by(is_active=True).all())
 
 
@@ -4306,7 +4535,20 @@ def walk_in():
     products  = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
     mechanics = Mechanic.query.order_by(Mechanic.name).all()
     services  = Service.query.filter_by(is_active=True).order_by(Service.name).all()
-    return render_template('walkin.html', products=products, mechanics=mechanics, services=services)
+
+    view_quotation = None
+    qid = request.args.get('view_quotation', type=int)
+    if qid:
+        q = Quotation.query.get(qid)
+        if q:
+            view_quotation = {
+                'ref': f'QUO-{q.id:03d}', 'inspected_by': q.inspected_by,
+                'items': [{'name': i.name, 'item_type': i.item_type, 'quantity': i.quantity, 'unit_price': i.unit_price}
+                          for i in q.items],
+                'total': q.total_amount,
+            }
+    return render_template('walkin.html', products=products, mechanics=mechanics, services=services,
+                           view_quotation=view_quotation)
 
 
 @admin_app.route('/walk-in/search-customer')
@@ -4381,11 +4623,12 @@ def walkin_create_job_order():
     mechanic_id    = data.get('mechanic_id')
     services       = data.get('services', [])
     cart           = data.get('cart', [])
+    findings       = data.get('findings', [])
 
     if not customer_name:
         return jsonify({'success': False, 'error': 'Customer name is required'}), 400
-    if not services and not cart:
-        return jsonify({'success': False, 'error': 'No services or products added'}), 400
+    if not services and not cart and not findings:
+        return jsonify({'success': False, 'error': 'No services, products, or findings added'}), 400
 
     mechanic_name = None
     if mechanic_id:
@@ -4401,6 +4644,12 @@ def walkin_create_job_order():
         product = Product.query.get(p.get('product_id')) if p.get('product_id') else None
         items.append({'item_type': 'product', 'name': product.name if product else p.get('name', ''),
                       'quantity': int(p.get('quantity', 1)), 'unit_price': float(p.get('unit_price', 0))})
+    for f in findings:
+        name = clean_str(f.get('name', ''), max_len=150)
+        if not name:
+            continue
+        items.append({'item_type': 'finding', 'name': name,
+                      'quantity': 1, 'unit_price': float(f.get('price', 0))})
 
     total = sum(i['unit_price'] * i['quantity'] for i in items)
 
@@ -5217,6 +5466,11 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN invoice_payment_method VARCHAR(10) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN invoice_paid TINYINT(1) DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN invoice_paid_at DATETIME DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN invoice_cash_received FLOAT DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN invoice_change FLOAT DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN invoice_receipt_no VARCHAR(20) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN invoice_gcash_ref VARCHAR(50) DEFAULT NULL",
+        "ALTER TABLE quotation ADD COLUMN decided_at DATETIME DEFAULT NULL",
     ]:
         try:
             from sqlalchemy import text as _tmig2

@@ -151,7 +151,7 @@
         <div class="rec-item">
           <div class="rec-item-left">
             <div class="rec-item-name">{{ item.name }}</div>
-            <div class="rec-item-type">{{ 'Product' if item.item_type == 'product' else 'Service' }}</div>
+            <div class="rec-item-type">{{ 'Product' if item.item_type == 'product' else ('Inspection Finding' if item.item_type == 'finding' else 'Service') }}</div>
           </div>
           <div class="rec-item-right">
             <div class="rec-item-qty">x{{ item.quantity }}</div>

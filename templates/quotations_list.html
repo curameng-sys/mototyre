@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -7,7 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-    :root{--ink:#f3f4f6;--panel:#111827;--surface:#f9fafb;--card:#ffffff;--red:#d00019;--blue:#2563eb;--green:#16a34a;--muted:#6b7280;--border:#e5e7eb;--text:#111827;--orange:#f59e0b;}
+    :root{--ink:#f3f4f6;--panel:#111827;--surface:#f9fafb;--card:#ffffff;--red:#d00019;--blue:#2563eb;--green:#16a34a;--muted:#6b7280;--border:#e5e7eb;--text:#111827;--orange:#f59e0b;--purple:#7c3aed;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     body{min-height:100vh;font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);}
 
@@ -24,10 +24,29 @@
 
     .main{padding:1.5rem 2rem;max-width:1200px;margin:0 auto;}
     .page-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;color:#111827;margin-bottom:.25rem;}
-    .page-sub{font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;}
+    .page-sub{font-size:.85rem;color:var(--muted);margin-bottom:1.25rem;}
+
+    /* SECTION CARDS */
+    .section-cards{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:1rem;}
+    .section-card{display:flex;align-items:center;gap:.85rem;padding:1rem 1.15rem;border-radius:12px;background:var(--card);border:2px solid var(--border);cursor:pointer;transition:all .15s;text-decoration:none;color:inherit;}
+    .section-card:hover{border-color:#9ca3af;}
+    .section-card.active.online{border-color:var(--purple);background:rgba(124,58,237,.04);}
+    .section-card.active.walkin{border-color:var(--orange);background:rgba(245,158,11,.05);}
+    .sc-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .sc-icon.online{background:rgba(124,58,237,.12);color:var(--purple);}
+    .sc-icon.walkin{background:rgba(245,158,11,.14);color:var(--orange);}
+    .sc-title{font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;letter-spacing:.04em;color:#111827;}
+    .sc-sub{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
+    .sc-count{margin-left:auto;font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.03em;color:#111827;flex-shrink:0;}
+
+    /* INFO BOX */
+    .info-box{display:flex;gap:.6rem;align-items:flex-start;padding:.75rem 1rem;border-radius:10px;font-size:.8rem;line-height:1.5;margin-bottom:1.25rem;}
+    .info-box.online{background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);color:#5b21b6;}
+    .info-box.walkin{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);color:#92400e;}
+    .info-box svg{flex-shrink:0;margin-top:.1rem;}
 
     /* FILTER TABS */
-    .filter-tabs{display:flex;gap:.4rem;margin-bottom:1.25rem;}
+    .filter-tabs{display:flex;gap:.4rem;margin-bottom:1.25rem;flex-wrap:wrap;}
     .ftab{padding:.4rem 1rem;border-radius:8px;background:#fff;border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:all .15s;}
     .ftab:hover{border-color:#9ca3af;color:#374151;}
     .ftab.active{background:var(--red);border-color:var(--red);color:#fff;}
@@ -45,17 +64,23 @@
     .cust-name{font-weight:600;color:#111827;}
     .moto-info{font-size:.75rem;color:var(--muted);margin-top:.1rem;}
 
+    .tag{display:inline-block;font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;padding:.2rem .55rem;border-radius:6px;white-space:nowrap;}
+    .tag-bkg{background:rgba(124,58,237,.12);color:var(--purple);border:1px solid rgba(124,58,237,.25);}
+    .tag-jo{background:rgba(245,158,11,.14);color:#b45309;border:1px solid rgba(245,158,11,.3);}
+    .link-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem;}
+
     /* STATUS BADGES */
     .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;border-radius:99px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
-    .badge-pending{background:rgba(245,158,11,.12);color:#b45309;border:1px solid rgba(245,158,11,.3);}
-    .badge-accepted{background:rgba(22,163,74,.1);color:#15803d;border:1px solid rgba(22,163,74,.25);}
-    .badge-rejected{background:rgba(107,114,128,.1);color:#4b5563;border:1px solid rgba(107,114,128,.25);}
+    .badge-pending,.badge-awaiting_customer{background:rgba(245,158,11,.12);color:#b45309;border:1px solid rgba(245,158,11,.3);}
+    .badge-accepted,.badge-approved{background:rgba(22,163,74,.1);color:#15803d;border:1px solid rgba(22,163,74,.25);}
+    .badge-rejected,.badge-declined{background:rgba(107,114,128,.1);color:#4b5563;border:1px solid rgba(107,114,128,.25);}
+    .status-sub{font-size:.7rem;color:var(--muted);margin-top:.25rem;}
 
     .amount{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.03em;color:#111827;}
     .date-cell{font-size:.78rem;color:var(--muted);}
 
     /* ACTIONS */
-    .action-btns{display:flex;gap:.4rem;flex-wrap:wrap;}
+    .action-btns{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;}
     .act-btn{padding:.3rem .65rem;border-radius:6px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;}
     .act-view{background:#f9fafb;border-color:var(--border);color:var(--muted);}
     .act-view:hover{border-color:#9ca3af;color:#374151;}
@@ -63,6 +88,11 @@
     .act-convert:hover{background:rgba(22,163,74,.15);color:#166534;}
     .act-reject{background:rgba(208,0,25,.06);border-color:rgba(208,0,25,.2);color:#b91c1c;}
     .act-reject:hover{background:rgba(208,0,25,.12);color:#991b1b;}
+    .act-approve{background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.25);color:#15803d;}
+    .act-approve:hover{background:rgba(22,163,74,.15);color:#166534;}
+    .act-withdraw{background:#f9fafb;border-color:var(--border);color:var(--muted);}
+    .act-withdraw:hover{border-color:#9ca3af;color:#374151;}
+    .needs-jo-note{font-size:.68rem;color:#b45309;font-weight:700;font-family:'Syne',sans-serif;text-transform:uppercase;letter-spacing:.04em;}
 
     /* EXPANDED ITEMS */
     .items-row{display:none;}
@@ -73,6 +103,7 @@
     .item-icon{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;}
     .item-icon.product{background:rgba(208,0,25,.1);color:var(--red);}
     .item-icon.service{background:rgba(37,99,235,.1);color:#2563eb;}
+    .item-icon.finding{background:rgba(217,119,6,.12);color:#d97706;}
     .item-name{flex:1;color:#374151;}
     .item-qty{color:var(--muted);font-size:.75rem;}
     .item-price{font-family:'Syne',sans-serif;font-weight:700;color:#111827;}
@@ -85,8 +116,8 @@
     /* FLASH MESSAGES */
     .flash-wrap{margin-bottom:1rem;}
     .flash{padding:.75rem 1rem;border-radius:8px;font-size:.85rem;margin-bottom:.4rem;}
-    .flash-success{background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.3);color:#86efac;}
-    .flash-danger{background:rgba(208,0,25,.12);border:1px solid rgba(208,0,25,.25);color:#fca5a5;}
+    .flash-success{background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.3);color:#15803d;}
+    .flash-danger{background:rgba(208,0,25,.12);border:1px solid rgba(208,0,25,.25);color:#b91c1c;}
 
     /* TOAST */
     .toast-wrap{position:fixed;top:70px;right:1.25rem;z-index:2000;display:flex;flex-direction:column;gap:.4rem;}
@@ -98,6 +129,7 @@
       .main{padding:1.25rem 1rem;}
       .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
       table{min-width:760px;}
+      .section-cards{grid-template-columns:1fr;}
     }
     @media (max-width: 600px) {
       .topbar{padding:0 1rem;flex-wrap:wrap;height:auto;min-height:56px;padding-top:.5rem;padding-bottom:.5rem;gap:.5rem;}
@@ -115,14 +147,16 @@
 <header class="topbar">
   <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">Quotations</span></div>
   <div class="topbar-right">
-    <a href="{{ url_for('quotation_new') }}" class="btn-action btn-primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Quotation</a>
+    {% if section == 'walkin' %}
+    <a href="{{ url_for('quotation_new') }}" class="btn-action btn-primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Walk-In Quotation</a>
+    {% endif %}
     <a href="{{ url_for('admin_dashboard') }}" class="btn-action btn-secondary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Dashboard</a>
   </div>
 </header>
 
 <div class="main">
   <div class="page-title">Quotations</div>
-  <div class="page-sub">Manage customer estimates. Convert to Job Order when customer confirms.</div>
+  <div class="page-sub">Manage customer estimates for online bookings and walk-in customers.</div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
@@ -134,12 +168,48 @@
   {% endif %}
   {% endwith %}
 
-  <div class="filter-tabs">
-    <a href="?status=all"      class="ftab {% if status_filter=='all'      %}active{% endif %}">All</a>
-    <a href="?status=pending"  class="ftab {% if status_filter=='pending'  %}active{% endif %}">Pending</a>
-    <a href="?status=accepted" class="ftab {% if status_filter=='accepted' %}active{% endif %}">Accepted</a>
-    <a href="?status=rejected" class="ftab {% if status_filter=='rejected' %}active{% endif %}">Rejected</a>
+  <div class="section-cards">
+    <a href="?section=online" class="section-card online {% if section=='online' %}active online{% endif %}">
+      <div class="sc-icon online"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <div>
+        <div class="sc-title">ONLINE BOOKINGS</div>
+        <div class="sc-sub">Customer answers in the app</div>
+      </div>
+      <div class="sc-count">{{ online_total }}</div>
+    </a>
+    <a href="?section=walkin" class="section-card walkin {% if section=='walkin' %}active walkin{% endif %}">
+      <div class="sc-icon walkin"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
+      <div>
+        <div class="sc-title">WALK-IN</div>
+        <div class="sc-sub">Customer answers at the counter</div>
+      </div>
+      <div class="sc-count">{{ walkin_total }}</div>
+    </a>
   </div>
+
+  {% if section == 'online' %}
+  <div class="info-box online">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div>Created from <strong>Manage Bookings → Create quotation</strong>. The customer approves or declines in their notifications, and the booking moves to <strong>In Progress</strong>. These never become Job Orders.</div>
+  </div>
+  <div class="filter-tabs">
+    <a href="?section=online&status=all"                class="ftab {% if status_filter=='all' %}active{% endif %}">All</a>
+    <a href="?section=online&status=awaiting_customer"   class="ftab {% if status_filter=='awaiting_customer' %}active{% endif %}">Awaiting Customer ({{ online_counts.awaiting_customer }})</a>
+    <a href="?section=online&status=approved"            class="ftab {% if status_filter=='approved' %}active{% endif %}">Approved ({{ online_counts.approved }})</a>
+    <a href="?section=online&status=declined"            class="ftab {% if status_filter=='declined' %}active{% endif %}">Declined ({{ online_counts.declined }})</a>
+  </div>
+  {% else %}
+  <div class="info-box walkin">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div>Created on the <strong>Walk-In</strong> page. The customer answers at the counter, so you record their answer here. Approved quotations become a <strong>Job Order</strong>.</div>
+  </div>
+  <div class="filter-tabs">
+    <a href="?section=walkin&status=all"      class="ftab {% if status_filter=='all' %}active{% endif %}">All</a>
+    <a href="?section=walkin&status=pending"  class="ftab {% if status_filter=='pending' %}active{% endif %}">Pending ({{ walkin_counts.pending }})</a>
+    <a href="?section=walkin&status=approved" class="ftab {% if status_filter=='approved' %}active{% endif %}">Approved ({{ walkin_counts.approved }})</a>
+    <a href="?section=walkin&status=declined" class="ftab {% if status_filter=='declined' %}active{% endif %}">Declined ({{ walkin_counts.declined }})</a>
+  </div>
+  {% endif %}
 
   <div class="table-wrap">
     {% if quotations %}
@@ -147,6 +217,7 @@
       <thead>
         <tr>
           <th>Ref #</th>
+          <th>{{ 'Booking' if section == 'online' else 'Job Order' }}</th>
           <th>Customer</th>
           <th>Items</th>
           <th>Total</th>
@@ -159,6 +230,22 @@
         {% for q in quotations %}
         <tr>
           <td><span class="ref-code">QUO-{{ '%03d'|format(q.id) }}</span></td>
+          <td>
+            {% if section == 'online' %}
+              {% if q.linked_booking %}
+              <span class="tag tag-bkg">BKG-{{ '%03d'|format(q.linked_booking.id) }}</span>
+              <div class="link-sub">{{ q.linked_booking.service }}</div>
+              {% else %}
+              <span style="font-size:.75rem;color:var(--muted);">—</span>
+              {% endif %}
+            {% else %}
+              {% if q.linked_jo %}
+              <span class="tag tag-jo">🔗 JO-{{ '%03d'|format(q.linked_jo.id) }}</span>
+              {% else %}
+              <span style="font-size:.75rem;color:var(--muted);">Not yet</span>
+              {% endif %}
+            {% endif %}
+          </td>
           <td>
             <div class="cust-name">{{ q.customer_name }}</div>
             {% if q.motorcycle_model or q.motorcycle_plate %}
@@ -177,32 +264,53 @@
           <td><span class="amount">₱{{ '%.2f'|format(q.total_amount) }}</span></td>
           <td>
             <span class="badge badge-{{ q.status }}">
-              {% if q.status == 'pending' %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{% elif q.status == 'accepted' %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{% else %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{% endif %}
-              {{ q.status|capitalize }}
+              {% if q.status in ('pending', 'awaiting_customer') %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{% elif q.status in ('accepted', 'approved') %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{% else %}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{% endif %}
+              {% if q.status == 'awaiting_customer' %}Awaiting Customer{% elif q.status in ('accepted', 'approved') %}Approved{% elif q.status in ('rejected', 'declined') %}Declined{% else %}Pending{% endif %}
             </span>
+            {% if section == 'online' %}
+              {% if q.status == 'awaiting_customer' %}
+              <div class="status-sub" data-expires="{{ (q.created_at.timestamp() + 172800)|int }}">Expires in —</div>
+              {% elif q.status in ('approved', 'declined') %}
+              <div class="status-sub">Booking → In Progress{% if q.decided_at %}<br>{{ q.decided_at.strftime('%b %d, %Y %I:%M %p') }}{% endif %}</div>
+              {% endif %}
+            {% endif %}
           </td>
           <td class="date-cell">{{ q.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.72rem;">{{ q.created_at.strftime('%I:%M %p') }}</span></td>
           <td>
             <div class="action-btns">
-              {% if q.status == 'pending' %}
-              <form method="POST" action="{{ url_for('convert_quotation', qid=q.id) }}" onsubmit="return confirm('Convert QUO-{{ '%03d'|format(q.id) }} to a Job Order? Customer has confirmed.');">
-                <button type="submit" class="act-btn act-convert"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> Convert to JO</button>
-              </form>
-              <button class="act-btn act-reject" onclick="rejectQuote({{ q.id }}, this)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject</button>
+              {% if section == 'online' %}
+                {% if q.status == 'awaiting_customer' %}
+                <button class="act-btn act-withdraw" onclick="withdrawQuote({{ q.id }}, this)">Withdraw</button>
+                {% else %}
+                <span style="font-size:.75rem;color:var(--muted);">—</span>
+                {% endif %}
               {% else %}
-              <span style="font-size:.75rem;color:var(--muted);">—</span>
+                {% if q.status == 'pending' %}
+                <button class="act-btn act-approve" onclick="approveQuote({{ q.id }}, this)">Mark approved</button>
+                <button class="act-btn act-reject" onclick="rejectQuote({{ q.id }}, this)">Mark declined</button>
+                {% elif q.status in ('approved', 'accepted') and not q.linked_jo %}
+                <div style="display:flex;flex-direction:column;gap:.25rem;align-items:flex-start;">
+                  <span class="needs-jo-note">Needs Job Order</span>
+                  <form method="POST" action="{{ url_for('convert_quotation', qid=q.id) }}" onsubmit="return confirm('Convert QUO-{{ '%03d'|format(q.id) }} to a Job Order?');">
+                    <button type="submit" class="act-btn act-convert"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> Convert to JO</button>
+                  </form>
+                </div>
+                {% else %}
+                <span style="font-size:.75rem;color:var(--muted);">—</span>
+                {% endif %}
               {% endif %}
             </div>
           </td>
         </tr>
         <tr class="items-row" id="items-row-{{ q.id }}">
-          <td colspan="7">
+          <td colspan="8">
             <div class="items-inner">
               {% if q.notes %}<div style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;padding:.5rem .75rem;background:#fff;border-radius:6px;border-left:3px solid var(--border);">{{ q.notes }}</div>{% endif %}
+              {% if q.inspected_by %}<div style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;">Inspected by <strong>{{ q.inspected_by }}</strong></div>{% endif %}
               {% for item in q.items %}
               <div class="item-line">
                 <div class="item-icon {{ item.item_type }}">
-                  {% if item.item_type == 'product' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>{% else %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>{% endif %}
+                  {% if item.item_type == 'product' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>{% elif item.item_type == 'finding' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>{% else %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>{% endif %}
                 </div>
                 <span class="item-name">{{ item.name }}</span>
                 <span class="item-qty">x{{ item.quantity }}</span>
@@ -218,7 +326,11 @@
     {% else %}
     <div class="empty-state">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      <p>No quotations found.<br><a href="{{ url_for('quotation_new') }}" style="color:var(--red);">Create the first one</a>.</p>
+      {% if section == 'online' %}
+      <p>No online booking quotations found.<br>Create one from <strong>Manage Bookings → Create quotation</strong>.</p>
+      {% else %}
+      <p>No walk-in quotations found.<br><a href="{{ url_for('quotation_new') }}" style="color:var(--red);">Create the first one</a>.</p>
+      {% endif %}
     </div>
     {% endif %}
   </div>
@@ -232,14 +344,35 @@
     row.classList.toggle('open');
   }
 
+  async function approveQuote(id, btn) {
+    btn.disabled = true;
+    try {
+      const res  = await fetch(`/quotation/${id}/approve`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) { toast('Quotation approved.'); setTimeout(() => location.reload(), 800); }
+      else { toast(data.error || 'Failed to approve.', 'error'); btn.disabled = false; }
+    } catch { toast('Network error.', 'error'); btn.disabled = false; }
+  }
+
   async function rejectQuote(id, btn) {
-    if (!confirm('Mark QUO-' + String(id).padStart(3,'0') + ' as rejected?')) return;
+    if (!confirm('Mark QUO-' + String(id).padStart(3,'0') + ' as declined?')) return;
     btn.disabled = true;
     try {
       const res  = await fetch(`/quotation/${id}/reject`, { method: 'POST' });
       const data = await res.json();
-      if (data.success) { toast('Quotation rejected.'); setTimeout(() => location.reload(), 800); }
-      else { toast('Failed to reject.', 'error'); btn.disabled = false; }
+      if (data.success) { toast('Quotation declined.'); setTimeout(() => location.reload(), 800); }
+      else { toast(data.error || 'Failed to decline.', 'error'); btn.disabled = false; }
+    } catch { toast('Network error.', 'error'); btn.disabled = false; }
+  }
+
+  async function withdrawQuote(id, btn) {
+    if (!confirm('Withdraw QUO-' + String(id).padStart(3,'0') + '? The booking returns to Inspection & Estimation.')) return;
+    btn.disabled = true;
+    try {
+      const res  = await fetch(`/quotation/${id}/withdraw`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) { toast('Quotation withdrawn.'); setTimeout(() => location.reload(), 800); }
+      else { toast(data.error || 'Failed to withdraw.', 'error'); btn.disabled = false; }
     } catch { toast('Network error.', 'error'); btn.disabled = false; }
   }
 
@@ -251,6 +384,20 @@
     w.appendChild(t);
     setTimeout(() => t.remove(), 3000);
   }
+
+  // "Expires in" countdown — 48h from when the quotation was sent.
+  function renderExpiries() {
+    const now = Date.now() / 1000;
+    document.querySelectorAll('[data-expires]').forEach(el => {
+      const diff = parseInt(el.dataset.expires, 10) - now;
+      if (diff <= 0) { el.textContent = 'Expired'; return; }
+      const h = Math.floor(diff / 3600);
+      const d = Math.floor(h / 24);
+      el.textContent = d > 0 ? `Expires in ${d}d ${h % 24}h` : `Expires in ${h}h`;
+    });
+  }
+  renderExpiries();
+  setInterval(renderExpiries, 60000);
 </script>
 </body>
 </html>

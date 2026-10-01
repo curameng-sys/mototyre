@@ -492,6 +492,10 @@ class Booking(db.Model):
     invoice_payment_method = db.Column(db.String(10), nullable=True)  # customer's pick on the post-completion invoice: 'cash' or 'gcash'
     invoice_paid     = db.Column(db.Boolean, default=False)   # true once that invoice is actually settled (cash confirmed, or GCash succeeded)
     invoice_paid_at  = db.Column(db.DateTime, nullable=True)
+    invoice_cash_received = db.Column(db.Float, nullable=True)
+    invoice_change        = db.Column(db.Float, nullable=True)
+    invoice_receipt_no    = db.Column(db.String(20), nullable=True)
+    invoice_gcash_ref     = db.Column(db.String(50), nullable=True)
 
 
 class BlockedSlot(db.Model):
@@ -681,6 +685,7 @@ class Quotation(db.Model):
     inspected_by     = db.Column(db.String(100), nullable=True)
     created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    decided_at       = db.Column(db.DateTime, nullable=True)
     items            = db.relationship('QuotationItem', backref='quotation', lazy=True)
 
 
@@ -2256,6 +2261,7 @@ def quotation_decision(qid):
         return jsonify({'success': False, 'error': 'Invalid decision.'}), 400
 
     q.status = 'approved' if decision == 'approve' else 'declined'
+    q.decided_at = ph_now()
     # The customer's own answer is what the shop was waiting on — no need to
     # also wait for an admin to click "No extra work" before work starts.
     if booking.status == 'inspection':
@@ -2408,7 +2414,7 @@ def get_notifications():
     return_ids = {n.return_request_id for n in notifs if n.return_request_id}
     claims = {r.id: r for r in ReturnRequest.query.filter(ReturnRequest.id.in_(return_ids)).all()} if return_ids else {}
 
-    quotation_booking_ids = {n.booking_id for n in notifs if n.type == 'quotation' and n.booking_id}
+    quotation_booking_ids = {n.booking_id for n in notifs if n.type in ('quotation', 'invoice') and n.booking_id}
     quotations_by_booking = {}
     bookings_by_id = {}
     if quotation_booking_ids:
@@ -2434,6 +2440,9 @@ def get_notifications():
         if n.type == 'quotation':
             q = quotations_by_booking.get(n.booking_id)
             return bool(q and q.status == 'awaiting_customer')
+        if n.type == 'invoice' and n.status == 'completed':
+            b = bookings_by_id.get(n.booking_id)
+            return bool(b and not b.invoice_paid)
         return not n.is_read
 
     def quotation_payload(n):
@@ -2464,18 +2473,42 @@ def get_notifications():
             message = f'You declined the extra work. Only {service} (₱{original:,.2f}).'
         return payload, title, message
 
+    def invoice_payload(n):
+        b = bookings_by_id.get(n.booking_id)
+        if not b:
+            return None
+        q = quotations_by_booking.get(n.booking_id)
+        if q:
+            relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked]
+            items = [{'name': i.name, 'price': i.unit_price} for i in relevant]
+            decision = q.status
+        else:
+            items = [{'name': b.service, 'price': b.total_amount}]
+            decision = None
+        status = 'paid' if b.invoice_paid else ('cash_pending' if b.invoice_payment_method == 'cash' else 'unpaid')
+        return {
+            'booking_id': b.id, 'ref': f'BKG-{b.id:03d}', 'inv_ref': f'INV-{b.id:03d}',
+            'service': b.service, 'total': b.total_amount, 'items': items, 'decision': decision,
+            'status': status, 'payment_method': b.invoice_payment_method,
+            'paid_at': b.invoice_paid_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if b.invoice_paid_at else None,
+            'sent_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
+        }
+
     results = []
     for n in notifs:
         title, message = n.title, n.message
         quotation = None
+        invoice = None
         if n.type == 'quotation':
             quotation, title, message = quotation_payload(n)
+        elif n.type == 'invoice':
+            invoice = invoice_payload(n)
         results.append({
             'id': n.id, 'title': title, 'message': message,
             'type': n.type, 'status': n.status, 'is_read': n.is_read,
             'priority': n.priority, 'booking_id': n.booking_id,
             'return_request_id': n.return_request_id, 'still_pending': still_pending(n),
-            'quotation': quotation,
+            'quotation': quotation, 'invoice': invoice,
             'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
         })
     return jsonify(results)
@@ -2597,6 +2630,51 @@ def pay_booking(bid):
     return redirect(url_for('customer_dashboard'))
 
 
+@app.route('/booking/<int:bid>/invoice/choose-method', methods=['POST'])
+@login_required
+def choose_invoice_payment_method(bid):
+    """The customer picking 'cash' on a post-completion invoice — just
+    records the intent so the counter knows what to expect; the invoice
+    itself only becomes paid once the cashier confirms the cash in hand."""
+    booking = Booking.query.filter_by(id=bid, user_id=current_user.id).first_or_404()
+    if booking.status != 'completed':
+        return jsonify({'success': False, 'error': 'This booking has not been completed yet.'}), 400
+    if booking.invoice_paid:
+        return jsonify({'success': False, 'error': 'This invoice is already paid.'}), 400
+    method = request.form.get('method')
+    if method != 'cash':
+        return jsonify({'success': False, 'error': 'Invalid payment method.'}), 400
+    booking.invoice_payment_method = 'cash'
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/pay/invoice/<int:bid>')
+@login_required
+def pay_invoice(bid):
+    """GCash checkout for a post-completion invoice — a separate path from
+    /pay/booking, which is only for the pending->confirmed deposit."""
+    booking = Booking.query.get_or_404(bid)
+    if booking.user_id != current_user.id:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+    if booking.status != 'completed':
+        flash('This booking has not been completed yet.', 'warning')
+        return redirect(url_for('customer_dashboard'))
+    if booking.invoice_paid:
+        flash('This invoice is already paid.', 'warning')
+        return redirect(url_for('customer_dashboard'))
+    description = f"MotoTyre Invoice INV-{booking.id:03d}: {booking.service}"
+    result = create_gcash_payment(amount=booking.total_amount, description=description,
+                                   booking_id=booking.id, origin=request.host_url)
+    if result["success"]:
+        booking.invoice_payment_method = 'gcash'
+        db.session.commit()
+        return redirect(result["checkout_url"])
+    flash('Could not create payment. Please try again.', 'danger')
+    return redirect(url_for('customer_dashboard'))
+
+
 @app.route('/payment/success')
 def payment_success():
     order_id    = request.args.get('order_id', '').strip()
@@ -2645,6 +2723,30 @@ def payment_success():
                 booking.status = 'confirmed'
                 db.session.commit()
                 flash('GCash payment successful — booking confirmed!', 'success')
+            elif booking and booking.status == 'completed' and not booking.invoice_paid:
+                booking.invoice_paid = True
+                booking.invoice_paid_at = ph_now()
+                booking.invoice_payment_method = 'gcash'
+                booking.payment_method = 'gcash'
+                booking.invoice_receipt_no = f'OR-{booking.id:06d}'
+                booking.invoice_gcash_ref = checkout_id or None
+                db.session.commit()
+                flash('GCash payment successful — invoice paid!', 'success')
+                ref = f'BKG-{booking.id:03d}'
+                send_notification(
+                    booking.user_id, 'Payment received ✅',
+                    f'You paid ₱{booking.total_amount:,.2f} by GCash for {booking.service} ({ref}). Thank you for choosing MotoTyre!',
+                    type='invoice', status='paid', booking_id=booking.id,
+                )
+                user = User.query.get(booking.user_id)
+                if user and user.email:
+                    html = f"""
+                    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+                      <p>Hi {user.fullname},</p>
+                      <p>You paid ₱{booking.total_amount:,.2f} by GCash for {booking.service} ({ref}). Thank you for choosing MotoTyre North Caloocan!</p>
+                      <p>— MotoTyre North Caloocan</p>
+                    </div>"""
+                    _send_gmail(user.email, 'Payment received — MotoTyre', html)
         except Exception as e:
             print(f"[payment/success] booking error: {e}")
 

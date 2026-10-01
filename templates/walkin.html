@@ -306,6 +306,13 @@
     }
     .ci-icon.product { background: rgba(208,0,25,0.12); color: var(--red); border: 1px solid rgba(208,0,25,0.2); }
     .ci-icon.service { background: rgba(37,99,235,0.12); color: #93c5fd; border: 1px solid rgba(37,99,235,0.2); }
+    .ci-icon.finding { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .cart-group-label {
+      font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted); margin: 0.65rem 0 0.3rem;
+    }
+    .cart-group-label:first-child { margin-top: 0; }
     .ci-name { font-family: 'Syne', sans-serif; font-size: 0.76rem; font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ci-unit { font-size: 0.68rem; color: var(--muted); margin-top: 0.1rem; }
     .ci-info { flex: 1; min-width: 0; }
@@ -524,6 +531,10 @@
         <button class="tab-btn" onclick="switchTab('services', this)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Services
         </button>
+        <button class="tab-btn" onclick="switchTab('inspection', this)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspection
+          <span id="inspection-tab-count" style="display:none;background:var(--red);color:#fff;font-size:0.6rem;font-weight:700;border-radius:10px;padding:0.05rem 0.4rem;">0</span>
+        </button>
       </div>
       <div id="product-controls">
         <div class="search-row">
@@ -588,6 +599,25 @@
       </div>
       <div class="service-list" id="service-list-container">
         <div style="padding:1rem;color:#6b7280;font-size:0.85rem;">Loading services...</div>
+      </div>
+    </div>
+
+    <!-- INSPECTION -->
+    <div class="services-panel" id="inspection-panel" style="display:none;">
+      <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:#92400e;">
+        Type what the mechanic found and the price to fix it. Add any parts needed from Products and extra labor from Services.
+      </div>
+      <div class="custom-svc-box">
+        <label>What did the mechanic find?</label>
+        <textarea class="svc-inp" id="finding-desc" placeholder="e.g. Steering bearings are worn and loose" style="width:100%;resize:vertical;min-height:56px;margin-bottom:0.6rem;font-family:'DM Sans',sans-serif;"></textarea>
+        <div class="custom-svc-row">
+          <input class="svc-inp" id="finding-price" type="number" placeholder="Price" style="max-width:120px;">
+          <button class="btn-add-svc" onclick="addFinding()">+ Add to Job Order</button>
+        </div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Findings added</div>
+      <div class="service-list" id="findings-list-container">
+        <div style="padding:1rem;color:#6b7280;font-size:0.85rem;">No findings yet.</div>
       </div>
     </div>
   </div>
@@ -676,6 +706,7 @@
       <div class="totals">
         <div class="total-row"><span>Services</span><span id="svc-total">&#8369;0.00</span></div>
         <div class="total-row"><span>Parts</span><span id="parts-total">&#8369;0.00</span></div>
+        <div class="total-row"><span>Inspection</span><span id="insp-total">&#8369;0.00</span></div>
         <div class="total-row grand"><span>Total</span><span id="grand-total">&#8369;0.00</span></div>
       </div>
       <button class="btn-save" id="btn-save" onclick="openConfirm()">
@@ -729,6 +760,10 @@
         <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> Products</div>
         <div id="confirm-products-list" style="font-size:0.8rem;color:#d1d5db;"></div>
       </div>
+      <div id="confirm-findings-box" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
+        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspection Findings</div>
+        <div id="confirm-findings-list" style="font-size:0.8rem;color:#d1d5db;"></div>
+      </div>
       <div id="confirm-note" style="font-size:0.75rem;color:var(--muted);text-align:center;background:rgba(255,255,255,0.02);border-radius:8px;padding:0.5rem;"></div>
     </div>
     <div class="modal-foot">
@@ -757,6 +792,21 @@
   </div>
 </div>
 
+<!-- VIEW QUOTATION MODAL (read-only) -->
+<div class="modal-overlay" id="view-quot-modal">
+  <div class="modal-box" style="width:420px;">
+    <div class="modal-head" style="background:rgba(124,58,237,0.08); border-bottom:1px solid var(--border);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--purple);flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <h3 id="view-quot-title">Quotation</h3>
+      <button onclick="closeModal('view-quot-modal')" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="view-quot-body" style="padding-top:0.5rem;"></div>
+    <div class="modal-foot">
+      <button class="btn-modal-ok green" onclick="closeModal('view-quot-modal')" style="flex:1;">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toasts"></div>
 
 <script>
@@ -765,6 +815,22 @@ let activeCat  = 'all';
 let walkinCustomerId = null;
 let _svcPrices       = {};
 let _phoneTimer     = null;
+const VIEW_QUOTATION = {{ (view_quotation or none)|tojson }};
+
+if (VIEW_QUOTATION) {
+  const labelFor = t => t === 'finding' ? 'Inspection finding' : t === 'product' ? 'Part' : 'Service';
+  document.getElementById('view-quot-title').textContent = VIEW_QUOTATION.ref;
+  const itemsHtml = VIEW_QUOTATION.items.map(i => `
+    <div class="r-item"><span>${i.name} <span style="color:#9ca3af;">(${labelFor(i.item_type)})</span></span><span>₱${i.unit_price.toFixed(2)}</span></div>
+  `).join('');
+  document.getElementById('view-quot-body').innerHTML = `
+    ${VIEW_QUOTATION.inspected_by ? `<div class="r-row"><span>Inspected by</span><span>${VIEW_QUOTATION.inspected_by}</span></div><hr class="r-divider">` : ''}
+    <div class="r-section-label">Items (read-only)</div>
+    ${itemsHtml}
+    <hr class="r-divider">
+    <div class="r-row bold"><span>Total</span><span>₱${VIEW_QUOTATION.total.toFixed(2)}</span></div>`;
+  document.getElementById('view-quot-modal').classList.add('open');
+}
 
 // ── SERVICES ──────────────────────────────────────────────────────────────────
 
@@ -803,10 +869,10 @@ tick(); setInterval(tick, 1000);
 function switchTab(tab, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const isP = tab === 'products';
-  document.getElementById('products-panel').style.display   = isP ? 'flex' : 'none';
-  document.getElementById('services-panel').style.display   = isP ? 'none' : 'block';
-  document.getElementById('product-controls').style.display = isP ? 'block' : 'none';
+  document.getElementById('products-panel').style.display   = tab === 'products'   ? 'flex'  : 'none';
+  document.getElementById('services-panel').style.display   = tab === 'services'   ? 'block' : 'none';
+  document.getElementById('inspection-panel').style.display = tab === 'inspection' ? 'block' : 'none';
+  document.getElementById('product-controls').style.display = tab === 'products'   ? 'block' : 'none';
 }
 
 // ── CATEGORY FILTER ───────────────────────────────────────────────────────────
@@ -965,6 +1031,41 @@ function addCustomService() {
   renderCart(); toast(`${name} added`);
 }
 
+function addFinding() {
+  const desc  = document.getElementById('finding-desc').value.trim();
+  const price = parseFloat(document.getElementById('finding-price').value);
+  if (!desc) { toast('Describe what the mechanic found', true); return; }
+  if (isNaN(price) || price < 0) { toast('Enter a valid price', true); return; }
+  cart.push({ type: 'finding', id: null, name: desc, price, qty: 1, maxQty: 1 });
+  document.getElementById('finding-desc').value  = '';
+  document.getElementById('finding-price').value = '';
+  renderCart(); toast('Finding added');
+}
+
+function renderFindingsList() {
+  const findings = cart.map((c, i) => ({ ...c, idx: i })).filter(c => c.type === 'finding');
+  const wrap  = document.getElementById('findings-list-container');
+  const badge = document.getElementById('inspection-tab-count');
+  if (!wrap) return;
+  if (!findings.length) {
+    wrap.innerHTML = '<div style="padding:1rem;color:#6b7280;font-size:0.85rem;">No findings yet.</div>';
+    if (badge) badge.style.display = 'none';
+    return;
+  }
+  wrap.innerHTML = findings.map((f, n) => `
+    <div class="service-item" style="cursor:default;">
+      <div style="display:flex;gap:0.55rem;align-items:flex-start;flex:1;min-width:0;">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--muted);font-size:0.78rem;flex-shrink:0;">${n + 1}.</span>
+        <span class="svc-name" style="white-space:normal;">${f.name}</span>
+      </div>
+      <div class="svc-right">
+        <span class="svc-price">&#8369;${f.price.toFixed(2)}</span>
+        <button class="btn-del" onclick="removeItem(${f.idx})" style="width:22px;height:22px;border:1px solid var(--border);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+    </div>`).join('');
+  if (badge) { badge.style.display = 'inline-block'; badge.textContent = findings.length; }
+}
+
 function changeQty(i, d) {
   cart[i].qty += d;
   if (cart[i].qty <= 0) cart.splice(i, 1);
@@ -975,46 +1076,73 @@ function changeQty(i, d) {
 function removeItem(i) { cart.splice(i, 1); renderCart(); }
 function clearCart()   { cart.length = 0; renderCart(); }
 
+const ICON_SVG = {
+  product: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+  service: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+  finding: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+};
+const GROUP_DEFS = [
+  { type: 'service', label: 'Services' },
+  { type: 'product', label: 'Parts' },
+  { type: 'finding', label: 'Inspection Findings' },
+];
+
 function renderCart() {
   const wrap = document.getElementById('cart-items');
   wrap.innerHTML = '';
   if (!cart.length) {
     wrap.innerHTML = `<div class="cart-empty" id="cart-empty"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><p>Cart empty.<br>Add products or services.</p></div>`;
     document.getElementById('cart-count').textContent = '0';
+    renderFindingsList();
     updateTotals(); return;
   }
-  cart.forEach((item, i) => {
-    const div = document.createElement('div');
-    div.className = 'cart-item';
-    div.innerHTML = `
-      <div class="ci-icon ${item.type}">
-        ${item.type === 'product' ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'}
-      </div>
-      <div class="ci-info">
-        <div class="ci-name">${item.name}</div>
-        <div class="ci-unit">${item.price > 0 ? '₱' + item.price.toFixed(2) + ' each' : 'Free'}</div>
-      </div>
-      <div class="ci-controls">
-        <button class="qty-btn" onclick="changeQty(${i},-1)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <span class="qty-val">${item.qty}</span>
-        <button class="qty-btn" onclick="changeQty(${i},1)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <button class="btn-del" onclick="removeItem(${i})"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
-      </div>`;
-    wrap.appendChild(div);
+  GROUP_DEFS.forEach(g => {
+    const items = cart.map((c, i) => ({ ...c, idx: i })).filter(c => c.type === g.type);
+    if (!items.length) return;
+    const h = document.createElement('div');
+    h.className = 'cart-group-label';
+    h.textContent = g.label;
+    wrap.appendChild(h);
+    items.forEach(item => {
+      const isFinding = item.type === 'finding';
+      const div = document.createElement('div');
+      div.className = 'cart-item';
+      div.innerHTML = `
+        <div class="ci-icon ${item.type}">${ICON_SVG[item.type]}</div>
+        <div class="ci-info">
+          <div class="ci-name">${item.name}</div>
+          ${!isFinding ? `<div class="ci-unit">${item.price > 0 ? '₱' + item.price.toFixed(2) + ' each' : 'Free'}</div>` : ''}
+        </div>
+        <div class="ci-controls">
+          ${isFinding ? `
+            <span class="svc-price" style="font-size:0.85rem;">₱${item.price.toFixed(2)}</span>
+            <button class="btn-del" onclick="removeItem(${item.idx})"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
+          ` : `
+            <button class="qty-btn" onclick="changeQty(${item.idx},-1)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <span class="qty-val">${item.qty}</span>
+            <button class="qty-btn" onclick="changeQty(${item.idx},1)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <button class="btn-del" onclick="removeItem(${item.idx})"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
+          `}
+        </div>`;
+      wrap.appendChild(div);
+    });
   });
   const total = cart.reduce((s, c) => s + c.qty, 0);
   document.getElementById('cart-count').textContent = total;
   const mb = document.getElementById('mob-cart-badge');
   if (mb) { mb.textContent = total; mb.classList.toggle('show', total > 0); }
+  renderFindingsList();
   updateTotals();
 }
 
 function updateTotals() {
-  const svcT  = cart.filter(c => c.type === 'service').reduce((s, c) => s + c.price * c.qty, 0);
+  const svcT   = cart.filter(c => c.type === 'service').reduce((s, c) => s + c.price * c.qty, 0);
   const partsT = cart.filter(c => c.type === 'product').reduce((s, c) => s + c.price * c.qty, 0);
+  const inspT  = cart.filter(c => c.type === 'finding').reduce((s, c) => s + c.price * c.qty, 0);
   document.getElementById('svc-total').textContent   = `₱${svcT.toFixed(2)}`;
   document.getElementById('parts-total').textContent = `₱${partsT.toFixed(2)}`;
-  document.getElementById('grand-total').textContent = `₱${(svcT + partsT).toFixed(2)}`;
+  document.getElementById('insp-total').textContent  = `₱${inspT.toFixed(2)}`;
+  document.getElementById('grand-total').textContent = `₱${(svcT + partsT + inspT).toFixed(2)}`;
 }
 
 // ── CONFIRM MODAL ─────────────────────────────────────────────────────────────
@@ -1039,14 +1167,18 @@ function openConfirm() {
   document.getElementById('confirm-status').textContent   = 'Pending';
   document.getElementById('confirm-items').textContent    = cart.reduce((s,c)=>s+c.qty,0) + ' item(s)';
 
-  const svcs = cart.filter(c => c.type === 'service');
-  const prods = cart.filter(c => c.type === 'product');
-  const svcsBox  = document.getElementById('confirm-services-box');
-  const prodsBox = document.getElementById('confirm-products-box');
-  svcsBox.style.display  = svcs.length  ? 'block' : 'none';
-  prodsBox.style.display = prods.length ? 'block' : 'none';
-  if (svcs.length)  document.getElementById('confirm-services-list').innerHTML = svcs.map(s  => `• ${s.name} x${s.qty} — ₱${(s.price*s.qty).toFixed(2)}`).join('<br>');
-  if (prods.length) document.getElementById('confirm-products-list').innerHTML = prods.map(p => `• ${p.name} x${p.qty} — ₱${(p.price*p.qty).toFixed(2)}`).join('<br>');
+  const svcs     = cart.filter(c => c.type === 'service');
+  const prods    = cart.filter(c => c.type === 'product');
+  const findings = cart.filter(c => c.type === 'finding');
+  const svcsBox     = document.getElementById('confirm-services-box');
+  const prodsBox    = document.getElementById('confirm-products-box');
+  const findingsBox = document.getElementById('confirm-findings-box');
+  svcsBox.style.display     = svcs.length     ? 'block' : 'none';
+  prodsBox.style.display    = prods.length    ? 'block' : 'none';
+  findingsBox.style.display = findings.length ? 'block' : 'none';
+  if (svcs.length)     document.getElementById('confirm-services-list').innerHTML = svcs.map(s  => `• ${s.name} x${s.qty} — ₱${(s.price*s.qty).toFixed(2)}`).join('<br>');
+  if (prods.length)    document.getElementById('confirm-products-list').innerHTML = prods.map(p => `• ${p.name} x${p.qty} — ₱${(p.price*p.qty).toFixed(2)}`).join('<br>');
+  if (findings.length) document.getElementById('confirm-findings-list').innerHTML = findings.map(f => `• ${f.name} — ₱${f.price.toFixed(2)}`).join('<br>');
 
   const noteEl = document.getElementById('confirm-note');
   const okBtn  = document.getElementById('confirm-ok-btn');
@@ -1080,6 +1212,9 @@ async function processTransaction() {
     })),
     services: cart.filter(c => c.type === 'service').map(c => ({
       name: c.name, price: c.price, qty: c.qty
+    })),
+    findings: cart.filter(c => c.type === 'finding').map(c => ({
+      name: c.name, price: c.price
     }))
   };
 
