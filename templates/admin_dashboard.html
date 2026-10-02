@@ -4122,8 +4122,12 @@
     if (r.item_returned_at) entries.push({ time: r.item_returned_at, text: 'Item marked received at the shop.' });
     if (r.redo_date) entries.push({ time: r.decided_at, text: `Back job scheduled for ${r.redo_date}${r.redo_time ? ' ' + r.redo_time : ''}${r.redo_mechanic_name ? ' with ' + r.redo_mechanic_name : ''}.` });
     if (r.resolved_at) entries.push({ time: r.resolved_at, text: 'Marked resolved — remedy carried out.' });
-    if (r.replacement_shipped_at) entries.push({ time: r.replacement_shipped_at, text: `Replacement shipped — on its way to ${r.delivery_address || 'the customer'}.` });
-    if (r.replacement_arrived_at) entries.push({ time: r.replacement_arrived_at, text: `Replacement has arrived at ${r.delivery_address || 'the customer'}.` });
+    if (r.replacement_shipped_at) entries.push({ time: r.replacement_shipped_at, text: r.is_pickup
+      ? 'Replacement ready — waiting for the customer to pick it up at the shop.'
+      : `Replacement shipped — on its way to ${r.delivery_address || 'the customer'}.` });
+    if (r.replacement_arrived_at) entries.push({ time: r.replacement_arrived_at, text: r.is_pickup
+      ? 'Customer picked up the replacement at the shop.'
+      : `Replacement has arrived at ${r.delivery_address || 'the customer'}.` });
     if (r.completed_at) entries.push({ time: r.completed_at, text: 'Completed — replacement confirmed received.' });
     if (r.cancelled_at) entries.push({ time: r.cancelled_at, text: 'Cancelled by the customer.' });
     return entries.sort((a, b) => new Date(a.time || 0) - new Date(b.time || 0));
@@ -4357,7 +4361,7 @@
       } else if (r.resolution === 'replacement') {
         actionsHTML = `
           <div style="margin-top:0.9rem;">
-            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">Mark Replacement Shipped</button>
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">${r.is_pickup ? 'Mark Ready for Pickup' : 'Mark Replacement Shipped'}</button>
           </div>`;
       } else {
         actionsHTML = `
@@ -4366,7 +4370,11 @@
           </div>`;
       }
     } else if (r.status === 'replacement_shipped') {
-      actionsHTML = `
+      actionsHTML = r.is_pickup ? `
+        <div style="margin-top:0.9rem;">
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Ready and waiting at the shop for the customer to pick up.</div>
+          <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="markReturnArrived(${r.id})">Mark Picked Up</button>
+        </div>` : `
         <div style="margin-top:0.9rem;">
           <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">On its way to ${r.delivery_address || 'the customer'}.</div>
           <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="markReturnArrived(${r.id})">Mark Arrived</button>
@@ -4377,7 +4385,7 @@
       // where the customer never touches the app.
       actionsHTML = `
         <div style="margin-top:0.9rem;">
-          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Delivered to ${r.delivery_address || 'the customer'} — waiting on them to confirm receipt, or close it out here yourself.</div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">${r.is_pickup ? 'Picked up at the shop' : `Delivered to ${r.delivery_address || 'the customer'}`} — waiting on them to confirm receipt, or close it out here yourself.</div>
           <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="completeReturn(${r.id})">Mark Handed Over</button>
         </div>`;
     }
@@ -4408,7 +4416,10 @@
       ${lineItemsHTML}
       ${mechanicHTML}
 
-      ${r.delivery_address ? `
+      ${r.is_pickup ? `
+      ${sectionHead('Delivery')}
+      <div style="font-size:0.85rem;color:var(--text);">Shop pickup — no address on file, customer will collect it in person.</div>
+      ` : r.delivery_address ? `
       ${sectionHead('Delivery Address')}
       <div style="font-size:0.85rem;color:var(--text);">${r.delivery_address}</div>
       ` : ''}
@@ -5674,15 +5685,22 @@ document.addEventListener('submit', function(e) {
       } else {
         row.classList.remove('booking-done', 'booking-cancelled');
         // Narrow the select options to reflect the new valid transitions
+        // Mirrors update_order_status()'s own allowed_next maps in admin_app.py
+        // exactly — "Completed" is deliberately never offered here for a pickup
+        // order (gcash included): the backend hard-rejects it with "completed
+        // on the Billing page", so listing it here would just be a selectable
+        // option that always errors on save.
         const ORDER_NEXT = {
           gcashpickup: {
-            confirmed: [['confirmed','Confirmed'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
-            shipped:   [['shipped','Ready to Pick Up'],['completed','Completed'],['cancelled','Cancelled']]
+            confirmed:  [['confirmed','Confirmed'],['processing','Processing'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
+            processing: [['processing','Processing'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
+            shipped:    [['shipped','Ready to Pick Up'],['cancelled','Cancelled']]
           },
           cashpickup: {
             pending:          [['pending','Pending'],['confirmed','Confirm Order'],['cancelled','Cancelled']],
             awaiting_payment: [['awaiting_payment','Awaiting Payment'],['confirmed','Confirm Order'],['cancelled','Cancelled']],
-            confirmed:        [['confirmed','Confirmed'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
+            confirmed:        [['confirmed','Confirmed'],['processing','Processing'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
+            processing:       [['processing','Processing'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
             shipped:          [['shipped','Ready to Pick Up'],['cancelled','Cancelled']]
           }
         };

@@ -24,7 +24,8 @@ from service_duration import (
     format_duration, minutes_to_ampm, minutes_to_hhmm, hhmm_to_minutes, slot_statuses,
     all_slot_starts, SHOP_CLOSE_MIN, compute_finish_minutes, mechanic_overlaps,
     mechanic_origin_note, validate_booking, MAX_BOOKINGS_PER_DAY, SLOT_GRANULARITY_MIN,
-    add_working_days, MULTIDAY_MIN_DAYS, MULTIDAY_MAX_DAYS,
+    add_working_days, MULTIDAY_MIN_DAYS, MULTIDAY_MAX_DAYS, day_fully_booked,
+    MECHANIC_TURNOVER_MIN,
 )
 from gmail_helper import send_gmail_html as _send_gmail, send_otp_email
 from delivery_zones import (DELIVERY_ZONE_BARANGAYS, DELIVERY_ZONE_CITIES,
@@ -121,6 +122,9 @@ FACEBOOK_PAGE_URL = os.getenv("FACEBOOK_PAGE_URL", "https://www.facebook.com/sha
 SHOP_PHONE         = os.getenv("SHOP_PHONE", "+639152698366")
 SHOP_PHONE_DISPLAY = os.getenv("SHOP_PHONE_DISPLAY", "0915 269 8366")
 SHOP_HOURS         = os.getenv("SHOP_HOURS", "Open daily, 8:00 AM to 6:30 PM")
+SHOP_MAPS_URL      = os.getenv("SHOP_MAPS_URL",
+    "https://www.google.com/maps/search/?api=1&query=" +
+    quote("Saranay Rd, Brgy. 171 Bagumbong, Caloocan City, Metro Manila 1421"))
 
 # Hosts the customer is allowed to be redirected back to after payment.
 # ALLOWED_ORIGIN lets a deployed host (Render, etc.) add itself without a
@@ -657,6 +661,7 @@ class ReturnRequest(db.Model):
     delivery_barangay = db.Column(db.String(50))
     delivery_street    = db.Column(db.String(255))
     delivery_zip       = db.Column(db.String(10))
+    is_pickup          = db.Column(db.Boolean, default=False)  # customer picks the replacement up at the shop — no delivery_* fields set
 
 
 class ReturnRequestItem(db.Model):
@@ -1182,6 +1187,7 @@ def customer_dashboard():
     for b in bookings:
         b.return_window = return_window_info('service', b.completed_at) if b.status == 'completed' else None
         b.open_claim = open_by_booking.get(b.id)
+        b.redo_stats = _booking_redo_stats(b) if b.return_window else None
         q = _quotations_by_booking.get(b.id)
         b.quotation_data = None if not q else {
             'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
@@ -1198,7 +1204,8 @@ def customer_dashboard():
                            delivery_zone_cities=DELIVERY_ZONE_CITIES,
                            default_delivery_eligible=default_delivery_eligible,
                            shop_phone=SHOP_PHONE, shop_phone_display=SHOP_PHONE_DISPLAY,
-                           shop_hours=SHOP_HOURS, facebook_page_url=FACEBOOK_PAGE_URL)
+                           shop_hours=SHOP_HOURS, facebook_page_url=FACEBOOK_PAGE_URL,
+                           shop_maps_url=SHOP_MAPS_URL)
 
 
 # A replacement only spends one of the two chances once the shop actually
@@ -1236,6 +1243,57 @@ def _order_replacement_stats(order):
         'approved_count': approved_count,
         'limit': REPLACEMENT_LIMIT_PER_ORDER,
         'limit_reached': approved_count >= REPLACEMENT_LIMIT_PER_ORDER,
+        'has_pending': has_pending,
+        'requests': requests_shown,
+    }
+
+
+# A back job counts the moment the shop approves it — it's already committed
+# at that point, whether or not the mechanic has actually redone the work
+# yet — same "approved locks it in" rule the product-replacement limit above
+# uses. The warranty itself never restarts from a back job (see
+# return_window_info, always measured from the ORIGINAL booking.completed_at).
+BACKJOB_COUNTS_STATUSES = {'approved', 'resolved'}
+BACKJOB_LIMIT_PER_BOOKING = 2
+
+
+def _booking_redo_stats(booking):
+    """How many of this booking's 2 lifetime back jobs have been used —
+    counted from EVERY redo_service request ever filed against this booking,
+    not just the currently-open one, so resolving an old claim never quietly
+    resets the count."""
+    reqs = ReturnRequest.query.filter(
+        ReturnRequest.booking_id == booking.id,
+        or_(ReturnRequest.desired_outcome == 'redo_service', ReturnRequest.resolution == 'redo_service'),
+    ).order_by(ReturnRequest.created_at.asc()).all()
+
+    used_count = sum(1 for r in reqs if r.status in BACKJOB_COUNTS_STATUSES)
+    # "In progress" for a back job means requested but not yet actually
+    # redone — that covers 'approved' too (the shop said yes, the mechanic
+    # hasn't done it yet), not just the earlier review statuses, so this is
+    # every status create_return_request's own existing_open check treats as
+    # still-open.
+    has_pending = any(r.status in OPEN_RETURN_STATUSES for r in reqs)
+
+    requests_shown = []
+    n = 0
+    for r in reqs:
+        if r.status not in BACKJOB_COUNTS_STATUSES:
+            continue
+        n += 1
+        done = r.status == 'resolved'
+        when = r.resolved_at if done else r.decided_at
+        requests_shown.append({
+            'n': n, 'ref': f'RMA-{r.id:03d}',
+            'date': when.strftime('%B %d, %Y') if when else None,
+            'mechanic': r.redo_mechanic_name,
+            'done': done,
+        })
+
+    return {
+        'used_count': used_count,
+        'limit': BACKJOB_LIMIT_PER_BOOKING,
+        'limit_reached': used_count >= BACKJOB_LIMIT_PER_BOOKING,
         'has_pending': has_pending,
         'requests': requests_shown,
     }
@@ -1426,6 +1484,13 @@ def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_mi
         mechanic_status=mechanic_status, mechanic_intervals=mechanic_intervals,
     )
     if not ok:
+        # The customer only ever names a mechanic the picker just showed as
+        # free — if validate_booking rejects it anyway for being on-duty but
+        # double-booked, someone else grabbed that exact window in the gap
+        # between the picker loading and this confirm, not because the
+        # customer picked something stale on their own.
+        if mechanic and mechanic_status == 'available' and error and error.startswith(f'{mechanic.name} is already booked between'):
+            return None, 'This mechanic was just booked by someone else. Please choose another mechanic or time.'
         return None, error
     return mechanic, None
 
@@ -1848,6 +1913,40 @@ def customer_profile():
     return redirect(url_for('customer_dashboard'))
 
 
+@app.route('/profile/default-address', methods=['POST'])
+@login_required
+def update_default_delivery_address():
+    """A structured delivery address, separate from the free-text Address on
+    the Account Information card above — this one has a real city/barangay,
+    so it's the one 'Use my default address' in a replacement claim can
+    actually check against the delivery zone. Saving here is what makes that
+    option usable instead of permanently showing 'No default address saved
+    yet' until the customer happens to tick 'save as default' mid-claim."""
+    name   = clean_str(request.form.get('name', ''), max_len=100)
+    mobile = clean_str(request.form.get('mobile', ''), max_len=13)
+    city   = clean_str(request.form.get('city', ''), max_len=50)
+    brgy   = clean_str(request.form.get('barangay', ''), max_len=50)
+    street = clean_str(request.form.get('street', ''), max_len=255)
+    zip_   = clean_str(request.form.get('zip', ''), max_len=10)
+
+    if not (name and mobile and street):
+        flash('Please fill in your full name, mobile number, and street address.', 'danger')
+    elif not is_valid_phone(mobile):
+        flash('Invalid mobile number.', 'danger')
+    elif not is_in_delivery_zone(city, brgy):
+        flash('That address is outside our delivery area (North Caloocan or Northern Quezon City), so it was not saved.', 'danger')
+    else:
+        current_user.default_delivery_name     = name
+        current_user.default_delivery_mobile   = mobile
+        current_user.default_delivery_city     = city
+        current_user.default_delivery_barangay = brgy
+        current_user.default_delivery_street   = street
+        current_user.default_delivery_zip      = zip_
+        db.session.commit()
+        flash('Default delivery address saved.', 'success')
+    return redirect(url_for('customer_dashboard'))
+
+
 @app.route('/profile/upload-pic', methods=['POST'])
 @login_required
 def upload_profile_pic():
@@ -1904,7 +2003,7 @@ def return_window_info(kind, reference_dt):
     expired = now > deadline
     days_left = max((deadline.date() - now.date()).days, 0)
     if expired:
-        label = 'Return window closed' if kind == 'product' else 'Warranty expired'
+        label = 'Return window closed' if kind == 'product' else 'Warranty ended'
     else:
         unit = 'day' if days_left == 1 else 'days'
         label = f"{days_left} {unit} left to return" if kind == 'product' else f"{days_left} {unit} of warranty left"
@@ -2047,6 +2146,9 @@ def create_return_request():
             ).first()
             if existing_open:
                 errors.append(f'Request RMA-{existing_open.id:03d} is already open for this appointment.')
+            elif desired_outcome == 'redo_service' and _booking_redo_stats(booking)['limit_reached']:
+                errors.append(f'This service has already used both of its {BACKJOB_LIMIT_PER_BOOKING} back jobs. '
+                               f'Please talk to the shop so we can sort it out together.')
             if desired_outcome == 'redo_service' and request.form.get('requested_mechanic') == 'yes' and booking.assigned_mechanic_name:
                 requested_mechanic_name = booking.assigned_mechanic_name
         what = booking.service if booking else 'your appointment'
@@ -2056,8 +2158,11 @@ def create_return_request():
     # skipped (and never required) for anything else.
     address_mode = clean_str(request.form.get('address_mode', ''), max_len=10)
     delivery_fields = {}
+    is_pickup = False
     if kind == 'product' and desired_outcome == 'replacement':
-        if address_mode == 'default':
+        if address_mode == 'pickup':
+            is_pickup = True
+        elif address_mode == 'default':
             u = current_user
             if not (u.default_delivery_city and is_in_delivery_zone(u.default_delivery_city, u.default_delivery_barangay)):
                 errors.append('Your saved default address is outside the delivery area — please use a different address for this claim.')
@@ -2086,7 +2191,7 @@ def create_return_request():
                     'delivery_barangay': d_brgy, 'delivery_street': d_street, 'delivery_zip': d_zip,
                 }
         else:
-            errors.append('Please choose a delivery address for the replacement.')
+            errors.append('Please choose shop pickup or a delivery address for the replacement.')
 
     if errors:
         return jsonify({'success': False, 'errors': errors}), 400
@@ -2114,7 +2219,7 @@ def create_return_request():
         reasons=','.join(reasons), other_reason_text=other_text if 'other' in reasons else None,
         desired_outcome=desired_outcome, requested_mechanic_name=requested_mechanic_name,
         requested_refund_amount=requested_refund_amount, photos=','.join(saved_filenames) or None,
-        **delivery_fields,
+        is_pickup=is_pickup, **delivery_fields,
     )
     db.session.add(rr)
     db.session.flush()
@@ -2291,17 +2396,31 @@ def quotation_decision(qid):
 @app.route('/api/booked-slots')
 @login_required
 def get_booked_slots():
+    """Which days in this month are 'Fully Booked' for the calendar — every
+    fixed slot that day already has a job covering it for each mechanic on
+    duty (see service_duration.day_fully_booked()), not just 'has a booking'."""
     year  = request.args.get('year',  type=int)
     month = request.args.get('month', type=int)
     if not year or not month:
-        return jsonify({})
+        return jsonify({'fully_booked': []})
     start    = date(year, month, 1)
     end      = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
     bookings = Booking.query.filter(Booking.date >= start, Booking.date < end, Booking.status != 'cancelled').all()
-    result   = {}
+    by_date = {}
     for b in bookings:
-        result.setdefault(b.date.strftime('%Y-%m-%d'), []).append(b.time.strftime('%H:%M'))
-    return jsonify(result)
+        b_start = b.time.hour * 60 + b.time.minute
+        b_end   = compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)
+        by_date.setdefault(b.date, []).append((b_start, b_end))
+
+    fully_booked = []
+    d = start
+    while d < end:
+        intervals = list(by_date.get(d, [])) + _gather_blocked_intervals(d)
+        _, _, on_duty = get_on_duty_mechanics(d)
+        if day_fully_booked(intervals, len(on_duty)):
+            fully_booked.append(d.strftime('%Y-%m-%d'))
+        d += timedelta(days=1)
+    return jsonify({'fully_booked': fully_booked})
 
 
 @app.route('/api/time-slots')
@@ -2380,11 +2499,13 @@ def get_mechanics():
     # are still returned (marked busy) rather than dropped, so the customer sees
     # the whole crew and why someone isn't available right now.
     busy_names = set()
+    busy_until = {}  # name -> minute-of-day they're free again, chained across back-to-back jobs
     if date_str and time_str:
         try:
             slot_date  = datetime.strptime(date_str, '%Y-%m-%d').date()
             start_min  = hhmm_to_minutes(time_str)
             end_min    = compute_finish_minutes(start_min, duration)
+            by_name = {}
             for b in Booking.query.filter(
                 Booking.assigned_mechanic_name.isnot(None),
                 Booking.date == slot_date,
@@ -2392,15 +2513,37 @@ def get_mechanics():
             ).all():
                 b_start = b.time.hour * 60 + b.time.minute
                 b_end   = compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)
-                if mechanic_overlaps(start_min, end_min, b_start, b_end):
-                    busy_names.add(b.assigned_mechanic_name)
+                by_name.setdefault(b.assigned_mechanic_name, []).append((b_start, b_end))
+
+            for name, intervals in by_name.items():
+                blocking = [be for bs, be in intervals if mechanic_overlaps(start_min, end_min, bs, be)]
+                if not blocking:
+                    continue
+                busy_names.add(name)
+                # Chain forward through back-to-back jobs (within the turnover
+                # gap) so "done at" reflects when they're ACTUALLY free again,
+                # not just the end of the one job that happened to overlap.
+                free_at = max(blocking)
+                changed = True
+                while changed:
+                    changed = False
+                    for bs, be in intervals:
+                        if bs - MECHANIC_TURNOVER_MIN <= free_at < be:
+                            free_at = be
+                            changed = True
+                busy_until[name] = free_at
         except ValueError:
             pass
 
-    return jsonify([
-        {'id': m.id, 'name': m.name, 'specialization': m.specialization, 'busy': m.name in busy_names}
-        for m in mechanics
-    ])
+    result = []
+    for m in mechanics:
+        row = {'id': m.id, 'name': m.name, 'specialization': m.specialization, 'busy': m.name in busy_names}
+        if m.name in busy_until:
+            free_at = busy_until[m.name]
+            row['busy_until_closing'] = free_at >= SHOP_CLOSE_MIN
+            row['busy_until_label']   = minutes_to_ampm(min(free_at, SHOP_CLOSE_MIN))
+        result.append(row)
+    return jsonify(result)
 
 
 # ── Notification routes ───────────────────────────────────────────────────────

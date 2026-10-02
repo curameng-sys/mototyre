@@ -312,7 +312,8 @@
     .cal-day.past { background: var(--bg-subtle); border-color: var(--line-1); color: #9ca3af !important; font-weight: 600; }
     .cal-day.fully-booked { background: #fecaca; border-color: #f87171; color: #7f1d1d !important; font-weight: 700; }
     .cal-day.selected { background: var(--brand-red) !important; border-color: var(--brand-red) !important; color: #ffffff !important; font-weight: 800; }
-    .time-slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 0.55rem; min-height: 60px; margin-bottom: 0.25rem; }
+    .time-slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 0.55rem; align-content: start; min-height: 60px; max-height: 300px; overflow-y: auto; margin-bottom: 0.25rem; padding-right: 0.2rem; scroll-behavior: smooth; }
+    .amber-notice { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.78rem; line-height: 1.4; margin-bottom: 0.6rem; }
     .time-slot-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; background: var(--bg-subtle); border: 1.5px solid var(--line-2); color: var(--fg-1); border-radius: 10px; padding: 0.65rem 0.4rem; min-height: 58px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
     .time-slot-btn:hover:not(:disabled) { background: var(--brand-red-soft); border-color: var(--brand-red-border); color: var(--brand-red); }
     .time-slot-btn .slot-start { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.05rem; line-height: 1.1; }
@@ -355,6 +356,7 @@
     .mech-picker-item.selected { background: rgba(208,0,25,0.1); border-color: var(--brand-red); }
     .mech-picker-item.selected .mp-name { color: var(--brand-red); }
     .mech-picker-item.recommended .mp-note { color: var(--green); font-weight: 600; }
+    .mech-picker-item .mp-note.mp-free { color: var(--green); font-weight: 600; }
     .mech-picker-item.disabled { opacity: 0.45; cursor: not-allowed; }
     .mech-picker-item.disabled .mp-note { color: #b91c1c; }
 
@@ -889,6 +891,7 @@
 
           <!-- Time slots -->
           <div class="appt-section-label" style="margin-top:0;">Available Time Slots</div>
+          <div id="time-clear-notice" class="amber-notice" style="display:none;"></div>
           <div id="time-slots-wrap" class="time-slots-grid">
             <div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Choose your services first — time slots are built around how long the work actually takes.</div>
           </div>
@@ -953,6 +956,7 @@
 
             <!-- "I'll Choose" panel — recommendation + full on-duty picker -->
             <div id="mech-panel-choose" style="display:none;">
+              <div id="mech-unselect-notice" class="amber-notice" style="display:none;"></div>
               <div id="mech-recommend-panel" class="mech-recommend-panel" style="display:none;"></div>
               <div id="mech-picker-list" style="display:flex;flex-direction:column;gap:0.4rem;max-height:260px;overflow-y:auto;padding-right:0.2rem;"></div>
 
@@ -1269,6 +1273,40 @@
           </form>
         </div>
       </div>
+      <div class="card">
+        <div class="card-head"><h5>Default Delivery Address</h5></div>
+        <div class="card-body">
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.55rem 0.8rem;font-size:0.76rem;color:#1e3a8a;margin-bottom:0.9rem;">
+            Used to pre-fill "Use my default address" when you file a replacement claim. We deliver only within North Caloocan (Barangays 165 to 188) and Northern Quezon City (Districts 2, 5, and 6).
+          </div>
+          <form method="POST" action="{{ url_for('update_default_delivery_address') }}">
+            <div class="form-grid">
+              <div class="form-group"><label>Full Name</label><input type="text" name="name" id="acct-delivery-name" value="{{ current_user.default_delivery_name or current_user.fullname }}" maxlength="100" placeholder="Juan Dela Cruz"></div>
+              <div class="form-group"><label>Mobile Number</label><input type="tel" name="mobile" id="acct-delivery-mobile" value="{{ current_user.default_delivery_mobile or current_user.phone }}" maxlength="11" placeholder="09XX XXX XXXX" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)"></div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group"><label>City</label>
+                <select name="city" id="acct-delivery-city" onchange="onAcctDeliveryCityChange()">
+                  <option value="">Select city</option>
+                  {% for c in delivery_zone_cities %}<option value="{{ c }}" {{ 'selected' if current_user.default_delivery_city == c }}>{{ c }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="form-group"><label>Barangay</label>
+                <select name="barangay" id="acct-delivery-barangay">
+                  {% if current_user.default_delivery_city %}
+                    {% for b in delivery_zone_barangays.get(current_user.default_delivery_city, []) %}<option value="{{ b }}" {{ 'selected' if current_user.default_delivery_barangay == b }}>{{ b }}</option>{% endfor %}
+                  {% else %}
+                    <option value="">Select city first</option>
+                  {% endif %}
+                </select>
+              </div>
+            </div>
+            <div class="form-group"><label>House No. and Street</label><input type="text" name="street" id="acct-delivery-street" value="{{ current_user.default_delivery_street or current_user.address or '' }}" maxlength="255" placeholder="Blk 3 Lot 7 Sampaguita St."></div>
+            <div class="form-group" style="max-width:160px;"><label>Zip Code</label><input type="text" name="zip" id="acct-delivery-zip" value="{{ current_user.default_delivery_zip or '' }}" maxlength="4" placeholder="1116"></div>
+            <button type="submit" class="btn-submit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Default Address</button>
+          </form>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1499,7 +1537,7 @@
         <span>Subtotal</span>
         <span id="od-subtotal"></span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--fg-3);margin-bottom:0.75rem;">
+      <div id="od-shipping-row" style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--fg-3);margin-bottom:0.75rem;">
         <span>Shipping</span>
         <span>To be arranged</span>
       </div>
@@ -1580,6 +1618,14 @@
           We deliver only within North Caloocan (Barangays 165 to 188) and Northern Quezon City (Districts 2, 5, and 6).
         </div>
 
+        <label style="display:flex;align-items:flex-start;gap:0.55rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.85rem;cursor:pointer;padding:0.7rem 0.8rem;border:1.5px solid var(--line-2);border-radius:8px;margin-bottom:0.5rem;">
+          <input type="radio" name="rf-address-mode" value="pickup" id="rf-address-pickup" onchange="onRfAddressModeChange()" style="margin-top:0.2rem;flex-shrink:0;">
+          <span style="flex:1;">
+            <strong>Shop Pick Up</strong>
+            <div style="margin-top:0.3rem;color:var(--fg-3);">Collect the replacement yourself at the shop — no delivery address needed.</div>
+          </span>
+        </label>
+
         <label style="display:flex;align-items:flex-start;gap:0.55rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.85rem;cursor:{{ 'pointer' if default_delivery_eligible else 'not-allowed' }};padding:0.7rem 0.8rem;border:1.5px solid var(--line-2);border-radius:8px;margin-bottom:0.5rem;{{ '' if default_delivery_eligible else 'opacity:0.5;' }}">
           <input type="radio" name="rf-address-mode" value="default" id="rf-address-default" onchange="onRfAddressModeChange()" {{ 'disabled' if not default_delivery_eligible }} style="margin-top:0.2rem;flex-shrink:0;">
           <span style="flex:1;">
@@ -1593,7 +1639,7 @@
                 {{ current_user.default_delivery_mobile }}
               </div>
             {% else %}
-              <div style="margin-top:0.3rem;color:var(--fg-3);">{{ 'No default address saved yet.' if not current_user.default_delivery_city else 'Your saved default address is outside the delivery area.' }}</div>
+              <div style="margin-top:0.3rem;color:var(--fg-3);">{{ 'No default address saved yet — add one under Account Information.' if not current_user.default_delivery_city else 'Your saved default address is outside the delivery area.' }}</div>
             {% endif %}
           </span>
         </label>
@@ -1680,13 +1726,64 @@
         <span style="font-size:1.2rem;">💬</span>
         <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;">Facebook Messenger</div><div style="font-size:0.78rem;color:var(--fg-3);">MotoTyre North Caloocan</div></div>
       </a>
-      <div style="display:flex;align-items:center;gap:0.65rem;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;">
+      <a href="{{ shop_maps_url }}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.65rem;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;text-decoration:none;color:var(--fg-1);">
         <span style="font-size:1.2rem;">🏬</span>
         <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;">Visit the Shop</div><div style="font-size:0.78rem;color:var(--fg-3);">{{ shop_hours }}</div></div>
-      </div>
+      </a>
     </div>
     <div class="modal-actions">
       <button type="button" class="btn-cancel-modal" onclick="closeTalkToShopModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TALK TO THE SHOP (SERVICE) — shown once a booking hits its back-job limit ═══ -->
+<div class="modal-overlay" id="modal-talk-to-shop-service" onclick="if (event.target === this) closeTalkToShopServiceModal()">
+  <div class="modal-box" style="width:420px;max-width:92vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <h5 style="margin:0;">Let's talk about this service</h5>
+      <button type="button" onclick="closeTalkToShopServiceModal()" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+    </div>
+    <div id="tts-service-message" style="font-size:0.85rem;color:var(--fg-2);line-height:1.6;margin-bottom:1.1rem;"></div>
+    <div style="display:flex;flex-direction:column;gap:0.6rem;">
+      <a href="tel:{{ shop_phone }}" style="display:flex;align-items:center;gap:0.65rem;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;text-decoration:none;color:var(--fg-1);">
+        <span style="font-size:1.2rem;">📞</span>
+        <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;">Call or Text</div><div style="font-size:0.78rem;color:var(--fg-3);">{{ shop_phone_display }}</div></div>
+      </a>
+      <a href="{{ facebook_page_url }}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.65rem;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;text-decoration:none;color:var(--fg-1);">
+        <span style="font-size:1.2rem;">💬</span>
+        <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;">Facebook Messenger</div><div style="font-size:0.78rem;color:var(--fg-3);">MotoTyre North Caloocan</div></div>
+      </a>
+      <a href="{{ shop_maps_url }}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.65rem;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;text-decoration:none;color:var(--fg-1);">
+        <span style="font-size:1.2rem;">🏬</span>
+        <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;">Visit the Shop</div><div style="font-size:0.78rem;color:var(--fg-3);">{{ shop_hours }}</div></div>
+      </a>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel-modal" onclick="closeTalkToShopServiceModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ NOTIFICATION DETAIL — the full, untruncated message, click-through from the bell panel ═══ -->
+<div class="modal-overlay" id="modal-notif-detail" onclick="if (event.target === this) closeNotifDetailModal()">
+  <div class="modal-box" style="width:440px;max-width:92vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <h5 style="margin:0;">Notification</h5>
+      <button type="button" onclick="closeNotifDetailModal()" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;">✕</button>
+    </div>
+    <div style="display:flex;gap:0.7rem;align-items:flex-start;margin-bottom:0.9rem;">
+      <div id="nd-icon" style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div id="nd-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:var(--fg-1);"></div>
+        <div id="nd-time" style="font-size:0.74rem;color:var(--fg-3);margin-top:0.15rem;"></div>
+      </div>
+    </div>
+    <div id="nd-status" style="margin-bottom:0.7rem;"></div>
+    <div id="nd-message" style="font-size:0.88rem;color:var(--fg-2);line-height:1.65;white-space:pre-line;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.85rem 1rem;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel-modal" onclick="closeNotifDetailModal()">Close</button>
+      <button type="button" id="nd-goto-btn" onclick="notifDetailGoTo()" style="display:none;padding:0.6rem 1.1rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;"></button>
     </div>
   </div>
 </div>
@@ -1769,7 +1866,7 @@
                 {{ current_user.default_delivery_mobile }}
               </div>
             {% else %}
-              <div style="margin-top:0.3rem;color:var(--fg-3);">{{ 'No default address saved yet.' if not current_user.default_delivery_city else 'Your saved default address is outside the delivery area.' }}</div>
+              <div style="margin-top:0.3rem;color:var(--fg-3);">{{ 'No default address saved yet — add one under Account Information.' if not current_user.default_delivery_city else 'Your saved default address is outside the delivery area.' }}</div>
             {% endif %}
           </span>
         </label>
@@ -2288,6 +2385,23 @@ function _talkToShopEscHandler(e) {
   if (e.key === 'Escape') closeTalkToShopModal();
 }
 
+function openTalkToShopServiceModal(bookingId) {
+  const b = bookingsData[bookingId];
+  const ref = `BKG-${String(bookingId).padStart(3,'0')}`;
+  const service = b ? b.service : 'this service';
+  document.getElementById('tts-service-message').textContent =
+    `This service from booking ${ref} (${service}) has already had 2 back jobs. Since there's still a problem, please reach out so we can check it together in person and decide what to do next.`;
+  document.getElementById('modal-talk-to-shop-service').classList.add('open');
+  document.addEventListener('keydown', _talkToShopServiceEscHandler);
+}
+function closeTalkToShopServiceModal() {
+  document.getElementById('modal-talk-to-shop-service').classList.remove('open');
+  document.removeEventListener('keydown', _talkToShopServiceEscHandler);
+}
+function _talkToShopServiceEscHandler(e) {
+  if (e.key === 'Escape') closeTalkToShopServiceModal();
+}
+
 function goToStep(stepId) {
   ['step-cart','step-shipping','step-payment','step-confirm'].forEach(s => {
     document.getElementById(s).style.display = s === stepId ? 'block' : 'none';
@@ -2468,9 +2582,8 @@ function selectPayment(method) {
 }
 
   /* ── CALENDAR ── */
-const ALL_SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
-const SLOT_LABELS = {'08:00':'8:00 AM','09:00':'9:00 AM','10:00':'10:00 AM','11:00':'11:00 AM','12:00':'12:00 PM','13:00':'1:00 PM','14:00':'2:00 PM','15:00':'3:00 PM','16:00':'4:00 PM','17:00':'5:00 PM','18:00':'6:00 PM','19:00':'7:00 PM'};
-let currentYear, currentMonth, selectedDate = null, selectedTime = null, bookedData = {};
+const SHOP_CLOSE_MINUTES = 18 * 60 + 30; // 6:30 PM — mirrors service_duration.SHOP_CLOSE_MIN
+let currentYear, currentMonth, selectedDate = null, selectedTime = null, bookedData = { fully_booked: [] };
 const today = new Date(); today.setHours(0,0,0,0);
 currentYear = today.getFullYear(); currentMonth = today.getMonth();
 
@@ -2545,6 +2658,17 @@ function multidayReadyWindow(dropOffDateStr, minDays, maxDays) {
 
 // ── BOOKING QUEUE ──
 let bookingQueue = [];
+
+function showAmberNotice(elId, msg) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideAmberNotice(elId) {
+  const el = document.getElementById(elId);
+  if (el) el.style.display = 'none';
+}
 
 function intervalsOverlap(aStart, aEnd, bStart, bEnd) { return aStart < bEnd && bStart < aEnd; }
 function hhmmToMinutes(hhmm) { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; }
@@ -2677,6 +2801,8 @@ function resetBookingForm() {
   document.getElementById('btn-add-queue').disabled = true;
   document.getElementById('name-error').style.display   = 'none';
   document.getElementById('mobile-error').style.display = 'none';
+  hideAmberNotice('time-clear-notice');
+  hideAmberNotice('mech-unselect-notice');
   renderCalendar();
 }
 
@@ -2715,9 +2841,9 @@ async function submitAllBookings() {
 
 async function fetchBookedSlots(year, month) {
   try { const res = await fetch(`/api/booked-slots?year=${year}&month=${month+1}`); bookedData = await res.json(); }
-  catch(e) { bookedData = {}; }
+  catch(e) { bookedData = { fully_booked: [] }; }
 }
-function isFullyBooked(dateStr) { return (bookedData[dateStr] || []).length >= ALL_SLOTS.length; }
+function isFullyBooked(dateStr) { return (bookedData.fully_booked || []).includes(dateStr); }
 
 async function renderCalendar() {
   await fetchBookedSlots(currentYear, currentMonth);
@@ -2740,8 +2866,7 @@ async function renderCalendar() {
     const isToday = dateObj.getTime() === today.getTime();
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const lastSlotMinutes = 19 * 60; // 7:00 PM
-    const pastClosing = isToday && nowMinutes >= lastSlotMinutes;
+    const pastClosing = isToday && nowMinutes >= SHOP_CLOSE_MINUTES;
     const isQueued = bookingQueue.some(b => b.date === dateStr);
     const holidayName = isHoliday(dateStr);
     const isBeyondMaxYear = currentYear > 2026;
@@ -2799,12 +2924,18 @@ let currentJobDuration = 60, currentJobIsMultiday = false, currentJobDurationLab
 
 async function renderTimeSlots(dateStr) {
   const wrap = document.getElementById('time-slots-wrap');
+  hideAmberNotice('time-clear-notice');
 
   if (!selectedServiceNames.length) {
     wrap.innerHTML = timeSlotsPlaceholderHTML();
     return;
   }
   wrap.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Loading available times…</div>';
+
+  // The time already picked, if any — re-validated below against the freshly
+  // computed slots (duration may have just changed because services changed).
+  // Captured before anything here touches selectedTime.
+  const prevSelectedTime = selectedDate === dateStr ? selectedTime : null;
 
   let data;
   try {
@@ -2831,8 +2962,10 @@ async function renderTimeSlots(dateStr) {
   const queuedIntervals = bookingQueue.filter(b => b.date === dateStr)
     .map(b => [hhmmToMinutes(b.time), hhmmToMinutes(b.time) + (b.duration_minutes || 60)]);
 
-  wrap.innerHTML = '';
-  let visibleCount = 0;
+  const built = [];
+  let availableCount = 0;
+  let prevStillFits = false;
+  let prevEndLabel = '';
 
   (data.slots || []).forEach(slot => {
     const startMin = hhmmToMinutes(slot.time);
@@ -2844,6 +2977,11 @@ async function renderTimeSlots(dateStr) {
       queuedIntervals.some(([qs, qe]) => intervalsOverlap(startMin, endMin, qs, qe));
     const isAvailable = slot.available && !queuedConflict;
 
+    if (isAvailable && slot.time === prevSelectedTime) {
+      prevStillFits = true;
+      prevEndLabel = slot.end_label;
+    }
+
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'time-slot-btn';
 
@@ -2854,6 +2992,7 @@ async function renderTimeSlots(dateStr) {
       // service_duration.compute_finish_minutes, the single source of this value).
       subClass = currentJobIsMultiday ? 'slot-sub' : 'slot-sub slot-done';
       subLine  = currentJobIsMultiday ? `Drop off — ${currentJobReadyWindow}` : `Done by ${slot.end_label}`;
+      availableCount++;
     } else {
       subClass = 'slot-sub';
       subLine  = queuedConflict ? 'Already in your queue' : slotReasonText(slot.reason);
@@ -2865,24 +3004,52 @@ async function renderTimeSlots(dateStr) {
       btn.title = subLine;
     } else {
       btn.onclick = () => selectTime(slot.time, btn, slot.end_label);
+      if (slot.time === selectedTime || (prevSelectedTime && slot.time === prevSelectedTime)) {
+        btn.classList.add('selected-slot');
+      }
     }
-    wrap.appendChild(btn);
-    visibleCount++;
+    built.push(btn);
   });
 
-  if (visibleCount === 0) {
-    wrap.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.75rem 0;">No time slots to show for this date.</div>';
+  if (availableCount === 0) {
+    wrap.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.75rem 0;">No times left on this date for the selected services. Please choose another date.</div>';
+    selectedTime = null; selectedEndLabel = '';
+    document.getElementById('selected-time-value').value = '';
+  } else {
+    wrap.innerHTML = '';
+    built.forEach(btn => wrap.appendChild(btn));
+    if (prevSelectedTime && prevStillFits) {
+      selectedTime = prevSelectedTime;
+      selectedEndLabel = prevEndLabel;
+      document.getElementById('selected-time-value').value = prevSelectedTime;
+    } else if (prevSelectedTime && !prevStillFits) {
+      // The time the customer had picked no longer fits the (just-changed)
+      // selection — clear it and say so, instead of silently keeping a stale
+      // value or silently dropping it with no explanation.
+      showAmberNotice('time-clear-notice',
+        `${minutesToAmpmJS(hhmmToMinutes(prevSelectedTime))} no longer fits your selection, so it was cleared. Please pick another time.`);
+      selectedTime = null; selectedEndLabel = '';
+      document.getElementById('selected-time-value').value = '';
+    }
+    // Scroll the (possibly long) list to the first bookable card so the
+    // customer isn't staring at a wall of greyed-out early-morning slots.
+    const firstPick = built.find(b => b.classList.contains('selected-slot')) || built.find(b => !b.disabled);
+    if (firstPick) firstPick.scrollIntoView({ block: 'nearest' });
   }
+
+  checkBookingReady();
+  updateConfirmButtonText();
+  loadMechanics(selectedDate, selectedTime, currentJobDuration);
 }
 
 // Plain-language reason a slot card is disabled — matches how the customer
-// would actually describe it, not the internal status code.
+// would actually describe it, not the internal status code. Never says
+// whether a SPECIFIC mechanic is busy — that only shows on the mechanic's
+// own name in the picker below, never on the time slot itself.
 function slotReasonText(reason) {
   if (reason === 'past') return 'Already past';
-  if (reason === 'too_long') return `Needs ${formatShopTime(currentJobDuration)} — closes 6:30 PM`;
-  if (reason === 'booked') {
-    return (mechanicMode === 'choose' && selectedMechanicId) ? 'No mechanic free then' : 'Fully booked';
-  }
+  if (reason === 'too_long') return 'Ends after closing';
+  if (reason === 'booked') return 'Fully booked';
   return 'Not available';
 }
 
@@ -2893,14 +3060,17 @@ function checkBookingReady() {
   const hasService = selectedServiceNames.length > 0;
   const nameOk    = /^[a-zA-Z\s]+$/.test(name) && name !== '';
   const mobileOk  = /^0\d{10}$/.test(mobile);
+  // "I'll Choose" isn't done until a specific mechanic is actually picked —
+  // "no one in particular" doesn't count, that's the same as Shop Assign.
+  const mechanicOk = mechanicMode !== 'choose' || !!selectedMechanicId;
 
-  document.getElementById('btn-add-queue').disabled = !(hasTime && hasService && nameOk && mobileOk);
+  document.getElementById('btn-add-queue').disabled = !(hasTime && hasService && nameOk && mobileOk && mechanicOk);
   updateConfirmButtonText();
 }
 
-// "Confirm 10:00 AM – 10:40 AM" with the outcome beside it — "40m with Bong
-// Espiritu (your choice)" or "(shop assigned)". Reflects exactly what
-// addToBookingQueue() is about to record, so there's no surprise at submit.
+// "Confirm 10:00 AM – 10:40 AM" with "40m with Bong Espiritu" underneath.
+// Reflects exactly what addToBookingQueue() is about to record, so there's
+// no surprise at submit.
 function updateConfirmButtonText() {
   const titleEl = document.getElementById('btn-add-queue-title');
   const subEl   = document.getElementById('btn-add-queue-sub');
@@ -2917,18 +3087,18 @@ function updateConfirmButtonText() {
     ? `Confirm ${startLabel} Drop-off`
     : (selectedEndLabel ? `Confirm ${startLabel} – ${selectedEndLabel}` : `Confirm ${startLabel}`);
 
-  let mechName = null, originTag = '';
+  let mechName = null;
   if (mechanicMode === 'choose' && selectedMechanicId) {
     const m = mechanicsRoster.find(x => String(x.id) === String(selectedMechanicId));
-    if (m) { mechName = m.name; originTag = 'your choice'; }
+    if (m) mechName = m.name;
   } else {
     const free = mechanicsRoster.find(m => !m.busy);
-    if (free) { mechName = free.name; originTag = 'shop assigned'; }
+    if (free) mechName = free.name;
   }
 
   const durationText = currentJobIsMultiday ? (currentJobDurationLabel || '') : formatShopTime(currentJobDuration);
   subEl.textContent = mechName
-    ? `${durationText} with ${mechName} (${originTag})`
+    ? `${durationText} with ${mechName}`
     : `${durationText} — shop will assign a mechanic`;
   subEl.style.display = 'block';
 }
@@ -2978,6 +3148,31 @@ let notifications = [];
 let showAll = false;
 let activeFilter = 'all';
 const NOTIF_PREVIEW = 3;
+
+// Shared by renderNotifications() (the bell panel) and openNotifDetail() (the
+// full-content modal) — hoisted out so both read the exact same icon/color
+// per notification type and status instead of keeping two copies in sync.
+const NOTIF_ICONS = {
+  booking:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  order:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  mechanic: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+  cost:     '<span style="display:inline-block;font-size:18px;font-weight:700;line-height:1;">₱</span>',
+  update:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  reminder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+};
+
+const NOTIF_COLOR_MAP = {
+  pending:     { bg: 'rgba(180,83,9,0.15)',    color: '#fbbf24' },
+  confirmed:   { bg: 'rgba(29,78,216,0.15)',   color: '#93c5fd' },
+  processing:  { bg: 'rgba(124,58,237,0.2)',   color: '#c4b5fd' },
+  shipped:     { bg: 'rgba(6,182,212,0.2)',    color: '#67e8f9' },
+  delivered:   { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
+  completed:   { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
+  cancelled:   { bg: 'rgba(220,38,38,0.15)',   color: '#fca5a5' },
+  inprogress:  { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
+  in_progress: { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
+  default:     { bg: 'rgba(0,0,0,0.05)', color: '#484340' },
+};
 
 async function fetchNotifications() {
   try {
@@ -3052,27 +3247,8 @@ function renderNotifications() {
     footer.style.display = 'none';
   }
 
-  const icons = {
-    booking:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-    order:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
-    mechanic: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
-    cost:     '<span style="display:inline-block;font-size:18px;font-weight:700;line-height:1;">₱</span>',
-    update:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-    reminder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-  };
-
-  const colorMap = {
-    pending:     { bg: 'rgba(180,83,9,0.15)',    color: '#fbbf24' },
-    confirmed:   { bg: 'rgba(29,78,216,0.15)',   color: '#93c5fd' },
-    processing:  { bg: 'rgba(124,58,237,0.2)',   color: '#c4b5fd' },
-    shipped:     { bg: 'rgba(6,182,212,0.2)',    color: '#67e8f9' },
-    delivered:   { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
-    completed:   { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
-    cancelled:   { bg: 'rgba(220,38,38,0.15)',   color: '#fca5a5' },
-    inprogress:  { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
-    in_progress: { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
-    default:     { bg: 'rgba(0,0,0,0.05)', color: '#484340' },
-  };
+  const icons = NOTIF_ICONS;
+  const colorMap = NOTIF_COLOR_MAP;
 
   // Remove old items
   list.querySelectorAll('.notif-item').forEach(el => el.remove());
@@ -3206,7 +3382,7 @@ function renderNotifications() {
     div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line-1);cursor:pointer;background:${pending ? 'rgba(208,0,25,0.05)' : 'transparent'};transition:background 0.15s;`;
     div.onmouseover = () => div.style.background = 'var(--bg-subtle)';
     div.onmouseout  = () => div.style.background = pending ? 'rgba(208,0,25,0.05)' : 'transparent';
-    div.onclick     = () => readNotif(n.id, n);
+    div.onclick     = () => openNotifDetail(n);
 
     div.innerHTML = `
       <div style="width:38px;height:38px;border-radius:10px;background:${scheme.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${scheme.color};">${icon}</div>
@@ -3247,32 +3423,84 @@ function filterNotifs(filter, btn) {
   renderNotifications();
 }
 
-async function readNotif(id, n) {
+// Clicking a notification in the bell panel opens this instead of jumping
+// straight to whatever it's linked to — the panel itself is cramped and
+// truncates nothing visually, but a customer still has to open it to read
+// the full message calmly, with the timestamp and status in view, before
+// deciding whether to follow it anywhere.
+let _notifDetailTarget = null; // { bookingId } | { returnRequestId } | null — what "Go to…" below does, if anything
+
+async function openNotifDetail(n) {
   if (!n.is_read) {
     try {
-      await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+      await fetch(`/api/notifications/${n.id}/read`, { method: 'POST' });
       n.is_read = true;
       renderNotifications();
     } catch(e) {}
   }
-  // Opening a booking-linked notification lands on that specific booking,
-  // not just the list.
+
+  const icon   = NOTIF_ICONS[n.type] || NOTIF_ICONS.update;
+  const scheme = NOTIF_COLOR_MAP[n.status] || NOTIF_COLOR_MAP.default;
+  const time = new Date(n.created_at).toLocaleString('en-PH', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+    timeZone: 'Asia/Manila'
+  });
+
+  const iconEl = document.getElementById('nd-icon');
+  iconEl.style.background = scheme.bg;
+  iconEl.style.color = scheme.color;
+  iconEl.innerHTML = icon;
+  document.getElementById('nd-title').textContent = n.title;
+  document.getElementById('nd-time').textContent = time;
+  document.getElementById('nd-message').textContent = n.message;
+
+  const statusEl = document.getElementById('nd-status');
+  statusEl.innerHTML = n.status
+    ? `<span style="font-size:0.68rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.25em 0.65em;border-radius:5px;">${n.status.replace('inprogress','in progress').replace(/_/g,' ')}</span>`
+    : '';
+
+  const gotoBtn = document.getElementById('nd-goto-btn');
   if (n.booking_id && bookingsData[n.booking_id]) {
-    notifOpen = false;
-    const panel = document.getElementById('notif-panel');
-    if (panel) panel.style.display = 'none';
-    showSection('bookings', null);
-    setTimeout(() => openBookingDetails(n.booking_id), 150);
+    _notifDetailTarget = { bookingId: n.booking_id };
+    gotoBtn.textContent = 'View Booking';
+    gotoBtn.style.display = 'inline-block';
   } else if (n.return_request_id) {
-    // Opening a claim notification lands on that specific claim in Screen 3
-    // (My Requests), not just the returns tab.
-    notifOpen = false;
-    const panel = document.getElementById('notif-panel');
-    if (panel) panel.style.display = 'none';
+    _notifDetailTarget = { returnRequestId: n.return_request_id };
+    gotoBtn.textContent = 'View Request';
+    gotoBtn.style.display = 'inline-block';
+  } else {
+    _notifDetailTarget = null;
+    gotoBtn.style.display = 'none';
+  }
+
+  document.getElementById('modal-notif-detail').classList.add('open');
+  document.addEventListener('keydown', _notifDetailEscHandler);
+}
+
+function closeNotifDetailModal() {
+  document.getElementById('modal-notif-detail').classList.remove('open');
+  document.removeEventListener('keydown', _notifDetailEscHandler);
+}
+
+function _notifDetailEscHandler(e) {
+  if (e.key === 'Escape') closeNotifDetailModal();
+}
+
+function notifDetailGoTo() {
+  if (!_notifDetailTarget) return;
+  closeNotifDetailModal();
+  notifOpen = false;
+  const panel = document.getElementById('notif-panel');
+  if (panel) panel.style.display = 'none';
+  if (_notifDetailTarget.bookingId) {
+    showSection('bookings', null);
+    setTimeout(() => openBookingDetails(_notifDetailTarget.bookingId), 150);
+  } else if (_notifDetailTarget.returnRequestId) {
     showSection('returns', null);
     setTimeout(() => {
       setReturnsTab('requests');
-      openReturnDetails(n.return_request_id);
+      openReturnDetails(_notifDetailTarget.returnRequestId);
     }, 150);
   }
 }
@@ -3384,11 +3612,10 @@ function toggleServiceSelection(name, isChecked) {
   renderServiceChecklist(currentServiceFilterItems());
   updateServiceSummary();
   checkBookingReady();
-  // Duration changed — the slot grid (and any already-chosen time) needs recomputing,
-  // or if no date is picked yet, the "choose a date" placeholder needs to reflect it.
+  // Duration changed — the slot grid needs recomputing. renderTimeSlots() keeps
+  // the already-chosen time if it still fits the new duration, or clears it
+  // (with an explanation) if it no longer does — see its prevSelectedTime logic.
   if (selectedDate) {
-    selectedTime = null;
-    document.getElementById('selected-time-value').value = '';
     renderTimeSlots(selectedDate);
   } else {
     updateTimeSlotsPlaceholder();
@@ -3526,8 +3753,9 @@ const bookingsData = {
     mechanic_spec: {{ (b.assigned_mechanic_specialization or '')|tojson }},
     created_at: '{{ b.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
     total_amount: {{ b.total_amount or 0 }},
-    return_window: {{ ({'expired': b.return_window.expired, 'days_left': b.return_window.days_left, 'label': b.return_window.label} if b.return_window else none)|tojson }},
-    open_claim: {{ ({'id': b.open_claim.id, 'ref': 'RMA-%03d'|format(b.open_claim.id)} if b.open_claim else none)|tojson }},
+    return_window: {{ ({'expired': b.return_window.expired, 'days_left': b.return_window.days_left, 'label': b.return_window.label, 'deadline_label': b.return_window.deadline.strftime('%B %d, %Y')} if b.return_window else none)|tojson }},
+    open_claim: {{ ({'id': b.open_claim.id, 'ref': 'RMA-%03d'|format(b.open_claim.id), 'status': b.open_claim.status} if b.open_claim else none)|tojson }},
+    redo_stats: {{ b.redo_stats|tojson }},
     quotation: {{ b.quotation_data|tojson }}
   }{% if not loop.last %},{% endif %}
   {% endfor %}
@@ -3781,9 +4009,11 @@ function openOrderDetails(orderId) {
     </div>
   `).join('');
 
-  // Summary
+  // Summary — a shop-pickup order has nothing to arrange shipping for, so
+  // that line (and the subtotal/total distinction it implies) doesn't apply.
   document.getElementById('od-subtotal').textContent = '₱' + order.total.toFixed(2);
   document.getElementById('od-total').textContent = '₱' + order.total.toFixed(2);
+  document.getElementById('od-shipping-row').style.display = isPickupOrder ? 'none' : 'flex';
   
   // Payment method
   const paymentLabels = { cash: 'Cash', gcash: 'GCash', cod: 'Cash on Delivery' };
@@ -3996,6 +4226,14 @@ const DEFAULT_DELIVERY_ADDRESS = {
   barangay: {{ (current_user.default_delivery_barangay or '')|tojson }},
   zip: {{ (current_user.default_delivery_zip or '')|tojson }},
 };
+// What the customer already has on file from Account Information — used to
+// pre-fill "Use a different address" instead of making them retype their
+// name/mobile/street from scratch every time.
+const ACCOUNT_PROFILE = {
+  name: {{ (current_user.fullname or '')|tojson }},
+  mobile: {{ (current_user.phone or '')|tojson }},
+  address: {{ (current_user.address or '')|tojson }},
+};
 
 // "Why" checklist (section 3): [code, label, needs_photo]. A reason needs a
 // photo when it's something a photo could actually prove.
@@ -4163,9 +4401,13 @@ function openReturnForm(kind, id) {
 
   document.querySelectorAll('input[name="rf-address-mode"]').forEach(r => r.checked = false);
   document.getElementById('rf-address-custom-fields').style.display = 'none';
-  ['rf-delivery-name', 'rf-delivery-mobile', 'rf-delivery-street', 'rf-delivery-zip'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
+  // Pre-fill "Use a different address" from what's already on the account —
+  // the customer only has to pick a city/barangay, not retype their name,
+  // mobile and street every time they file a claim.
+  document.getElementById('rf-delivery-name').value   = ACCOUNT_PROFILE.name;
+  document.getElementById('rf-delivery-mobile').value = ACCOUNT_PROFILE.mobile;
+  document.getElementById('rf-delivery-street').value = ACCOUNT_PROFILE.address;
+  document.getElementById('rf-delivery-zip').value    = '';
   document.getElementById('rf-delivery-city').value = '';
   document.getElementById('rf-delivery-barangay').innerHTML = '<option value="">Select city first</option>';
   document.getElementById('rf-delivery-save-default').checked = false;
@@ -4538,6 +4780,15 @@ function onRfDeliveryCityChange() {
   updateRfSummary();
 }
 
+function onAcctDeliveryCityChange() {
+  const city = document.getElementById('acct-delivery-city').value;
+  const brgySel = document.getElementById('acct-delivery-barangay');
+  const brgys = DELIVERY_ZONE_BARANGAYS[city] || [];
+  brgySel.innerHTML = city
+    ? brgys.map(b => `<option value="${b}">${b}</option>`).join('')
+    : '<option value="">Select city first</option>';
+}
+
 function computeRfRefundAmount() {
   if (_rfKind === 'product') {
     let total = 0;
@@ -4717,16 +4968,20 @@ function updateRfSummary() {
   let deliveryLine = '';
   if (_rfKind === 'product' && outcome === 'replacement') {
     const mode = document.querySelector('input[name="rf-address-mode"]:checked');
-    let text = '(no delivery address chosen yet)';
-    if (mode && mode.value === 'default') {
-      text = '{{ (current_user.default_delivery_street or "") }}, {{ (current_user.default_delivery_barangay or "") }}, {{ (current_user.default_delivery_city or "") }}'.trim();
-    } else if (mode && mode.value === 'custom') {
-      const street = document.getElementById('rf-delivery-street').value.trim();
-      const brgy = document.getElementById('rf-delivery-barangay').value;
-      const city = document.getElementById('rf-delivery-city').value;
-      text = (street || brgy || city) ? `${street}, ${brgy}, ${city}` : text;
+    if (mode && mode.value === 'pickup') {
+      deliveryLine = `<div style="margin-top:0.3rem;"><strong>Delivery:</strong> Shop Pick Up</div>`;
+    } else {
+      let text = '(no delivery address chosen yet)';
+      if (mode && mode.value === 'default') {
+        text = '{{ (current_user.default_delivery_street or "") }}, {{ (current_user.default_delivery_barangay or "") }}, {{ (current_user.default_delivery_city or "") }}'.trim();
+      } else if (mode && mode.value === 'custom') {
+        const street = document.getElementById('rf-delivery-street').value.trim();
+        const brgy = document.getElementById('rf-delivery-barangay').value;
+        const city = document.getElementById('rf-delivery-city').value;
+        text = (street || brgy || city) ? `${street}, ${brgy}, ${city}` : text;
+      }
+      deliveryLine = `<div style="margin-top:0.3rem;"><strong>Deliver to:</strong> ${text}</div>`;
     }
-    deliveryLine = `<div style="margin-top:0.3rem;"><strong>Deliver to:</strong> ${text}</div>`;
   }
 
   summary.innerHTML = `
@@ -4765,7 +5020,9 @@ function submitReturnForm(e) {
   if (_rfKind === 'product' && outcome === 'replacement') {
     const mode = document.querySelector('input[name="rf-address-mode"]:checked');
     if (!mode) {
-      errors.push('Please choose a delivery address for the replacement.');
+      errors.push('Please choose shop pickup or a delivery address for the replacement.');
+    } else if (mode.value === 'pickup') {
+      addressFields = { mode: 'pickup' };
     } else if (mode.value === 'custom') {
       const name   = document.getElementById('rf-delivery-name').value.trim();
       const mobile = document.getElementById('rf-delivery-mobile').value.trim();
@@ -5216,11 +5473,13 @@ let selectedEndLabel = '';     // end label of the currently selected slot, e.g.
 
 function setMechanicMode(mode) {
   mechanicMode = mode;
+  hideAmberNotice('mech-unselect-notice');
   document.getElementById('mech-card-shop').classList.toggle('active', mode === 'shop');
   document.getElementById('mech-card-choose').classList.toggle('active', mode === 'choose');
   document.getElementById('mech-panel-shop').style.display   = mode === 'shop'   ? 'block' : 'none';
   document.getElementById('mech-panel-choose').style.display = mode === 'choose' ? 'block' : 'none';
   renderMechanicPanels();
+  checkBookingReady();
 }
 
 async function loadMechanics(date, time, duration) {
@@ -5230,10 +5489,21 @@ async function loadMechanics(date, time, duration) {
       : '';
     const res = await fetch('/api/mechanics' + qs);
     mechanicsRoster = await res.json();
-    if (selectedMechanicId && !mechanicsRoster.some(m => String(m.id) === String(selectedMechanicId))) {
-      selectedMechanicId = '';
+
+    if (selectedMechanicId) {
+      const picked = mechanicsRoster.find(m => String(m.id) === String(selectedMechanicId));
+      if (!picked) {
+        selectedMechanicId = '';
+      } else if (date && time && picked.busy) {
+        // The customer had this mechanic selected, but the slot now being
+        // looked at has them occupied — never silently keep an invalid pick.
+        showAmberNotice('mech-unselect-notice',
+          `${picked.name} is occupied at ${minutesToAmpmJS(hhmmToMinutes(time))}, so they were unselected. Please choose another mechanic, or pick a different time.`);
+        selectedMechanicId = '';
+      }
     }
     renderMechanicPanels();
+    checkBookingReady();
   } catch(e) {
     console.error('Failed to load mechanics', e);
   }
@@ -5311,7 +5581,7 @@ function bestMechanicRecommendation() {
   return best ? { mechanic: best, ...bestCoverage } : null;
 }
 
-function buildMechanicPickerItem({ id, name, note, disabled, selected, recommended }) {
+function buildMechanicPickerItem({ id, name, note, noteClass, disabled, selected, recommended }) {
   const div = document.createElement('div');
   div.className = 'mech-picker-item'
     + (disabled ? ' disabled' : '') + (selected ? ' selected' : '') + (recommended ? ' recommended' : '');
@@ -5321,7 +5591,7 @@ function buildMechanicPickerItem({ id, name, note, disabled, selected, recommend
   div.appendChild(nameEl);
   if (note) {
     const noteEl = document.createElement('div');
-    noteEl.className = 'mp-note';
+    noteEl.className = 'mp-note' + (noteClass ? ' ' + noteClass : '');
     noteEl.textContent = note;
     div.appendChild(noteEl);
   }
@@ -5336,17 +5606,24 @@ function buildMechanicPickerItem({ id, name, note, disabled, selected, recommend
 // card. One entry point keeps them from drifting out of sync.
 function chooseMechanic(id) {
   selectedMechanicId = id;
+  hideAmberNotice('mech-unselect-notice');
   renderRecommendationPanel();
   renderMechanicPickerList();
   renderMechanicProfileCard();
-  updateConfirmButtonText();
+  checkBookingReady();
 }
 
 function renderMechanicPickerList() {
   const list = document.getElementById('mech-picker-list');
   list.innerHTML = '';
 
+  if (!selectedTime) {
+    list.innerHTML = '<div style="padding:0.6rem 0.2rem;font-size:0.78rem;color:var(--fg-3);">Pick a time slot to see which mechanics are free.</div>';
+    return;
+  }
+
   const rec = bestMechanicRecommendation();
+  const startLabel = minutesToAmpmJS(hhmmToMinutes(selectedTime));
 
   // Always first: drops the pick back to shop assignment without leaving this card.
   list.appendChild(buildMechanicPickerItem({
@@ -5355,21 +5632,18 @@ function renderMechanicPickerList() {
   }));
 
   mechanicsRoster.forEach(m => {
-    let note = '';
+    let note, noteClass;
     const isRecommended = !!rec && rec.mechanic.id === m.id;
     if (m.busy) {
-      note = 'busy at this time';
+      note = m.busy_until_closing
+        ? 'This mechanic is occupied for the rest of the day.'
+        : `This mechanic is occupied at this time. You can book them after they're done at ${m.busy_until_label || ''}.`;
     } else {
-      const coverage = mechanicCoverage(m);
-      const pct = Math.round(coverage.share * 100);
-      if (isRecommended) {
-        note = `recommended — covers ${pct}% of this job`;
-      } else if (coverage.matches.length) {
-        note = `specialist for ${coverage.matches.join(' and ').toLowerCase()} (${pct}%)`;
-      }
+      note = `Free at ${startLabel}`;
+      noteClass = 'mp-free';
     }
     list.appendChild(buildMechanicPickerItem({
-      id: m.id, name: `${m.name} — ${m.specialization}`, note, disabled: m.busy,
+      id: m.id, name: `${m.name} — ${m.specialization}`, note, noteClass, disabled: m.busy,
       selected: String(selectedMechanicId) === String(m.id), recommended: isRecommended,
     }));
   });

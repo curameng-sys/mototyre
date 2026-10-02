@@ -508,6 +508,7 @@ class ReturnRequest(db.Model):
     delivery_barangay  = db.Column(db.String(50))
     delivery_street     = db.Column(db.String(255))
     delivery_zip        = db.Column(db.String(10))
+    is_pickup           = db.Column(db.Boolean, default=False)  # customer picks the replacement up at the shop — no delivery_* fields set
 
 
 class ReturnRequestItem(db.Model):
@@ -2780,6 +2781,7 @@ def api_returns():
             'completed_at': r.completed_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.completed_at else None,
             'delivery_address': format_delivery_address(r.delivery_name, r.delivery_mobile, r.delivery_street,
                                                           r.delivery_barangay, r.delivery_city, r.delivery_zip) if r.delivery_street else None,
+            'is_pickup': bool(r.is_pickup),
             'cancelled_at': r.cancelled_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.cancelled_at else None,
         })
 
@@ -3142,7 +3144,7 @@ def resolve_return_request(rid):
         return jsonify({'success': False, 'error': "Mark the item received first — the part hasn't come back yet."}), 400
     if rr.kind == 'service' and rr.resolution == 'redo_service' and not rr.redo_date:
         return jsonify({'success': False, 'error': 'Schedule the back job first.'}), 400
-    if rr.resolution == 'replacement' and not rr.delivery_street:
+    if rr.resolution == 'replacement' and not rr.is_pickup and not rr.delivery_street:
         return jsonify({'success': False, 'error': 'This claim has no delivery address on file — contact the customer directly.'}), 400
 
     # A replacement isn't done once it's sent — it isn't real until the
@@ -3171,6 +3173,9 @@ def resolve_return_request(rid):
     if rr.resolution == 'refund':
         title = f'Your refund of ₱{rr.refund_amount:,.2f} has been released'
         body = f'Your refund for {subject} ({ref}) — ₱{rr.refund_amount:,.2f} — has been released to your original payment method.'
+    elif rr.resolution == 'replacement' and rr.is_pickup:
+        title = 'Your replacement is ready for pickup'
+        body = f'The replacement for {subject} ({ref}) is ready at the shop — come by anytime during business hours to pick it up.'
     elif rr.resolution == 'replacement':
         addr = format_delivery_address(rr.delivery_name, rr.delivery_mobile, rr.delivery_street,
                                         rr.delivery_barangay, rr.delivery_city, rr.delivery_zip)
@@ -3180,7 +3185,10 @@ def resolve_return_request(rid):
         title = 'Your back job is complete'
         body = f'The redo for {subject} ({ref}) is done.'
     emailed = _notify_return_customer(rr, title, body, priority=False)
-    msg = 'Marked on the way — customer notified.' if rr.resolution == 'replacement' else 'Marked resolved — customer notified.'
+    if rr.resolution == 'replacement':
+        msg = 'Marked ready for pickup — customer notified.' if rr.is_pickup else 'Marked on the way — customer notified.'
+    else:
+        msg = 'Marked resolved — customer notified.'
     return jsonify({'success': True, 'emailed': emailed, 'message': msg})
 
 
@@ -3200,14 +3208,15 @@ def mark_return_arrived(rid):
 
     ref = _return_ref(rr)
     subject = _return_subject_label(rr)
-    addr = format_delivery_address(rr.delivery_name, rr.delivery_mobile, rr.delivery_street,
-                                    rr.delivery_barangay, rr.delivery_city, rr.delivery_zip)
-    emailed = _notify_return_customer(
-        rr, 'Your replacement has arrived',
-        f'The replacement for {subject} ({ref}) has arrived at {addr}.',
-        priority=False,
-    )
-    return jsonify({'success': True, 'emailed': emailed, 'message': 'Marked arrived — customer notified.'})
+    if rr.is_pickup:
+        title, body = 'Replacement picked up', f'Your replacement for {subject} ({ref}) has been picked up at the shop.'
+    else:
+        addr = format_delivery_address(rr.delivery_name, rr.delivery_mobile, rr.delivery_street,
+                                        rr.delivery_barangay, rr.delivery_city, rr.delivery_zip)
+        title, body = 'Your replacement has arrived', f'The replacement for {subject} ({ref}) has arrived at {addr}.'
+    emailed = _notify_return_customer(rr, title, body, priority=False)
+    msg = 'Marked picked up — customer notified.' if rr.is_pickup else 'Marked arrived — customer notified.'
+    return jsonify({'success': True, 'emailed': emailed, 'message': msg})
 
 
 @admin_app.route('/returns/<int:rid>/complete', methods=['POST'])
@@ -5867,6 +5876,7 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN contact_name VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN is_instore TINYINT(1) DEFAULT 0",
         "ALTER TABLE `order` ADD COLUMN instore_seen TINYINT(1) DEFAULT 1",
+        "ALTER TABLE return_request ADD COLUMN is_pickup TINYINT(1) DEFAULT 0",
     ]:
         try:
             from sqlalchemy import text as _tmig2

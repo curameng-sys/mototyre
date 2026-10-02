@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, time as _time
 SHOP_OPEN_MIN  = 8 * 60         # 8:00 AM
 SHOP_CLOSE_MIN = 18 * 60 + 30   # 6:30 PM — every job must FINISH by this, not just start.
                                  # A 40-minute job can't take the 6:00 PM slot (would end 6:40).
-SLOT_GRANULARITY_MIN = 60  # candidate start times, on the hour — 8,9,10,11 AM, 1-6 PM once the break is excluded
+SLOT_GRANULARITY_MIN = 30  # candidate start times, every half hour — 8:00, 8:30, 9:00... once the break is excluded
 
 # Mechanics' lunch break — no job may START in this window, and a job that starts
 # before it and would still be running at BREAK_START_MIN pauses there and resumes
@@ -269,6 +269,23 @@ def slot_statuses(duration_minutes, existing_intervals, now_minutes=None, on_dut
             continue
         result.append({'start': start, 'end': end, 'available': True, 'reason': None})
     return result
+
+
+def day_fully_booked(existing_intervals, on_duty_count):
+    """Whether EVERY fixed slot start that day already has an existing job
+    covering it for each mechanic on duty — the calendar-day version of
+    slot_statuses()'s 'booked' reason, independent of any particular job's
+    duration (the calendar is shown before a service is picked). A day with
+    no one on duty counts as fully booked: there's no capacity to book
+    anything, so it reads the same as a day already maxed out, not as a
+    wide-open one."""
+    if on_duty_count <= 0:
+        return True
+    for start in all_slot_starts():
+        occupied = sum(1 for bs, be in existing_intervals if bs <= start < be)
+        if occupied < on_duty_count:
+            return False
+    return True
 
 
 MAX_BOOKINGS_PER_DAY = 20  # shop policy cap — independent of whatever technically fits the hours
