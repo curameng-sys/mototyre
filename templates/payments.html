@@ -192,6 +192,19 @@
       #receipt-print-area { position: absolute; top: 0; left: 0; width: 100%; }
       #receipt-print-area .bill-close { display: none; }
     }
+    /* ── TOP-RIGHT: notifications + profile (same widget on every admin page) ── */
+    .topright-btn{display:flex;align-items:center;gap:.55rem;background:#fff;border:1px solid var(--border);cursor:pointer;transition:all .15s;font-family:inherit;}
+    .topright-btn:hover{border-color:#9ca3af;}
+    .topright-bell{width:36px;height:36px;border-radius:50%;justify-content:center;color:#6b7280;}
+    .topright-profile{border-radius:99px;padding:.28rem .75rem .28rem .28rem;}
+    .topright-avatar{width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+    .topright-badge{display:none;position:absolute;top:-2px;right:-2px;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center;border:2px solid #fff;}
+    #admin-profile-menu{display:none;position:fixed;top:4rem;right:1.75rem;width:220px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);z-index:9999;overflow:hidden;font-family:'DM Sans',sans-serif;}
+    .profile-menu-item{display:block;padding:.7rem 1rem;font-size:.82rem;color:var(--text);text-decoration:none;border-top:1px solid var(--border);transition:background .12s;}
+    .profile-menu-item:hover{background:#f9fafb;}
+    #admin-notif-panel{display:none;position:fixed;top:4rem;right:1.75rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,.1);border-radius:16px;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden;font-family:'DM Sans',sans-serif;}
+    @media(max-width:640px){ #admin-notif-panel,#admin-profile-menu{right:.75rem;width:calc(100vw - 1.5rem);} }
+
     @media(max-width:900px){.main{padding:1.25rem 1rem;} thead th:nth-child(3),td:nth-child(3){display:none;} }
     @media(max-width:640px){
       .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -207,9 +220,10 @@
 
 <header class="topbar">
   <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">Billing</span></div>
-  <div style="display:flex;gap:.6rem;">
+  <div style="display:flex;gap:.6rem;align-items:center;">
     <a href="{{ url_for('job_orders') }}" class="btn-nav"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Job Orders</a>
     <a href="{{ url_for('admin_dashboard') }}" class="btn-nav"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Dashboard</a>
+    {% include 'partials/admin_topright.html' %}
   </div>
 </header>
 

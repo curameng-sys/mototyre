@@ -1,0 +1,24 @@
+<!-- Reports & Sales → Recent Transactions Log body. Rendered server-side on
+     first load and re-rendered client-side (same markup, built in JS) when
+     the date filter changes — see _buildTxnRowsHtml() in admin_dashboard.html. -->
+{% set type_labels = {'booking': 'Service Booking', 'job_order': 'Job Order', 'online': 'Online Order', 'sale': 'In-Store Sale', 'refund': 'Refund'} %}
+{% set type_colors = {'booking': '#7c3aed', 'job_order': '#2563eb', 'online': '#ea580c', 'sale': '#0d9488', 'refund': '#dc2626'} %}
+{% if rpt.transactions %}
+<table class="table">
+  <thead><tr><th>Reference</th><th>Type</th><th>Customer</th><th>Payment</th><th>Amount</th><th>Date</th></tr></thead>
+  <tbody>
+    {% for t in rpt.transactions[:30] %}
+    <tr{% if t.type == 'refund' %} style="background:rgba(220,38,38,0.05);"{% endif %}>
+      <td style="font-weight:700;">{{ t.ref }}{% if t.type == 'refund' %}<div style="font-size:0.68rem;color:var(--muted);font-weight:400;">for {{ t.refund_for }} · {{ t.return_ref }}</div>{% endif %}</td>
+      <td><span style="display:inline-block;padding:0.2em 0.6em;border-radius:99px;font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;background:{{ type_colors[t.type] }}1a;color:{{ type_colors[t.type] }};">{{ type_labels[t.type] }}</span></td>
+      <td>{{ t.customer }}</td>
+      <td>{{ t.payment }}</td>
+      <td style="font-weight:700;{% if t.type == 'refund' %}color:var(--red);{% endif %}">{{ '−' if t.amount < 0 else '' }}₱{{ '%.2f'|format(t.amount|abs) }}</td>
+      <td style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">{{ t.date.strftime('%b %d, %Y %I:%M %p') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><p>No transactions in this period.</p></div>
+{% endif %}

@@ -130,15 +130,29 @@
       .toast-wrap{left:1rem;right:1rem;}
       .toast{min-width:0;}
     }
+
+    /* ── TOP-RIGHT: notifications + profile (same widget on every admin page) ── */
+    .topright-btn{display:flex;align-items:center;gap:.55rem;background:#fff;border:1px solid var(--border);cursor:pointer;transition:all .15s;font-family:inherit;}
+    .topright-btn:hover{border-color:#9ca3af;}
+    .topright-bell{width:36px;height:36px;border-radius:50%;justify-content:center;color:#6b7280;}
+    .topright-profile{border-radius:99px;padding:.28rem .75rem .28rem .28rem;}
+    .topright-avatar{width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+    .topright-badge{display:none;position:absolute;top:-2px;right:-2px;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center;border:2px solid #fff;}
+    #admin-profile-menu{display:none;position:fixed;top:4rem;right:1.75rem;width:220px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);z-index:9999;overflow:hidden;font-family:'DM Sans',sans-serif;}
+    .profile-menu-item{display:block;padding:.7rem 1rem;font-size:.82rem;color:var(--text);text-decoration:none;border-top:1px solid var(--border);transition:background .12s;}
+    .profile-menu-item:hover{background:#f9fafb;}
+    #admin-notif-panel{display:none;position:fixed;top:4rem;right:1.75rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,.1);border-radius:16px;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden;font-family:'DM Sans',sans-serif;}
+    @media(max-width:640px){ #admin-notif-panel,#admin-profile-menu{right:.75rem;width:calc(100vw - 1.5rem);} }
   </style>
 </head>
 <body>
 
 <header class="topbar">
   <div class="topbar-brand">MOTO<span>TYRE</span> <span class="badge-pill">Job Orders</span></div>
-  <div class="topbar-right">
+  <div class="topbar-right" style="align-items:center;">
     <a href="{{ url_for('walk_in') }}" class="btn-action btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Walk-In</a>
     <a href="{{ url_for('admin_dashboard') }}" class="btn-action btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Dashboard</a>
+    {% include 'partials/admin_topright.html' %}
   </div>
 </header>
 

@@ -1,0 +1,247 @@
+<!-- Shared top-right notifications + profile widget for every standalone
+     admin page (Billing, Job Orders, Walk-In, Quotations). admin_dashboard.html
+     has its own fixed-overlay version instead, since clicks there can switch
+     SPA sections instantly rather than reloading the page — everywhere else,
+     navigating to a related page IS a reload, so this keeps things simple and
+     uses the same sessionStorage handoff admin_dashboard.html already reads
+     on load to restore the last section. -->
+<div style="position:relative;">
+  <button onclick="toggleAdminNotifications(event)" title="Notifications" class="topright-btn topright-bell">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+  </button>
+  <span id="admin-notif-badge" class="topright-badge">0</span>
+</div>
+<button onclick="toggleAdminProfileMenu(event)" class="topright-btn topright-profile">
+  <div class="topright-avatar">
+    {% if current_user.profile_pic %}
+      <img src="{{ current_user.profile_pic if current_user.profile_pic.startswith('http') else url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="{{ current_user.fullname[0].upper() }}" style="width:100%;height:100%;object-fit:cover;" onerror="this.replaceWith(document.createTextNode(this.alt))">
+    {% else %}
+      {{ current_user.fullname[0].upper() }}
+    {% endif %}
+  </div>
+  <div style="text-align:left;line-height:1.15;">
+    <div style="font-weight:700;font-size:0.78rem;color:#fff;">{{ current_user.fullname }}</div>
+    <div style="font-size:0.64rem;color:#9ca3af;">Administrator</div>
+  </div>
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#9ca3af;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+</button>
+
+<div id="admin-notif-panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <div style="font-family:inherit;font-weight:700;font-size:0.95rem;color:#fff;">Notifications</div>
+    <button onclick="adminMarkAllRead()" style="background:none;border:none;color:#d00019;font-family:inherit;font-weight:700;font-size:0.75rem;cursor:pointer;">Mark all read</button>
+  </div>
+  <div id="admin-notif-list" style="max-height:420px;overflow-y:auto;">
+    <div id="admin-notif-empty" style="text-align:center;padding:2.5rem 1rem;color:#6b7280;">
+      <div style="margin-bottom:0.5rem;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      <div style="font-size:0.85rem;">No notifications yet.</div>
+    </div>
+  </div>
+  <div style="padding:0.75rem 1.25rem;border-top:1px solid rgba(255,255,255,0.07);text-align:center;">
+    <a href="#" onclick="goToAdminSection('outbox');return false;" style="color:#d00019;font-family:inherit;font-weight:700;font-size:0.8rem;text-decoration:none;">Open Outbox</a>
+  </div>
+</div>
+
+<div id="admin-profile-menu">
+  <div style="padding:0.9rem 1rem;border-bottom:1px solid var(--border);">
+    <div style="font-weight:700;font-size:0.85rem;color:var(--text);">{{ current_user.fullname }}</div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;word-break:break-all;">{{ current_user.email }}</div>
+  </div>
+  <a href="#" onclick="closeAdminProfileMenu();goToAdminSection('settings');return false;" class="profile-menu-item">My profile</a>
+  <a href="#" onclick="closeAdminProfileMenu();openChangePasswordModal();return false;" class="profile-menu-item">Change password</a>
+  <a href="{{ url_for('admin_logout') }}" class="profile-menu-item" style="color:var(--red);font-weight:700;">Log out</a>
+</div>
+
+<div class="modal-overlay" id="modal-change-password" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;width:380px;max-width:92vw;padding:1.5rem;font-family:'DM Sans',sans-serif;">
+    <h5 style="margin:0 0 1rem;font-family:'Syne',sans-serif;color:var(--text);">Change Password</h5>
+    <div id="change-pw-error" style="display:none;background:rgba(208,0,25,0.08);border:1px solid rgba(208,0,25,0.25);color:#b91c1c;font-size:0.8rem;padding:0.6rem 0.8rem;border-radius:8px;margin-bottom:0.85rem;"></div>
+    <div style="margin-bottom:0.75rem;">
+      <label style="display:block;font-size:0.75rem;color:var(--muted);margin-bottom:0.3rem;">Current Password</label>
+      <input type="password" id="pw-current" autocomplete="current-password" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;">
+    </div>
+    <div style="margin-bottom:0.75rem;">
+      <label style="display:block;font-size:0.75rem;color:var(--muted);margin-bottom:0.3rem;">New Password</label>
+      <input type="password" id="pw-new" autocomplete="new-password" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;">
+    </div>
+    <div style="margin-bottom:1.1rem;">
+      <label style="display:block;font-size:0.75rem;color:var(--muted);margin-bottom:0.3rem;">Confirm New Password</label>
+      <input type="password" id="pw-confirm" autocomplete="new-password" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;">
+    </div>
+    <div style="display:flex;gap:0.6rem;">
+      <button onclick="document.getElementById('modal-change-password').style.display='none'" style="flex:1;padding:0.6rem;border-radius:8px;border:1px solid var(--border);background:#f9fafb;color:var(--muted);font-family:inherit;font-weight:700;font-size:0.8rem;cursor:pointer;">Cancel</button>
+      <button id="pw-submit-btn" onclick="submitChangePassword()" style="flex:1;padding:0.6rem;border-radius:8px;border:none;background:var(--red);color:#fff;font-family:inherit;font-weight:700;font-size:0.8rem;cursor:pointer;">Save Password</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let adminNotifOpen = false;
+let adminProfileOpen = false;
+let adminNotifications = [];
+
+function goToAdminSection(name) {
+  sessionStorage.setItem('adminSection', name);
+  window.location.href = '{{ url_for("admin_dashboard") }}';
+}
+
+async function fetchAdminNotifications() {
+  try {
+    const res = await fetch('/api/notifications');
+    adminNotifications = await res.json();
+    renderAdminNotifications();
+  } catch(e) { console.error('Notif fetch error', e); }
+}
+
+function formatStatusInText(text) {
+  return text.replace(/\b(IN_PROGRESS|in_progress)\b/gi, 'In Progress')
+             .replace(/\b(AWAITING_PAYMENT|awaiting_payment)\b/gi, 'Awaiting Payment');
+}
+
+function relativeTime(iso) {
+  const diffSec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (diffSec < 60) return 'Just now';
+  const min = Math.floor(diffSec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hr${hr > 1 ? 's' : ''} ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day} day${day > 1 ? 's' : ''} ago`;
+  return new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+}
+
+const ADMIN_NOTIF_ICONS = {
+  quotation_decision: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  invoice: '<span style="font-weight:800;font-size:1rem;line-height:1;">₱</span>',
+  booking: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  order: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+};
+const ADMIN_NOTIF_DEFAULT_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+
+function renderAdminNotifications() {
+  const list = document.getElementById('admin-notif-list');
+  const empty = document.getElementById('admin-notif-empty');
+  const badge = document.getElementById('admin-notif-badge');
+  const unread = adminNotifications.filter(n => !n.is_read).length;
+
+  if (unread > 0) { badge.style.display = 'flex'; badge.textContent = unread > 9 ? '9+' : unread; }
+  else badge.style.display = 'none';
+
+  list.querySelectorAll('.admin-notif-item').forEach(el => el.remove());
+  if (adminNotifications.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  adminNotifications.slice(0, 10).forEach(n => {
+    const icon = ADMIN_NOTIF_ICONS[n.type] || ADMIN_NOTIF_DEFAULT_ICON;
+    const div = document.createElement('div');
+    div.className = 'admin-notif-item';
+    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(217,119,6,0.08)'};`;
+    div.onclick = () => adminReadNotif(n.id, n);
+    div.innerHTML = `
+      <div style="width:38px;height:38px;border-radius:10px;background:rgba(208,0,25,0.12);color:#f87171;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:inherit;font-weight:700;font-size:0.82rem;color:#fff;margin-bottom:0.2rem;display:flex;align-items:center;gap:0.5rem;">
+          ${n.title}
+          ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:#d00019;display:inline-block;flex-shrink:0;"></span>' : ''}
+        </div>
+        <div style="font-size:0.78rem;color:#9ca3af;line-height:1.5;margin-bottom:0.3rem;">${formatStatusInText(n.message)}</div>
+        <div style="font-size:0.7rem;color:#4b5563;">${relativeTime(n.created_at)}</div>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+const ADMIN_NOTIF_SECTION = { quotation_decision: 'outbox', invoice: 'outbox', booking: 'bookings', order: 'orders' };
+
+async function adminReadNotif(id, n) {
+  if (!n.is_read) {
+    try { await fetch(`/api/notifications/${id}/read`, { method: 'POST' }); n.is_read = true; } catch(e) {}
+  }
+  goToAdminSection(ADMIN_NOTIF_SECTION[n.type] || 'outbox');
+}
+
+async function adminMarkAllRead() {
+  try {
+    await fetch('/api/notifications/read-all', { method: 'POST' });
+    adminNotifications.forEach(n => n.is_read = true);
+    renderAdminNotifications();
+  } catch(e) {}
+}
+
+function toggleAdminNotifications(e) {
+  if (e) e.stopPropagation();
+  closeAdminProfileMenu();
+  adminNotifOpen = !adminNotifOpen;
+  document.getElementById('admin-notif-panel').style.display = adminNotifOpen ? 'block' : 'none';
+  if (adminNotifOpen) fetchAdminNotifications();
+}
+function closeAdminNotifications() {
+  adminNotifOpen = false;
+  document.getElementById('admin-notif-panel').style.display = 'none';
+}
+
+function toggleAdminProfileMenu(e) {
+  if (e) e.stopPropagation();
+  closeAdminNotifications();
+  adminProfileOpen = !adminProfileOpen;
+  document.getElementById('admin-profile-menu').style.display = adminProfileOpen ? 'block' : 'none';
+}
+function closeAdminProfileMenu() {
+  adminProfileOpen = false;
+  document.getElementById('admin-profile-menu').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  const notifPanel = document.getElementById('admin-notif-panel');
+  if (adminNotifOpen && !notifPanel.contains(e.target) && !e.target.closest('[onclick*="toggleAdminNotifications"]')) closeAdminNotifications();
+  const profileMenu = document.getElementById('admin-profile-menu');
+  if (adminProfileOpen && !profileMenu.contains(e.target) && !e.target.closest('[onclick*="toggleAdminProfileMenu"]')) closeAdminProfileMenu();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { if (adminNotifOpen) closeAdminNotifications(); if (adminProfileOpen) closeAdminProfileMenu(); }
+});
+
+function openChangePasswordModal() {
+  document.getElementById('pw-current').value = '';
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-confirm').value = '';
+  document.getElementById('change-pw-error').style.display = 'none';
+  document.getElementById('modal-change-password').style.display = 'flex';
+}
+
+async function submitChangePassword() {
+  const current = document.getElementById('pw-current').value;
+  const next = document.getElementById('pw-new').value;
+  const confirmVal = document.getElementById('pw-confirm').value;
+  const errEl = document.getElementById('change-pw-error');
+  errEl.style.display = 'none';
+
+  if (!current || !next || !confirmVal) { errEl.textContent = 'Fill in all three fields.'; errEl.style.display = 'block'; return; }
+  if (next.length < 6) { errEl.textContent = 'New password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
+  if (next !== confirmVal) { errEl.textContent = 'New password and confirmation do not match.'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('pw-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('{{ url_for("change_admin_password") }}', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `current_password=${encodeURIComponent(current)}&new_password=${encodeURIComponent(next)}`,
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('modal-change-password').style.display = 'none';
+    } else {
+      errEl.textContent = data.error || 'Could not change password.';
+      errEl.style.display = 'block';
+    }
+  } catch (e) {
+    errEl.textContent = 'Network error — please try again.';
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Password';
+}
+
+fetchAdminNotifications();
+</script>

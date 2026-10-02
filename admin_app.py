@@ -821,6 +821,169 @@ def admin_logout():
 
 # Admin routes
 
+def _revenue_transactions(date_from=None, date_to=None):
+    """Every money-moving event in one list: completed bookings, paid job
+    orders, completed orders (online + in-store), and released refunds
+    (negative amount, dated when the refund was actually released — not
+    the original sale date, so a report already printed never changes).
+    This is the single source of truth behind the Dashboard's revenue
+    card, the Reports & Sales page, and Transaction History — they only
+    ever disagree if one of them stops calling this."""
+    def in_range(dt):
+        if dt is None:
+            return False
+        d = dt.date() if hasattr(dt, 'date') else dt
+        if date_from and d < date_from:
+            return False
+        if date_to and d > date_to:
+            return False
+        return True
+
+    txns = []
+
+    for b in Booking.query.filter(Booking.status == 'completed', Booking.total_amount > 0,
+                                   Booking.is_archived == False).all():
+        d = b.completed_at or b.created_at
+        if not in_range(d):
+            continue
+        cust = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown')
+        txns.append({
+            'ref': f'BKG-{b.id:03d}', 'type': 'booking', 'customer': cust or 'Unknown',
+            'payment': (b.invoice_payment_method or b.payment_method or 'cash').upper(),
+            'amount': b.total_amount, 'date': d, 'status': 'Completed', 'record_id': b.id,
+        })
+
+    for jo in JobOrder.query.join(Payment, Payment.job_order_id == JobOrder.id).all():
+        d = jo.payment.paid_at
+        if not in_range(d):
+            continue
+        txns.append({
+            'ref': f'JO-{jo.id:03d}', 'type': 'job_order', 'customer': jo.customer_name or 'Unknown',
+            'payment': (jo.payment.payment_method or 'cash').upper(),
+            'amount': jo.total_amount, 'date': d, 'status': 'Paid', 'record_id': jo.id,
+        })
+
+    _walkin_cache = {}
+    for o in Order.query.filter(Order.status == 'completed').filter(Order.items.any()).all():
+        d = o.created_at
+        if not in_range(d):
+            continue
+        is_sale = bool(o.is_instore or o.walkin_customer_id)
+        if o.is_instore:
+            cust = o.contact_name or 'Walk-in'
+        elif o.walkin_customer_id:
+            if o.walkin_customer_id not in _walkin_cache:
+                _walkin_cache[o.walkin_customer_id] = WalkInCustomer.query.get(o.walkin_customer_id)
+            wc = _walkin_cache[o.walkin_customer_id]
+            cust = wc.name if wc else 'Walk-in'
+        else:
+            cust = o.customer.fullname if o.customer else 'Unknown'
+        txns.append({
+            'ref': (f'SALE-{o.id:03d}' if is_sale else f'ORD-{o.id:03d}'),
+            'type': ('sale' if is_sale else 'online'), 'customer': cust,
+            'payment': (o.payment_method or 'cash').upper(),
+            'amount': o.total_amount, 'date': d, 'status': 'Completed', 'record_id': o.id,
+        })
+
+    for rr in ReturnRequest.query.filter(ReturnRequest.resolution == 'refund', ReturnRequest.status == 'resolved').all():
+        d = rr.resolved_at
+        if not in_range(d):
+            continue
+        u = User.query.get(rr.user_id)
+        orig_ref = f'ORD-{rr.order_id:03d}' if rr.kind == 'product' else f'BKG-{rr.booking_id:03d}'
+        txns.append({
+            'ref': f'RF-{rr.id:03d}', 'type': 'refund', 'customer': u.fullname if u else 'Unknown',
+            'payment': '—', 'amount': -(rr.refund_amount or 0), 'date': d, 'status': 'Refunded',
+            'record_id': rr.id, 'refund_for': orig_ref, 'return_ref': _return_ref(rr),
+        })
+
+    txns.sort(key=lambda t: t['date'], reverse=True)
+    return txns
+
+
+def _order_refund_totals():
+    """{order_id: (total_refunded, is_full)} for every order with at least
+    one released refund. A full refund (amount >= what was paid) means the
+    order shouldn't count toward Orders Fulfilled; a partial one still
+    counts, just billed for less."""
+    totals = {}
+    for rr in ReturnRequest.query.filter(ReturnRequest.resolution == 'refund', ReturnRequest.status == 'resolved',
+                                          ReturnRequest.order_id.isnot(None)).all():
+        totals[rr.order_id] = totals.get(rr.order_id, 0) + (rr.refund_amount or 0)
+    if not totals:
+        return {}
+    orders_by_id = {o.id: o for o in Order.query.filter(Order.id.in_(totals.keys())).all()}
+    return {oid: (amt, amt >= (orders_by_id[oid].total_amount if oid in orders_by_id else 0) - 0.01)
+            for oid, amt in totals.items()}
+
+
+def _reports_summary(date_from=None, date_to=None):
+    """Everything the Dashboard's revenue card, the Reports & Sales page,
+    and Transaction History all read from — one computation, so they can
+    never disagree for the same date range."""
+    def in_range(d):
+        if date_from or date_to:
+            dd = d.date() if hasattr(d, 'date') else d
+            if date_from and dd < date_from:
+                return False
+            if date_to and dd > date_to:
+                return False
+        return True
+
+    txns = _revenue_transactions(date_from, date_to)
+
+    gross_by_type = {'booking': 0.0, 'job_order': 0.0, 'sale': 0.0, 'online': 0.0}
+    for t in txns:
+        if t['type'] in gross_by_type:
+            gross_by_type[t['type']] += t['amount']
+    gross_total = sum(gross_by_type.values())
+
+    refund_txns = [t for t in txns if t['type'] == 'refund']
+    refund_total = sum(-t['amount'] for t in refund_txns)
+    net_revenue = gross_total - refund_total
+
+    services_completed = sum(1 for t in txns if t['type'] in ('booking', 'job_order'))
+
+    refund_totals = _order_refund_totals()
+    fully_refunded_order_ids = {oid for oid, (amt, is_full) in refund_totals.items() if is_full}
+    orders_fulfilled = sum(1 for t in txns if t['type'] in ('sale', 'online') and t['record_id'] not in fully_refunded_order_ids)
+    refunded_orders_excluded = sum(1 for t in txns if t['type'] in ('sale', 'online') and t['record_id'] in fully_refunded_order_ids)
+
+    order_status_counts = {}
+    for o in Order.query.filter(Order.is_archived == False).filter(Order.items.any()).all():
+        if not in_range(o.created_at):
+            continue
+        eff_status = 'refunded' if o.id in fully_refunded_order_ids else o.status
+        order_status_counts[eff_status] = order_status_counts.get(eff_status, 0) + 1
+
+    service_tally = {}
+    for b in Booking.query.filter(Booking.status != 'cancelled', Booking.is_archived == False).all():
+        if not in_range(b.completed_at or b.created_at):
+            continue
+        service_tally[b.service] = service_tally.get(b.service, 0) + 1
+    for jo in JobOrder.query.filter(JobOrder.status != 'cancelled').all():
+        if not in_range(jo.created_at):
+            continue
+        for item in jo.items:
+            if item.item_type == 'service':
+                service_tally[item.name] = service_tally.get(item.name, 0) + item.quantity
+    top_services_list = sorted(service_tally.items(), key=lambda kv: kv[1], reverse=True)[:8]
+
+    return {
+        'transactions': txns,
+        'gross_by_type': gross_by_type,
+        'gross_total': gross_total,
+        'refund_total': refund_total,
+        'refund_count': len(refund_txns),
+        'net_revenue': net_revenue,
+        'services_completed': services_completed,
+        'orders_fulfilled': orders_fulfilled,
+        'refunded_orders_excluded': refunded_orders_excluded,
+        'order_status_counts': order_status_counts,
+        'top_services': top_services_list,
+    }
+
+
 def require_admin_or_staff(f):
     """Decorator: ensure only admin/staff can access a route."""
     from functools import wraps
@@ -838,15 +1001,11 @@ def require_admin_or_staff(f):
 @require_admin_or_staff
 def admin_dashboard():
     cleanup_abandoned_gcash_orders()
-    # Cash pick-up orders are only paid at the counter (Billing page), so they count as
-    # revenue only once completed — same treatment as awaiting_payment.
-    _order_rev   = db.session.query(func.sum(Order.total_amount)).filter(
-        Order.status.notin_(["cancelled", "awaiting_payment"]),
-        not_(and_(Order.payment_method == "cash", Order.delivery_method == "pickup", Order.status != "completed")),
-    ).scalar() or 0
-    _booking_rev = db.session.query(func.sum(Booking.total_amount)).filter(Booking.status == "completed").scalar() or 0
-    _jo_rev      = db.session.query(func.sum(Payment.amount)).scalar() or 0
-    _total_rev   = _order_rev + _booking_rev + _jo_rev
+    # Net of refunds, all-time — the same _reports_summary() the Reports &
+    # Sales page and Transaction History read from, so this card can never
+    # drift from either of them.
+    _rpt = _reports_summary()
+    _total_rev = _rpt['net_revenue']
     all_orders      = Order.query.filter_by(is_archived=False).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
     archived_orders = Order.query.filter_by(is_archived=True).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
 
@@ -915,6 +1074,14 @@ def admin_dashboard():
     for b in _all_bookings_list:
         b.quotation = _latest_quotations.get(b.id)
 
+    # Bookings sitting in Inspection & Estimation with a quotation out for
+    # the customer's answer — the one "nothing to do but wait" count that's
+    # genuinely useful to call out separately on the dashboard.
+    _awaiting_quotation_count = sum(
+        1 for b in _all_bookings_list
+        if b.status == 'inspection' and b.quotation and b.quotation.status == 'awaiting_customer'
+    )
+
     return render_template('admin_dashboard.html',
         pending_billing_count=_pending_billing_count,
         total_bookings=Booking.query.filter_by(is_archived=False).count(),
@@ -922,10 +1089,12 @@ def admin_dashboard():
         total_users=User.query.count(),
         total_revenue=f'{_total_rev:,.2f}',
         booking_status_counts=_booking_status_counts,
-        order_status_counts=dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
-        top_services=db.session.query(Booking.service, func.count(Booking.id).label('count')).group_by(Booking.service).order_by(func.count(Booking.id).desc()).limit(5).all(),
+        order_status_counts=_rpt['order_status_counts'],
+        top_services=_rpt['top_services'],
+        rpt=_rpt,
         new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
-        recent_bookings=Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).limit(5).all(),
+        recent_bookings=_all_bookings_list[:5],
+        awaiting_quotation_count=_awaiting_quotation_count,
         all_bookings=_all_bookings_list,
         all_orders=all_orders,
         all_products=Product.query.all(),
@@ -940,6 +1109,75 @@ def admin_dashboard():
         today=ph_now().date(),
         customer_origin=BASE_URL,
     )
+
+
+@admin_app.route('/api/dashboard-stats')
+@login_required
+@require_admin_or_staff
+def api_dashboard_stats():
+    """Powers the Dashboard overview's 15-second auto-refresh — the same
+    numbers admin_dashboard() computes for the initial page load, kept to
+    just what the stat cards / chart / Pending Actions / Recent Bookings
+    actually need, so polling this stays cheap."""
+    _total_rev = _reports_summary()['net_revenue']
+
+    _booking_status_counts = dict(db.session.query(Booking.status, func.count(Booking.id)).filter(Booking.is_archived == False).group_by(Booking.status).all())
+    if 'inprogress' in _booking_status_counts:
+        _booking_status_counts['in_progress'] = _booking_status_counts.get('in_progress', 0) + _booking_status_counts.pop('inprogress')
+
+    _all_bookings_list = Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).limit(50).all()
+    _q_booking_ids = [b.id for b in _all_bookings_list]
+    _latest_quotations = {}
+    if _q_booking_ids:
+        for q in Quotation.query.filter(Quotation.booking_id.in_(_q_booking_ids)).order_by(Quotation.created_at.asc()).all():
+            _latest_quotations[q.booking_id] = q
+    for b in _all_bookings_list:
+        b.quotation = _latest_quotations.get(b.id)
+
+    _awaiting_quotation_count = sum(
+        1 for b in _all_bookings_list
+        if b.status == 'inspection' and b.quotation and b.quotation.status == 'awaiting_customer'
+    )
+
+    _paid_jo_ids = [r[0] for r in db.session.query(Payment.job_order_id).filter(Payment.job_order_id != None).all()]
+    _pending_billing_count = (
+        JobOrder.query.filter(JobOrder.status == 'in_progress',
+                               ~JobOrder.id.in_(_paid_jo_ids) if _paid_jo_ids else True).count()
+        + Booking.query.filter(Booking.status.in_(['in_progress', 'inprogress']),
+                                Booking.payment_method.in_(['cash', None]),
+                                Booking.walkin_customer_id == None,
+                                Booking.is_archived == False).count()
+        + Order.query.filter(Order.delivery_method == 'pickup', Order.status == 'shipped',
+                              Order.walkin_customer_id == None, Order.is_archived == False)
+                     .filter(Order.items.any()).count()
+        + Booking.query.filter(Booking.status == 'completed', Booking.invoice_paid == False,
+                                Booking.invoice_payment_method == 'cash',
+                                Booking.is_archived == False).count()
+        + Order.query.filter(Order.is_instore == True, Order.instore_seen == False).count()
+    )
+
+    recent_bookings = []
+    for b in _all_bookings_list[:5]:
+        cust_name = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown')
+        recent_bookings.append({
+            'id': b.id, 'ref': f'BKG-{b.id:03d}', 'customer': cust_name, 'service': b.service,
+            'date': b.date.strftime('%b %d, %Y'), 'time': b.time.strftime('%I:%M %p'),
+            'status': b.status,
+            'awaiting_quotation': bool(b.status == 'inspection' and b.quotation and b.quotation.status == 'awaiting_customer'),
+        })
+
+    return jsonify({
+        'total_bookings': Booking.query.filter_by(is_archived=False).count(),
+        'total_orders': Order.query.filter_by(is_archived=False).filter(Order.items.any()).count(),
+        'total_users': User.query.count(),
+        'total_revenue': f'{_total_rev:,.2f}',
+        'booking_status_counts': _booking_status_counts,
+        'order_status_counts': dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
+        'new_users_today': User.query.filter(func.date(User.id) == date.today()).count(),
+        'awaiting_quotation_count': _awaiting_quotation_count,
+        'pending_billing_count': _pending_billing_count,
+        'recent_bookings': recent_bookings,
+    })
 
 
 @admin_app.route('/feedback/<int:fid>/read', methods=['POST'])
@@ -3665,6 +3903,21 @@ def update_admin_profile():
     return redirect(url_for('admin_dashboard'))
 
 
+@admin_app.route('/account/change-password', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def change_admin_password():
+    current_pw = request.form.get('current_password', '')
+    new_pw = request.form.get('new_password', '')
+    if not current_user.check_password(current_pw):
+        return jsonify({'success': False, 'error': 'Current password is incorrect.'}), 400
+    if len(new_pw) < 6:
+        return jsonify({'success': False, 'error': 'New password must be at least 6 characters.'}), 400
+    current_user.set_password(new_pw)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @admin_app.route('/profile/upload-pic', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -5106,6 +5359,53 @@ def walkin_receipt():
 
 # Report routes
 
+@admin_app.route('/api/reports-data')
+@login_required
+@require_admin_or_staff
+def api_reports_data():
+    """Powers the Reports & Sales page's live date-range filtering — the
+    From/To fields re-fetch this instead of reloading the page, so the
+    cards, charts, breakdown, and log all update from one consistent call."""
+    date_from_s = request.args.get('date_from', '').strip()
+    date_to_s = request.args.get('date_to', '').strip()
+    date_from = date_to = None
+    try:
+        if date_from_s:
+            date_from = datetime.strptime(date_from_s, '%Y-%m-%d').date()
+        if date_to_s:
+            date_to = datetime.strptime(date_to_s, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid date.'}), 400
+    if date_from and date_to and date_from > date_to:
+        return jsonify({'success': False, 'error': '"From" must be on or before "To".'}), 400
+
+    rpt = _reports_summary(date_from, date_to)
+    total_customers = User.query.filter_by(role='customer').count()
+
+    txns_json = [{
+        'ref': t['ref'], 'type': t['type'], 'customer': t['customer'], 'payment': t['payment'],
+        'amount': t['amount'], 'date': t['date'].strftime('%b %d, %Y %I:%M %p'),
+        'status': t['status'], 'refund_for': t.get('refund_for'), 'return_ref': t.get('return_ref'),
+    } for t in rpt['transactions'][:100]]
+
+    return jsonify({
+        'success': True,
+        'gross_total': rpt['gross_total'],
+        'gross_by_type': rpt['gross_by_type'],
+        'refund_total': rpt['refund_total'],
+        'refund_count': rpt['refund_count'],
+        'net_revenue': rpt['net_revenue'],
+        'services_completed': rpt['services_completed'],
+        'orders_fulfilled': rpt['orders_fulfilled'],
+        'refunded_orders_excluded': rpt['refunded_orders_excluded'],
+        'total_customers': total_customers,
+        'order_status_counts': rpt['order_status_counts'],
+        'top_services': rpt['top_services'],
+        'transactions': txns_json,
+        'transaction_count': len(rpt['transactions']),
+    })
+
+
 @admin_app.route('/report/generate', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -5141,7 +5441,22 @@ def generate_report():
         func.date(Payment.paid_at) >= d_from, func.date(Payment.paid_at) <= d_to
     ).scalar() or 0
 
-    total_revenue      = order_revenue + booking_revenue + job_order_revenue
+    gross_revenue = order_revenue + booking_revenue + job_order_revenue
+
+    # Refunds released within this period — subtracted here, on the date
+    # they were actually released, not the original sale's date, so a
+    # report already printed never changes after the fact.
+    _refunds_in_period = ReturnRequest.query.filter(
+        ReturnRequest.resolution == 'refund', ReturnRequest.status == 'resolved',
+        func.date(ReturnRequest.resolved_at) >= d_from, func.date(ReturnRequest.resolved_at) <= d_to,
+    ).all()
+    refund_total = sum(rr.refund_amount or 0 for rr in _refunds_in_period)
+    refund_count = len(_refunds_in_period)
+    refund_rows = [(_return_ref(rr),
+                     f'ORD-{rr.order_id:03d}' if rr.kind == 'product' else f'BKG-{rr.booking_id:03d}',
+                     rr.refund_amount or 0, rr.resolved_at) for rr in _refunds_in_period]
+
+    total_revenue      = gross_revenue - refund_total
     total_orders       = len(orders)
     total_bookings     = len(bookings)
     completed_orders   = sum(1 for o in orders if o.status == 'completed')
@@ -5247,7 +5562,7 @@ def generate_report():
 
     story.append(Paragraph('SUMMARY', heading_style))
     summary_data = [
-        ['Total Revenue', 'Total Orders', 'Total Bookings', 'Completed Orders'],
+        ['Net Revenue', 'Total Orders', 'Total Bookings', 'Completed Orders'],
         [f'P{total_revenue:,.2f}', str(total_orders), str(total_bookings), str(completed_orders)],
     ]
     st = Table(summary_data, colWidths=[W/4]*4)
@@ -5277,10 +5592,19 @@ def generate_report():
             ['Product Sales (Orders)', f'P{order_revenue:,.2f}'],
             ['Service Bookings (Completed)', f'P{booking_revenue:,.2f}'],
             ['Job Orders / Walk-ins', f'P{job_order_revenue:,.2f}'],
-            ['TOTAL REVENUE', f'P{total_revenue:,.2f}'],
+            ['GROSS REVENUE', f'P{gross_revenue:,.2f}'],
+            [f'Refunds ({refund_count})', f'-P{refund_total:,.2f}'],
+            ['NET REVENUE', f'P{total_revenue:,.2f}'],
         ],
         [W*0.65, W*0.35], align_right_cols=(1,), bold_last_row=True
     ))
+    if refund_rows:
+        story.append(Spacer(1, 4))
+        story.append(section_table(
+            ['Refund Ref', 'For', 'Amount', 'Released'],
+            [[ref, orig, f'-P{amt:,.2f}', dt.strftime('%b %d, %Y')] for ref, orig, amt, dt in refund_rows],
+            [W*0.2, W*0.3, W*0.25, W*0.25], align_right_cols=(2,)
+        ))
 
     story.append(Paragraph('ORDERS BY STATUS', heading_style))
     order_rows_sorted = sorted(order_status_rows.items())

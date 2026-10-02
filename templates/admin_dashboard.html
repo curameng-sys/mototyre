@@ -105,27 +105,63 @@
       border-top: 1px solid var(--sidebar-border);
       padding: 0.75rem;
     }
-    .sidebar-greeting {
-      display: flex; align-items: center; gap: 0.65rem;
-      padding: 0.5rem 0.4rem; border-radius: 7px;
-      cursor: default; transition: background 0.15s;
-      position: relative;
+    /* ═══════════════════════════════════════
+       TOP-RIGHT: notifications + profile
+    ═══════════════════════════════════════ */
+    #admin-topright {
+      position: fixed; top: 1.1rem; right: 1.75rem; z-index: 600;
+      display: flex; align-items: center; gap: 0.6rem;
     }
-    .sidebar-greeting:hover { background: var(--sidebar-hover); }
-    .avatar {
-      width: 32px; height: 32px;
-      border-radius: 50%; background: var(--red);
+    .topright-btn {
+      display: flex; align-items: center; gap: 0.55rem;
+      background: #fff; border: 1px solid var(--border);
+      cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: all 0.15s; font-family: inherit;
+    }
+    .topright-btn:hover { border-color: #9ca3af; }
+    .topright-bell {
+      width: 38px; height: 38px; border-radius: 50%;
+      justify-content: center; color: #6b7280;
+    }
+    .topright-profile { border-radius: 99px; padding: 0.3rem 0.8rem 0.3rem 0.3rem; }
+    .topright-avatar {
+      width: 30px; height: 30px; border-radius: 50%; background: var(--red);
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.82rem; font-weight: 700; color: #fff;
-      flex-shrink: 0; overflow: hidden;
+      font-size: 0.82rem; font-weight: 700; color: #fff; flex-shrink: 0; overflow: hidden;
     }
-    .greeting-name { font-size: 0.82rem; font-weight: 600; color: #f3f4f6; line-height: 1.2; }
-    .greeting-role { font-size: 0.7rem; color: #9ca3af; }
+    .topright-badge {
+      display: none; position: absolute; top: -2px; right: -2px;
+      background: var(--red); color: #fff; font-size: 0.6rem; font-weight: 700;
+      border-radius: 50%; width: 17px; height: 17px; align-items: center; justify-content: center;
+      border: 2px solid #fff;
+    }
+    #admin-profile-menu {
+      display: none; position: fixed; top: 4rem; right: 1.75rem; width: 220px;
+      background: #fff; border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15); z-index: 601; overflow: hidden;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .profile-menu-item {
+      display: block; padding: 0.7rem 1rem; font-size: 0.82rem; color: var(--text);
+      text-decoration: none; border-top: 1px solid var(--border); transition: background 0.12s;
+    }
+    .profile-menu-item:hover { background: #f9fafb; }
+    @media (max-width: 900px) {
+      /* The mobile topbar (logo + hamburger) already owns this strip —
+         avoid cramming a second fixed bar in next to it. Notifications and
+         profile stay reachable from the sidebar drawer's Settings/Logout
+         links on small screens. */
+      #admin-topright, #admin-profile-menu { display: none !important; }
+      .main { padding-top: 4.5rem !important; }
+    }
 
     /* ═══════════════════════════════════════
        MAIN CONTENT
     ═══════════════════════════════════════ */
-    .main { padding: 1.75rem 2rem; overflow-x: hidden; background: var(--ink); }
+    /* Extra top padding reserves room below the fixed top-right notif/profile
+       widget so it never overlaps a section's own right-aligned header button
+       (Add Product, New Walk-In Quotation, View All, etc.). */
+    .main { padding: 5rem 2rem 1.75rem; overflow-x: hidden; background: var(--ink); }
     .page-section { display: none; }
     .page-section.active { display: block; }
 
@@ -297,7 +333,7 @@
     .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
     .chart-bar-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
     .chart-bar-item { display: flex; align-items: center; gap: 0.65rem; font-size: 0.78rem; }
-    .chart-bar-item .bar-label { width: 75px; color: var(--muted); text-align: right; font-size: 0.73rem; }
+    .chart-bar-item .bar-label { width: 120px; flex-shrink: 0; color: var(--muted); text-align: right; font-size: 0.73rem; line-height: 1.25; }
     .chart-bar-track { flex: 1; background: #f3f4f6; border-radius: 99px; height: 6px; overflow: hidden; }
     .chart-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; width: 0; }
     .chart-bar-item .bar-val { width: 36px; font-weight: 600; color: var(--text); font-size: 0.72rem; }
@@ -309,14 +345,44 @@
     .bar-shipped { background: #06b6d4; }
     .bar-green { background: #16a34a; }
 
+    /* Booking-status chart only — its own color namespace so it never
+       collides with (or accidentally recolors) the Order-status chart,
+       which reuses .bar-pending/.bar-cancelled for its own meanings. */
+    .bk-bar-confirmed  { background: #3b82f6; }
+    .bk-bar-inspection { background: #f59e0b; }
+    .bk-bar-inprogress { background: #6366f1; }
+    .bk-bar-completed  { background: #16a34a; }
+    .bk-bar-cancelled  { background: #9ca3af; }
+
+    /* Reports & Sales → Orders by Status chart — its own namespace too,
+       since 'completed'/'cancelled' already mean something different on
+       the two chart color sets above. */
+    .rpt-bar-pending    { background: #f59e0b; }
+    .rpt-bar-processing { background: #3b82f6; }
+    .rpt-bar-shipped    { background: #6366f1; }
+    .rpt-bar-completed  { background: #16a34a; }
+    .rpt-bar-refunded   { background: #dc2626; }
+    .rpt-bar-cancelled  { background: #9ca3af; }
+    .bk-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 0.4rem; flex-shrink: 0; }
+    .chart-bar-item.clickable { cursor: pointer; border-radius: 8px; padding: 0.2rem 0.4rem; margin: -0.2rem -0.4rem; transition: background 0.12s; }
+    .chart-bar-item.clickable:hover { background: #f3f4f6; }
+    .chart-bar-item .bar-label { display: flex; align-items: center; }
+
     .pending-box {
       display: flex; justify-content: space-between; align-items: center;
       padding: 0.75rem 1rem; background: #f9fafb;
       border: 1px solid var(--border); border-radius: 8px;
       margin-bottom: 0.6rem; font-size: 0.82rem;
+      cursor: pointer; transition: all 0.15s;
     }
+    .pending-box:hover { background: #f3f4f6; }
     .pending-box:last-child { margin-bottom: 0; }
     .pending-num { font-size: 1.3rem; font-weight: 700; color: var(--text); }
+    .pending-box.amber-highlight { background: #fffbeb; border-color: #fde68a; }
+    .pending-box.amber-highlight:hover { background: #fef3c7; }
+    .pending-sub { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
+    .stat-flash { animation: statFlash 1s ease; }
+    @keyframes statFlash { 0%, 100% { color: inherit; } 30% { color: var(--red); } }
 
     /* ═══════════════════════════════════════
        MODAL
@@ -441,6 +507,58 @@
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeAdminSidebar()"></div>
 
+<!-- TOP-RIGHT: notifications + profile — fixed so it stays in the same
+     corner on every section/page, without duplicating it into each
+     page-header. -->
+<div id="admin-topright">
+  <div style="position:relative;">
+    <button onclick="toggleAdminNotifications(event)" title="Notifications" class="topright-btn topright-bell">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </button>
+    <span id="admin-notif-badge" class="topright-badge">0</span>
+  </div>
+  <button onclick="toggleAdminProfileMenu(event)" class="topright-btn topright-profile">
+    <div class="topright-avatar">
+      {% if current_user.profile_pic %}
+        <img src="{{ current_user.profile_pic if current_user.profile_pic.startswith('http') else url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="{{ current_user.fullname[0].upper() }}" style="width:100%;height:100%;object-fit:cover;" onerror="this.replaceWith(document.createTextNode(this.alt))">
+      {% else %}
+        {{ current_user.fullname[0].upper() }}
+      {% endif %}
+    </div>
+    <div style="text-align:left;line-height:1.15;">
+      <div style="font-weight:700;font-size:0.8rem;color:var(--text);">{{ current_user.fullname }}</div>
+      <div style="font-size:0.66rem;color:var(--muted);">Administrator</div>
+    </div>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+</div>
+
+<!-- PROFILE MENU -->
+<div id="admin-profile-menu">
+  <div style="padding:0.9rem 1rem;border-bottom:1px solid var(--border);">
+    <div style="font-weight:700;font-size:0.85rem;color:var(--text);">{{ current_user.fullname }}</div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;word-break:break-all;">{{ current_user.email }}</div>
+  </div>
+  <a href="#" onclick="closeAdminProfileMenu();goToSection('settings');return false;" class="profile-menu-item">My profile</a>
+  <a href="#" onclick="closeAdminProfileMenu();openChangePasswordModal();return false;" class="profile-menu-item">Change password</a>
+  <a href="#" onclick="closeAdminProfileMenu();document.getElementById('modal-logout').style.display='flex';return false;" class="profile-menu-item" style="color:var(--red);font-weight:700;">Log out</a>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay" id="modal-change-password">
+  <div class="modal-box" style="max-width:380px;">
+    <h5 style="margin-bottom:1rem;">Change Password</h5>
+    <div id="change-pw-error" style="display:none;background:rgba(208,0,25,0.08);border:1px solid rgba(208,0,25,0.25);color:#b91c1c;font-size:0.8rem;padding:0.6rem 0.8rem;border-radius:8px;margin-bottom:0.85rem;"></div>
+    <div class="form-group"><label>Current Password</label><input type="password" id="pw-current" autocomplete="current-password"></div>
+    <div class="form-group"><label>New Password</label><input type="password" id="pw-new" autocomplete="new-password"></div>
+    <div class="form-group"><label>Confirm New Password</label><input type="password" id="pw-confirm" autocomplete="new-password"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('modal-change-password').style.display='none'">Cancel</button>
+      <button id="pw-submit-btn" onclick="submitChangePassword()" style="padding:0.6rem 1.5rem;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">Save Password</button>
+    </div>
+  </div>
+</div>
+
 <div class="admin-wrap">
 
   <!-- SIDEBAR -->
@@ -479,23 +597,6 @@
       <div class="sidebar-label" style="padding-top:0;">Account</div>
       <a href="#" onclick="showSection('settings', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span> Settings</a>
       <a href="#" onclick="document.getElementById('modal-logout').style.display='flex'"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Logout</a>
-      <div class="sidebar-greeting" style="margin-top:0.5rem;">
-        <div class="avatar">
-          {% if current_user.profile_pic %}
-            <img src="{{ current_user.profile_pic if current_user.profile_pic.startswith('http') else url_for('static', filename='profile_pics/' + current_user.profile_pic) }}" alt="{{ current_user.fullname[0].upper() }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.replaceWith(document.createTextNode(this.alt))">
-          {% else %}
-            {{ current_user.fullname[0].upper() }}
-          {% endif %}
-        </div>
-        <div>
-          <div class="greeting-name">{{ current_user.fullname }}</div>
-          <div class="greeting-role">Administrator</div>
-        </div>
-        <div style="margin-left:auto;cursor:pointer;position:relative;" onclick="toggleAdminNotifications(event)" title="Notifications">
-          <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:#9ca3af;transition:all 0.15s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-          <span id="admin-notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:#d00019;color:#fff;font-size:0.6rem;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center;border:2px solid var(--sidebar-bg);">0</span>
-        </div>
-      </div>
     </div>
   </aside>
 
@@ -513,34 +614,37 @@
       <div class="stats-grid">
         <div class="stat-card red">
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-          <div class="stat-value">{{ total_bookings }}</div><div class="stat-label">Total Bookings</div>
+          <div class="stat-value" id="stat-total-bookings">{{ total_bookings }}</div><div class="stat-label">Total Bookings</div>
         </div>
         <div class="stat-card blue">
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
-          <div class="stat-value">{{ total_orders }}</div><div class="stat-label">Total Orders</div>
+          <div class="stat-value" id="stat-total-orders">{{ total_orders }}</div><div class="stat-label">Total Orders</div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon" style="font-size:20px;font-weight:700;line-height:1;">₱</div>
-          <div class="stat-value">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div>
+          <div class="stat-value" id="stat-total-revenue">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div>
         </div>
         <div class="stat-card orange">
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-          <div class="stat-value">{{ total_users }}</div><div class="stat-label">Registered Users</div>
+          <div class="stat-value" id="stat-total-users">{{ total_users }}</div><div class="stat-label">Registered Users</div>
         </div>
       </div>
       <div class="charts-grid">
         <div class="card">
-          <div class="card-head"><h5>Bookings by Status</h5></div>
+          <div class="card-head">
+            <h5>Bookings by Status</h5>
+            <span style="font-size:0.7rem;color:var(--muted);">Click a status to open it in Manage Bookings</span>
+          </div>
           <div class="card-body">
-            <div class="chart-bar-wrap">
-              {% set booking_statuses = [('in_progress','bar-pending'),('confirmed','bar-confirmed'),('completed','bar-completed'),('cancelled','bar-cancelled')] %}
-              {% for status, cls in booking_statuses %}
+            <div class="chart-bar-wrap" id="booking-status-chart">
+              {% set booking_statuses = [('confirmed','Confirmed','bk-bar-confirmed','confirmed'),('inspection','Inspection & Estimation','bk-bar-inspection','inspection'),('in_progress','In Progress','bk-bar-inprogress','inprogress'),('completed','Completed','bk-bar-completed','completed'),('cancelled','Cancelled','bk-bar-cancelled','cancelled')] %}
+              {% for status, label, cls, tab in booking_statuses %}
                 {% set count = booking_status_counts.get(status, 0) %}
                 {% set pct = ((count / total_bookings * 100)|int) if total_bookings > 0 else 0 %}
-                <div class="chart-bar-item">
-                  <span class="bar-label">{{ status|replace('_',' ')|title }}</span>
-                  <div class="chart-bar-track"><div class="chart-bar-fill {{ cls }}" data-width="{{ pct }}"></div></div>
-                  <span class="bar-val">{{ count }}</span>
+                <div class="chart-bar-item clickable" data-status="{{ status }}" onclick="goToBookingsTab('{{ tab }}')">
+                  <span class="bar-label"><span class="bk-dot {{ cls }}"></span>{{ label }}</span>
+                  <div class="chart-bar-track"><div class="chart-bar-fill {{ cls }}" data-width="{{ pct }}" id="bk-bar-{{ status }}"></div></div>
+                  <span class="bar-val" id="bk-count-{{ status }}">{{ count }}</span>
                 </div>
               {% endfor %}
             </div>
@@ -548,30 +652,56 @@
         </div>
         <div class="card">
           <div class="card-head"><h5>Pending Actions</h5></div>
-          <div class="card-body">
-            <div class="pending-box"><span>In Progress Bookings</span><span class="pending-num" style="color:var(--warning);">{{ booking_status_counts.get('in_progress', 0) }}</span></div>
-            <div class="pending-box"><span>Pending Orders</span><span class="pending-num" style="color:var(--blue);">{{ order_status_counts.get('pending', 0) }}</span></div>
-            <div class="pending-box"><span>New Users Today</span><span class="pending-num" style="color:var(--green);">{{ new_users_today }}</span></div>
+          <div class="card-body" id="pending-actions-body">
+            <div class="pending-box{% if awaiting_quotation_count > 0 %} amber-highlight{% endif %}" id="pending-box-quotation" onclick="goToBookingsTab('inspection')">
+              <div><span>Awaiting Quotation Answer</span><div class="pending-sub">Quotations sent, waiting for the customer</div></div>
+              <span class="pending-num" id="pending-num-quotation" style="color:#b45309;">{{ awaiting_quotation_count }}</span>
+            </div>
+            <div class="pending-box" onclick="goToBookingsTab('inprogress')">
+              <span>In Progress Bookings</span><span class="pending-num" id="pending-num-inprogress" style="color:var(--warning);">{{ booking_status_counts.get('in_progress', 0) }}</span>
+            </div>
+            <div class="pending-box" onclick="goToSection('orders')">
+              <span>Pending Orders</span><span class="pending-num" id="pending-num-orders" style="color:var(--blue);">{{ order_status_counts.get('pending', 0) }}</span>
+            </div>
+            <div class="pending-box" onclick="goToSection('users')">
+              <span>New Users Today</span><span class="pending-num" id="pending-num-users" style="color:var(--green);">{{ new_users_today }}</span>
+            </div>
           </div>
         </div>
       </div>
       <div class="card">
         <div class="card-head">
           <h5>Recent Bookings</h5>
-          <button class="btn-primary-custom" onclick="showSection('bookings', document.querySelectorAll('.sidebar a')[2])">View All</button>
+          <button class="btn-primary-custom" onclick="goToSection('bookings')">View All</button>
         </div>
+        {% set bk_status_colors = {
+          'confirmed':  {'bg': '#eff6ff', 'fg': '#1d4ed8'},
+          'inspection': {'bg': '#fffbeb', 'fg': '#b45309'},
+          'in_progress':{'bg': '#eef2ff', 'fg': '#4338ca'},
+          'inprogress': {'bg': '#eef2ff', 'fg': '#4338ca'},
+          'completed':  {'bg': '#f0fdf4', 'fg': '#15803d'},
+          'cancelled':  {'bg': '#f3f4f6', 'fg': '#4b5563'},
+        } %}
         {% if recent_bookings %}
-        <div style="overflow-x:auto;">
+        <div style="overflow-x:auto;" id="recent-bookings-wrap">
           <table class="table">
             <thead><tr><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
             <tbody>
               {% for b in recent_bookings %}
+              {% set sc = bk_status_colors.get(b.status, {'bg':'#f3f4f6','fg':'#4b5563'}) %}
               <tr>
-                <td>{{ b.customer.fullname }}</td>
+                <td>
+                  {{ b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown') }}
+                  <div class="pending-sub">BKG-{{ '%03d'|format(b.id) }}</div>
+                </td>
                 <td>{{ b.service }}</td>
                 <td>{{ b.date.strftime('%b %d, %Y') }}</td>
                 <td>{{ b.time.strftime('%I:%M %p') }}</td>
-                <td><span class="badge badge-{{ b.status|replace('_','') }}">{{ b.status|replace('_',' ')|title }}</span></td>
+                <td>
+                  <span class="badge" style="background:{{ sc.bg }};color:{{ sc.fg }};border:1px solid {{ sc.fg }}33;">
+                    {% if b.status == 'inspection' and b.quotation and b.quotation.status == 'awaiting_customer' %}Inspection &amp; Estimation · Quotation sent{% else %}{{ b.status|replace('_',' ')|title }}{% endif %}
+                  </span>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -594,19 +724,19 @@
 
       <!-- Status Tabs -->
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-        <button class="bk-tab active" onclick="switchBookingTab('confirmed', this)">
+        <button class="bk-tab active" data-tab="confirmed" onclick="switchBookingTab('confirmed', this)">
           Confirmed <span class="bk-tab-count">{{ booking_status_counts.get('confirmed', 0) }}</span>
         </button>
-        <button class="bk-tab" onclick="switchBookingTab('inspection', this)">
+        <button class="bk-tab" data-tab="inspection" onclick="switchBookingTab('inspection', this)">
           Inspection &amp; Estimation <span class="bk-tab-count">{{ booking_status_counts.get('inspection', 0) }}</span>
         </button>
-        <button class="bk-tab" onclick="switchBookingTab('inprogress', this)">
+        <button class="bk-tab" data-tab="inprogress" onclick="switchBookingTab('inprogress', this)">
           In Progress <span class="bk-tab-count">{{ booking_status_counts.get('in_progress', 0) + booking_status_counts.get('inprogress', 0) }}</span>
         </button>
-        <button class="bk-tab" onclick="switchBookingTab('completed', this)">
+        <button class="bk-tab" data-tab="completed" onclick="switchBookingTab('completed', this)">
           Completed <span class="bk-tab-count">{{ booking_status_counts.get('completed', 0) }}</span>
         </button>
-        <button class="bk-tab" onclick="switchBookingTab('cancelled', this)">
+        <button class="bk-tab" data-tab="cancelled" onclick="switchBookingTab('cancelled', this)">
           Cancelled <span class="bk-tab-count">{{ booking_status_counts.get('cancelled', 0) }}</span>
         </button>
       </div>
@@ -1412,31 +1542,35 @@
         </div>
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-        <div style="font-family:inherit;font-weight:700;font-size:0.88rem;color:var(--text);margin-right:0.5rem;">Generate Report</div>
-        <form method="POST" action="{{ url_for('generate_report') }}" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-          <div style="display:flex;align-items:center;gap:0.5rem;">
-            <label style="font-size:0.78rem;color:var(--muted);font-family:inherit;font-weight:600;">From</label>
-            <input type="date" name="date_from" required style="padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#ffffff;color:var(--text);font-size:0.82rem;outline:none;">
-          </div>
-          <div style="display:flex;align-items:center;gap:0.5rem;">
-            <label style="font-size:0.78rem;color:var(--muted);font-family:inherit;font-weight:600;">To</label>
-            <input type="date" name="date_to" required style="padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#ffffff;color:var(--text);font-size:0.82rem;outline:none;">
-          </div>
-          <button type="submit" class="btn-primary-custom">Download PDF</button>
-        </form>
+        <div style="font-family:inherit;font-weight:700;font-size:0.88rem;color:var(--text);margin-right:0.5rem;">Report Period</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <label style="font-size:0.78rem;color:var(--muted);font-family:inherit;font-weight:600;">From</label>
+          <input type="date" id="rpt-date-from" onchange="refreshReports()" style="padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#ffffff;color:var(--text);font-size:0.82rem;outline:none;">
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <label style="font-size:0.78rem;color:var(--muted);font-family:inherit;font-weight:600;">To</label>
+          <input type="date" id="rpt-date-to" onchange="refreshReports()" style="padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#ffffff;color:var(--text);font-size:0.82rem;outline:none;">
+        </div>
+        <button type="button" onclick="clearReportDates()" style="padding:0.45rem 0.9rem;border-radius:8px;border:1px solid var(--border);background:#f9fafb;color:var(--muted);font-family:inherit;font-weight:700;font-size:0.78rem;cursor:pointer;">All time</button>
+        <button type="button" onclick="downloadReportPdf()" class="btn-primary-custom">Download PDF</button>
+        <div id="rpt-date-error" style="display:none;width:100%;color:var(--red);font-size:0.8rem;font-weight:600;"></div>
       </div>
       <div class="stats-grid">
         <div class="stat-card red">
           <div class="stat-icon" style="font-size:20px;font-weight:700;line-height:1;">₱</div>
-          <div class="stat-value">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div>
+          <div class="stat-value" id="rpt-net-revenue">₱{{ '%.2f'|format(rpt.net_revenue) }}</div><div class="stat-label">Net Revenue</div>
+          <div id="rpt-revenue-sub" style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem;">Gross ₱{{ '%.2f'|format(rpt.gross_total) }}{% if rpt.refund_total > 0 %} · <strong style="color:var(--red);">−₱{{ '%.2f'|format(rpt.refund_total) }}</strong> refunded{% else %} · no refunds{% endif %}</div>
         </div>
         <div class="stat-card blue">
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
-          <div class="stat-value">{{ booking_status_counts.get('completed', 0) }}</div><div class="stat-label">Services Completed</div>
+          <div class="stat-value" id="rpt-services-completed">{{ rpt.services_completed }}</div><div class="stat-label">Services Completed</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem;">Bookings and job orders</div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
-          <div class="stat-value">{{ order_status_counts.get('completed', 0) }}</div><div class="stat-label">Orders Fulfilled</div>
+          <div class="stat-value" id="rpt-orders-fulfilled">{{ rpt.orders_fulfilled }}</div><div class="stat-label">Orders Fulfilled</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem;">Online and in-store</div>
+          <div id="rpt-refunded-excluded-note" style="font-size:0.68rem;color:var(--muted);margin-top:0.1rem;{% if not rpt.refunded_orders_excluded %}display:none;{% endif %}">{{ rpt.refunded_orders_excluded }} refunded order(s) not counted</div>
         </div>
         <div class="stat-card orange">
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
@@ -1445,17 +1579,21 @@
       </div>
       <div class="charts-grid">
         <div class="card">
-          <div class="card-head"><h5>Orders by Status</h5></div>
+          <div class="card-head">
+            <h5>Orders by Status</h5>
+            <span style="font-size:0.7rem;color:var(--muted);">Online and in-store orders</span>
+          </div>
           <div class="card-body">
-            <div class="chart-bar-wrap">
-              {% set order_statuses = [('pending','bar-pending'),('processing','bar-processing'),('shipped','bar-shipped'),('completed','bar-completed'),('cancelled','bar-cancelled')] %}
-              {% for status, cls in order_statuses %}
-                {% set count = order_status_counts.get(status, 0) %}
-                {% set pct = ((count / total_orders * 100)|int) if total_orders > 0 else 0 %}
+            <div class="chart-bar-wrap" id="rpt-order-status-chart">
+              {% set order_statuses = [('pending','Pending','rpt-bar-pending'),('processing','Processing','rpt-bar-processing'),('shipped','Shipped','rpt-bar-shipped'),('completed','Completed','rpt-bar-completed'),('refunded','Refunded','rpt-bar-refunded'),('cancelled','Cancelled','rpt-bar-cancelled')] %}
+              {% set rpt_order_total = rpt.order_status_counts.values()|sum %}
+              {% for status, label, cls in order_statuses %}
+                {% set count = rpt.order_status_counts.get(status, 0) %}
+                {% set pct = ((count / rpt_order_total * 100)|int) if rpt_order_total > 0 else 0 %}
                 <div class="chart-bar-item">
-                  <span class="bar-label">{{ status|title }}</span>
-                  <div class="chart-bar-track"><div class="chart-bar-fill {{ cls }}" data-width="{{ pct }}"></div></div>
-                  <span class="bar-val">{{ count }}</span>
+                  <span class="bar-label">{{ label }}</span>
+                  <div class="chart-bar-track"><div class="chart-bar-fill {{ cls }}" data-width="{{ pct }}" id="rpt-bar-fill-{{ status }}"></div></div>
+                  <span class="bar-val" id="rpt-bar-count-{{ status }}">{{ count }}</span>
                 </div>
               {% endfor %}
             </div>
@@ -1464,45 +1602,40 @@
         <div class="card">
           <div class="card-head"><h5>Top Services Booked</h5></div>
           <div class="card-body">
-            {% if top_services %}
-            <div class="chart-bar-wrap">
-              {% for service, count in top_services %}
-                {% set pct = ((count / total_bookings * 100)|int) if total_bookings > 0 else 0 %}
-                <div class="chart-bar-item">
-                  <span class="bar-label" style="width:90px;font-size:0.7rem;">{{ service[:10] }}</span>
-                  <div class="chart-bar-track"><div class="chart-bar-fill bar-green" data-width="{{ pct }}"></div></div>
-                  <span class="bar-val">{{ count }}</span>
-                </div>
-              {% endfor %}
+            <div class="chart-bar-wrap" id="rpt-top-services-chart">
+              {% if rpt.top_services %}
+                {% set rpt_top_max = rpt.top_services[0][1] %}
+                {% for service, count in rpt.top_services %}
+                  {% set pct = ((count / rpt_top_max * 100)|int) if rpt_top_max > 0 else 0 %}
+                  <div class="chart-bar-item">
+                    <span class="bar-label" style="width:140px;">{{ service }}</span>
+                    <div class="chart-bar-track"><div class="chart-bar-fill bar-green" data-width="{{ pct }}"></div></div>
+                    <span class="bar-val">{{ count }}</span>
+                  </div>
+                {% endfor %}
+              {% else %}
+              <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No booking data yet.</p></div>
+              {% endif %}
             </div>
-            {% else %}
-            <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No booking data yet.</p></div>
-            {% endif %}
           </div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-head"><h5>Recent Orders Log</h5></div>
-        {% if all_orders %}
-        <div style="overflow-x:auto;">
-          <table class="table">
-            <thead><tr><th>Order #</th><th>Customer</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
-            <tbody>
-              {% for o in all_orders[:10] %}
-              <tr>
-                <td>{{ ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) }}</td>
-                <td>{{ o.contact_name if o.is_instore else o.customer.fullname }}</td>
-                <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
-                <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
-                <td><span class="badge badge-{{ o.status }}">{{ o.status|title }}</span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:1rem;align-items:start;">
+        <div class="card">
+          <div class="card-head">
+            <h5>Recent Transactions Log</h5>
+            <span id="rpt-txn-count" style="font-size:0.75rem;color:var(--muted);">{{ rpt.transactions|length }} transaction{{ 's' if rpt.transactions|length != 1 else '' }}</span>
+          </div>
+          <div id="rpt-txn-log-wrap" style="overflow-x:auto;">
+            {% include 'partials/reports_txn_rows.html' %}
+          </div>
         </div>
-        {% else %}
-        <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><p>No transactions yet.</p></div>
-        {% endif %}
+        <div class="card">
+          <div class="card-head"><h5>Revenue Breakdown</h5></div>
+          <div class="card-body" id="rpt-breakdown-body">
+            {% include 'partials/reports_breakdown.html' %}
+          </div>
+        </div>
       </div>
     </section>
 
@@ -2416,6 +2549,21 @@
     if (name === 'outbox') { loadOutbox(); }
     if (name === 'returns') { loadReturns(); }
     if (name === 'mechanics') { loadMechanicsRoster(); }
+  }
+
+  // Generic "jump to a sidebar section" used by Dashboard-overview widgets
+  // (chart rows, Pending Actions, View All) — looked up by the section name
+  // baked into that link's own onclick, so it stays correct even if the
+  // sidebar's link order changes.
+  function goToSection(name) {
+    const link = document.querySelector(`.sidebar a[onclick*="showSection('${name}'"]`);
+    showSection(name, link);
+  }
+
+  function goToBookingsTab(tabKey) {
+    goToSection('bookings');
+    const btn = document.querySelector(`#sec-bookings .bk-tab[data-tab="${tabKey}"]`);
+    if (btn) switchBookingTab(tabKey, btn);
   }
 
   // Every add, edit, delete or assign touches the roster the bookings
@@ -5232,19 +5380,19 @@
 </script>
 
 <!-- ═══ ADMIN NOTIFICATION PANEL ═══ -->
-<div id="admin-notif-panel" style="display:none;position:fixed;top:1rem;left:260px;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,0.1);border-radius:16px;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;font-family:'DM Sans',sans-serif;">
+<div id="admin-notif-panel" style="display:none;position:fixed;top:4rem;right:1.75rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,0.1);border-radius:16px;z-index:601;box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;font-family:'DM Sans',sans-serif;">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.07);">
     <div style="font-family:inherit;font-weight:700;font-size:0.95rem;color:#fff;">Notifications</div>
-    <div style="display:flex;gap:0.75rem;">
-      <button onclick="adminMarkAllRead()" style="background:none;border:none;color:#d00019;font-family:inherit;font-weight:700;font-size:0.75rem;cursor:pointer;">Mark all read</button>
-      <button onclick="toggleAdminNotifications()" style="background:none;border:none;color:#6b7280;font-size:1.1rem;cursor:pointer;">✕</button>
-    </div>
+    <button onclick="adminMarkAllRead()" style="background:none;border:none;color:#d00019;font-family:inherit;font-weight:700;font-size:0.75rem;cursor:pointer;">Mark all read</button>
   </div>
-  <div id="admin-notif-list" style="max-height:460px;overflow-y:auto;">
+  <div id="admin-notif-list" style="max-height:420px;overflow-y:auto;">
     <div id="admin-notif-empty" style="text-align:center;padding:2.5rem 1rem;color:#6b7280;">
       <div style="margin-bottom:0.5rem;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
       <div style="font-size:0.85rem;">No notifications yet.</div>
     </div>
+  </div>
+  <div style="padding:0.75rem 1.25rem;border-top:1px solid rgba(255,255,255,0.07);text-align:center;">
+    <a href="#" onclick="toggleAdminNotifications();goToSection('outbox');return false;" style="color:#d00019;font-family:inherit;font-weight:700;font-size:0.8rem;text-decoration:none;">Open Outbox</a>
   </div>
 </div>
 
@@ -5264,6 +5412,26 @@ function formatStatusInText(text) {
   return text.replace(/\b(IN_PROGRESS|in_progress)\b/gi, 'In Progress')
              .replace(/\b(AWAITING_PAYMENT|awaiting_payment)\b/gi, 'Awaiting Payment');
 }
+
+function relativeTime(iso) {
+  const diffSec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (diffSec < 60) return 'Just now';
+  const min = Math.floor(diffSec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hr${hr > 1 ? 's' : ''} ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day} day${day > 1 ? 's' : ''} ago`;
+  return new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+}
+
+const ADMIN_NOTIF_ICONS = {
+  quotation_decision: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  invoice: '<span style="font-weight:800;font-size:1rem;line-height:1;">₱</span>',
+  booking: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  order: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+};
+const ADMIN_NOTIF_DEFAULT_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
 
 function renderAdminNotifications() {
   const list = document.getElementById('admin-notif-list');
@@ -5286,31 +5454,35 @@ function renderAdminNotifications() {
   }
   empty.style.display = 'none';
 
-  const icons = { booking: '●', order: '●', update: '●', reminder: '●' };
-
   adminNotifications.slice(0, 10).forEach(n => {
-    const icon = icons[n.type] || '●';
-    const time = new Date(n.created_at).toLocaleString('en-PH', {
-      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-    });
+    const icon = ADMIN_NOTIF_ICONS[n.type] || ADMIN_NOTIF_DEFAULT_ICON;
     const div = document.createElement('div');
     div.className = 'admin-notif-item';
-    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(208,0,25,0.05)'};`;
+    div.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;background:${n.is_read ? 'transparent' : 'rgba(217,119,6,0.08)'};`;
     div.onclick = () => adminReadNotif(n.id, n);
     div.innerHTML = `
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(208,0,25,0.12);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">${icon}</div>
+      <div style="width:38px;height:38px;border-radius:10px;background:rgba(208,0,25,0.12);color:#f87171;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-family:inherit;font-weight:700;font-size:0.82rem;color:#fff;margin-bottom:0.2rem;display:flex;align-items:center;gap:0.5rem;">
           ${n.title}
-          ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:#d00019;display:inline-block;"></span>' : ''}
+          ${!n.is_read ? '<span style="width:7px;height:7px;border-radius:50%;background:#d00019;display:inline-block;flex-shrink:0;"></span>' : ''}
         </div>
         <div style="font-size:0.78rem;color:#9ca3af;line-height:1.5;margin-bottom:0.3rem;">${formatStatusInText(n.message)}</div>
-        <div style="font-size:0.7rem;color:#4b5563;">${time}</div>
+        <div style="font-size:0.7rem;color:#4b5563;">${relativeTime(n.created_at)}</div>
       </div>
     `;
     list.appendChild(div);
   });
 }
+
+// Which section a notification is "about" — best-effort, since the admin
+// list doesn't carry a specific booking/order id, just its type.
+const ADMIN_NOTIF_DESTINATION = {
+  quotation_decision: () => { toggleAdminNotifications(); goToSection('outbox'); },
+  invoice:            () => { toggleAdminNotifications(); goToSection('outbox'); },
+  booking:            () => { toggleAdminNotifications(); goToSection('bookings'); },
+  order:              () => { toggleAdminNotifications(); goToSection('orders'); },
+};
 
 async function adminReadNotif(id, n) {
   if (!n.is_read) {
@@ -5320,6 +5492,7 @@ async function adminReadNotif(id, n) {
       renderAdminNotifications();
     } catch(e) {}
   }
+  (ADMIN_NOTIF_DESTINATION[n.type] || (() => { toggleAdminNotifications(); goToSection('outbox'); }))();
 }
 
 async function adminMarkAllRead() {
@@ -5332,18 +5505,90 @@ async function adminMarkAllRead() {
 
 function toggleAdminNotifications(e) {
   if (e) e.stopPropagation();
+  closeAdminProfileMenu();
   adminNotifOpen = !adminNotifOpen;
   document.getElementById('admin-notif-panel').style.display = adminNotifOpen ? 'block' : 'none';
   if (adminNotifOpen) fetchAdminNotifications();
 }
+function closeAdminNotifications() {
+  adminNotifOpen = false;
+  document.getElementById('admin-notif-panel').style.display = 'none';
+}
+
+// ── Profile menu ──
+let adminProfileOpen = false;
+function toggleAdminProfileMenu(e) {
+  if (e) e.stopPropagation();
+  closeAdminNotifications();
+  adminProfileOpen = !adminProfileOpen;
+  document.getElementById('admin-profile-menu').style.display = adminProfileOpen ? 'block' : 'none';
+}
+function closeAdminProfileMenu() {
+  adminProfileOpen = false;
+  document.getElementById('admin-profile-menu').style.display = 'none';
+}
 
 document.addEventListener('click', function(e) {
-  const panel = document.getElementById('admin-notif-panel');
-  if (adminNotifOpen && !panel.contains(e.target) && !e.target.closest('[onclick*="toggleAdminNotifications"]')) {
-    adminNotifOpen = false;
-    panel.style.display = 'none';
+  const notifPanel = document.getElementById('admin-notif-panel');
+  if (adminNotifOpen && !notifPanel.contains(e.target) && !e.target.closest('[onclick*="toggleAdminNotifications"]')) {
+    closeAdminNotifications();
+  }
+  const profileMenu = document.getElementById('admin-profile-menu');
+  if (adminProfileOpen && !profileMenu.contains(e.target) && !e.target.closest('[onclick*="toggleAdminProfileMenu"]')) {
+    closeAdminProfileMenu();
   }
 });
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (adminNotifOpen) closeAdminNotifications();
+    if (adminProfileOpen) closeAdminProfileMenu();
+  }
+});
+
+// ── Change password ──
+function openChangePasswordModal() {
+  document.getElementById('pw-current').value = '';
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-confirm').value = '';
+  document.getElementById('change-pw-error').style.display = 'none';
+  document.getElementById('modal-change-password').style.display = 'flex';
+}
+
+async function submitChangePassword() {
+  const current = document.getElementById('pw-current').value;
+  const next = document.getElementById('pw-new').value;
+  const confirm = document.getElementById('pw-confirm').value;
+  const errEl = document.getElementById('change-pw-error');
+  errEl.style.display = 'none';
+
+  if (!current || !next || !confirm) { errEl.textContent = 'Fill in all three fields.'; errEl.style.display = 'block'; return; }
+  if (next.length < 6) { errEl.textContent = 'New password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
+  if (next !== confirm) { errEl.textContent = 'New password and confirmation do not match.'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('pw-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('{{ url_for("change_admin_password") }}', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `current_password=${encodeURIComponent(current)}&new_password=${encodeURIComponent(next)}`,
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('modal-change-password').style.display = 'none';
+      showToast('Password changed.', 'success');
+    } else {
+      errEl.textContent = data.error || 'Could not change password.';
+      errEl.style.display = 'block';
+    }
+  } catch (e) {
+    errEl.textContent = 'Network error — please try again.';
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Password';
+}
 
 fetchAdminNotifications();
 
@@ -5812,6 +6057,244 @@ function closeAdminSidebar() {
 document.querySelectorAll('.sidebar a').forEach(a => {
   a.addEventListener('click', closeAdminSidebar);
 });
+
+// ── Dashboard overview: 15s auto-refresh ──
+// Keeps the stat cards, status chart, Pending Actions, and Recent Bookings
+// current without a reload — every other number on this page belongs to
+// sections with their own refresh (Outbox, Returns, etc.), so this only
+// touches the Dashboard-overview widgets.
+const BK_STATUS_COLORS = {
+  confirmed:   { bg: '#eff6ff', fg: '#1d4ed8' },
+  inspection:  { bg: '#fffbeb', fg: '#b45309' },
+  in_progress: { bg: '#eef2ff', fg: '#4338ca' },
+  completed:   { bg: '#f0fdf4', fg: '#15803d' },
+  cancelled:   { bg: '#f3f4f6', fg: '#4b5563' },
+};
+
+function _setStatText(id, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.textContent !== text) {
+    el.textContent = text;
+    el.classList.remove('stat-flash');
+    void el.offsetWidth; // restart the animation if it's still running
+    el.classList.add('stat-flash');
+  }
+}
+
+async function refreshDashboardOverview() {
+  if (!document.getElementById('sec-dashboard')) return;
+  try {
+    const res = await fetch('/api/dashboard-stats');
+    if (!res.ok) return;
+    const d = await res.json();
+
+    _setStatText('stat-total-bookings', String(d.total_bookings));
+    _setStatText('stat-total-orders', String(d.total_orders));
+    _setStatText('stat-total-revenue', '₱' + d.total_revenue);
+    _setStatText('stat-total-users', String(d.total_users));
+
+    const counts = d.booking_status_counts || {};
+    const total = d.total_bookings || 0;
+    ['confirmed', 'inspection', 'in_progress', 'completed', 'cancelled'].forEach(status => {
+      const count = counts[status] || 0;
+      const pct = total > 0 ? Math.floor(count / total * 100) : 0;
+      const bar = document.getElementById('bk-bar-' + status);
+      if (bar) bar.style.width = pct + '%';
+      const countEl = document.getElementById('bk-count-' + status);
+      if (countEl) countEl.textContent = count;
+    });
+
+    const qBox = document.getElementById('pending-box-quotation');
+    if (qBox) qBox.classList.toggle('amber-highlight', d.awaiting_quotation_count > 0);
+    const qNum = document.getElementById('pending-num-quotation');
+    if (qNum) qNum.textContent = d.awaiting_quotation_count;
+    const ipNum = document.getElementById('pending-num-inprogress');
+    if (ipNum) ipNum.textContent = counts.in_progress || 0;
+    const ordNum = document.getElementById('pending-num-orders');
+    if (ordNum) ordNum.textContent = (d.order_status_counts || {}).pending || 0;
+    const usrNum = document.getElementById('pending-num-users');
+    if (usrNum) usrNum.textContent = d.new_users_today;
+
+    _renderRecentBookings(d.recent_bookings || []);
+  } catch (e) { /* quiet — next tick will retry */ }
+}
+
+function _renderRecentBookings(rows) {
+  const wrap = document.getElementById('recent-bookings-wrap');
+  if (!wrap) return;
+  if (!rows.length) {
+    wrap.outerHTML = '<div class="empty-state" id="recent-bookings-wrap"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings yet.</p></div>';
+    return;
+  }
+  const bodyRows = rows.map(b => {
+    const sc = BK_STATUS_COLORS[b.status] || BK_STATUS_COLORS.cancelled;
+    const label = b.awaiting_quotation ? 'Inspection &amp; Estimation · Quotation sent'
+      : (b.status || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return `<tr>
+      <td>${b.customer}<div class="pending-sub">${b.ref}</div></td>
+      <td>${b.service}</td>
+      <td>${b.date}</td>
+      <td>${b.time}</td>
+      <td><span class="badge" style="background:${sc.bg};color:${sc.fg};border:1px solid ${sc.fg}33;">${label}</span></td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table class="table">
+    <thead><tr><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+    <tbody>${bodyRows}</tbody>
+  </table>`;
+}
+
+setInterval(refreshDashboardOverview, 15000);
+
+// ── Reports & Sales: live date-range filtering ──
+const RPT_TYPE_LABELS = { booking: 'Service Booking', job_order: 'Job Order', online: 'Online Order', sale: 'In-Store Sale', refund: 'Refund' };
+const RPT_TYPE_COLORS = { booking: '#7c3aed', job_order: '#2563eb', online: '#ea580c', sale: '#0d9488', refund: '#dc2626' };
+const RPT_BREAKDOWN_LABELS = { booking: 'Service bookings', job_order: 'Job orders', online: 'Online orders', sale: 'In-store sales' };
+let _rptDebounce = null;
+
+function showReportDateError(msg) {
+  const el = document.getElementById('rpt-date-error');
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function clearReportDates() {
+  document.getElementById('rpt-date-from').value = '';
+  document.getElementById('rpt-date-to').value = '';
+  refreshReports();
+}
+
+async function refreshReports() {
+  clearTimeout(_rptDebounce);
+  _rptDebounce = setTimeout(async () => {
+    const from = document.getElementById('rpt-date-from').value;
+    const to = document.getElementById('rpt-date-to').value;
+    if (from && to && from > to) {
+      showReportDateError('"From" must be on or before "To".');
+      return;
+    }
+    showReportDateError(null);
+    try {
+      const params = new URLSearchParams();
+      if (from) params.set('date_from', from);
+      if (to) params.set('date_to', to);
+      const res = await fetch('/api/reports-data?' + params.toString());
+      const d = await res.json();
+      if (!d.success) { showReportDateError(d.error || 'Could not load report.'); return; }
+      _applyReportsData(d);
+    } catch (e) { /* quiet */ }
+  }, 150);
+}
+
+function _applyReportsData(d) {
+  document.getElementById('rpt-net-revenue').textContent = '₱' + d.net_revenue.toLocaleString('en-PH', {minimumFractionDigits:2});
+  document.getElementById('rpt-revenue-sub').innerHTML = 'Gross ₱' + d.gross_total.toLocaleString('en-PH', {minimumFractionDigits:2}) +
+    (d.refund_total > 0 ? ' · <strong style="color:var(--red);">−₱' + d.refund_total.toLocaleString('en-PH', {minimumFractionDigits:2}) + '</strong> refunded' : ' · no refunds');
+  document.getElementById('rpt-services-completed').textContent = d.services_completed;
+  document.getElementById('rpt-orders-fulfilled').textContent = d.orders_fulfilled;
+  const excludedNote = document.getElementById('rpt-refunded-excluded-note');
+  if (d.refunded_orders_excluded > 0) {
+    excludedNote.style.display = '';
+    excludedNote.textContent = `${d.refunded_orders_excluded} refunded order(s) not counted`;
+  } else {
+    excludedNote.style.display = 'none';
+  }
+
+  const orderStatuses = [['pending','Pending'],['processing','Processing'],['shipped','Shipped'],['completed','Completed'],['refunded','Refunded'],['cancelled','Cancelled']];
+  const orderTotal = Object.values(d.order_status_counts).reduce((s,v) => s+v, 0);
+  orderStatuses.forEach(([status]) => {
+    const count = d.order_status_counts[status] || 0;
+    const pct = orderTotal > 0 ? Math.floor(count / orderTotal * 100) : 0;
+    const bar = document.getElementById('rpt-bar-fill-' + status);
+    if (bar) bar.style.width = pct + '%';
+    const countEl = document.getElementById('rpt-bar-count-' + status);
+    if (countEl) countEl.textContent = count;
+  });
+
+  const topWrap = document.getElementById('rpt-top-services-chart');
+  if (!d.top_services.length) {
+    topWrap.innerHTML = '<div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No booking data yet.</p></div>';
+  } else {
+    const max = d.top_services[0][1];
+    topWrap.innerHTML = d.top_services.map(([service, count]) => {
+      const pct = max > 0 ? Math.floor(count / max * 100) : 0;
+      return `<div class="chart-bar-item">
+        <span class="bar-label" style="width:140px;">${service}</span>
+        <div class="chart-bar-track"><div class="chart-bar-fill bar-green" style="width:${pct}%;"></div></div>
+        <span class="bar-val">${count}</span>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('rpt-txn-count').textContent = `${d.transaction_count} transaction${d.transaction_count !== 1 ? 's' : ''}`;
+  const txnWrap = document.getElementById('rpt-txn-log-wrap');
+  if (!d.transactions.length) {
+    txnWrap.innerHTML = '<div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><p>No transactions in this period.</p></div>';
+  } else {
+    const rows = d.transactions.slice(0, 30).map(t => {
+      const color = RPT_TYPE_COLORS[t.type];
+      const isRefund = t.type === 'refund';
+      const amountAbs = Math.abs(t.amount).toLocaleString('en-PH', {minimumFractionDigits:2});
+      return `<tr${isRefund ? ' style="background:rgba(220,38,38,0.05);"' : ''}>
+        <td style="font-weight:700;">${t.ref}${isRefund ? `<div style="font-size:0.68rem;color:var(--muted);font-weight:400;">for ${t.refund_for} · ${t.return_ref}</div>` : ''}</td>
+        <td><span style="display:inline-block;padding:0.2em 0.6em;border-radius:99px;font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;background:${color}1a;color:${color};">${RPT_TYPE_LABELS[t.type]}</span></td>
+        <td>${t.customer}</td>
+        <td>${t.payment}</td>
+        <td style="font-weight:700;${isRefund ? 'color:var(--red);' : ''}">${t.amount < 0 ? '−' : ''}₱${amountAbs}</td>
+        <td style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">${t.date}</td>
+      </tr>`;
+    }).join('');
+    txnWrap.innerHTML = `<table class="table">
+      <thead><tr><th>Reference</th><th>Type</th><th>Customer</th><th>Payment</th><th>Amount</th><th>Date</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  const breakdownRows = ['booking','job_order','online','sale'].map(k => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;font-size:0.82rem;">
+      <span style="display:flex;align-items:center;gap:0.5rem;color:var(--text);">
+        <span style="width:8px;height:8px;border-radius:50%;background:${RPT_TYPE_COLORS[k]};flex-shrink:0;"></span>
+        ${RPT_BREAKDOWN_LABELS[k]}
+      </span>
+      <span style="font-weight:600;color:var(--text);">₱${d.gross_by_type[k].toLocaleString('en-PH', {minimumFractionDigits:2})}</span>
+    </div>`).join('');
+  document.getElementById('rpt-breakdown-body').innerHTML = breakdownRows + `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;margin-top:0.3rem;border-top:1px solid var(--border);font-size:0.85rem;">
+      <span style="font-weight:700;color:var(--text);">Gross sales</span>
+      <span style="font-weight:700;color:var(--text);">₱${d.gross_total.toLocaleString('en-PH', {minimumFractionDigits:2})}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;font-size:0.85rem;">
+      <span style="color:var(--muted);">Refunds (${d.refund_count})</span>
+      <span style="font-weight:600;color:var(--red);">−₱${d.refund_total.toLocaleString('en-PH', {minimumFractionDigits:2})}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.7rem 0;margin-top:0.3rem;border-top:2px solid var(--border);">
+      <span style="font-weight:800;font-size:1rem;color:var(--text);">Net revenue</span>
+      <span style="font-weight:800;font-size:1.15rem;color:var(--red);">₱${d.net_revenue.toLocaleString('en-PH', {minimumFractionDigits:2})}</span>
+    </div>
+    <div style="font-size:0.68rem;color:var(--muted);line-height:1.5;margin-top:0.5rem;">Refunds are subtracted on the date they're approved. Replacements don't change revenue, since no money is returned.</div>`;
+}
+
+function downloadReportPdf() {
+  const from = document.getElementById('rpt-date-from').value;
+  const to = document.getElementById('rpt-date-to').value;
+  if (from && to && from > to) { showReportDateError('"From" must be on or before "To".'); return; }
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '{{ url_for("generate_report") }}';
+  form.target = '_blank';
+  const addField = (name, value) => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = name; inp.value = value;
+    form.appendChild(inp);
+  };
+  addField('date_from', from || '2000-01-01');
+  addField('date_to', to || new Date().toISOString().slice(0, 10));
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
 </script>
 
 </body>
