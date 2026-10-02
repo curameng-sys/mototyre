@@ -1629,6 +1629,7 @@
           <div id="rpt-txn-log-wrap" style="overflow-x:auto;">
             {% include 'partials/reports_txn_rows.html' %}
           </div>
+          <div id="rpt-txn-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0.75rem 0 0.25rem;flex-wrap:wrap;"></div>
         </div>
         <div class="card">
           <div class="card-head"><h5>Revenue Breakdown</h5></div>
@@ -1795,6 +1796,7 @@
         <div id="txn-table-wrap">
           <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><p>Loading transactions…</p></div>
         </div>
+        <div id="txn-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0.75rem 0;flex-wrap:wrap;"></div>
       </div>
     </section>
 
@@ -2549,6 +2551,7 @@
     if (name === 'outbox') { loadOutbox(); }
     if (name === 'returns') { loadReturns(); }
     if (name === 'mechanics') { loadMechanicsRoster(); }
+    if (name === 'reports') { refreshReports(); }
   }
 
   // Generic "jump to a sidebar section" used by Dashboard-overview widgets
@@ -5968,6 +5971,10 @@ function _renderTxnStats(data) {
   document.getElementById('txn-stats').innerHTML = html;
 }
 
+const TXN_PER_PAGE = 15;
+let _txnPage = 1;
+let _txnFiltered = [];
+
 function filterTxns() {
   const type    = document.getElementById('txn-type').value;
   const payment = document.getElementById('txn-payment').value;
@@ -5996,6 +6003,14 @@ function filterTxns() {
   });
 
   document.getElementById('txn-count').textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
+  _txnPage = 1;
+  _applyTxnPagination(filtered);
+}
+
+function _applyTxnPagination(filtered) {
+  _txnFiltered = filtered;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TXN_PER_PAGE));
+  _txnPage = Math.min(Math.max(1, _txnPage), totalPages);
 
   const typeColors = {
     'Job Order': 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe',
@@ -6010,10 +6025,14 @@ function filterTxns() {
   if (!filtered.length) {
     document.getElementById('txn-table-wrap').innerHTML =
       '<div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><p>No transactions found.</p></div>';
+    document.getElementById('txn-pagination').innerHTML = '';
     return;
   }
 
-  const rows = filtered.map(t => `
+  const start = (_txnPage - 1) * TXN_PER_PAGE;
+  const pageRows = filtered.slice(start, start + TXN_PER_PAGE);
+
+  const rows = pageRows.map(t => `
     <tr${t.is_new ? ' style="background:rgba(22,163,74,.08);"' : ''}>
       <td style="font-weight:700;font-size:.8rem;color:var(--text);">${t.trx_id}${t.is_new ? ' <span style="display:inline-block;margin-left:.35rem;padding:.12rem .4rem;border-radius:5px;background:var(--green);color:#fff;font-size:.58rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;">New</span>' : ''}</td>
       <td style="font-size:.78rem;color:var(--muted);">${t.ref}</td>
@@ -6033,6 +6052,21 @@ function filterTxns() {
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+
+  const pg = document.getElementById('txn-pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+  let html = `<button class="parts-page-btn" onclick="goTxnPage(${_txnPage-1})" ${_txnPage===1?'disabled':''}>←</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="parts-page-btn${i===_txnPage?' pp-active':''}" onclick="goTxnPage(${i})">${i}</button>`;
+  }
+  html += `<button class="parts-page-btn" onclick="goTxnPage(${_txnPage+1})" ${_txnPage===totalPages?'disabled':''}>→</button>`;
+  pg.innerHTML = html;
+}
+
+function goTxnPage(p) {
+  _txnPage = p;
+  _applyTxnPagination(_txnFiltered);
+  document.getElementById('txn-table-wrap').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // ── Sidebar search ──
@@ -6151,7 +6185,10 @@ setInterval(refreshDashboardOverview, 15000);
 const RPT_TYPE_LABELS = { booking: 'Service Booking', job_order: 'Job Order', online: 'Online Order', sale: 'In-Store Sale', refund: 'Refund' };
 const RPT_TYPE_COLORS = { booking: '#7c3aed', job_order: '#2563eb', online: '#ea580c', sale: '#0d9488', refund: '#dc2626' };
 const RPT_BREAKDOWN_LABELS = { booking: 'Service bookings', job_order: 'Job orders', online: 'Online orders', sale: 'In-store sales' };
+const RPT_TXN_PER_PAGE = 10;
 let _rptDebounce = null;
+let _rptTxnAll = [];
+let _rptTxnPage = 1;
 
 function showReportDateError(msg) {
   const el = document.getElementById('rpt-date-error');
@@ -6229,28 +6266,9 @@ function _applyReportsData(d) {
   }
 
   document.getElementById('rpt-txn-count').textContent = `${d.transaction_count} transaction${d.transaction_count !== 1 ? 's' : ''}`;
-  const txnWrap = document.getElementById('rpt-txn-log-wrap');
-  if (!d.transactions.length) {
-    txnWrap.innerHTML = '<div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><p>No transactions in this period.</p></div>';
-  } else {
-    const rows = d.transactions.slice(0, 30).map(t => {
-      const color = RPT_TYPE_COLORS[t.type];
-      const isRefund = t.type === 'refund';
-      const amountAbs = Math.abs(t.amount).toLocaleString('en-PH', {minimumFractionDigits:2});
-      return `<tr${isRefund ? ' style="background:rgba(220,38,38,0.05);"' : ''}>
-        <td style="font-weight:700;">${t.ref}${isRefund ? `<div style="font-size:0.68rem;color:var(--muted);font-weight:400;">for ${t.refund_for} · ${t.return_ref}</div>` : ''}</td>
-        <td><span style="display:inline-block;padding:0.2em 0.6em;border-radius:99px;font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;background:${color}1a;color:${color};">${RPT_TYPE_LABELS[t.type]}</span></td>
-        <td>${t.customer}</td>
-        <td>${t.payment}</td>
-        <td style="font-weight:700;${isRefund ? 'color:var(--red);' : ''}">${t.amount < 0 ? '−' : ''}₱${amountAbs}</td>
-        <td style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">${t.date}</td>
-      </tr>`;
-    }).join('');
-    txnWrap.innerHTML = `<table class="table">
-      <thead><tr><th>Reference</th><th>Type</th><th>Customer</th><th>Payment</th><th>Amount</th><th>Date</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-  }
+  _rptTxnAll = d.transactions;
+  _rptTxnPage = 1;
+  _applyRptTxnPagination();
 
   const breakdownRows = ['booking','job_order','online','sale'].map(k => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;font-size:0.82rem;">
@@ -6274,6 +6292,53 @@ function _applyReportsData(d) {
       <span style="font-weight:800;font-size:1.15rem;color:var(--red);">₱${d.net_revenue.toLocaleString('en-PH', {minimumFractionDigits:2})}</span>
     </div>
     <div style="font-size:0.68rem;color:var(--muted);line-height:1.5;margin-top:0.5rem;">Refunds are subtracted on the date they're approved. Replacements don't change revenue, since no money is returned.</div>`;
+}
+
+function _applyRptTxnPagination() {
+  const txnWrap = document.getElementById('rpt-txn-log-wrap');
+  const pg = document.getElementById('rpt-txn-pagination');
+  if (!_rptTxnAll.length) {
+    txnWrap.innerHTML = '<div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><p>No transactions in this period.</p></div>';
+    pg.innerHTML = '';
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(_rptTxnAll.length / RPT_TXN_PER_PAGE));
+  _rptTxnPage = Math.min(Math.max(1, _rptTxnPage), totalPages);
+  const start = (_rptTxnPage - 1) * RPT_TXN_PER_PAGE;
+  const pageTxns = _rptTxnAll.slice(start, start + RPT_TXN_PER_PAGE);
+
+  const rows = pageTxns.map(t => {
+    const color = RPT_TYPE_COLORS[t.type];
+    const isRefund = t.type === 'refund';
+    const amountAbs = Math.abs(t.amount).toLocaleString('en-PH', {minimumFractionDigits:2});
+    return `<tr${isRefund ? ' style="background:rgba(220,38,38,0.05);"' : ''}>
+      <td style="font-weight:700;">${t.ref}${isRefund ? `<div style="font-size:0.68rem;color:var(--muted);font-weight:400;">for ${t.refund_for} · ${t.return_ref}</div>` : ''}</td>
+      <td><span style="display:inline-block;padding:0.2em 0.6em;border-radius:99px;font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;background:${color}1a;color:${color};">${RPT_TYPE_LABELS[t.type]}</span></td>
+      <td>${t.customer}</td>
+      <td>${t.payment}</td>
+      <td style="font-weight:700;${isRefund ? 'color:var(--red);' : ''}">${t.amount < 0 ? '−' : ''}₱${amountAbs}</td>
+      <td style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">${t.date}</td>
+    </tr>`;
+  }).join('');
+  txnWrap.innerHTML = `<table class="table">
+    <thead><tr><th>Reference</th><th>Type</th><th>Customer</th><th>Payment</th><th>Amount</th><th>Date</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+  let html = `<button class="parts-page-btn" onclick="goRptTxnPage(${_rptTxnPage-1})" ${_rptTxnPage===1?'disabled':''}>←</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="parts-page-btn${i===_rptTxnPage?' pp-active':''}" onclick="goRptTxnPage(${i})">${i}</button>`;
+  }
+  html += `<button class="parts-page-btn" onclick="goRptTxnPage(${_rptTxnPage+1})" ${_rptTxnPage===totalPages?'disabled':''}>→</button>`;
+  pg.innerHTML = html;
+}
+
+function goRptTxnPage(p) {
+  _rptTxnPage = p;
+  _applyRptTxnPagination();
+  document.getElementById('rpt-txn-log-wrap').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function downloadReportPdf() {
