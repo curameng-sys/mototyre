@@ -1184,10 +1184,41 @@ def customer_dashboard():
     if _booking_ids:
         for q in Quotation.query.filter(Quotation.booking_id.in_(_booking_ids)).order_by(Quotation.created_at.asc()).all():
             _quotations_by_booking[q.booking_id] = q
+    # A back job writes a real, zero-charge Booking of its own (see
+    # schedule_return_redo in admin_app.py) — this maps that booking's id
+    # back to the ReturnRequest that created it, so its card can show the
+    # ORIGINAL service's warranty and back-job count instead of starting a
+    # fresh one of its own.
+    _redo_origin_by_booking = {
+        rr.redo_booking_id: rr
+        for rr in ReturnRequest.query.filter(ReturnRequest.redo_booking_id.isnot(None)).all()
+    }
+    _bookings_by_id = {b.id: b for b in bookings}
     for b in bookings:
-        b.return_window = return_window_info('service', b.completed_at) if b.status == 'completed' else None
-        b.open_claim = open_by_booking.get(b.id)
-        b.redo_stats = _booking_redo_stats(b) if b.return_window else None
+        origin_rr = _redo_origin_by_booking.get(b.id)
+        if origin_rr:
+            original = _bookings_by_id.get(origin_rr.booking_id) or \
+                Booking.query.filter_by(id=origin_rr.booking_id, user_id=current_user.id).first()
+            b.is_back_job = True
+            b.backjob_original_id = original.id if original else origin_rr.booking_id
+            b.backjob_original_service = original.service if original else None
+            b.return_window = return_window_info('service', original.completed_at) \
+                if original and original.completed_at else None
+            b.open_claim = None
+            b.redo_stats = None
+            _orig_stats = _booking_redo_stats(original) if original else None
+            _ref = f'RMA-{origin_rr.id:03d}'
+            b.backjob_number = next((r['n'] for r in (_orig_stats['requests'] if _orig_stats else []) if r['ref'] == _ref), 1)
+            b.backjob_done = origin_rr.status == 'resolved'
+        else:
+            b.is_back_job = False
+            b.backjob_original_id = None
+            b.backjob_original_service = None
+            b.backjob_number = None
+            b.backjob_done = None
+            b.return_window = return_window_info('service', b.completed_at) if b.status == 'completed' else None
+            b.open_claim = open_by_booking.get(b.id)
+            b.redo_stats = _booking_redo_stats(b) if b.return_window else None
         q = _quotations_by_booking.get(b.id)
         b.quotation_data = None if not q else {
             'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,

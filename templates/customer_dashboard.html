@@ -1699,6 +1699,7 @@
         <div id="rf-summary" style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.9rem 1rem;font-size:0.83rem;color:var(--fg-1);line-height:1.6;"></div>
       </div>
 
+      <div id="rf-submit-hint" style="display:none;text-align:right;font-size:0.72rem;color:var(--fg-3);margin-bottom:0.3rem;"></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-return-form')">Cancel</button>
         <button type="submit" class="btn-submit" id="rf-submit-btn">Submit Request</button>
@@ -3756,6 +3757,11 @@ const bookingsData = {
     return_window: {{ ({'expired': b.return_window.expired, 'days_left': b.return_window.days_left, 'label': b.return_window.label, 'deadline_label': b.return_window.deadline.strftime('%B %d, %Y')} if b.return_window else none)|tojson }},
     open_claim: {{ ({'id': b.open_claim.id, 'ref': 'RMA-%03d'|format(b.open_claim.id), 'status': b.open_claim.status} if b.open_claim else none)|tojson }},
     redo_stats: {{ b.redo_stats|tojson }},
+    is_back_job: {{ b.is_back_job|tojson }},
+    backjob_original_id: {{ b.backjob_original_id|tojson }},
+    backjob_original_service: {{ b.backjob_original_service|tojson }},
+    backjob_number: {{ b.backjob_number|tojson }},
+    backjob_done: {{ b.backjob_done|tojson }},
     quotation: {{ b.quotation_data|tojson }}
   }{% if not loop.last %},{% endif %}
   {% endfor %}
@@ -4327,6 +4333,65 @@ function replacementLimitHTML(stats) {
     </div>`;
 }
 
+// Same two-bar counter + past-requests list as replacementLimitHTML() above,
+// counting redo_service claims against a booking instead of replacement
+// claims against an order — "up to 2 back jobs per service."
+function backJobTrackerHTML(stats) {
+  if (!stats || !stats.requests.length) return '';
+  const bars = Array.from({ length: stats.limit }, (_, i) => {
+    const filled = i < stats.used_count;
+    const color = filled ? (stats.limit_reached ? '#dc2626' : 'var(--brand-red)') : 'var(--line-2)';
+    return `<div style="flex:1;height:6px;border-radius:3px;background:${color};"></div>`;
+  }).join('');
+  const rowHTML = r => r.done
+    ? `<div style="font-size:0.74rem;color:#15803d;">Back job ${r.n} — ${r.date || ''} · ${r.mechanic || 'Shop assigned'} · Done · counts</div>`
+    : `<div style="font-size:0.74rem;color:#a16207;">Back job ${r.n} — ${r.date || ''} · ${r.mechanic || 'Shop assigned'} · Requested · counts</div>`;
+  return `
+    <div style="margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed var(--line-1);">
+      <div style="font-size:0.75rem;font-weight:700;color:${stats.limit_reached ? '#b91c1c' : 'var(--fg-2)'};margin-bottom:0.3rem;">Back jobs used: ${stats.used_count} of ${stats.limit}</div>
+      <div style="display:flex;gap:0.3rem;margin-bottom:0.4rem;">${bars}</div>
+      <div style="display:flex;flex-direction:column;gap:0.2rem;">${stats.requests.map(rowHTML).join('')}</div>
+      ${stats.limit_reached ? `<div style="margin-top:0.5rem;padding:0.5rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:0.76rem;color:#b91c1c;">This service has used both of its ${stats.limit} back jobs. Please talk to the shop so we can sort it out together.</div>` : ''}
+    </div>`;
+}
+
+// What shows in the action corner of a completed-service card: warranty
+// expired beats everything else (nothing is claimable at all once it has),
+// then the 2-of-2 limit (talk to the shop instead), then an in-progress back
+// job (nothing new until it resolves), then any other open claim (a pending
+// refund, say) falls back to the generic claimActionHTML() handling, and
+// only once none of that applies does "Start a Claim" show, with how many
+// back jobs are left underneath it.
+function backJobActionHTML(b) {
+  const stats = b.redo_stats;
+  if (b.return_window.expired) {
+    return `
+      <div style="text-align:right;">
+        <button type="button" disabled style="padding:0.5rem 1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;opacity:0.6;cursor:not-allowed;">Start a Claim</button>
+        <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.3rem;">Warranty ended on ${b.return_window.deadline_label}.</div>
+      </div>`;
+  }
+  if (stats && stats.limit_reached) {
+    return `<button type="button" onclick="openTalkToShopServiceModal(${b.id})" style="padding:0.5rem 1rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Talk to the Shop</button>`;
+  }
+  if (stats && stats.has_pending) {
+    return `
+      <div style="text-align:right;">
+        <button type="button" disabled style="padding:0.5rem 1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;opacity:0.6;cursor:not-allowed;">Start a Claim</button>
+        <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.3rem;">A back job is already in progress.</div>
+      </div>`;
+  }
+  if (b.open_claim) {
+    return claimActionHTML(b.open_claim, false, '', null);
+  }
+  const left = stats ? stats.limit - stats.used_count : 2;
+  return `
+    <div style="text-align:right;">
+      <button type="button" class="pic-upload-btn" onclick="openReturnForm('service', ${b.id})" style="padding:0.5rem 1rem;">Start a Claim</button>
+      <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.3rem;">${left} back job${left === 1 ? '' : 's'} left</div>
+    </div>`;
+}
+
 function renderClaimableOrders() {
   const list = document.getElementById('claimable-orders-list');
   const eligible = Object.values(ordersData).filter(o => o.return_window !== null);
@@ -4352,6 +4417,35 @@ function renderClaimableOrders() {
     </div>`).join('');
 }
 
+// A back job's own card — read-only, no claim button, no tracker of its own
+// (the tracker lives on the ORIGINAL service's card, which is what this one
+// links back to). It still appears in this list since it carries the
+// original's inherited warranty window.
+function backJobCardHTML(b) {
+  const tag = b.backjob_done
+    ? `<span class="badge" style="background:#dcfce7;color:#14532d;border:1px solid #22c55e;">DONE</span>`
+    : `<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;">REQUESTED</span>`;
+  const warrantyPill = b.return_window ? claimBadgeHTML(b.return_window) : '';
+  const originRef = `BKG-${String(b.backjob_original_id).padStart(3,'0')}`;
+  return `
+    <div class="card" style="padding:1rem 1.1rem;">
+      <div style="display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">Back job ${b.backjob_number} of 2 — ${b.backjob_original_service || b.service}</div>
+          <div style="font-size:0.76rem;color:var(--fg-3);">${b.date}</div>
+        </div>
+        ${warrantyPill}
+      </div>
+      <div style="font-size:0.78rem;color:var(--fg-2);">Motorcycle: ${b.motorcycle_model || '—'}</div>
+      <div style="font-size:0.78rem;color:var(--fg-2);">Mechanic: ${b.mechanic_name || 'Shop assigned'}</div>
+      <div style="font-size:0.74rem;color:var(--fg-3);margin-top:0.3rem;">Original booking: <a href="#" onclick="showSection('bookings', null); setTimeout(() => openBookingDetails(${b.backjob_original_id}), 150); return false;" style="color:var(--fg-3);">${originRef}</a></div>
+      <div style="border-top:1px solid var(--line-1);margin-top:0.5rem;padding-top:0.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">Total &#8369;0.00</span>
+        ${tag}
+      </div>
+    </div>`;
+}
+
 function renderClaimableBookings() {
   const list = document.getElementById('claimable-bookings-list');
   const eligible = Object.values(bookingsData).filter(b => b.return_window !== null);
@@ -4359,7 +4453,9 @@ function renderClaimableBookings() {
     list.innerHTML = '<div class="card" style="padding:1rem;text-align:center;color:var(--fg-3);font-size:0.85rem;">No completed services yet.</div>';
     return;
   }
-  list.innerHTML = eligible.map(b => `
+  list.innerHTML = eligible.map(b => {
+    if (b.is_back_job) return backJobCardHTML(b);
+    return `
     <div class="card" style="padding:1rem 1.1rem;">
       <div style="display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.5rem;">
         <div>
@@ -4372,9 +4468,11 @@ function renderClaimableBookings() {
       <div style="font-size:0.78rem;color:var(--fg-2);">Mechanic: ${b.mechanic_name || 'Shop assigned'}</div>
       <div style="border-top:1px solid var(--line-1);margin-top:0.5rem;padding-top:0.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
         <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">Total &#8369;${b.total_amount.toFixed(2)}</span>
-        ${claimActionHTML(b.open_claim, b.return_window.expired, `openReturnForm('service', ${b.id})`)}
+        ${backJobActionHTML(b)}
       </div>
-    </div>`).join('');
+      ${backJobTrackerHTML(b.redo_stats)}
+    </div>`;
+  }).join('');
 }
 
 // ── Screen 2: the request dialog ──
@@ -4726,11 +4824,24 @@ function renderReturnOutcomeCards(kind) {
   const opts = RETURN_OUTCOMES[kind];
   wrap.innerHTML = opts.map(o => {
     const selected = o.value === hidden.value;
+    // Service claims get two dynamic additions static copy can't carry:
+    // the refund card states the actual amount paid for THIS booking, and
+    // the back-job card notes how many of its 2 lifetime slots are used.
+    let detail = o.detail;
+    let usageNote = '';
+    if (kind === 'service' && _rfBooking) {
+      if (o.value === 'refund') {
+        detail = `We return ₱${(_rfBooking.total_amount || 0).toFixed(2)}, what you paid for the service.`;
+      } else if (o.value === 'redo_service' && _rfBooking.redo_stats) {
+        usageNote = `<div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.35rem;">${_rfBooking.redo_stats.used_count} of ${_rfBooking.redo_stats.limit} back jobs used</div>`;
+      }
+    }
     return `
       <div onclick="selectReturnOutcome('${o.value}')" style="border:1.5px solid ${selected ? 'var(--brand-red)' : 'var(--line-2)'};background:${selected ? 'rgba(208,0,25,0.06)' : '#fff'};border-radius:10px;padding:0.75rem 0.9rem;cursor:pointer;margin-bottom:0.5rem;transition:all 0.15s;">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:var(--fg-1);">${o.title}</div>
-        <div style="font-size:0.78rem;color:var(--fg-2);margin-top:0.25rem;">${o.detail}</div>
+        <div style="font-size:0.78rem;color:var(--fg-2);margin-top:0.25rem;">${detail}</div>
         <div style="font-size:0.78rem;color:var(--fg-1);margin-top:0.35rem;"><strong>${o.consequence}</strong></div>
+        ${usageNote}
       </div>`;
   }).join('');
 }
@@ -4944,6 +5055,9 @@ function updateRfSummary() {
   let askLine;
   if (outcomeOpt && outcome === 'refund') {
     askLine = `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--brand-red);">₱${computeRfRefundAmount().toFixed(2)} refund</span>`;
+  } else if (outcomeOpt && outcome === 'redo_service' && _rfBooking && _rfBooking.redo_stats) {
+    const n = _rfBooking.redo_stats.used_count + 1;
+    askLine = `Back job ${n} of ${_rfBooking.redo_stats.limit}`;
   } else if (outcomeOpt) {
     askLine = outcomeOpt.title;
   } else {
@@ -4992,6 +5106,35 @@ function updateRfSummary() {
     <div style="margin-top:0.3rem;"><strong>Photos:</strong> ${_rfPhotos.length}</div>
     ${explainer ? `<div style="margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed var(--line-2);color:var(--fg-2);font-size:0.78rem;">${explainer}</div>` : ''}
   `;
+  updateRfSubmitState();
+}
+
+// Keeps "Submit Request" disabled (with a small note under it saying what's
+// still missing) until the three things every claim needs regardless of
+// kind or outcome are in place — item selection, delivery address, etc. are
+// checked separately at actual submit time in submitReturnForm().
+function updateRfSubmitState() {
+  const btn = document.getElementById('rf-submit-btn');
+  const hint = document.getElementById('rf-submit-hint');
+  if (!btn || !hint) return;
+
+  const reasonTicks = Array.from(document.querySelectorAll('.rf-reason-tick:checked')).map(el => el.value);
+  const otherText = document.getElementById('rf-other-text').value.trim();
+  const reasonMeta = Object.fromEntries((RETURN_REASONS[_rfKind] || []).map(r => [r[0], r[2]]));
+  const needsPhoto = reasonTicks.some(c => reasonMeta[c]);
+
+  let missing = '';
+  if (!reasonTicks.length) {
+    missing = 'Select at least one reason.';
+  } else if (reasonTicks.includes('other') && !otherText) {
+    missing = 'Type what went wrong for "Other".';
+  } else if (needsPhoto && _rfPhotos.length === 0) {
+    missing = 'Add a photo for the reason you selected.';
+  }
+
+  btn.disabled = !!missing;
+  hint.textContent = missing;
+  hint.style.display = missing ? 'block' : 'none';
 }
 
 // Validate-on-submit: every problem, listed together, in plain language.

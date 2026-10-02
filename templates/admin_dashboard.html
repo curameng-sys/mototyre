@@ -4044,6 +4044,20 @@
     tbody.innerHTML = rows.map(returnRowHTML).join('');
   }
 
+  // Flags a redo_service claim that's the SECOND (or later) one against the
+  // same original booking — lets a senior mechanic or the owner know to
+  // double-check the work before it's redone again, since the first attempt
+  // apparently didn't hold.
+  function isSecondBackJob(r) {
+    if (r.kind !== 'service' || (r.desired_outcome !== 'redo_service' && r.resolution !== 'redo_service') || !r.booking_id) return false;
+    const counts = s => s === 'approved' || s === 'resolved';
+    if (!counts(r.status)) return false;
+    const siblings = _returnsItems.filter(x => x.booking_id === r.booking_id &&
+      (x.desired_outcome === 'redo_service' || x.resolution === 'redo_service') && counts(x.status));
+    siblings.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    return siblings.findIndex(x => x.id === r.id) >= 1;
+  }
+
   function returnRowHTML(r) {
     const statusLabel = returnStatusLabel(r);
     const sc = RETURN_STATUS_LABEL_COLORS[statusLabel] || RETURN_STATUS_LABEL_COLORS['Submitted'];
@@ -4080,7 +4094,7 @@
         <td>${askHTML}</td>
         <td>${photosHTML}</td>
         <td>${ageHTML}</td>
-        <td><span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${statusLabel}</span></td>
+        <td><span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${statusLabel}</span>${isSecondBackJob(r) ? '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;margin-left:0.3rem;">2nd back job</span>' : ''}</td>
         <td><button type="button" class="btn-primary-custom" style="padding:0.3rem 0.6rem;font-size:0.72rem;" onclick="openReturnModal(${r.id})">${actionLabel}</button></td>
       </tr>`;
   }
