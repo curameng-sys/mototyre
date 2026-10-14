@@ -302,6 +302,7 @@ class Product(db.Model):
     description = db.Column(db.Text)
     price       = db.Column(db.Float, nullable=False)
     stock       = db.Column(db.Integer, default=0)
+    image_url   = db.Column(db.String(500))
     created_at  = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     order_items = db.relationship('OrderItem', backref='product', lazy=True)
 
@@ -566,6 +567,26 @@ def send_notification(user_id, title, message, type='update', status=None, booki
     db.session.commit()
 
 
+def _notify_order_customer(order, title, body, status=None):
+    """Writes the order's bell notification and — unless this is a walk-in/
+    in-store sale with no real account — emails the exact same title/body to
+    the customer's Gmail, mirroring _notify_customer()'s pattern for bookings."""
+    send_notification(order.user_id, title, body, type='order', status=status)
+    if order.is_instore or order.walkin_customer_id:
+        return False
+    customer = User.query.get(order.user_id)
+    if not (customer and customer.email):
+        return False
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+      <p>Hi {customer.fullname},</p>
+      <p>{body}</p>
+      <p>— MotoTyre North Caloocan</p>
+    </div>"""
+    _send_gmail(customer.email, f'{title} — MotoTyre', html)
+    return True
+
+
 def booking_service_price(service_str):
     """Sum the catalog price for every service in a booking's (possibly combined,
     comma-separated) service string — a plain name lookup misses combo bookings."""
@@ -607,6 +628,44 @@ def is_booking_overdue(b, now):
 
 
 admin_app.jinja_env.globals['is_booking_overdue'] = is_booking_overdue
+
+
+def _quotation_breakdown(items):
+    """Splits a quotation into the three things a customer actually decides
+    over: the service they already booked (locked=True, always charged),
+    the materials the shop physically used on their bike (item_type='product',
+    not locked — a part that's already installed can't be un-charged just
+    because the customer declines the rest), and the extra inspection
+    findings (everything else — labor/diagnosis beyond the booked service,
+    the only thing an actual decline removes). Works on either real
+    QuotationItem rows or the raw item dicts save_quotation() gets before
+    they're written to the DB."""
+    def amt(i):
+        price = i.unit_price if hasattr(i, 'unit_price') else i['unit_price']
+        qty   = i.quantity   if hasattr(i, 'quantity')   else i['quantity']
+        return float(price) * int(qty)
+    def is_locked(i):
+        return i.locked if hasattr(i, 'locked') else bool(i.get('locked'))
+    def item_type(i):
+        return i.item_type if hasattr(i, 'item_type') else i.get('item_type', 'service')
+
+    booked    = sum(amt(i) for i in items if is_locked(i))
+    materials = sum(amt(i) for i in items if not is_locked(i) and item_type(i) == 'product')
+    extra     = sum(amt(i) for i in items if not is_locked(i) and item_type(i) != 'product')
+    return {
+        'booked': booked, 'materials': materials, 'extra': extra,
+        'approve_total': booked + materials + extra,
+        'decline_total': booked + materials,
+    }
+
+
+def _mechanic_initials(name):
+    parts = (name or '').split()
+    if not parts:
+        return '?'
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return (parts[0][0] + parts[-1][0]).upper()
 
 
 def _generate_otp(length=6):
@@ -957,18 +1016,94 @@ def _reports_summary(date_from=None, date_to=None):
         eff_status = 'refunded' if o.id in fully_refunded_order_ids else o.status
         order_status_counts[eff_status] = order_status_counts.get(eff_status, 0) + 1
 
+    # A combo booking's .service is a comma-joined list ("Brake Cleaning, Change
+    # Oil") — each service in it counts on its own. A back job's .service is
+    # prefixed "Back job — <service>"; it counts under that same service (not
+    # its own bucket) and also adds to service_backjob_tally for the "includes
+    # X back job" note.
     service_tally = {}
+    service_backjob_tally = {}
     for b in Booking.query.filter(Booking.status != 'cancelled', Booking.is_archived == False).all():
         if not in_range(b.completed_at or b.created_at):
             continue
-        service_tally[b.service] = service_tally.get(b.service, 0) + 1
+        is_backjob = b.service.startswith('Back job — ')
+        base = b.service[len('Back job — '):] if is_backjob else b.service
+        for name in split_service_names(base):
+            service_tally[name] = service_tally.get(name, 0) + 1
+            if is_backjob:
+                service_backjob_tally[name] = service_backjob_tally.get(name, 0) + 1
     for jo in JobOrder.query.filter(JobOrder.status != 'cancelled').all():
         if not in_range(jo.created_at):
             continue
         for item in jo.items:
             if item.item_type == 'service':
                 service_tally[item.name] = service_tally.get(item.name, 0) + item.quantity
-    top_services_list = sorted(service_tally.items(), key=lambda kv: kv[1], reverse=True)[:8]
+    top_services_list = [(name, count, service_backjob_tally.get(name, 0))
+                          for name, count in sorted(service_tally.items(), key=lambda kv: kv[1], reverse=True)[:8]]
+
+    # Mechanic Performance (completed bookings only) and the "parts added in
+    # quotations" half of Top Products Sold share the same completed-bookings
+    # + latest-quotation-per-booking lookup, so they're built together.
+    completed_bookings = [b for b in Booking.query.filter(Booking.status == 'completed', Booking.is_archived == False).all()
+                           if in_range(b.completed_at or b.created_at)]
+    _mp_booking_ids = [b.id for b in completed_bookings]
+    _mp_latest_quotations = {}
+    if _mp_booking_ids:
+        for q in Quotation.query.filter(Quotation.booking_id.in_(_mp_booking_ids)).order_by(Quotation.created_at.asc()).all():
+            _mp_latest_quotations[q.booking_id] = q
+
+    def _relevant_quotation_items(q):
+        return q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
+
+    def _labor_income(b, q):
+        if not q:
+            return b.total_amount or 0
+        return sum(i.unit_price * i.quantity for i in _relevant_quotation_items(q) if i.item_type != 'product')
+
+    mechanic_tally = {}   # name -> [completed, back_jobs, labor_income]
+    product_sales = {}    # name -> [units, revenue]
+    for b in completed_bookings:
+        q = _mp_latest_quotations.get(b.id)
+        if b.assigned_mechanic_name:
+            row = mechanic_tally.setdefault(b.assigned_mechanic_name, [0, 0, 0.0])
+            row[0] += 1
+            if b.service.startswith('Back job — '):
+                row[1] += 1
+            row[2] += _labor_income(b, q)
+        if q:
+            for i in _relevant_quotation_items(q):
+                if i.item_type == 'product':
+                    prow = product_sales.setdefault(i.name, [0, 0.0])
+                    prow[0] += i.quantity
+                    prow[1] += i.quantity * i.unit_price
+
+    mechanic_performance = sorted(
+        [{'name': name, 'completed': c, 'backjobs': bj, 'income': inc} for name, (c, bj, inc) in mechanic_tally.items()],
+        key=lambda r: r['completed'], reverse=True)
+
+    # Top Products Sold — online orders + in-store sales (both are Order rows),
+    # plus parts billed through job orders (quotation parts already folded in
+    # above). Fully-refunded orders are excluded entirely; there's no per-item
+    # refund tracking, so a partial refund's items still count as sold.
+    for o in Order.query.filter(Order.status != 'cancelled', Order.is_archived == False).all():
+        if not in_range(o.created_at) or o.id in fully_refunded_order_ids:
+            continue
+        for item in o.items:
+            pname = item.product.name if item.product else 'Unknown Product'
+            prow = product_sales.setdefault(pname, [0, 0.0])
+            prow[0] += item.quantity
+            prow[1] += item.quantity * item.unit_price
+    for jo in JobOrder.query.filter(JobOrder.status != 'cancelled').all():
+        if not in_range(jo.created_at):
+            continue
+        for item in jo.items:
+            if item.item_type == 'product':
+                prow = product_sales.setdefault(item.name, [0, 0.0])
+                prow[0] += item.quantity
+                prow[1] += item.quantity * item.unit_price
+    top_products_list = sorted(
+        [{'name': name, 'units': u, 'revenue': rev} for name, (u, rev) in product_sales.items()],
+        key=lambda r: r['units'], reverse=True)[:10]
 
     return {
         'transactions': txns,
@@ -982,6 +1117,8 @@ def _reports_summary(date_from=None, date_to=None):
         'refunded_orders_excluded': refunded_orders_excluded,
         'order_status_counts': order_status_counts,
         'top_services': top_services_list,
+        'mechanic_performance': mechanic_performance,
+        'top_products': top_products_list,
     }
 
 
@@ -1253,6 +1390,20 @@ def _mechanic_swap_notification(booking, new_name):
     return _notify_customer(booking, title, body, priority=True, collapse_minutes=5)
 
 
+def _mechanic_assigned_notification(booking, new_name):
+    """A mechanic was just assigned to a booking that had no preference on
+    file — ordinarily silent (see assign_booking_mechanic's docstring), but
+    the Quotation page's 'Assign & Notify Customer' button opts into telling
+    the customer anyway: they're about to have someone looking at their bike
+    and should know who."""
+    ref = f'BKG-{booking.id:03d}'
+    spec = booking.assigned_mechanic_specialization or 'General Service'
+    title = f'{new_name} has been assigned to your booking'
+    body = (f'{new_name} ({spec}) has been assigned to your {booking.service} ({ref}) '
+            f'and will begin the inspection shortly.')
+    return _notify_customer(booking, title, body, priority=False)
+
+
 @admin_app.route('/booking/<int:bid>/status', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -1338,8 +1489,8 @@ def complete_booking_invoice(bid):
 
     q = Quotation.query.filter_by(booking_id=bid).order_by(Quotation.created_at.desc()).first()
     if q:
-        locked_total = sum(i.unit_price * i.quantity for i in q.items if i.locked)
-        total = q.total_amount if q.status == 'approved' else locked_total
+        breakdown = _quotation_breakdown(q.items)
+        total = breakdown['approve_total'] if q.status == 'approved' else breakdown['decline_total']
     else:
         total = booking_service_price(booking.service)
 
@@ -1364,7 +1515,9 @@ def complete_booking_invoice(bid):
     if not booking.walkin_customer_id and customer and customer.email:
         items_rows = ''
         if q and q.items:
-            relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked]
+            # On decline, the booked service and any materials already used
+            # still bill — only the extra inspection findings drop off.
+            relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
             items_rows = ''.join(
                 f'<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;">{i.name}</td>'
                 f'<td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">₱{i.unit_price:,.2f}</td></tr>'
@@ -1454,9 +1607,15 @@ def api_booking_invoice_data(bid):
     booking = Booking.query.get_or_404(bid)
     q = Quotation.query.filter_by(booking_id=bid).order_by(Quotation.created_at.desc()).first()
     if q:
-        relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked]
+        # On decline, the booked service and any materials already used
+        # still bill — only the extra inspection findings drop off.
+        relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
         items = [{'name': i.name, 'price': i.unit_price} for i in relevant]
-        mechanic = q.inspected_by
+        # inspected_by is the mechanic as of when the quotation was sent;
+        # fall back to the booking's current assignment for older quotations
+        # that predate that field, or any other case it ended up blank —
+        # the receipt should never show no mechanic when the booking has one.
+        mechanic = q.inspected_by or booking.assigned_mechanic_name
     else:
         items = [{'name': booking.service, 'price': booking.total_amount}]
         mechanic = booking.assigned_mechanic_name
@@ -1537,14 +1696,22 @@ def assign_booking_mechanic(bid):
     booking.assigned_mechanic_specialization = new_spec
     db.session.commit()
 
+    # Opt-in only: a caller (the Quotation page's "Assign & Notify Customer"
+    # button, specifically) can ask to be told even for the ordinarily-silent
+    # no-preference case — everywhere else (e.g. a routine reassignment from
+    # Manage Bookings) keeps the original quiet default.
+    notify_first_assign = clean_str(request.form.get('notify_first_assign', ''), max_len=5) == '1'
+
     changed      = new_name != old_name
     had_promise  = bool(booking.preferred_mechanic_name)
     broke_promise = had_promise and new_name != booking.preferred_mechanic_name
     if changed and broke_promise:
         _mechanic_swap_notification(booking, new_name)
+    elif changed and notify_first_assign and new_name:
+        _mechanic_assigned_notification(booking, new_name)
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'success': True, 'mechanic_name': new_name})
+        return jsonify({'success': True, 'mechanic_name': new_name, 'mechanic_specialization': new_spec})
     flash('Mechanic updated.', 'success')
     return redirect(url_for('admin_dashboard'))
 
@@ -2065,7 +2232,7 @@ def booking_ready_for_pickup(bid):
     date_str = booking.date.strftime('%b %d, %Y')
     title = f'{booking.service} — ready for pickup'
     body = (f'Your motorcycle is ready for pickup. We carried out: {booking.service} ({ref}), dropped off '
-            f'{date_str}. Collect anytime: Mon–Sat, 8:00 AM – 6:30 PM.')
+            f'{date_str}. Collect anytime: Mon–Sun, 8:00 AM – 6:30 PM.')
     emailed = _notify_customer(booking, title, body, priority=False)
     return jsonify({'success': True, 'emailed': emailed, 'message': f'{booking.service} closed — bay freed.'})
 
@@ -2516,16 +2683,17 @@ def api_outbox():
         q = quotations_by_booking.get(n.booking_id)
         if not q or not b:
             return None
-        locked_total = sum(i.unit_price * i.quantity for i in q.items if i.locked)
-        total = q.total_amount if q.status == 'approved' else locked_total
+        breakdown = _quotation_breakdown(q.items)
+        total = breakdown['approve_total'] if q.status == 'approved' else breakdown['decline_total']
         completed = b.status == 'completed'
         customer_name = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown customer')
         return {
             'booking_id': b.id, 'ref': f'BKG-{b.id:03d}', 'service': b.service,
             'customer_name': customer_name, 'motorcycle': b.motorcycle_model or '',
             'decision': q.status, 'completed': completed,
-            'total': total, 'original': locked_total,
-            'items': [{'name': i.name, 'price': i.unit_price, 'locked': i.locked} for i in q.items],
+            'total': total, 'original': breakdown['decline_total'],
+            'booked': breakdown['booked'], 'materials': breakdown['materials'], 'extra': breakdown['extra'],
+            'items': [{'name': i.name, 'price': i.unit_price, 'locked': i.locked, 'item_type': i.item_type} for i in q.items],
             'invoice_paid': bool(b.invoice_paid),
             'invoice_payment_method': b.invoice_payment_method,
         }
@@ -3435,7 +3603,7 @@ def update_order_status(oid):
                                   when=ph_now()) if new_status != prev_status else None
     if notice:
         title, msg = notice
-        send_notification(order.user_id, title, msg, type='order', status=new_status)
+        _notify_order_customer(order, title, msg, status=new_status)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'new_status': new_status, 'message': 'Order status updated!'})
     flash('Order status updated!', 'success')
@@ -3538,14 +3706,33 @@ def admin_api_services():
 
 
 
+def _save_product_image(file):
+    """Uploads a product photo to Cloudinary (falls back to local disk only
+    when Cloudinary isn't configured, e.g. local dev) and returns the URL/path
+    to store on Product.image_url, or None if no usable file was given."""
+    if not file or file.filename == '' or not allowed_file(file.filename):
+        return None
+    cloud_url = upload_image(file, 'product_photos')
+    if cloud_url:
+        return cloud_url
+    ext      = file.filename.rsplit('.', 1)[1].lower()
+    filename = f"product_{uuid.uuid4().hex}.{ext}"
+    folder   = os.path.join(admin_app.root_path, 'static', 'product_photos')
+    os.makedirs(folder, exist_ok=True)
+    file.save(os.path.join(folder, filename))
+    return filename  # bare filename — resolved against static/product_photos at render time, same convention as User.profile_pic
+
+
 @admin_app.route('/product/add', methods=['POST'])
 @login_required
 @require_admin_or_staff
 def add_product():
+    image_url = _save_product_image(request.files.get('image'))
     db.session.add(Product(
         name=request.form['name'], category=request.form['category'],
         description=request.form.get('description', ''),
-        price=float(request.form['price']), stock=int(request.form['stock'])
+        price=float(request.form['price']), stock=int(request.form['stock']),
+        image_url=image_url
     ))
     db.session.commit()
     flash('Product added successfully!', 'success')
@@ -3566,6 +3753,11 @@ def edit_product(pid):
     p.price       = float(request.form['price'])
     p.stock       = int(request.form['stock'])
     p.description = request.form.get('description', '')
+    new_image = _save_product_image(request.files.get('image'))
+    if new_image:
+        p.image_url = new_image
+    elif request.form.get('remove_image') == '1':
+        p.image_url = None
     db.session.commit()
     flash(f'Product "{p.name}" updated!', 'success')
     return redirect(url_for('admin_dashboard'))
@@ -4055,6 +4247,12 @@ def quotation_new():
         if b:
             customer_name = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else '')
             customer_phone = b.contact_mobile if b.walkin_customer_id else (b.customer.phone if b.customer else '')
+            # Inspected By is read from the booking, never typed — whoever's
+            # actually assigned to the job is who inspects it. The "customer
+            # chose this person" tag is only true when the assignment still
+            # matches what they originally asked for; any other case (shop
+            # picked, or picked someone else because the request wasn't free)
+            # reads as "assigned by the shop".
             booking = {
                 'id': b.id, 'ref': f'BKG-{b.id:03d}',
                 'customer_name': customer_name or '',
@@ -4063,6 +4261,10 @@ def quotation_new():
                 'motorcycle_plate': b.motorcycle_plate or '',
                 'service_name': b.service,
                 'service_price': booking_service_price(b.service),
+                'assigned_mechanic_name': b.assigned_mechanic_name,
+                'assigned_mechanic_specialization': b.assigned_mechanic_specialization,
+                'assigned_mechanic_initials': _mechanic_initials(b.assigned_mechanic_name),
+                'mechanic_is_customer_choice': bool(b.preferred_mechanic_name) and b.preferred_mechanic_name == b.assigned_mechanic_name,
             }
     return render_template('quotation.html', products=products, services=services,
                             mechanics=mechanics, booking=booking)
@@ -4081,6 +4283,18 @@ def save_quotation():
     total = sum(float(i['unit_price']) * int(i['quantity']) for i in items)
     booking_id = data.get('booking_id')
     booking = Booking.query.get(booking_id) if booking_id else None
+
+    # Who inspected it is read from the booking's own assigned mechanic, not
+    # whatever the client sent — the admin never types this, so there's
+    # nothing to trust (or distrust) in the payload for it. A booking-linked
+    # quotation can't be sent at all until someone's assigned.
+    if booking:
+        if not booking.assigned_mechanic_name:
+            return jsonify({'success': False, 'error': 'Assign a mechanic before sending the quotation.'}), 400
+        inspected_by = booking.assigned_mechanic_name
+    else:
+        inspected_by = (data.get('inspected_by') or '').strip() or None
+
     q = Quotation(
         customer_name    = data.get('customer_name', '').strip(),
         customer_phone   = data.get('customer_phone', '').strip(),
@@ -4090,7 +4304,7 @@ def save_quotation():
         total_amount     = total,
         status           = 'awaiting_customer' if booking else 'pending',
         booking_id       = booking.id if booking else None,
-        inspected_by     = (data.get('inspected_by') or '').strip() or None,
+        inspected_by     = inspected_by,
         created_by       = current_user.id,
     )
     db.session.add(q)
@@ -4108,7 +4322,8 @@ def save_quotation():
 
     if booking:
         ref = f'BKG-{booking.id:03d}'
-        locked_total = sum(float(i['unit_price']) * int(i['quantity']) for i in items if i.get('locked'))
+        breakdown = _quotation_breakdown(items)
+        decline_note = ' (service + materials)' if breakdown['materials'] else ' (booked service only)'
         title = 'Quotation ready: please respond'
         message = f'During inspection of your {booking.service} ({ref}), the mechanic found additional work.'
         send_notification(booking.user_id, title, message, type='quotation', status='awaiting_customer',
@@ -4128,7 +4343,7 @@ def save_quotation():
               <p>{message} Please review and approve or decline:</p>
               <table style="width:100%;border-collapse:collapse;margin:12px 0;">{rows}</table>
               <p>If you approve: <strong>₱{total:,.2f}</strong><br>
-                 If you decline: <strong>₱{locked_total:,.2f}</strong> (original service only)</p>
+                 If you decline: <strong>₱{breakdown['decline_total']:,.2f}</strong>{decline_note}</p>
               <p><a href="{BASE_URL}/customer/dashboard?open_booking={booking.id}"
                     style="display:inline-block;padding:10px 18px;background:#d00019;color:#fff;
                            border-radius:6px;text-decoration:none;font-weight:bold;">Review Quotation</a></p>
@@ -4136,7 +4351,9 @@ def save_quotation():
             </div>"""
             _send_gmail(customer.email, f'{title} — MotoTyre', html)
 
-    return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}'})
+    customer_first_name = (q.customer_name or '').split(' ')[0] or None
+    return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}',
+                     'inspected_by': inspected_by, 'customer_first_name': customer_first_name})
 
 
 @admin_app.route('/quotations')
@@ -4606,7 +4823,7 @@ def billing_order_complete(oid):
     db.session.commit()
     body = (f'Your order ORD-{order.id:03d} has been picked up and payment collected. Thank you!' if is_cash
             else f'Your order ORD-{order.id:03d} has been picked up. Thank you!')
-    send_notification(order.user_id, 'Order Completed!', body, type='order', status='completed')
+    _notify_order_customer(order, 'Order Completed!', body, status='completed')
     return jsonify({'success': True, 'ref': f'ORD-{order.id:03d}', 'amount': order.total_amount})
 
 
@@ -5264,7 +5481,7 @@ def walkin_receipt():
         s('brand', alignment=1, fontName='Helvetica-Bold', fontSize=20, textColor=DARK, spaceAfter=1)))
     story.append(Paragraph('MOTO SHOP', s('sub', alignment=1, fontName='Helvetica', fontSize=7, textColor=GREY, spaceAfter=2)))
     story.append(Paragraph('Saranay Rd, Brgy. 171 Bagumbong, Caloocan City', sm))
-    story.append(Paragraph('0915 269 8366  ·  Mon–Sat 8AM–7PM', sm))
+    story.append(Paragraph('0915 269 8366  ·  Mon–Sun 8AM–6:30PM', sm))
     story.append(HRFlowable(width='100%', thickness=2, color=RED, spaceBefore=5, spaceAfter=6))
 
     # Receipt ID
@@ -5410,6 +5627,8 @@ def api_reports_data():
         'total_customers': total_customers,
         'order_status_counts': rpt['order_status_counts'],
         'top_services': rpt['top_services'],
+        'mechanic_performance': rpt['mechanic_performance'],
+        'top_products': rpt['top_products'],
         'transactions': txns_json,
         'transaction_count': len(rpt['transactions']),
     })
@@ -5436,6 +5655,12 @@ def generate_report():
     bookings = Booking.query.filter(
         Booking.date >= d_from, Booking.date <= d_to
     ).order_by(Booking.date.desc()).all()
+
+    # Mechanic Performance and Top Products Sold are the same computation the
+    # live Reports & Sales page uses, so the PDF never disagrees with it.
+    _rpt_detail = _reports_summary(d_from, d_to)
+    mechanic_performance = _rpt_detail['mechanic_performance']
+    top_products_sold    = _rpt_detail['top_products']
 
     def order_counts_as_revenue(o):
         return (o.status not in ('cancelled', 'awaiting_payment')
@@ -5486,26 +5711,21 @@ def generate_report():
     for b in bookings:
         booking_status_rows[b.status] += 1
 
-    # Top-selling products — only from orders that weren't cancelled, since a
-    # cancelled order was never actually sold.
-    product_sales = defaultdict(lambda: [0, 0.0])
-    for o in orders:
-        if o.status == 'cancelled':
-            continue
-        for item in o.items:
-            pname = item.product.name if item.product else 'Unknown Product'
-            product_sales[pname][0] += item.quantity
-            product_sales[pname][1] += item.quantity * item.unit_price
-    top_products = sorted(product_sales.items(), key=lambda kv: kv[1][1], reverse=True)[:8]
-
-    # Top services booked — only non-cancelled bookings; revenue only from completed ones.
+    # Top services booked — only non-cancelled bookings; revenue only from completed
+    # ones. A combo booking's .service is comma-joined, so each service in it counts
+    # on its own; a back job's .service is prefixed "Back job — <service>" and counts
+    # under that same service rather than its own bucket.
     service_bookings = defaultdict(lambda: [0, 0.0])
     for b in bookings:
         if b.status == 'cancelled':
             continue
-        service_bookings[b.service][0] += 1
-        if b.status == 'completed':
-            service_bookings[b.service][1] += (b.total_amount or 0)
+        is_backjob = b.service.startswith('Back job — ')
+        base = b.service[len('Back job — '):] if is_backjob else b.service
+        names = split_service_names(base)
+        for name in names:
+            service_bookings[name][0] += 1
+            if b.status == 'completed':
+                service_bookings[name][1] += (b.total_amount or 0) / len(names)
     top_services = sorted(service_bookings.items(), key=lambda kv: kv[1][0], reverse=True)[:8]
 
     # Payment method split, orders only (cash vs GCash) — non-cancelled orders.
@@ -5637,11 +5857,11 @@ def generate_report():
     else:
         story.append(Paragraph('No bookings in this period.', sub_style))
 
-    story.append(Paragraph('TOP-SELLING PRODUCTS', heading_style))
-    if top_products:
+    story.append(Paragraph('TOP PRODUCTS SOLD', heading_style))
+    if top_products_sold:
         story.append(section_table(
-            ['Product', 'Qty Sold', 'Revenue'],
-            [[name, str(int(q)), f'P{rev:,.2f}'] for name, (q, rev) in top_products],
+            ['Product', 'Units Sold', 'Revenue'],
+            [[r['name'], str(int(r['units'])), f'P{r["revenue"]:,.2f}'] for r in top_products_sold],
             [W*0.5, W*0.2, W*0.3], align_right_cols=(1, 2)
         ))
     else:
@@ -5656,6 +5876,20 @@ def generate_report():
         ))
     else:
         story.append(Paragraph('No bookings in this period.', sub_style))
+
+    story.append(Paragraph('MECHANIC PERFORMANCE', heading_style))
+    if mechanic_performance:
+        story.append(section_table(
+            ['Mechanic', 'Services Completed', 'Back Jobs', 'Service Income (Labor Only)'],
+            [[r['name'], str(r['completed']), str(r['backjobs']), f'P{r["income"]:,.2f}'] for r in mechanic_performance] +
+            [['TOTAL', str(sum(r['completed'] for r in mechanic_performance)),
+              str(sum(r['backjobs'] for r in mechanic_performance)),
+              f'P{sum(r["income"] for r in mechanic_performance):,.2f}']],
+            [W*0.3, W*0.25, W*0.2, W*0.25], align_right_cols=(1, 2, 3), bold_last_row=True
+        ))
+        story.append(Paragraph('Service income reflects labor only — parts and materials billed on a quotation are excluded.', small_style))
+    else:
+        story.append(Paragraph('No completed bookings in this period.', sub_style))
 
     story.append(Paragraph('PAYMENT METHOD BREAKDOWN (ORDERS)', heading_style))
     if payment_split:
@@ -5877,6 +6111,7 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN is_instore TINYINT(1) DEFAULT 0",
         "ALTER TABLE `order` ADD COLUMN instore_seen TINYINT(1) DEFAULT 1",
         "ALTER TABLE return_request ADD COLUMN is_pickup TINYINT(1) DEFAULT 0",
+        "ALTER TABLE product ADD COLUMN image_url VARCHAR(500) DEFAULT NULL",
     ]:
         try:
             from sqlalchemy import text as _tmig2

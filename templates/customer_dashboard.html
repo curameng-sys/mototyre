@@ -289,8 +289,23 @@
     .btn-submit { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
 
     /* ── PRODUCTS ── */
-    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
-    .product-card { background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; transition: all 0.2s; box-shadow: 0 6px 24px rgba(28,24,20,0.35), 0 2px 6px rgba(28,24,20,0.15); }
+    .product-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .product-photo { width: 100%; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; margin-bottom: 0.25rem; }
+    .product-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .product-photo.no-photo { flex-direction: column; gap: 0.35rem; color: var(--fg-3); }
+    .product-photo.no-photo span { font-size: 0.68rem; font-family: 'Syne',sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .low-stock-badge { position: absolute; top: 0.85rem; right: 0.85rem; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-family: 'Syne',sans-serif; font-weight: 700; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.3em 0.6em; border-radius: 6px; z-index: 1; }
+    .shop-pagination { display: flex; align-items: center; justify-content: center; gap: 0.35rem; flex-wrap: wrap; margin: 1.5rem 0; }
+    .shop-page-btn { min-width: 34px; height: 34px; padding: 0 0.6rem; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg-page); color: var(--fg-2); font-family: 'Syne',sans-serif; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: all 0.15s; }
+    .shop-page-btn:hover:not(:disabled) { border-color: var(--brand-red); color: var(--brand-red); }
+    .shop-page-btn.active { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+    .shop-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .shop-page-ellipsis { color: var(--fg-3); font-size: 0.82rem; padding: 0 0.2rem; }
+    @media (max-width: 768px) {
+      .product-grid { grid-template-columns: repeat(2, 1fr); gap: 0.85rem; }
+      .product-card { padding: 1rem; }
+    }
+    .product-card { background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; transition: all 0.2s; box-shadow: 0 6px 24px rgba(28,24,20,0.35), 0 2px 6px rgba(28,24,20,0.15); position: relative; }
     .product-card:hover { border-color: var(--line-1); transform: translateY(-3px); box-shadow: 0 10px 32px rgba(28,24,20,0.42), 0 3px 10px rgba(28,24,20,0.18); }
     .product-icon { font-size: 2rem; margin-bottom: 0.25rem; }
     .product-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--fg-1); }
@@ -1096,6 +1111,7 @@
         {% endfor %}
       </select>
     </div>
+    <div id="shop-showing-count" style="font-size:0.78rem;color:var(--fg-3);margin-bottom:0.85rem;"></div>
 
     {% if products %}
     <div class="product-grid" id="product-grid">
@@ -1107,8 +1123,17 @@
         data-price="{{ p.price }}"
         data-stock="{{ p.stock }}"
         data-description="{{ (p.description or '')|e }}"
+        data-image="{{ (p.image_url if p.image_url.startswith('http') else url_for('static', filename='product_photos/' + p.image_url)) if p.image_url else '' }}"
         onclick="openProductInfo(this)">
-        <div class="product-icon" style="color:var(--fg-3);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+        {% if p.stock > 0 and p.stock <= 2 %}<div class="low-stock-badge">Only {{ p.stock }} left</div>{% endif %}
+        {% if p.image_url %}
+        <div class="product-photo"><img src="{{ p.image_url if p.image_url.startswith('http') else url_for('static', filename='product_photos/' + p.image_url) }}" alt="{{ p.name|e }}" loading="lazy"></div>
+        {% else %}
+        <div class="product-photo no-photo">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <span>No photo yet</span>
+        </div>
+        {% endif %}
         <div class="product-name">{{ p.name }}</div>
         <div class="product-cat">{{ p.category }}</div>
         <div class="product-price">₱{{ '%.2f'|format(p.price) }}</div>
@@ -1119,6 +1144,7 @@
       {% endfor %}
     </div>
     <div id="no-products" style="display:none;" class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><p>No products in this category.</p></div>
+    <div class="shop-pagination" id="shop-pagination"></div>
     {% else %}
     <div class="empty-state"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><p>No parts available at the moment. Please check back later.</p></div>
     {% endif %}
@@ -1393,7 +1419,7 @@
     <div id="bd-quotation-wrap" style="display:none;margin-top:1rem;padding:1rem;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:#6b21a8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.65rem;">Inspection Findings</div>
       <div id="bd-quotation-items" style="margin-bottom:0.65rem;"></div>
-      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-2);margin-bottom:0.2rem;"><span>Original service</span><span id="bd-quotation-original"></span></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-2);margin-bottom:0.2rem;"><span id="bd-quotation-original-label">Original service</span><span id="bd-quotation-original"></span></div>
       <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-2);margin-bottom:0.5rem;"><span>Extra work</span><span id="bd-quotation-extra"></span></div>
       <div style="display:flex;justify-content:space-between;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--fg-1);padding-top:0.5rem;border-top:1px solid #e9d5ff;margin-bottom:0.75rem;"><span>Estimated Total</span><span id="bd-quotation-total" style="color:var(--brand-red);"></span></div>
       <div id="bd-quotation-actions" style="display:flex;gap:0.5rem;">
@@ -1447,21 +1473,65 @@
       </div>
     </div>
 
-    <div style="padding:0.85rem 1rem;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;margin-bottom:1rem;font-size:0.82rem;color:#92400e;line-height:1.5;">
-      <strong>The mechanic found additional work.</strong> Nothing extra will be done unless you approve it.
-    </div>
+    <div id="qf-banner" style="padding:0.85rem 1rem;border-radius:10px;margin-bottom:1rem;font-size:0.82rem;line-height:1.5;"></div>
 
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Your booked service</div>
     <div id="qf-booked-service" style="margin-bottom:1rem;"></div>
 
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Extra work</div>
-    <div id="qf-extra-items" style="margin-bottom:1rem;"></div>
+    <div id="qf-materials-section" style="display:none;margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.5rem;">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;">Materials used</span>
+        <span style="font-size:0.6rem;font-weight:700;letter-spacing:0.03em;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:5px;padding:0.1rem 0.45rem;text-transform:uppercase;">Included</span>
+      </div>
+      <div style="font-size:0.72rem;color:var(--fg-3);margin-bottom:0.5rem;">Parts the shop used on your motorcycle. Included in your payment.</div>
+      <div id="qf-materials-items"></div>
+    </div>
+
+    <div id="qf-extra-section" style="display:none;margin-bottom:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem;">Extra work</div>
+      <div style="font-size:0.72rem;color:var(--fg-3);margin-bottom:0.5rem;">From the mechanic's inspection. Needs your approval.</div>
+      <div id="qf-extra-items"></div>
+    </div>
 
     <div id="qf-totals"></div>
 
-    <div style="display:flex;gap:0.6rem;margin-top:1rem;">
+    <div id="qf-decision-actions" style="display:flex;gap:0.6rem;margin-top:1rem;">
       <button type="button" id="qf-decline-btn" style="flex:1;padding:0.8rem;background:#fff;border:2px solid var(--brand-red);border-radius:10px;color:var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;">Decline</button>
       <button type="button" id="qf-approve-btn" style="flex:1;padding:0.8rem;background:var(--brand-red);border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;">Approve</button>
+    </div>
+    <button type="button" id="qf-acknowledge-btn" style="display:none;width:100%;margin-top:1rem;padding:0.8rem;background:#111827;border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;">Got it</button>
+  </div>
+</div>
+
+<!-- ═══ QUOTATION DECISION CONFIRM ═══ -->
+<div class="modal-overlay" id="modal-quotation-confirm" onclick="if (event.target === this) closeQuotationConfirmModal()">
+  <div class="modal-box" style="width:380px;max-width:92vw;padding:1.75rem 1.5rem;text-align:center;">
+    <div id="qc-icon" style="width:52px;height:52px;border-radius:50%;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;"></div>
+    <h5 id="qc-title" style="margin:0 0 0.4rem;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--fg-1);"></h5>
+    <div id="qc-subtitle" style="font-size:0.82rem;color:var(--fg-3);line-height:1.5;margin-bottom:1.25rem;"></div>
+    <div id="qc-amount-box" style="border-radius:10px;padding:0.9rem;margin-bottom:1.25rem;">
+      <div id="qc-amount-label" style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem;"></div>
+      <div id="qc-amount-value" style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;"></div>
+    </div>
+    <div style="display:flex;gap:0.6rem;">
+      <button type="button" onclick="closeQuotationConfirmModal()" style="flex:1;padding:0.75rem;background:#fff;border:1px solid var(--line-2);border-radius:10px;color:var(--fg-2);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Go back</button>
+      <button type="button" id="qc-confirm-btn" onclick="confirmQuotationDecision()" style="flex:1;padding:0.75rem;border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;background:var(--brand-red);"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ORDER RECEIVED CONFIRM ═══ -->
+<div class="modal-overlay" id="modal-order-received-confirm" onclick="if (event.target === this) closeOrderReceivedConfirm()">
+  <div class="modal-box" style="width:380px;max-width:92vw;padding:1.75rem 1.5rem;text-align:center;">
+    <div style="width:52px;height:52px;border-radius:50%;margin:0 auto 1rem;background:#dcfce7;display:flex;align-items:center;justify-content:center;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    </div>
+    <h5 id="orc-title" style="margin:0 0 0.4rem;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--fg-1);"></h5>
+    <div id="orc-subtitle" style="font-size:0.82rem;color:var(--fg-3);line-height:1.5;margin-bottom:1rem;"></div>
+    <div id="orc-summary" style="display:inline-block;font-size:0.76rem;color:var(--fg-2);background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:20px;padding:0.4rem 0.9rem;margin-bottom:1.25rem;"></div>
+    <div style="display:flex;gap:0.6rem;">
+      <button type="button" onclick="closeOrderReceivedConfirm()" style="flex:1;padding:0.75rem;background:#fff;border:1px solid var(--line-2);border-radius:10px;color:var(--fg-2);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Go back</button>
+      <button type="button" id="orc-confirm-btn" onclick="_submitOrderReceived()" style="flex:1;padding:0.75rem;border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;background:var(--green);"></button>
     </div>
   </div>
 </div>
@@ -1559,11 +1629,7 @@
     <!-- Status Timeline -->
     <div id="od-timeline" style="margin-top:1.25rem;"></div>
 
-    <div id="od-confirm-received-wrap" style="display:none;margin-top:1rem;">
-      <button id="od-confirm-received-btn" onclick="confirmOrderReceived()" style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.12);border:1px solid rgba(21,128,61,0.3);border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:0.04em;transition:all 0.2s;" onmouseover="this.style.background='rgba(21,128,61,0.22)'" onmouseout="this.style.background='rgba(21,128,61,0.12)'">
-        I Already Received My Order
-      </button>
-    </div>
+    <div id="od-confirm-received-wrap" style="display:none;margin-top:1rem;"></div>
 
     <div id="od-report-problem-wrap" style="display:none;margin-top:1rem;">
       <div id="od-return-badge" style="text-align:center;font-size:0.76rem;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:0.5rem;"></div>
@@ -1810,7 +1876,7 @@
 
     <!-- STEP 2: DELIVERY METHOD -->
     <div id="step-shipping" style="display:none;">
-      <h5>Delivery Method</h5>
+      <h5>Pickup or Delivery</h5>
       
       <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.25rem;">
         <div id="opt-pickup" class="delivery-option selected" onclick="selectDelivery('pickup')" style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(21,128,61,0.1);border:2px solid var(--green);border-radius:10px;cursor:pointer;transition:all 0.15s;">
@@ -1845,7 +1911,7 @@
         <div style="font-size:0.78rem;color:#86efac;margin-top:0.5rem;">📞 0915 269 8366</div>
         <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(21,128,61,0.2);">
           <div style="font-size:0.75rem;color:var(--fg-3);">Operating Hours</div>
-          <div style="font-size:0.82rem;color:var(--fg-1);margin-top:0.25rem;">Mon - Sat: 8:00 AM - 7:00 PM</div>
+          <div style="font-size:0.82rem;color:var(--fg-1);margin-top:0.25rem;">Monday – Sunday: 8:00 AM – 6:30 PM</div>
         </div>
       </div>
 
@@ -1980,7 +2046,7 @@
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Items</div>
         <div id="conf-items-list" style="margin-bottom:0.5rem;"></div>
         <div style="border-top:1px solid var(--line-1);margin:0.75rem 0;"></div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Delivery Method</div>
+        <div id="conf-delivery-label" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Delivery Method</div>
         <div id="conf-delivery-info" style="color:var(--fg-1);line-height:1.6;margin-bottom:0.75rem;"></div>
         <div style="border-top:1px solid var(--line-1);margin:0.75rem 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -2527,10 +2593,13 @@ function goToConfirm() {
   document.getElementById('conf-total').textContent = '₱' + total.toFixed(2);
   const paymentLabels = { cash: 'Cash', gcash: 'GCash' };
   document.getElementById('conf-payment-display').innerHTML = paymentLabels[selectedPayment] || 'Cash';
-  const deliveryInfo = document.getElementById('conf-delivery-info');
+  const deliveryLabel = document.getElementById('conf-delivery-label');
+  const deliveryInfo  = document.getElementById('conf-delivery-info');
   if (deliveryMethod === 'pickup') {
-    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#86efac;margin-bottom:0.25rem;"><span style="font-family:'Syne',sans-serif;font-weight:700;">Shop Pickup</span></div><div style="font-size:0.8rem;color:var(--fg-3);">MotoTyre North Caloocan<br>Saranay Rd, Brgy. 171 Bagumbong, Caloocan City</div>`;
+    deliveryLabel.textContent = 'Pickup at';
+    deliveryInfo.innerHTML = `<div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);margin-bottom:0.2rem;">MotoTyre North Caloocan</div><div style="font-size:0.8rem;color:var(--fg-3);">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City</div>`;
   } else {
+    deliveryLabel.textContent = 'Deliver to';
     const mode = document.querySelector('input[name="ship-address-mode"]:checked');
     const addr = (mode && mode.value === 'default') ? DEFAULT_DELIVERY_ADDRESS : {
       name: document.getElementById('ship-name').value,
@@ -2540,7 +2609,7 @@ function goToConfirm() {
       barangay: document.getElementById('ship-barangay').value,
       zip: document.getElementById('ship-zip').value,
     };
-    deliveryInfo.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;color:#93c5fd;margin-bottom:0.25rem;"><span style="font-family:'Syne',sans-serif;font-weight:700;">Ship to Address</span></div><div style="font-size:0.8rem;color:var(--fg-3);">${addr.name}<br>${addr.mobile}<br>${addr.street}, Brgy. ${addr.barangay},<br>${addr.city}, Metro Manila ${addr.zip}</div>`;
+    deliveryInfo.innerHTML = `<div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);margin-bottom:0.2rem;">${addr.name} · ${addr.mobile}</div><div style="font-size:0.8rem;color:var(--fg-3);">${addr.street}, Barangay ${addr.barangay}, ${addr.city}${addr.zip ? ', ' + addr.zip : ''}</div><div style="font-size:0.75rem;color:#fbbf24;margin-top:0.3rem;">Shipping fee to be calculated</div>`;
   }
   goToStep('step-confirm');
 }
@@ -3837,6 +3906,7 @@ function openBookingDetails(bookingId) {
     document.getElementById('bd-quotation-items').innerHTML = extraItems.length
       ? extraItems.map(it => `<div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-1);margin-bottom:0.3rem;"><span>${it.name}</span><span>₱${it.price.toFixed(2)}</span></div>`).join('')
       : '<div style="font-size:0.8rem;color:var(--fg-3);">No extra work found.</div>';
+    document.getElementById('bd-quotation-original-label').textContent = (q.materials || 0) > 0 ? 'Service + materials' : 'Original service';
     document.getElementById('bd-quotation-original').textContent = `₱${q.original.toFixed(2)}`;
     document.getElementById('bd-quotation-extra').textContent    = `₱${q.extra.toFixed(2)}`;
     document.getElementById('bd-quotation-total').textContent    = `₱${q.total.toFixed(2)}`;
@@ -3954,6 +4024,7 @@ const ordersData = {
     payment_method: {{ (o.payment_method or "cash")|tojson }},
     delivery_method: {{ (o.delivery_method or "pickup")|tojson }},
     created_at: '{{ o.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
+    delivered_at: {{ (o.delivered_at.strftime("%b %d, %Y at %I:%M %p")|tojson) if o.delivered_at else 'null' }},
     return_window: {{ ({'expired': o.return_window.expired, 'days_left': o.return_window.days_left, 'label': o.return_window.label} if o.return_window else none)|tojson }},
     open_claim: {{ ({'id': o.open_claim.id, 'ref': 'RMA-%03d'|format(o.open_claim.id), 'status': o.open_claim.status} if o.open_claim else none)|tojson }},
     replacement_stats: {{ (o.replacement_stats or none)|tojson }},
@@ -3993,7 +4064,9 @@ function openOrderDetails(orderId) {
   };
   const sc = statusColors[order.status] || statusColors.pending;
   const isPickupOrder = (order.delivery_method || 'pickup') !== 'ship';
-  const statusLabel = (isPickupOrder && order.status === 'shipped') ? 'ready for pickup' : order.status.replace('_', ' ');
+  const statusLabel = (isPickupOrder && order.status === 'shipped') ? 'ready for pickup'
+    : (!isPickupOrder && order.status === 'completed') ? 'delivered'
+    : order.status.replace('_', ' ');
   document.getElementById('od-status-badge').innerHTML = `
     <span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.4em 0.9em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
       ${statusLabel}
@@ -4044,7 +4117,10 @@ function openOrderDetails(orderId) {
 
   const currentIdx = steps.indexOf(resolvedStatus);
   const isCancelled = order.status === 'cancelled';
-  const isCompleted = order.status === 'completed';
+  // Ship-to-address orders keep showing the 4-step tracker (with "Delivered"
+  // checked off) once completed — only pick-up orders collapse to the banner,
+  // since "picked up" has no further step worth tracking.
+  const isCompleted = order.status === 'completed' && isPickup;
 
   if (isCancelled) {
     timeline.innerHTML = `
@@ -4080,13 +4156,23 @@ function openOrderDetails(orderId) {
   // Ship-to-address orders are only ever marked delivered by the customer — staff/admin
   // can't know a parcel actually arrived, so there's no equivalent button on their end.
   const receivedWrap = document.getElementById('od-confirm-received-wrap');
-  const confirmBtn = document.getElementById('od-confirm-received-btn');
   const isCashPickup = order.payment_method === 'cash' && isPickup;
+  const packageIconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0.4rem;"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
   if (order.status === 'shipped' && !isCashPickup) {
     _confirmOrderId = order.id;
-    _confirmOrderLabel = isPickup ? 'I Already Picked Up My Order' : 'Mark as Delivered';
+    _confirmOrderIsPickup = isPickup;
     receivedWrap.style.display = 'block';
-    confirmBtn.textContent = _confirmOrderLabel;
+    receivedWrap.innerHTML = `
+      <button id="od-confirm-received-btn" onclick="openOrderReceivedConfirm()" style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.12);border:1px solid rgba(21,128,61,0.3);border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:0.04em;transition:all 0.2s;" onmouseover="this.style.background='rgba(21,128,61,0.22)'" onmouseout="this.style.background='rgba(21,128,61,0.12)'">
+        ${isPickup ? 'I Already Picked Up My Order' : packageIconSvg + 'I received my order'}
+      </button>`;
+  } else if (!isPickup && order.status === 'completed') {
+    _confirmOrderId = null;
+    receivedWrap.style.display = 'block';
+    receivedWrap.innerHTML = `
+      <div style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.12);border:1px solid rgba(21,128,61,0.3);border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.04em;text-align:center;">
+        ${packageIconSvg}Delivered${order.delivered_at ? ' · You confirmed on ' + order.delivered_at : ''}
+      </div>`;
   } else {
     _confirmOrderId = null;
     receivedWrap.style.display = 'none';
@@ -4110,12 +4196,34 @@ function openOrderDetails(orderId) {
 }
 
 let _confirmOrderId = null;
-let _confirmOrderLabel = 'I Already Received My Order';
+let _confirmOrderIsPickup = false;
 
-async function confirmOrderReceived() {
-  const btn = document.getElementById('od-confirm-received-btn');
+function openOrderReceivedConfirm() {
+  if (!_confirmOrderId) return;
+  const order = ordersData[_confirmOrderId];
+  const isPickup = _confirmOrderIsPickup;
+  document.getElementById('orc-title').textContent = isPickup ? 'Picked Up Your Order?' : 'Received Your Order?';
+  document.getElementById('orc-subtitle').textContent = isPickup
+    ? "This confirms you picked it up. You can't undo this."
+    : "This confirms your order arrived. You can't undo this.";
+  document.getElementById('orc-summary').textContent = `ORD-${String(_confirmOrderId).padStart(3, '0')} · ₱${order.total.toFixed(2)}`;
+  const btn = document.getElementById('orc-confirm-btn');
+  btn.textContent = isPickup ? 'Yes, I picked it up' : 'Yes, I received it';
+  btn.disabled = false;
+  document.getElementById('modal-order-received-confirm').classList.add('open');
+  document.addEventListener('keydown', _orcEscHandler);
+}
+function closeOrderReceivedConfirm() {
+  document.getElementById('modal-order-received-confirm').classList.remove('open');
+  document.removeEventListener('keydown', _orcEscHandler);
+}
+function _orcEscHandler(e) { if (e.key === 'Escape') closeOrderReceivedConfirm(); }
+
+async function _submitOrderReceived() {
+  const btn = document.getElementById('orc-confirm-btn');
   const orderId = _confirmOrderId;
-  if (!confirm('Confirm that you have received your order? This cannot be undone.')) return;
+  if (!orderId) return;
+  const original = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Processing...';
   let res;
@@ -4128,13 +4236,13 @@ async function confirmOrderReceived() {
   } catch (e) {
     alert('Could not reach the server. Please check your connection and try again.');
     btn.disabled = false;
-    btn.textContent = _confirmOrderLabel;
+    btn.textContent = original;
     return;
   }
   if (!res.ok && res.status !== 400 && res.status !== 403) {
     alert('Server error (' + res.status + '). Please restart the app and try again.');
     btn.disabled = false;
-    btn.textContent = _confirmOrderLabel;
+    btn.textContent = original;
     return;
   }
   let data;
@@ -4143,19 +4251,21 @@ async function confirmOrderReceived() {
   } catch (e) {
     alert('Unexpected server response. Please restart the app and try again.');
     btn.disabled = false;
-    btn.textContent = _confirmOrderLabel;
+    btn.textContent = original;
     return;
   }
   if (data.success) {
-    ordersData[orderId].status = data.new_status || 'delivered';
+    ordersData[orderId].status = data.new_status || 'completed';
+    if (data.delivered_at) ordersData[orderId].delivered_at = data.delivered_at;
     _confirmOrderId = null;
+    closeOrderReceivedConfirm();
     closeModal('modal-order-details');
     openOrderDetails(parseInt(orderId));
     showToast('Order marked as received!', 'success');
   } else {
     alert(data.message || 'Something went wrong.');
     btn.disabled = false;
-    btn.textContent = _confirmOrderLabel;
+    btn.textContent = original;
   }
 }
 
@@ -4534,14 +4644,23 @@ function reportProblemForBooking() {
   openReturnForm('service', _currentBookingDetailId);
 }
 
-async function decideQuotation(decision, qidOverride) {
-  const wrap = document.getElementById('bd-quotation-wrap');
-  const qid = qidOverride || (wrap && wrap.dataset.quotationId);
-  if (!qid) return;
-  const msg = decision === 'approve'
-    ? 'Approve this quotation? The shop will do the extra work and bill the full amount.'
-    : 'Decline this quotation? The shop will proceed with just the booked service.';
-  if (!confirm(msg)) return;
+// Finds the quotation's current amounts wherever they're already loaded
+// client-side — the notification feed (awaiting_customer quotations) and
+// the booking's own quotation_data (already-decided ones) both carry the
+// same shape, so either source works for the confirm modal.
+function _findQuotationData(qid) {
+  const fromNotif = notifications.find(x => x.quotation && x.quotation.id === qid);
+  if (fromNotif) return fromNotif.quotation;
+  if (typeof _currentBookingDetailId !== 'undefined' && bookingsData[_currentBookingDetailId] &&
+      bookingsData[_currentBookingDetailId].quotation &&
+      bookingsData[_currentBookingDetailId].quotation.id === qid) {
+    return bookingsData[_currentBookingDetailId].quotation;
+  }
+  return null;
+}
+
+async function _submitQuotationDecision(decision, qid, btn) {
+  if (btn) btn.disabled = true;
   try {
     const res = await fetch(`/quotation/${qid}/decision`, {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -4552,10 +4671,70 @@ async function decideQuotation(decision, qidOverride) {
       window.location.reload();
     } else {
       alert(data.error || 'Could not record your decision.');
+      if (btn) btn.disabled = false;
     }
   } catch (e) {
     alert('Network error — please try again.');
+    if (btn) btn.disabled = false;
   }
+}
+
+let _qcState = { decision: null, qid: null };
+
+function decideQuotation(decision, qidOverride) {
+  const wrap = document.getElementById('bd-quotation-wrap');
+  const qid = qidOverride || (wrap && parseInt(wrap.dataset.quotationId));
+  if (!qid) return;
+  openQuotationConfirmModal(decision, qid, _findQuotationData(qid));
+}
+
+function openQuotationConfirmModal(decision, qid, q) {
+  _qcState = { decision, qid };
+  const approveTotal = q ? q.total    : 0;
+  const declineTotal = q ? q.original : 0;
+  const hasMaterials = q ? (q.materials || 0) > 0 : false;
+
+  const icon = document.getElementById('qc-icon');
+  const amountBox   = document.getElementById('qc-amount-box');
+  const amountLabel = document.getElementById('qc-amount-label');
+  const amountValue = document.getElementById('qc-amount-value');
+  const confirmBtn  = document.getElementById('qc-confirm-btn');
+
+  if (decision === 'approve') {
+    icon.style.background = '#dcfce7';
+    icon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    document.getElementById('qc-title').textContent = 'Approve Quotation?';
+    document.getElementById('qc-subtitle').textContent = 'The shop will do the extra work and bill the full amount.';
+    amountBox.style.background = '#f0fdf4'; amountBox.style.border = '1px solid #bbf7d0';
+    amountLabel.textContent = 'Your new total'; amountLabel.style.color = '#166534';
+    amountValue.textContent = `₱${approveTotal.toFixed(2)}`; amountValue.style.color = '#166534';
+    confirmBtn.textContent = `Approve ₱${approveTotal.toFixed(2)}`;
+  } else {
+    icon.style.background = '#fef3c7';
+    icon.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    document.getElementById('qc-title').textContent = 'Decline Quotation?';
+    document.getElementById('qc-subtitle').textContent = hasMaterials
+      ? 'The shop will proceed with just the booked service and materials already used.'
+      : 'The shop will proceed with just the booked service.';
+    amountBox.style.background = 'var(--bg-subtle)'; amountBox.style.border = '1px solid var(--line-2)';
+    amountLabel.textContent = 'Your total'; amountLabel.style.color = 'var(--fg-3)';
+    amountValue.textContent = `₱${declineTotal.toFixed(2)}`; amountValue.style.color = 'var(--fg-1)';
+    confirmBtn.textContent = `Decline ₱${declineTotal.toFixed(2)}`;
+  }
+
+  document.getElementById('modal-quotation-confirm').classList.add('open');
+  document.addEventListener('keydown', _qcEscHandler);
+}
+function closeQuotationConfirmModal() {
+  document.getElementById('modal-quotation-confirm').classList.remove('open');
+  document.removeEventListener('keydown', _qcEscHandler);
+}
+function _qcEscHandler(e) { if (e.key === 'Escape') closeQuotationConfirmModal(); }
+
+function confirmQuotationDecision() {
+  const { decision, qid } = _qcState;
+  if (!qid) return;
+  _submitQuotationDecision(decision, qid, document.getElementById('qc-confirm-btn'));
 }
 
 function buildQuotationItemsHTML(q) {
@@ -4573,15 +4752,20 @@ function buildQuotationItemsHTML(q) {
 }
 
 function buildQuotationTotalsHTML(q) {
+  const hasMaterials = (q.materials || 0) > 0;
+  const approveNote = hasMaterials ? 'Service + materials + extra work' : 'Service + extra work';
+  const declineNote = hasMaterials ? 'Service + materials only' : 'Booked service only';
   return `
     <div style="display:flex;gap:0.5rem;margin:0.6rem 0;">
       <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.5rem 0.6rem;text-align:center;">
         <div style="font-size:0.6rem;color:#166534;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">If you approve</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#166534;">₱${q.total.toFixed(2)}</div>
+        <div style="font-size:0.58rem;color:#15803d;margin-top:0.1rem;">${approveNote}</div>
       </div>
       <div style="flex:1;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;padding:0.5rem 0.6rem;text-align:center;">
         <div style="font-size:0.6rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">If you decline</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--fg-2);">₱${q.original.toFixed(2)}</div>
+        <div style="font-size:0.58rem;color:var(--fg-3);margin-top:0.1rem;">${declineNote}</div>
       </div>
     </div>`;
 }
@@ -4592,27 +4776,78 @@ function openQuotationModal(qid) {
   const q = n.quotation;
   document.getElementById('qf-subtitle').textContent =
     `Booking ${q.ref} · ${q.service}${q.inspected_by ? ' · Inspected by ' + q.inspected_by : ''}`;
-  const locked = q.items.filter(it => it.locked);
+
+  const locked    = q.items.filter(it => it.locked);
+  const materials = q.items.filter(it => !it.locked && it.item_type === 'product');
+  const findings  = q.items.filter(it => !it.locked && it.item_type !== 'product');
+  const hasExtra  = findings.length > 0;
+
+  const banner = document.getElementById('qf-banner');
+  if (hasExtra) {
+    banner.style.background = '#fffbeb'; banner.style.border = '1px solid #fde68a'; banner.style.color = '#92400e';
+    banner.innerHTML = '<strong>The mechanic found additional work.</strong> Nothing extra will be done unless you approve it.';
+  } else {
+    banner.style.background = '#f0fdf4'; banner.style.border = '1px solid #bbf7d0'; banner.style.color = '#166534';
+    banner.innerHTML = '<strong>No additional work was found.</strong> Your total is your booked service' +
+      (materials.length ? ' and the materials used.' : '.');
+  }
+
   document.getElementById('qf-booked-service').innerHTML = locked.map(it => `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;background:var(--bg-subtle);border-radius:8px;padding:0.65rem 0.8rem;">
       <div><div style="font-size:0.85rem;font-weight:600;color:var(--fg-1);">${it.name}</div><div style="font-size:0.7rem;color:var(--fg-3);margin-top:0.1rem;">Already agreed at booking</div></div>
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
     </div>`).join('');
-  const extra = q.items.filter(it => !it.locked);
-  document.getElementById('qf-extra-items').innerHTML = extra.length
-    ? extra.map(it => `
+
+  const materialsSection = document.getElementById('qf-materials-section');
+  if (materials.length) {
+    materialsSection.style.display = 'block';
+    document.getElementById('qf-materials-items').innerHTML = materials.map(it => `
+      <div style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.6rem 0.8rem;border-bottom:1px solid var(--line-2);">
+        <div style="width:28px;height:28px;border-radius:7px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:0.1rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+        <div style="flex:1;min-width:0;"><div style="font-size:0.82rem;color:var(--fg-1);">${it.name}</div><div style="font-size:0.68rem;color:var(--fg-3);margin-top:0.1rem;">Part · ${it.quantity || 1} × ₱${it.price.toFixed(2)}</div></div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
+      </div>`).join('');
+  } else {
+    materialsSection.style.display = 'none';
+  }
+
+  const extraSection = document.getElementById('qf-extra-section');
+  if (hasExtra) {
+    extraSection.style.display = 'block';
+    document.getElementById('qf-extra-items').innerHTML = findings.map(it => `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.8rem;border-bottom:1px solid var(--line-2);">
         <div><div style="font-size:0.82rem;color:var(--fg-1);">${it.name}</div><div style="font-size:0.68rem;color:var(--fg-3);margin-top:0.1rem;">${it.label}</div></div>
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
-      </div>`).join('')
-    : '<div style="font-size:0.8rem;color:var(--fg-3);">No extra work found.</div>';
-  document.getElementById('qf-totals').innerHTML = buildQuotationTotalsHTML(q);
+      </div>`).join('');
+  } else {
+    extraSection.style.display = 'none';
+  }
 
-  const declineBtn = document.getElementById('qf-decline-btn');
-  const approveBtn = document.getElementById('qf-approve-btn');
-  approveBtn.textContent = `Approve ₱${q.total.toFixed(2)}`;
-  declineBtn.onclick = () => decideQuotation('decline', q.id);
-  approveBtn.onclick = () => decideQuotation('approve', q.id);
+  const decisionActions = document.getElementById('qf-decision-actions');
+  const ackBtn = document.getElementById('qf-acknowledge-btn');
+
+  if (hasExtra) {
+    document.getElementById('qf-totals').innerHTML = buildQuotationTotalsHTML(q);
+    decisionActions.style.display = 'flex';
+    ackBtn.style.display = 'none';
+    const declineBtn = document.getElementById('qf-decline-btn');
+    const approveBtn = document.getElementById('qf-approve-btn');
+    declineBtn.onclick = () => decideQuotation('decline', q.id);
+    approveBtn.onclick = () => decideQuotation('approve', q.id);
+  } else {
+    // Nothing optional to weigh — materials (if any) were needed to do the
+    // booked service itself, not extra work beyond it, so there's no
+    // decision to confirm, just a total to acknowledge.
+    document.getElementById('qf-totals').innerHTML = `
+      <div style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;padding:0.75rem;text-align:center;">
+        <div style="font-size:0.62rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Total to pay</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--fg-1);">₱${q.total.toFixed(2)}</div>
+        <div style="font-size:0.66rem;color:var(--fg-3);margin-top:0.1rem;">${materials.length ? 'Service + materials' : 'Booked service'}</div>
+      </div>`;
+    decisionActions.style.display = 'none';
+    ackBtn.style.display = 'block';
+    ackBtn.onclick = () => _submitQuotationDecision('approve', q.id, ackBtn);
+  }
 
   document.getElementById('modal-quotation-full').classList.add('open');
   document.addEventListener('keydown', _quotationModalEscHandler);
@@ -5512,6 +5747,9 @@ async function submitReturnInfo(id) {
 let currentProductInfo = null;
 
 let _shopCategory = 'all';
+const SHOP_PAGE_SIZE = 10;
+let _shopPage = 1;
+let _shopFiltered = [];
 
 function filterProducts(cat) {
   _shopCategory = cat;
@@ -5525,18 +5763,68 @@ function searchProducts() {
 function applyShopFilters() {
   const searchEl = document.getElementById('shop-search');
   const q = (searchEl ? searchEl.value : '').toLowerCase().trim();
-  const cards = document.querySelectorAll('#product-grid .product-card');
-  let visibleCount = 0;
-  cards.forEach(card => {
+  const cards = Array.from(document.querySelectorAll('#product-grid .product-card'));
+  _shopFiltered = cards.filter(card => {
     const matchesCat = _shopCategory === 'all' || card.dataset.category === _shopCategory;
     const matchesSearch = !q || card.dataset.name.toLowerCase().includes(q);
-    const show = matchesCat && matchesSearch;
-    card.style.display = show ? '' : 'none';
-    if (show) visibleCount++;
+    return matchesCat && matchesSearch;
   });
   const noProducts = document.getElementById('no-products');
-  if (noProducts) noProducts.style.display = visibleCount === 0 ? '' : 'none';
+  if (noProducts) noProducts.style.display = _shopFiltered.length === 0 ? '' : 'none';
+  _shopPage = 1;
+  renderShopPage();
 }
+
+function renderShopPage() {
+  const cards = document.querySelectorAll('#product-grid .product-card');
+  cards.forEach(card => { card.style.display = 'none'; });
+
+  const totalPages = Math.max(1, Math.ceil(_shopFiltered.length / SHOP_PAGE_SIZE));
+  if (_shopPage > totalPages) _shopPage = totalPages;
+  const start = (_shopPage - 1) * SHOP_PAGE_SIZE;
+  _shopFiltered.slice(start, start + SHOP_PAGE_SIZE).forEach(card => { card.style.display = ''; });
+
+  const showing = document.getElementById('shop-showing-count');
+  if (showing) {
+    showing.textContent = _shopFiltered.length === 0 ? '' :
+      `Showing ${start + 1}–${Math.min(start + SHOP_PAGE_SIZE, _shopFiltered.length)} of ${_shopFiltered.length} products`;
+  }
+  renderShopPagination(totalPages);
+}
+
+function goToShopPage(page) {
+  _shopPage = page;
+  renderShopPage();
+  document.getElementById('product-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function _shopPageList(current, total) {
+  const delta = 2;
+  const range = [];
+  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) range.push(i);
+  const pages = [1];
+  if (range[0] > 2) pages.push('…');
+  pages.push(...range);
+  if (range.length && range[range.length - 1] < total - 1) pages.push('…');
+  if (total > 1) pages.push(total);
+  return pages;
+}
+
+function renderShopPagination(totalPages) {
+  const wrap = document.getElementById('shop-pagination');
+  if (!wrap) return;
+  if (totalPages <= 1) { wrap.innerHTML = ''; return; }
+  let html = `<button class="shop-page-btn" ${_shopPage === 1 ? 'disabled' : ''} onclick="goToShopPage(${_shopPage - 1})">‹ Prev</button>`;
+  _shopPageList(_shopPage, totalPages).forEach(p => {
+    html += p === '…'
+      ? `<span class="shop-page-ellipsis">…</span>`
+      : `<button class="shop-page-btn${p === _shopPage ? ' active' : ''}" onclick="goToShopPage(${p})">${p}</button>`;
+  });
+  html += `<button class="shop-page-btn" ${_shopPage === totalPages ? 'disabled' : ''} onclick="goToShopPage(${_shopPage + 1})">Next ›</button>`;
+  wrap.innerHTML = html;
+}
+
+if (document.getElementById('product-grid')) applyShopFilters();
 
 function openProductInfo(card) {
   currentProductInfo = {

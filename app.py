@@ -304,7 +304,7 @@ def send_order_receipt_email(order, override_email=None):
             <div style="color:#6b7280;font-size:12px;line-height:1.7;">
               <strong style="color:#111827;">MotoTyre North Caloocan</strong><br>
               Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>
-              &#128222; 0915 269 8366 &nbsp;|&nbsp; Mon–Sat 8:00 AM – 7:00 PM
+              &#128222; 0915 269 8366 &nbsp;|&nbsp; Mon–Sun 8:00 AM – 6:30 PM
             </div>
             <div style="margin-top:12px;color:#9ca3af;font-size:11px;">Thank you for choosing MotoTyre! &#127947;</div>
           </div>
@@ -397,7 +397,7 @@ def send_booking_confirmation_email(booking):
             <div style="color:#6b7280;font-size:12px;line-height:1.7;">
               <strong style="color:#111827;">MotoTyre North Caloocan</strong><br>
               Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>
-              &#128222; 0915 269 8366 &nbsp;|&nbsp; Mon–Sat 8:00 AM – 6:30 PM
+              &#128222; 0915 269 8366 &nbsp;|&nbsp; Mon–Sun 8:00 AM – 6:30 PM
             </div>
           </div>
         </div>"""
@@ -540,6 +540,7 @@ class Product(db.Model):
     description = db.Column(db.Text)
     price       = db.Column(db.Float, nullable=False)
     stock       = db.Column(db.Integer, default=0)
+    image_url   = db.Column(db.String(500))
     created_at  = db.Column(db.DateTime, default=ph_now)
     order_items = db.relationship('OrderItem', backref='product', lazy=True)
 
@@ -717,6 +718,23 @@ def send_notification(user_id, title, message, type='update', status=None, booki
     db.session.commit()
 
 
+def _notify_order_customer(order, title, body, status=None):
+    """Writes the order's bell notification and emails the exact same title/body
+    to the customer's Gmail, so the two channels never say something different."""
+    send_notification(order.user_id, title, body, type='order', status=status)
+    customer = User.query.get(order.user_id)
+    if not (customer and customer.email):
+        return False
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
+      <p>Hi {customer.fullname},</p>
+      <p>{body}</p>
+      <p>— MotoTyre North Caloocan</p>
+    </div>"""
+    _send_gmail(customer.email, f'{title} — MotoTyre', html)
+    return True
+
+
 def require_active_account(f):
     """Decorator: block booking/ordering for banned accounts (deactivated accounts
     already can't log in, but this also covers an already-open session)."""
@@ -802,6 +820,27 @@ def check_day_before_reminders():
                 </div>"""
                 _send_gmail(user.email, f"Reminder — tomorrow at {f['time_str']} ({f['ref']})", html)
             print(f'[DAY-BEFORE REMINDER] Sent for booking #{b.id} to user {b.user_id}')
+
+
+def _quotation_breakdown(items):
+    """Splits a quotation into the three things a customer actually decides
+    over: the service they already booked (locked=True, always charged),
+    the materials the shop physically used on their bike (item_type='product',
+    not locked — a part that's already installed can't be un-charged just
+    because the customer declines the rest), and the extra inspection
+    findings (everything else — labor/diagnosis beyond the booked service,
+    the only thing an actual decline removes). Mirrors admin_app.py's copy
+    exactly so the two apps never disagree about what a decline costs."""
+    def amt(i):
+        return float(i.unit_price) * int(i.quantity)
+    booked    = sum(amt(i) for i in items if i.locked)
+    materials = sum(amt(i) for i in items if not i.locked and i.item_type == 'product')
+    extra     = sum(amt(i) for i in items if not i.locked and i.item_type != 'product')
+    return {
+        'booked': booked, 'materials': materials, 'extra': extra,
+        'approve_total': booked + materials + extra,
+        'decline_total': booked + materials,
+    }
 
 
 def _generate_otp(length=6):
@@ -1220,13 +1259,16 @@ def customer_dashboard():
             b.open_claim = open_by_booking.get(b.id)
             b.redo_stats = _booking_redo_stats(b) if b.return_window else None
         q = _quotations_by_booking.get(b.id)
-        b.quotation_data = None if not q else {
-            'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
-            'original': sum(i.unit_price for i in q.items if i.locked),
-            'extra': sum(i.unit_price for i in q.items if not i.locked),
-            'total': q.total_amount,
-            'items': [{'name': i.name, 'price': i.unit_price, 'locked': i.locked} for i in q.items],
-        }
+        if not q:
+            b.quotation_data = None
+        else:
+            _qbd = _quotation_breakdown(q.items)
+            b.quotation_data = {
+                'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
+                'original': _qbd['decline_total'], 'extra': _qbd['extra'], 'total': q.total_amount,
+                'booked': _qbd['booked'], 'materials': _qbd['materials'],
+                'items': [{'name': i.name, 'price': i.unit_price, 'locked': i.locked, 'item_type': i.item_type} for i in q.items],
+            }
     default_delivery_eligible = bool(current_user.default_delivery_city and
         is_in_delivery_zone(current_user.default_delivery_city, current_user.default_delivery_barangay))
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders,
@@ -2626,15 +2668,16 @@ def get_notifications():
         b = bookings_by_id.get(n.booking_id)
         service = b.service if b else ''
         ref = f'BKG-{n.booking_id:03d}'
-        original = sum(i.unit_price * i.quantity for i in q.items if i.locked)
-        extra = q.total_amount - original
+        breakdown = _quotation_breakdown(q.items)
         payload = {
             'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
             'service': service, 'ref': ref,
-            'original': original, 'extra': extra, 'total': q.total_amount,
+            'original': breakdown['decline_total'], 'extra': breakdown['extra'], 'total': q.total_amount,
+            'booked': breakdown['booked'], 'materials': breakdown['materials'],
             'sent_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
             'items': [{'name': i.name, 'price': i.unit_price,
-                       'label': item_type_labels.get(i.item_type, 'Service'), 'locked': i.locked}
+                       'label': item_type_labels.get(i.item_type, 'Service'), 'locked': i.locked,
+                       'item_type': i.item_type}
                       for i in q.items],
         }
         if q.status == 'awaiting_customer':
@@ -2644,7 +2687,8 @@ def get_notifications():
             message = f'✓ You approved ₱{q.total_amount:,.2f}.'
         else:
             title = f'Quotation for {service}'
-            message = f'You declined the extra work. Only {service} (₱{original:,.2f}).'
+            decline_note = ' plus materials used' if breakdown['materials'] else ''
+            message = f'You declined the extra work. Only {service}{decline_note} (₱{breakdown["decline_total"]:,.2f}).'
         return payload, title, message
 
     def invoice_payload(n):
@@ -2653,7 +2697,9 @@ def get_notifications():
             return None
         q = quotations_by_booking.get(n.booking_id)
         if q:
-            relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked]
+            # On decline, the booked service and any materials already used
+            # still bill — only the extra inspection findings drop off.
+            relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
             items = [{'name': i.name, 'price': i.unit_price} for i in relevant]
             decision = q.status
         else:
@@ -2748,16 +2794,17 @@ def confirm_order_received(oid):
         order.delivered_at = ph_now()
     db.session.commit()
     _is_ship = order.delivery_method == 'ship'
-    send_notification(current_user.id, 'Order Received!',
+    _notify_order_customer(order, 'Order Received!',
         with_stamp(
             f'You confirmed receipt of your order ORD-{order.id:03d}. Thank you!',
             'completed', is_ship=_is_ship),
-        type='order', status='completed')
+        status='completed')
     for admin in User.query.filter_by(role='admin').all():
         send_notification(admin.id, 'Order Received ✅',
             f'{current_user.fullname} confirmed receipt of ORD-{order.id:03d}.',
             type='order', status='completed')
-    return jsonify({'success': True, 'new_status': 'completed'})
+    return jsonify({'success': True, 'new_status': 'completed',
+                     'delivered_at': order.delivered_at.strftime('%b %d, %Y at %I:%M %p')})
 
 
 # ── Payment routes ────────────────────────────────────────────────────────────
@@ -2879,12 +2926,12 @@ def payment_success():
                 _next_step = (f' We are getting it ready to ship to {_dest}.' if _is_ship and _dest
                               else ' We are getting it ready to ship.' if _is_ship
                               else '')
-                send_notification(order.user_id, 'Order Confirmed! ✅',
+                _notify_order_customer(order, 'Order Confirmed! ✅',
                     with_stamp(
                         f'Your payment for Order ORD-{order.id:03d} ({items_desc}) worth '
                         f'₱{order.total_amount:.2f} has been confirmed.{_next_step}',
                         'confirmed', is_ship=_is_ship),
-                    type='order', status='confirmed')
+                    status='confirmed')
             if order and order.status == 'confirmed':
                 send_order_receipt_email(order, override_email=gcash_email)
         except Exception as e:

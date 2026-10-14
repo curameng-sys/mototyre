@@ -396,7 +396,13 @@
           </td>
           <td>
             {% if (o.payment_method or '')|lower == 'gcash' %}
-            <button class="btn-collect btn-collect-ord" onclick="markPickedUp({{ o.id }}, 'ORD-{{ '%03d'|format(o.id) }}', this)">
+            <button class="btn-collect btn-collect-ord"
+              data-id="{{ o.id }}"
+              data-ref="ORD-{{ '%03d'|format(o.id) }}"
+              data-customer="{{ o.customer.fullname|e }}"
+              data-amount="{{ o.total_amount }}"
+              data-items='{{ ord_items }}'
+              onclick="openPickupConfirm(this)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Mark Picked Up
             </button>
             {% else %}
@@ -606,6 +612,35 @@
   </div>
 </div>
 
+<!-- ── MARK AS PICKED UP MODAL ── -->
+<div class="bill-overlay" id="pu-overlay" onclick="if(event.target===this)closePickupConfirm()">
+  <div class="bill-box" style="max-width:420px;">
+    <div class="bill-head">
+      <div>
+        <div class="bill-head-title">Mark as Picked Up?</div>
+        <div class="bill-ref">This confirms the customer took their order. It's already paid, so there's nothing to collect.</div>
+      </div>
+      <button class="bill-close" onclick="closePickupConfirm()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="bill-body">
+      <div class="bill-info">
+        <div class="bill-info-row"><span class="bill-info-label">Order</span><span class="bill-info-val" id="pu-ref"></span></div>
+        <div class="bill-info-row"><span class="bill-info-label">Customer</span><span class="bill-info-val" id="pu-customer"></span></div>
+        <div class="bill-info-row"><span class="bill-info-label">Items</span><span class="bill-info-val" id="pu-items" style="text-align:right;max-width:60%;"></span></div>
+        <div class="bill-info-row"><span class="bill-info-label">Amount</span><span class="bill-info-val" id="pu-amount"></span></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.65rem .9rem;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);border-radius:8px;">
+        <span style="font-size:.78rem;color:var(--muted);">Payment</span>
+        <span style="font-size:.78rem;font-weight:700;color:#15803d;display:flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Already paid via GCash</span>
+      </div>
+    </div>
+    <div class="bill-foot">
+      <button class="btn-cancel-bill" onclick="closePickupConfirm()">Go back</button>
+      <button class="btn-mark-paid" id="pu-confirm-btn" onclick="submitPickedUp()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Mark as Picked Up</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── RECEIPT MODAL ── -->
 <div class="bill-overlay" id="receipt-overlay" onclick="if(event.target===this)closeReceiptModal()">
   <div class="receipt-box">
@@ -798,25 +833,48 @@ function doneSuccess() {
   location.reload();
 }
 
-async function markPickedUp(orderId, ref, btn) {
-  if (!confirm(`Mark ${ref} as picked up? It's already paid via GCash — this just confirms the customer took it.`)) return;
-  btn.disabled = true;
-  const original = btn.innerHTML;
-  btn.innerHTML = 'Marking…';
+let _pickup = {};
+
+function openPickupConfirm(btn) {
+  const d = btn.dataset;
+  _pickup = { id: parseInt(d.id), ref: d.ref, customer: d.customer, amount: parseFloat(d.amount) || 0,
+              items: JSON.parse(d.items || '[]'), btn };
+  document.getElementById('pu-ref').textContent = _pickup.ref;
+  document.getElementById('pu-customer').textContent = _pickup.customer;
+  document.getElementById('pu-items').textContent = _pickup.items.map(i => `${i.name}${i.qty > 1 ? ` ×${i.qty}` : ''}`).join(', ');
+  document.getElementById('pu-amount').textContent = '₱' + _pickup.amount.toLocaleString('en-PH', {minimumFractionDigits:2});
+  const confirmBtn = document.getElementById('pu-confirm-btn');
+  confirmBtn.disabled = false;
+  confirmBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Mark as Picked Up';
+  document.getElementById('pu-overlay').classList.add('open');
+  document.addEventListener('keydown', _puEscHandler);
+}
+
+function closePickupConfirm() {
+  document.getElementById('pu-overlay').classList.remove('open');
+  document.removeEventListener('keydown', _puEscHandler);
+}
+
+function _puEscHandler(e) { if (e.key === 'Escape') closePickupConfirm(); }
+
+async function submitPickedUp() {
+  const confirmBtn = document.getElementById('pu-confirm-btn');
+  confirmBtn.disabled = true;
+  confirmBtn.innerHTML = 'Marking…';
   try {
-    const res  = await fetch(`/billing/order/${orderId}/complete`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+    const res  = await fetch(`/billing/order/${_pickup.id}/complete`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
     const data = await res.json();
     if (data.success) {
       location.reload();
     } else {
       alert(data.error || 'Could not mark this order as picked up.');
-      btn.disabled = false;
-      btn.innerHTML = original;
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Mark as Picked Up';
     }
   } catch (e) {
     alert('Network error. Please try again.');
-    btn.disabled = false;
-    btn.innerHTML = original;
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Mark as Picked Up';
   }
 }
 
@@ -845,7 +903,7 @@ function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
     @media print{button{display:none;}}
   </style></head><body>
   <div class="logo">MOTO<span>TYRE</span></div>
-  <div class="addr">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>0915 269 8366 · Mon–Sat 8AM–7PM</div>
+  <div class="addr">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>0915 269 8366 · Mon–Sun 8AM–6:30PM</div>
   <div class="title">Official Receipt — Service</div>
   <div class="row"><span>Reference</span><span>${ref}</span></div>
   <div class="row"><span>Date</span><span>${date}</span></div>
@@ -887,7 +945,7 @@ function printOrdReceipt(ref, customer, phone, amount, method, date, items, deli
     @media print{button{display:none;}}
   </style></head><body>
   <div class="logo">MOTO<span>TYRE</span></div>
-  <div class="addr">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>0915 269 8366 · Mon–Sat 8AM–7PM</div>
+  <div class="addr">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>0915 269 8366 · Mon–Sun 8AM–6:30PM</div>
   <div class="title">Official Receipt — ${isInstore ? 'In-Store' : 'Order'}</div>
   <div class="row"><span>Reference</span><span>${ref}</span></div>
   <div class="row"><span>Date</span><span>${date}</span></div>

@@ -333,7 +333,7 @@
     .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
     .chart-bar-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
     .chart-bar-item { display: flex; align-items: center; gap: 0.65rem; font-size: 0.78rem; }
-    .chart-bar-item .bar-label { width: 120px; flex-shrink: 0; color: var(--muted); text-align: right; font-size: 0.73rem; line-height: 1.25; }
+    .chart-bar-item .bar-label { width: 160px; flex-shrink: 0; color: var(--muted); text-align: left; font-size: 0.73rem; line-height: 1.25; white-space: nowrap; }
     .chart-bar-track { flex: 1; background: #f3f4f6; border-radius: 99px; height: 6px; overflow: hidden; }
     .chart-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; width: 0; }
     .chart-bar-item .bar-val { width: 36px; font-weight: 600; color: var(--text); font-size: 0.72rem; }
@@ -366,7 +366,7 @@
     .bk-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 0.4rem; flex-shrink: 0; }
     .chart-bar-item.clickable { cursor: pointer; border-radius: 8px; padding: 0.2rem 0.4rem; margin: -0.2rem -0.4rem; transition: background 0.12s; }
     .chart-bar-item.clickable:hover { background: #f3f4f6; }
-    .chart-bar-item .bar-label { display: flex; align-items: center; }
+    .chart-bar-item .bar-label { display: flex; align-items: center; justify-content: flex-start; }
 
     .pending-box {
       display: flex; justify-content: space-between; align-items: center;
@@ -397,6 +397,14 @@
     .form-group input::placeholder, .form-group textarea::placeholder { color: var(--muted); }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--text); box-shadow: 0 0 0 3px rgba(17,24,39,0.06); }
     .form-group select option { background: #fff; color: var(--text); }
+    .img-drop-zone { border: 1px dashed var(--border); border-radius: 10px; padding: 1rem; display: flex; align-items: center; gap: 0.9rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; background: #fafafa; }
+    .img-drop-zone.drag-over { border-color: var(--red); background: rgba(208,0,25,0.04); }
+    .img-drop-zone .img-icon-box { width: 56px; height: 56px; border-radius: 8px; background: #f0f0f0; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--muted); flex-shrink: 0; }
+    .btn-upload-photo { padding: 0.4rem 0.8rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; color: var(--text); font-size: 0.78rem; font-weight: 600; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; }
+    .btn-upload-photo:hover { border-color: var(--text); }
+    .img-hint { font-size: 0.7rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.4; }
+    .img-preview-thumb { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+    .img-remove-link { font-size: 0.72rem; color: var(--red); font-weight: 600; cursor: pointer; background: none; border: none; padding: 0; margin-top: 0.3rem; font-family: inherit; }
     .modal-actions { display: flex; gap: 0.65rem; justify-content: flex-end; margin-top: 1.5rem; }
     .btn-cancel { padding: 0.5rem 1rem; border-radius: 7px; border: 1px solid var(--border); background: #f9fafb; cursor: pointer; font-size: 0.82rem; font-weight: 500; color: var(--text); font-family: inherit; transition: background 0.15s; }
     .btn-cancel:hover { background: #f3f4f6; }
@@ -815,7 +823,7 @@
                     data-date="{{ b.date.strftime('%b %d, %Y') }}"
                     data-time="{{ b.time.strftime('%I:%M %p') }}"
                     data-status="{{ display_status }}"
-                    data-payment="{{ b.payment_method or 'cash' }}"
+                    data-payment="{{ 'unpaid' if b.status != 'completed' else ((b.invoice_payment_method or b.payment_method) or 'cash') }}"
                     data-mechanic="{{ (b.assigned_mechanic_name or '')|e }}"
                     data-mechanic-spec="{{ (b.assigned_mechanic_specialization or '')|e }}"
                     data-preferred-mechanic="{{ (b.preferred_mechanic_name or '')|e }}"
@@ -888,7 +896,11 @@
                     {% endif %}
                   </td>
                   <td>
-                    {% if b.payment_method == 'gcash' %}
+                    {% if b.status != 'completed' %}
+                      {# The customer only picks cash or GCash on the post-completion invoice —
+                         nothing has been charged yet while the service is still being worked on. #}
+                      <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;">Unpaid</span>
+                    {% elif (b.invoice_payment_method or b.payment_method) == 'gcash' %}
                       <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">GCash</span>
                     {% else %}
                       <span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">Cash</span>
@@ -1221,7 +1233,7 @@
              <th style="white-space:nowrap;">Products</th>
              <th style="white-space:nowrap;">Status</th>
              <th style="white-space:nowrap;">Date</th>
-             <th style="white-space:nowrap;">Delivery</th>
+             <th style="white-space:nowrap;">Pickup / Ship</th>
              <th style="white-space:nowrap;">Update Status</th>
              <th style="white-space:nowrap;">Archive</th>
            </tr></thead>
@@ -1329,7 +1341,7 @@
           <div class="page-sub">Add and manage spare parts and accessories inventory.</div>
         </div>
         <div class="page-actions">
-          <button class="btn-primary-custom" onclick="openModal('modal-add-product')">+ Add Product</button>
+          <button class="btn-primary-custom" onclick="resetProductImagePicker('add');openModal('modal-add-product')">+ Add Product</button>
           <button class="btn-primary-custom" onclick="openModal('modal-import-csv')">Import CSV</button>
         </div>
       </div>
@@ -1346,7 +1358,8 @@
               <tr style="cursor:pointer;" onclick="openEditProductFromRow(this)"
                   data-id="{{ p.id }}" data-name="{{ p.name|e }}" data-category="{{ p.category|e }}"
                   data-price="{{ p.price }}" data-stock="{{ p.stock }}"
-                  data-description="{{ (p.description or '')|e }}">
+                  data-description="{{ (p.description or '')|e }}"
+                  data-image="{{ (p.image_url if p.image_url.startswith('http') else url_for('static', filename='product_photos/' + p.image_url)) if p.image_url else '' }}">
                 <td>{{ loop.index }}</td>
                 <td style="font-weight:600;color:var(--text);">{{ p.name }}</td>
                 <td>{{ p.category }}</td>
@@ -1605,10 +1618,15 @@
             <div class="chart-bar-wrap" id="rpt-top-services-chart">
               {% if rpt.top_services %}
                 {% set rpt_top_max = rpt.top_services[0][1] %}
-                {% for service, count in rpt.top_services %}
+                {% for service, count, backjob_count in rpt.top_services %}
                   {% set pct = ((count / rpt_top_max * 100)|int) if rpt_top_max > 0 else 0 %}
                   <div class="chart-bar-item">
-                    <span class="bar-label" style="width:140px;">{{ service }}</span>
+                    <span class="bar-label" style="width:180px;">
+                      <span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;">
+                        <span>{{ service }}</span>
+                        {% if backjob_count > 0 %}<span style="font-size:0.64rem;color:#d97706;font-weight:600;">includes {{ backjob_count }} back job{{ 's' if backjob_count != 1 else '' }}</span>{% endif %}
+                      </span>
+                    </span>
                     <div class="chart-bar-track"><div class="chart-bar-fill bar-green" data-width="{{ pct }}"></div></div>
                     <span class="bar-val">{{ count }}</span>
                   </div>
@@ -1636,6 +1654,74 @@
           <div class="card-body" id="rpt-breakdown-body">
             {% include 'partials/reports_breakdown.html' %}
           </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start;margin-top:1rem;">
+        <div class="card">
+          <div class="card-head">
+            <h5>Mechanic Performance</h5>
+            <span style="font-size:0.7rem;color:var(--muted);">Bookings and job orders</span>
+          </div>
+          <div id="rpt-mechanic-wrap" style="overflow-x:auto;">
+            {% set rpt_mech_max = (rpt.mechanic_performance|map(attribute='completed')|max) if rpt.mechanic_performance else 0 %}
+            {% if rpt.mechanic_performance %}
+            <table class="table">
+              <thead><tr><th>Mechanic</th><th>Services Completed</th><th>Back Jobs</th><th>Service Income</th></tr></thead>
+              <tbody>
+                {% for m in rpt.mechanic_performance[:5] %}
+                <tr>
+                  <td style="font-weight:600;color:var(--text);">{{ m.name }}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                      <div style="width:70px;height:5px;border-radius:99px;background:#eef2ff;overflow:hidden;"><div style="height:100%;border-radius:99px;background:var(--blue);width:{{ ((m.completed / rpt_mech_max * 100)|int) if rpt_mech_max > 0 else 0 }}%;"></div></div>
+                      <span>{{ m.completed }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    {% if m.backjobs > 0 %}<span style="display:inline-block;padding:0.2em 0.6em;border-radius:99px;font-size:0.68rem;font-weight:700;background:#fef3c7;color:#92400e;">{{ m.backjobs }} back job{{ 's' if m.backjobs != 1 else '' }}</span>
+                    {% else %}<span style="color:var(--muted);font-size:0.78rem;">None</span>{% endif %}
+                  </td>
+                  <td style="font-weight:700;color:var(--text);">₱{{ '{:,.2f}'.format(m.income) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr style="font-weight:700;background:var(--light,#f9fafb);">
+                  <td>Total</td>
+                  <td>{{ rpt.mechanic_performance|sum(attribute='completed') }}</td>
+                  <td>{{ rpt.mechanic_performance|sum(attribute='backjobs') }} back job{{ 's' if (rpt.mechanic_performance|sum(attribute='backjobs')) != 1 else '' }}</td>
+                  <td>₱{{ '{:,.2f}'.format(rpt.mechanic_performance|sum(attribute='income')) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+            {% else %}
+            <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></div><p>No completed bookings in this period.</p></div>
+            {% endif %}
+          </div>
+          <div id="rpt-mechanic-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0.75rem 0 0.25rem;flex-wrap:wrap;"></div>
+          <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Service income reflects labor only — parts and materials billed on a quotation aren't counted toward a mechanic's income.</div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h5>Top Products Sold</h5>
+            <span style="font-size:0.7rem;color:var(--muted);">By units sold</span>
+          </div>
+          <div class="card-body" id="rpt-top-products-body">
+            {% if rpt.top_products %}
+              {% set rpt_prod_max = rpt.top_products[0].units %}
+              {% for p in rpt.top_products %}
+                {% set ppct = ((p.units / rpt_prod_max * 100)|int) if rpt_prod_max > 0 else 0 %}
+                <div class="chart-bar-item">
+                  <span class="bar-label" style="width:180px;">{{ p.name }}</span>
+                  <div class="chart-bar-track"><div class="chart-bar-fill" style="background:#f97316;" data-width="{{ ppct }}"></div></div>
+                  <span class="bar-val" style="width:auto;white-space:nowrap;">₱{{ '{:,.2f}'.format(p.revenue) }}</span>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No product sales in this period.</p></div>
+            {% endif %}
+          </div>
+          <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Includes online orders, in-store sales, and parts used in bookings and job orders. Fully refunded orders are excluded.</div>
         </div>
       </div>
     </section>
@@ -2130,8 +2216,29 @@
 <div class="modal-overlay" id="modal-add-product">
   <div class="modal-box">
     <h5>Add New Product</h5>
-    <form method="POST" action="{{ url_for('add_product') }}">
+    <form method="POST" action="{{ url_for('add_product') }}" enctype="multipart/form-data">
       <div class="form-group"><label>Product Name</label><input type="text" name="name" placeholder="e.g. IRC MB99 Front Tire" required></div>
+      <div class="form-group">
+        <label>Product Image (optional)</label>
+        <div class="img-drop-zone" id="add-img-drop" onclick="document.getElementById('add-img-input').click()"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="handleProductImageDrop(event,'add')">
+          <div class="img-icon-box" id="add-img-icon-box">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </div>
+          <div>
+            <button type="button" class="btn-upload-photo" onclick="event.stopPropagation();document.getElementById('add-img-input').click()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload photo
+            </button>
+            <div class="img-hint">Drag a photo here, or JPG, PNG or WEBP, up to 5 MB. A square photo or plain background looks best.</div>
+            <button type="button" class="img-remove-link" id="add-img-remove-link" style="display:none;" onclick="event.stopPropagation();removeProductImage('add')">Remove photo</button>
+          </div>
+        </div>
+        <input type="file" id="add-img-input" name="image" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleProductImageSelect(this,'add')">
+        <input type="hidden" id="add-img-remove-flag" name="remove_image" value="0">
+      </div>
       <div class="form-group">
         <label>Category</label>
         <select name="category" required>
@@ -2161,8 +2268,29 @@
         <button type="submit" class="btn-action-delete">Delete Product</button>
       </form>
     </div>
-    <form method="POST" id="edit-product-form" action="">
+    <form method="POST" id="edit-product-form" action="" enctype="multipart/form-data">
       <div class="form-group"><label>Product Name</label><input type="text" name="name" id="edit-product-name" required></div>
+      <div class="form-group">
+        <label>Product Image (optional)</label>
+        <div class="img-drop-zone" id="edit-img-drop" onclick="document.getElementById('edit-img-input').click()"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="handleProductImageDrop(event,'edit')">
+          <div class="img-icon-box" id="edit-img-icon-box">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </div>
+          <div>
+            <button type="button" class="btn-upload-photo" onclick="event.stopPropagation();document.getElementById('edit-img-input').click()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload photo
+            </button>
+            <div class="img-hint">Drag a photo here, or JPG, PNG or WEBP, up to 5 MB. A square photo or plain background looks best.</div>
+            <button type="button" class="img-remove-link" id="edit-img-remove-link" style="display:none;" onclick="event.stopPropagation();removeProductImage('edit')">Remove photo</button>
+          </div>
+        </div>
+        <input type="file" id="edit-img-input" name="image" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleProductImageSelect(this,'edit')">
+        <input type="hidden" id="edit-img-remove-flag" name="remove_image" value="0">
+      </div>
       <div class="form-group">
         <label>Category</label>
         <select name="category" id="edit-product-category" required>
@@ -4767,8 +4895,10 @@
       odoWrap.style.display = 'none';
     }
 
-    // Payment
-    document.getElementById('bd-payment').textContent = d.payment === 'gcash' ? 'GCash' : 'Cash';
+    // Payment — "Unpaid" until the service is completed, since the customer
+    // only picks cash or GCash on the post-completion invoice.
+    document.getElementById('bd-payment').textContent =
+      d.payment === 'unpaid' ? 'Unpaid' : (d.payment === 'gcash' ? 'GCash' : 'Cash');
 
     // Total
     const totalAmount = parseFloat(d.totalAmount || 0);
@@ -5165,7 +5295,7 @@
     setTimeout(() => { bar.style.width = bar.dataset.width + '%'; }, 100);
   });
 
-  function openEditProduct(id, name, category, price, stock, description) {
+  function openEditProduct(id, name, category, price, stock, description, image) {
     document.getElementById('edit-product-name').value    = name;
     document.getElementById('edit-product-price').value   = price;
     document.getElementById('edit-product-stock').value   = stock;
@@ -5174,11 +5304,54 @@
     document.getElementById('delete-product-form').action = '/product/' + id + '/delete';
     const sel = document.getElementById('edit-product-category');
     for (let opt of sel.options) { opt.selected = opt.value === category; }
+    resetProductImagePicker('add');   // in case "Add" was used earlier this session
+    resetProductImagePicker('edit');
+    if (image) setProductImagePreview('edit', image);
     openModal('modal-edit-product');
   }
 
   function openEditProductFromRow(row) {
-    openEditProduct(row.dataset.id, row.dataset.name, row.dataset.category, row.dataset.price, row.dataset.stock, row.dataset.description);
+    openEditProduct(row.dataset.id, row.dataset.name, row.dataset.category, row.dataset.price, row.dataset.stock, row.dataset.description, row.dataset.image);
+  }
+
+  /* ── Product image picker (Add / Edit Product modals) ── */
+  function setProductImagePreview(which, url) {
+    document.getElementById(which + '-img-icon-box').innerHTML = `<img src="${url}" class="img-preview-thumb">`;
+    document.getElementById(which + '-img-remove-link').style.display = 'inline';
+    document.getElementById(which + '-img-remove-flag').value = '0';
+  }
+
+  function resetProductImagePicker(which) {
+    document.getElementById(which + '-img-icon-box').innerHTML =
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+    document.getElementById(which + '-img-remove-link').style.display = 'none';
+    document.getElementById(which + '-img-input').value = '';
+    document.getElementById(which + '-img-remove-flag').value = '0';
+  }
+
+  function handleProductImageSelect(input, which) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('Image is too large — please choose one under 5 MB.'); input.value = ''; return; }
+    setProductImagePreview(which, URL.createObjectURL(file));
+  }
+
+  function handleProductImageDrop(event, which) {
+    event.preventDefault();
+    document.getElementById(which + '-img-drop').classList.remove('drag-over');
+    const file = event.dataTransfer.files && event.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) { alert('Image is too large — please choose one under 5 MB.'); return; }
+    const input = document.getElementById(which + '-img-input');
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    setProductImagePreview(which, URL.createObjectURL(file));
+  }
+
+  function removeProductImage(which) {
+    resetProductImagePicker(which);
+    document.getElementById(which + '-img-remove-flag').value = '1';
   }
 
   function previewPic(input) {
@@ -6287,10 +6460,15 @@ function _applyReportsData(d) {
     topWrap.innerHTML = '<div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No booking data yet.</p></div>';
   } else {
     const max = d.top_services[0][1];
-    topWrap.innerHTML = d.top_services.map(([service, count]) => {
+    topWrap.innerHTML = d.top_services.map(([service, count, backjobCount]) => {
       const pct = max > 0 ? Math.floor(count / max * 100) : 0;
       return `<div class="chart-bar-item">
-        <span class="bar-label" style="width:140px;">${service}</span>
+        <span class="bar-label" style="width:180px;">
+          <span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;">
+            <span>${service}</span>
+            ${backjobCount > 0 ? `<span style="font-size:0.64rem;color:#d97706;font-weight:600;">includes ${backjobCount} back job${backjobCount !== 1 ? 's' : ''}</span>` : ''}
+          </span>
+        </span>
         <div class="chart-bar-track"><div class="chart-bar-fill bar-green" style="width:${pct}%;"></div></div>
         <span class="bar-val">${count}</span>
       </div>`;

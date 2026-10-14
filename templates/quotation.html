@@ -57,11 +57,37 @@
     textarea.svc-inp{resize:vertical;min-height:70px;}
     .btn-add-svc{padding:.5rem .9rem;border-radius:8px;background:var(--red);border:none;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .2s;white-space:nowrap;}
     .btn-add-svc:hover{background:#a8001a;}
+    .btn-add-svc:disabled{background:#fca5a5;cursor:not-allowed;}
+    .svc-inp:disabled{background:#f3f4f6;color:#9ca3af;cursor:not-allowed;}
     .service-item{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;cursor:pointer;transition:all .15s;margin-bottom:.5rem;}
     .service-item:hover{border-color:#bfdbfe;background:#eff6ff;}
     .svc-name{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--text);}
     .svc-desc{font-size:.72rem;color:var(--muted);margin-top:.15rem;}
     .svc-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.03em;color:var(--red);}
+
+    /* Inspected By — auto-filled from the booking's assigned mechanic */
+    .insp-mech-field{display:flex;align-items:center;gap:.65rem;background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:.6rem .75rem;transition:background .6s ease;}
+    .insp-mech-field.just-changed{background:#fef9c3;}
+    .insp-mech-avatar{width:32px;height:32px;border-radius:50%;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;}
+    .insp-mech-info{flex:1;min-width:0;}
+    .insp-mech-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:var(--text);}
+    .insp-mech-tag{display:inline-flex;align-items:center;gap:.3rem;font-size:.63rem;font-weight:700;letter-spacing:.02em;padding:.12rem .5rem;border-radius:5px;margin-top:.2rem;}
+    .insp-mech-tag.tag-customer{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
+    .insp-mech-tag.tag-shop{background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;}
+    .insp-mech-lock{color:#9ca3af;flex-shrink:0;}
+    .insp-mech-note{display:flex;align-items:flex-start;gap:.4rem;font-size:.7rem;color:var(--muted);margin-top:.4rem;line-height:1.4;}
+    .insp-mech-note svg{flex-shrink:0;margin-top:.1rem;}
+
+    .insp-mech-empty{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:.75rem .85rem;}
+    .insp-mech-empty-head{display:flex;align-items:center;gap:.4rem;font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;color:#92400e;}
+    .insp-mech-empty-text{font-size:.75rem;color:#92400e;margin-top:.3rem;line-height:1.4;}
+    .insp-mech-empty-row{display:flex;gap:.5rem;margin-top:.65rem;}
+    .insp-mech-select{flex:1;padding:.5rem .6rem;background:#fff;border:1px solid #fde68a;border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.83rem;outline:none;}
+    .insp-assign-btn{padding:.5rem .9rem;border-radius:8px;background:#111827;border:none;color:#fff;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:background .15s;}
+    .insp-assign-btn:hover{background:#1f2937;}
+    .insp-assign-btn:disabled{opacity:.6;cursor:not-allowed;}
+    .insp-mech-error{font-size:.72rem;color:var(--red);margin-top:.4rem;}
+    .insp-disabled-note{font-size:.68rem;color:var(--muted);align-self:center;white-space:nowrap;}
 
     .findings-label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:1.25rem 0 .5rem;}
     .finding-card{display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:#fff;border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;margin-bottom:.45rem;}
@@ -86,6 +112,8 @@
     .booking-ref-id{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.04em;color:var(--text);}
     .booking-ref-sub{font-size:.76rem;color:var(--muted);margin-top:.1rem;}
     .booking-ref-change{font-size:.72rem;font-weight:700;color:var(--blue);text-decoration:none;flex-shrink:0;font-family:'Syne',sans-serif;}
+    .booking-ref-mech{display:flex;align-items:center;gap:.3rem;font-size:.74rem;color:var(--muted);margin-top:.3rem;}
+    .booking-ref-mech.unassigned{color:#b45309;font-weight:600;}
 
     /* Quote items */
     .quote-items{flex:1;overflow-y:auto;padding:.75rem 1.25rem;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.12) transparent;background:var(--surface);}
@@ -271,13 +299,42 @@
     <div class="inspection-panel" id="inspection-panel" style="display:block;">
       <div class="custom-svc-box">
         <label>Inspected By</label>
-        <input class="svc-inp" id="inspected-by" placeholder="Mechanic's name" style="width:100%;">
+        <div id="insp-mech-wrap">
+          {% if booking.assigned_mechanic_name %}
+            <div class="insp-mech-field" id="insp-mech-field">
+              <div class="insp-mech-avatar" id="insp-mech-avatar">{{ booking.assigned_mechanic_initials }}</div>
+              <div class="insp-mech-info">
+                <div class="insp-mech-name" id="insp-mech-name">{{ booking.assigned_mechanic_name }}</div>
+                {% if booking.mechanic_is_customer_choice %}
+                <span class="insp-mech-tag tag-customer" id="insp-mech-tag"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Chosen by customer</span>
+                {% else %}
+                <span class="insp-mech-tag tag-shop" id="insp-mech-tag"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"/><path d="M5 9.5V20h14V9.5"/></svg>Assigned by shop</span>
+                {% endif %}
+              </div>
+              <svg class="insp-mech-lock" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="insp-mech-note"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>Filled in from the booking. To change it, update the mechanic in Manage Bookings.</span></div>
+          {% else %}
+            <div class="insp-mech-empty" id="insp-mech-empty">
+              <div class="insp-mech-empty-head"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>No mechanic assigned yet</div>
+              <div class="insp-mech-empty-text">The customer let the shop choose. Assign one to start the inspection.</div>
+              <div class="insp-mech-empty-row">
+                <select class="insp-mech-select" id="insp-mech-choose"><option value="">Choose a mechanic</option></select>
+                <button type="button" class="insp-assign-btn" id="insp-assign-btn" onclick="assignInspectionMechanic()">Assign &amp; Notify Customer</button>
+              </div>
+              <div class="insp-mech-error" id="insp-mech-error" style="display:none;">Choose a mechanic first.</div>
+            </div>
+          {% endif %}
+        </div>
+        <input type="hidden" id="inspected-by" value="{{ booking.assigned_mechanic_name or '' }}">
+
         <label>What did the mechanic find?</label>
-        <textarea class="svc-inp" id="finding-desc" placeholder="e.g. Steering bearings are worn and loose" style="width:100%;"></textarea>
+        <textarea class="svc-inp" id="finding-desc" placeholder="e.g. Steering bearings are worn and loose" style="width:100%;" {{ 'disabled' if not booking.assigned_mechanic_name }}></textarea>
         <label>Price</label>
-        <div class="custom-svc-row">
-          <input class="svc-inp" id="finding-price" type="number" min="0" placeholder="₱0.00" style="max-width:140px;">
-          <button class="btn-add-svc" onclick="addFinding()">+ Add to Quotation</button>
+        <div class="custom-svc-row" style="align-items:center;">
+          <input class="svc-inp" id="finding-price" type="number" min="0" placeholder="₱0.00" style="max-width:140px;" {{ 'disabled' if not booking.assigned_mechanic_name }}>
+          <button class="btn-add-svc" id="add-finding-btn" onclick="addFinding()" {{ 'disabled' if not booking.assigned_mechanic_name }}>+ Add to Quotation</button>
+          <span class="insp-disabled-note" id="insp-disabled-note" style="{{ 'display:none;' if booking.assigned_mechanic_name }}">Assign a mechanic first.</span>
         </div>
       </div>
       <div class="findings-label">Findings Added</div>
@@ -296,6 +353,10 @@
           <div>
             <div class="booking-ref-id">{{ booking.ref }}</div>
             <div class="booking-ref-sub">{{ booking.customer_name }} · {{ booking.motorcycle_model or 'No motorcycle model' }}</div>
+            <div class="booking-ref-mech {{ '' if booking.assigned_mechanic_name else 'unassigned' }}" id="booking-ref-mech">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              <span id="booking-ref-mech-text">{{ ('Mechanic: ' + booking.assigned_mechanic_name) if booking.assigned_mechanic_name else 'No mechanic assigned yet' }}</span>
+            </div>
           </div>
           <a href="{{ url_for('quotation_new') }}" class="booking-ref-change">Change</a>
         </div>
@@ -395,6 +456,7 @@
 
 <script>
   const HAS_BOOKING = {{ 'true' if booking else 'false' }};
+  const BOOKING_ID  = {{ booking.id if booking else 'null' }};
   let items = [];
   {% if booking %}
   items.push({ item_type: 'service', name: {{ booking.service_name|tojson }}, unit_price: {{ booking.service_price }}, quantity: 1, locked: true });
@@ -594,10 +656,10 @@
   function closeClearModal() { document.getElementById('clear-modal').classList.remove('open'); }
 
   function confirmClearAll() {
+    // Findings/custom items reset, but who's assigned to the booking does
+    // not — that's tied to the booking itself, not to this draft quotation.
     items = items.filter(i => i.locked);
     document.getElementById('notes').value = '';
-    const insp = document.getElementById('inspected-by');
-    if (insp) insp.value = '';
     closeClearModal();
     renderItems();
     toast('Cleared. The booked service stays.');
@@ -607,6 +669,10 @@
     const name = document.getElementById('cust-name').value.trim();
     if (!name) { toast('Customer name is required.', 'error'); return; }
     if (items.length === 0) { toast('Add at least one item.', 'error'); return; }
+    if (HAS_BOOKING && !document.getElementById('inspected-by').value.trim()) {
+      toast('Assign a mechanic before sending the quotation.', 'error');
+      return;
+    }
 
     const btn = document.getElementById('save-btn');
     const savingLabel = HAS_BOOKING ? 'Sending...' : 'Saving...';
@@ -636,7 +702,11 @@
         document.getElementById('modal-items').textContent    = items.reduce((s,i)=>s+i.quantity,0) + ' item(s)';
         document.getElementById('modal-total').textContent    = `₱${total.toFixed(2)}`;
         if (HAS_BOOKING) {
-          document.getElementById('modal-sub').textContent = 'Sent to the customer — waiting for them to approve or decline.';
+          const firstName = (data.customer_first_name || name.split(' ')[0] || '').trim();
+          const inspBy    = data.inspected_by || document.getElementById('inspected-by').value.trim();
+          document.getElementById('modal-sub').textContent = inspBy
+            ? `Quotation sent to ${firstName} · inspected by ${inspBy}`
+            : `Quotation sent to ${firstName}`;
         }
         document.getElementById('success-modal').classList.add('open');
         if (!HAS_BOOKING) items = [];
@@ -656,6 +726,130 @@
     clearAll();
     renderItems();
     document.getElementById('save-btn').innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Save Quotation';
+  }
+
+  // ── Inspected By: auto-filled from the booking's assigned mechanic ──
+  function mechInitials(name) {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  async function loadMechanicChoices() {
+    const sel = document.getElementById('insp-mech-choose');
+    if (!sel) return;
+    try {
+      const res  = await fetch('/api/mechanics-roster');
+      const data = await res.json();
+      (data.mechanics || []).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name + ' — ' + m.specialization;
+        sel.appendChild(opt);
+      });
+    } catch (e) { /* leave just the placeholder option */ }
+  }
+
+  // Swaps the "No mechanic assigned yet" box for the normal, locked
+  // Inspected By field — used both right after assigning one here, and
+  // (via checkMechanicChangeHighlight) to flag when it was changed
+  // elsewhere since this admin last had the page open.
+  function renderInspMechFilled(name, isCustomerChoice, highlight) {
+    const tagClass = isCustomerChoice ? 'tag-customer' : 'tag-shop';
+    const tagIcon  = isCustomerChoice
+      ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+      : '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"/><path d="M5 9.5V20h14V9.5"/></svg>';
+    const tagLabel = isCustomerChoice ? 'Chosen by customer' : 'Assigned by shop';
+
+    document.getElementById('insp-mech-wrap').innerHTML = `
+      <div class="insp-mech-field${highlight ? ' just-changed' : ''}" id="insp-mech-field">
+        <div class="insp-mech-avatar" id="insp-mech-avatar">${mechInitials(name)}</div>
+        <div class="insp-mech-info">
+          <div class="insp-mech-name" id="insp-mech-name">${name}</div>
+          <span class="insp-mech-tag ${tagClass}" id="insp-mech-tag">${tagIcon}${tagLabel}</span>
+        </div>
+        <svg class="insp-mech-lock" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div class="insp-mech-note"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>Filled in from the booking. To change it, update the mechanic in Manage Bookings.</span></div>`;
+    document.getElementById('inspected-by').value = name;
+
+    if (highlight) {
+      setTimeout(() => {
+        const f = document.getElementById('insp-mech-field');
+        if (f) f.classList.remove('just-changed');
+      }, 2000);
+    }
+
+    ['finding-desc', 'finding-price', 'add-finding-btn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = false;
+    });
+    const note = document.getElementById('insp-disabled-note');
+    if (note) note.style.display = 'none';
+
+    const mechLine = document.getElementById('booking-ref-mech');
+    const mechText = document.getElementById('booking-ref-mech-text');
+    if (mechLine && mechText) {
+      mechLine.classList.remove('unassigned');
+      mechText.textContent = 'Mechanic: ' + name;
+    }
+
+    if (BOOKING_ID) { try { localStorage.setItem(`mototyre_insp_mech_${BOOKING_ID}`, name); } catch (e) {} }
+  }
+
+  async function assignInspectionMechanic() {
+    const sel   = document.getElementById('insp-mech-choose');
+    const errEl = document.getElementById('insp-mech-error');
+    if (!sel || !sel.value) {
+      if (errEl) errEl.style.display = 'block';
+      return;
+    }
+    if (errEl) errEl.style.display = 'none';
+    const btn = document.getElementById('insp-assign-btn');
+    btn.disabled = true;
+    const mechName = sel.options[sel.selectedIndex].textContent.split(' — ')[0];
+
+    try {
+      const res = await fetch(`/booking/${BOOKING_ID}/assign-mechanic`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: `mechanic_id=${encodeURIComponent(sel.value)}&notify_first_assign=1`,
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Assigned from this box == the shop chose, by definition (there was
+        // no customer preference — that's exactly why the box was showing).
+        renderInspMechFilled(data.mechanic_name || mechName, false, false);
+        toast(`${data.mechanic_name || mechName} assigned — customer notified.`);
+      } else {
+        toast(data.error || 'Could not assign mechanic.', 'error');
+        btn.disabled = false;
+      }
+    } catch (e) {
+      toast('Network error. Please try again.', 'error');
+      btn.disabled = false;
+    }
+  }
+
+  // Compares today's assigned mechanic against what this admin last saw for
+  // this booking (stored per-browser) — if it moved since then, briefly
+  // highlights the field instead of silently showing the new name.
+  function checkMechanicChangeHighlight() {
+    if (!HAS_BOOKING || !BOOKING_ID) return;
+    const current = document.getElementById('inspected-by').value || '';
+    if (!current) return;
+    const key = `mototyre_insp_mech_${BOOKING_ID}`;
+    let prev = null;
+    try { prev = localStorage.getItem(key); } catch (e) {}
+    if (prev !== null && prev !== current) {
+      const field = document.getElementById('insp-mech-field');
+      if (field) {
+        field.classList.add('just-changed');
+        setTimeout(() => field.classList.remove('just-changed'), 2000);
+      }
+    }
+    try { localStorage.setItem(key, current); } catch (e) {}
   }
 
   function toast(msg, type='success') {
@@ -707,6 +901,11 @@
 
   syncStock();
   setInterval(syncStock, 60000);
+
+  if (HAS_BOOKING) {
+    if (document.getElementById('insp-mech-choose')) loadMechanicChoices();
+    checkMechanicChangeHighlight();
+  }
 
   // Initial render
   renderItems();

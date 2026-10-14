@@ -117,7 +117,7 @@ def _pickup_messages(ref):
             f'Your order {ref} has been delivered.'),
         'completed': (
             'Order Completed!',
-            f'Your order {ref} has been completed. Thank you!'),
+            f'Your order {ref} has been picked up. Thank you!'),
         'cancelled': (
             'Order Cancelled',
             f'Your order {ref} has been cancelled.'),
