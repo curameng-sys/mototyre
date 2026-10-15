@@ -281,6 +281,82 @@
     .admin-toast.show { transform: translateY(0); opacity: 1; }
     .admin-toast-success { background: #16a34a; }
     .admin-toast-error   { background: #dc2626; }
+    .admin-toast-warning { background: #f97316; }
+    .dx-chip { font-family:inherit; font-size:0.72rem; padding:0.25rem 0.65rem; border:1px solid var(--border); border-radius:99px; background:#fff; color:var(--text); cursor:pointer; }
+    .dx-chip:hover { background:#f3f4f6; }
+
+    .backjob-tag { display:inline-block; margin-left:0.45rem; font-size:0.62rem; font-weight:700; padding:0.15em 0.55em; border-radius:99px; background:#fef3c7; color:#92400e; border:1px solid #fde68a; vertical-align:middle; }
+
+    /* Mechanics — view switch + attendance */
+    .mech-switch { display:inline-flex; gap:0.25rem; padding:0.25rem; background:#f3f4f6; border:1px solid var(--border); border-radius:10px; margin-bottom:1rem; }
+    .mech-switch button { font-family:inherit; font-size:0.78rem; font-weight:600; border:none; background:none; color:var(--muted); padding:0.4rem 0.95rem; border-radius:7px; cursor:pointer; }
+    .mech-switch button.active { background:#111827; color:#fff; }
+    .att-card { flex:1; min-width:140px; border-radius:10px; padding:1.1rem; text-align:center; border:1px solid; }
+    .att-card .n { font-size:1.9rem; font-weight:700; }
+    .att-card .l { font-size:0.78rem; margin-top:0.2rem; }
+    .att-pill { display:inline-block; font-size:0.7rem; font-weight:700; padding:0.2em 0.7em; border-radius:99px; white-space:nowrap; }
+    .att-present { background:#dcfce7; color:#15803d; } .att-late { background:#fef3c7; color:#b45309; }
+    .att-absent { background:#fee2e2; color:#b91c1c; } .att-not_in { background:#f3f4f6; color:#4b5563; }
+    .att-btn { font-family:inherit; font-size:0.72rem; font-weight:600; padding:0.3rem 0.7rem; border-radius:6px; cursor:pointer; border:1px solid var(--border); background:#fff; color:var(--text); }
+    .att-btn.dark { background:#111827; color:#fff; border-color:#111827; }
+    .att-btn.link { border:none; background:none; color:var(--muted); }
+
+    /* Dashboard — Inventory */
+    .inv-head { display:flex; align-items:baseline; justify-content:space-between; margin:1.25rem 0 0.75rem; }
+    .inv-head h4 { margin:0; font-size:1rem; font-weight:700; color:var(--text); }
+    .inv-head .inv-sub { font-size:0.72rem; color:var(--muted); }
+    .inv-head a { font-size:0.74rem; font-weight:700; color:var(--red); cursor:pointer; text-decoration:none; }
+    .inv-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1rem; }
+    .inv-card { border-radius:12px; padding:1rem 1.1rem; color:#fff; cursor:pointer; border:none; text-align:left; font-family:inherit; transition:transform 0.12s, box-shadow 0.12s; }
+    .inv-card:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.18); }
+    .inv-card .ic-label { font-size:0.74rem; font-weight:700; opacity:0.95; }
+    .inv-card .ic-count { font-size:2rem; font-weight:800; line-height:1.1; margin:0.35rem 0 0.2rem; }
+    .inv-card .ic-pct { font-size:0.68rem; opacity:0.9; }
+    .inv-card .ic-bar { height:4px; border-radius:99px; background:rgba(255,255,255,0.3); margin-top:0.5rem; overflow:hidden; }
+    .inv-card .ic-bar > div { height:100%; background:#fff; border-radius:99px; }
+    .inv-out { background:#dc2626; } .inv-low { background:#f59e0b; } .inv-ok { background:#15803d; } .inv-all { background:#2563eb; }
+    .inv-grid { display:grid; grid-template-columns:1.6fr 1fr; gap:1rem; margin-bottom:1rem; align-items:start; }
+    .inv-legend { display:flex; gap:1rem; font-size:0.68rem; color:var(--muted); margin-bottom:0.75rem; }
+    .inv-legend i { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:0.3rem; }
+    .inv-cat-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.55rem; font-size:0.74rem; }
+    .inv-cat-row .cat-name { width:120px; flex-shrink:0; color:var(--text); }
+    .inv-cat-row .cat-track { flex:1; display:flex; height:10px; border-radius:3px; overflow:hidden; background:#f3f4f6; }
+    .inv-cat-row .cat-note { width:110px; flex-shrink:0; text-align:right; font-size:0.66rem; color:var(--muted); }
+    .inv-toggle { font-family:inherit; font-size:0.68rem; font-weight:600; background:#fff; border:1px solid var(--border); border-radius:6px; padding:0.2rem 0.6rem; cursor:pointer; color:var(--text); }
+    .inv-donut-wrap { position:relative; width:170px; height:170px; margin:0 auto 1rem; }
+    .inv-donut-wrap .donut-mid { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .inv-donut-wrap .donut-mid b { font-size:1.9rem; line-height:1; color:var(--text); }
+    .inv-donut-wrap .donut-mid span { font-size:0.68rem; color:var(--muted); }
+    .inv-status-row { display:flex; justify-content:space-between; align-items:center; font-size:0.74rem; padding:0.3rem 0; color:var(--text); }
+    .inv-status-row .sr-name::before { content:''; display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:0.5rem; background:var(--c); }
+    .inv-restock-row { display:grid; grid-template-columns:1fr 120px 100px 90px; gap:0.75rem; align-items:center; padding:0.65rem 1rem; border-top:1px solid var(--border); font-size:0.78rem; }
+    .inv-restock-row.head { border-top:none; font-size:0.66rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); }
+    .inv-restock-row .p-name { font-weight:700; color:var(--text); }
+    .inv-restock-row .p-cat { font-size:0.68rem; color:var(--muted); }
+    .btn-restock { font-family:inherit; font-size:0.72rem; font-weight:700; background:#111827; color:#fff; border:none; border-radius:6px; padding:0.4rem 0.9rem; cursor:pointer; }
+    @media (max-width: 900px) { .inv-cards { grid-template-columns:repeat(2,1fr); } .inv-grid { grid-template-columns:1fr; } }
+
+    /* Manage Products — stock alerts, legend, labels */
+    .stock-alert { display:flex; align-items:center; gap:0.75rem; padding:0.7rem 1rem; border-radius:10px; margin-bottom:0.6rem; border:1px solid; }
+    .stock-alert .sa-icon { flex-shrink:0; width:22px; height:22px; border-radius:50%; border:1.5px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:800; }
+    .stock-alert .sa-body { flex:1; min-width:0; }
+    .stock-alert .sa-title { font-size:0.82rem; font-weight:700; color:var(--text); }
+    .stock-alert .sa-names { font-size:0.7rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .stock-alert button { font-family:inherit; font-size:0.72rem; font-weight:600; cursor:pointer; border-radius:6px; padding:0.3rem 0.7rem; }
+    .stock-alert .sa-show { background:#fff; border:1px solid currentColor; }
+    .stock-alert .sa-hide { background:none; border:none; color:var(--muted); }
+    .stock-alert-out { background:#fef2f2; border-color:#fecaca; color:#dc2626; }
+    .stock-alert-low { background:#fff7ed; border-color:#fed7aa; color:#ea580c; }
+    .stock-legend { display:flex; gap:0.4rem; margin-left:auto; flex-wrap:wrap; }
+    .stock-chip { display:inline-flex; align-items:center; gap:0.4rem; font-family:inherit; font-size:0.72rem; font-weight:600; background:#fff; color:var(--text); border:1px solid var(--border); border-radius:99px; padding:0.3rem 0.75rem; cursor:pointer; }
+    .stock-chip .dot { width:7px; height:7px; border-radius:50%; }
+    .stock-chip .cnt { color:var(--muted); font-weight:500; }
+    .stock-chip.active { background:var(--ink,#111827); color:#fff; border-color:var(--ink,#111827); }
+    .stock-chip.active .cnt { color:#d1d5db; }
+    .stock-label { display:inline-block; font-size:0.68rem; font-weight:700; padding:0.2em 0.65em; border-radius:99px; white-space:nowrap; }
+    .stock-label-in  { background:#dcfce7; color:#15803d; }
+    .stock-label-low { background:#ffedd5; color:#c2410c; }
+    .stock-label-out { background:#fee2e2; color:#b91c1c; }
 
     /* ═══════════════════════════════════════
        FILTER BAR
@@ -309,6 +385,8 @@
     .status-form select { padding: 0.25rem 0.45rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.72rem; background: #fff; color: var(--text); outline: none; font-family: inherit; }
     .status-form select option { background: #fff; color: var(--text); }
     .status-form button { padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: #f3f4f6; color: var(--text); font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+    .status-form button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .status-form button:disabled:hover { background: #f3f4f6; color: var(--text); border-color: var(--border); }
     .status-form button:hover { background: var(--red); color: #fff; border-color: var(--red); }
 
     /* ═══════════════════════════════════════
@@ -591,7 +669,7 @@
     <a href="#" onclick="showSection('services', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span> Services</a>
     <a href="{{ url_for('quotations_list') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Quotations</a>
     <a href="{{ url_for('job_orders') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span> Job Orders</a>
-    <a href="{{ url_for('payments') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing {% if pending_billing_count %}<span style="margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;">{{ pending_billing_count }}</span>{% endif %}</a>
+    <a href="{{ url_for('payments') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing {% set billing_badge = (pending_billing_count or 0) + (billing_new_count or 0) %}{% if billing_badge %}<span title="{{ pending_billing_count or 0 }} to collect · {{ billing_new_count or 0 }} new in History" style="margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;">{{ billing_badge }}</span>{% endif %}</a>
     <a href="{{ url_for('walk_in') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Walk-In</a>
     <a href="#" onclick="showSection('parts', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span> Parts Purchase</a>
     <a href="#" onclick="showSection('transactions', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Transactions</a>
@@ -636,6 +714,102 @@
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
           <div class="stat-value" id="stat-total-users">{{ total_users }}</div><div class="stat-label">Registered Users</div>
         </div>
+      </div>
+      {# ── INVENTORY ── low = 4 or fewer left, same rule as Manage Products ── #}
+      {% set inv_total = all_products|length %}
+      {% set inv_out = all_products|selectattr('stock','le',0)|list|length %}
+      {% set inv_low = all_products|selectattr('stock','gt',0)|selectattr('stock','lt',5)|list|length %}
+      {% set inv_ok  = inv_total - inv_out - inv_low %}
+      {% set inv_cats = all_products|groupby('category') %}
+      <div class="inv-head">
+        <div><h4>Inventory</h4><div class="inv-sub">{{ inv_total }} products. Low stock means 4 or fewer left.</div></div>
+        <a onclick="goToSection('products')">Manage products</a>
+      </div>
+      <div class="inv-cards">
+        {% for key, cls, label, n in [('out','inv-out','Out of stock',inv_out),('low','inv-low','Low stock',inv_low),('in','inv-ok','In stock',inv_ok),('all','inv-all','Total products',inv_total)] %}
+        {% set pct = ((n / inv_total * 100)|round|int) if inv_total else 0 %}
+        <button type="button" class="inv-card {{ cls }}" onclick="openProductsFiltered('{{ key }}')">
+          <div class="ic-label">{{ label }}</div>
+          <div class="ic-count">{{ n }}</div>
+          <div class="ic-pct">{% if key == 'all' %}in {{ inv_cats|length }} categor{{ 'y' if inv_cats|length == 1 else 'ies' }}{% else %}{{ pct }}% of products{% endif %}</div>
+          <div class="ic-bar"><div style="width:{{ pct if key != 'all' else 100 }}%;"></div></div>
+        </button>
+        {% endfor %}
+      </div>
+      <div class="inv-grid">
+        <div class="card">
+          <div class="card-head"><h5>Stock by Category</h5><button type="button" class="inv-toggle" id="inv-cat-toggle" onclick="toggleInvCatView()">Table</button></div>
+          <div class="card-body">
+            <div id="inv-cat-chart">
+              <div class="inv-legend"><span><i style="background:#dc2626"></i>Out of stock</span><span><i style="background:#f59e0b"></i>Low stock</span><span><i style="background:#15803d"></i>In stock</span></div>
+              {% set cat_max = namespace(v=1) %}
+              {% for cname, items in inv_cats %}{% if items|length > cat_max.v %}{% set cat_max.v = items|length %}{% endif %}{% endfor %}
+              {% for cname, items in inv_cats %}
+                {% set co = items|selectattr('stock','le',0)|list|length %}
+                {% set cl = items|selectattr('stock','gt',0)|selectattr('stock','lt',5)|list|length %}
+                {% set ci = items|length - co - cl %}
+                <div class="inv-cat-row">
+                  <span class="cat-name">{{ cname or 'Uncategorized' }}</span>
+                  <div class="cat-track" style="width:{{ (items|length / cat_max.v * 100)|round|int }}%;max-width:100%;flex:none;">
+                    {% if co %}<div style="background:#dc2626;flex:{{ co }};"></div>{% endif %}
+                    {% if cl %}<div style="background:#f59e0b;flex:{{ cl }};"></div>{% endif %}
+                    {% if ci %}<div style="background:#15803d;flex:{{ ci }};"></div>{% endif %}
+                  </div>
+                  <span class="cat-note">{{ items|length }} <span>({% for t in [(co,'out'),(cl,'low'),(ci,'in')] if t[0] %}{{ t[0] }} {{ t[1] }}{{ ', ' if not loop.last }}{% endfor %})</span></span>
+                </div>
+              {% endfor %}
+            </div>
+            <table class="table" id="inv-cat-table" style="display:none;">
+              <thead><tr><th>Category</th><th>Out</th><th>Low</th><th>In stock</th><th>Total</th></tr></thead>
+              <tbody>
+                {% for cname, items in inv_cats %}
+                {% set co = items|selectattr('stock','le',0)|list|length %}
+                {% set cl = items|selectattr('stock','gt',0)|selectattr('stock','lt',5)|list|length %}
+                <tr><td>{{ cname or 'Uncategorized' }}</td><td>{{ co }}</td><td>{{ cl }}</td><td>{{ items|length - co - cl }}</td><td>{{ items|length }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h5>Stock Status</h5></div>
+          <div class="card-body">
+            {% set circ = 251.33 %}
+            <div class="inv-donut-wrap">
+              <svg viewBox="0 0 100 100" width="170" height="170" style="transform:rotate(-90deg);">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" stroke-width="16"/>
+                {% set off = namespace(v=0) %}
+                {% for n, col in [(inv_out,'#dc2626'),(inv_low,'#f59e0b'),(inv_ok,'#15803d')] if n and inv_total %}
+                  {% set seg = n / inv_total * circ %}
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ col }}" stroke-width="16" stroke-dasharray="{{ seg }} {{ circ - seg }}" stroke-dashoffset="{{ -off.v }}"/>
+                  {% set off.v = off.v + seg %}
+                {% endfor %}
+              </svg>
+              <div class="donut-mid"><b>{{ inv_total }}</b><span>products</span></div>
+            </div>
+            {% for n, col, label in [(inv_out,'#dc2626','Out of stock'),(inv_low,'#f59e0b','Low stock'),(inv_ok,'#15803d','In stock')] %}
+            <div class="inv-status-row" style="--c:{{ col }};"><span class="sr-name">{{ label }}</span><span><b>{{ n }}</b> &nbsp;<span style="color:var(--muted);">{{ ((n / inv_total * 100)|round|int) if inv_total else 0 }}%</span></span></div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% set restock_all = all_products|selectattr('stock','lt',5)|sort(attribute='stock')|list %}
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-head"><h5>Needs Restocking</h5><span style="font-size:0.7rem;color:var(--muted);">Out of stock first, then lowest stock</span></div>
+        {% if restock_all %}
+        <div class="inv-restock-row head"><span>Product</span><span>Stock</span><span>Price</span><span></span></div>
+        {% for p in restock_all[:8] %}
+        <div class="inv-restock-row">
+          <div><div class="p-name">{{ p.name }}</div><div class="p-cat">{{ p.category }}</div></div>
+          <div>{% if p.stock <= 0 %}<span class="stock-label stock-label-out">Out of stock</span>{% else %}<span class="stock-label stock-label-low">{{ p.stock }} left</span>{% endif %}</div>
+          <div>₱{{ '{:,.2f}'.format(p.price) }}</div>
+          <div><button type="button" class="btn-restock" onclick="restockProduct({{ p.id }})">Restock</button></div>
+        </div>
+        {% endfor %}
+        <div style="padding:0.7rem 1rem;border-top:1px solid var(--border);font-size:0.72rem;color:var(--muted);">Showing {{ [restock_all|length, 8]|min }} of {{ restock_all|length }}. <a onclick="openProductsFiltered('low')" style="color:var(--red);font-weight:700;cursor:pointer;">View all in Manage Products</a></div>
+        {% else %}
+        <div class="empty-state"><p>Every product is well stocked.</p></div>
+        {% endif %}
       </div>
       <div class="charts-grid">
         <div class="card">
@@ -702,7 +876,9 @@
                   {{ b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown') }}
                   <div class="pending-sub">BKG-{{ '%03d'|format(b.id) }}</div>
                 </td>
-                <td>{{ b.service }}</td>
+                <td>
+                  {% if b.service.startswith('Back job — ') %}{{ b.service[11:] }}<span class="backjob-tag">Back job</span>{% else %}{{ b.service }}{% endif %}
+                </td>
                 <td>{{ b.date.strftime('%b %d, %Y') }}</td>
                 <td>{{ b.time.strftime('%I:%M %p') }}</td>
                 <td>
@@ -925,12 +1101,17 @@
                           <button type="button" onclick="submitBookingStatusForm('no-extra-work-form-{{ b.id }}')" style="background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">No extra work</button>
                         </form>
                       {% elif b.status == 'confirmed' %}
-                        {% set not_yet_due = (b.date, b.time) > (today, now.time()) %}
+                        {% set elig = start_eligibility(b, now) %}
+                        {% set not_yet_due = elig.state != 'ready' %}
                         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
                           <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form" id="start-service-form-{{ b.id }}">
                             <input type="hidden" name="status" value="inspection">
-                            {% if not_yet_due %}
-                              <button type="button" disabled title="Cannot start before {{ b.date.strftime('%b %d, %Y') }} {{ b.time.strftime('%I:%M %p') }}" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button>
+                            {% if elig.state == 'early_ok' %}
+                              <button type="button" onclick="openEarlyStartModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start early</button>
+                            {% elif elig.state == 'early_busy' %}
+                              <button type="button" disabled title="{{ elig.message }}" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button>
+                            {% elif elig.state == 'too_early' %}
+                              <button type="button" disabled title="Can start from {{ elig.opens_at }}" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button>
                             {% else %}
                               <button type="button" onclick="openStartServiceModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start</button>
                             {% endif %}
@@ -940,8 +1121,12 @@
                             <button type="button" onclick="openCancelBookingModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">Cancel</button>
                           </form>
                         </div>
-                        {% if not_yet_due %}
-                          <div style="font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">Starts {{ b.date.strftime('%b %d') }}, {{ b.time.strftime('%I:%M %p') }}</div>
+                        {% if elig.state == 'early_busy' %}
+                          <div style="font-size:0.65rem;color:#c2410c;margin-top:0.2rem;">{{ elig.message }}</div>
+                        {% elif elig.state == 'early_ok' %}
+                          <div style="font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">Booked {{ b.time.strftime('%I:%M %p') }} · {{ elig.minutes_early }} min early</div>
+                        {% elif elig.state == 'too_early' %}
+                          <div style="font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">Can start from {{ elig.opens_at }}</div>
                         {% endif %}
                       {% endif %}
                     {% endif %}
@@ -950,7 +1135,7 @@
                     {% set age = (today - b.date).days %}
                     {% set min_days = 30 if b.status == 'completed' else 7 %}
                     {% if b.status in ['completed', 'cancelled'] and age >= min_days %}
-                      <form method="POST" action="{{ url_for('archive_booking', bid=b.id) }}" onsubmit="return confirm('Archive Booking #{{ b.id }}?')">
+                      <form method="POST" action="{{ url_for('archive_booking', bid=b.id) }}" data-confirm-title="Archive booking?" data-confirm="Booking #{{ b.id }} will be moved to the archive." data-confirm-label="Yes, Archive">
                         <button type="submit" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:inherit;font-weight:700;cursor:pointer;">Archive</button>
                       </form>
                     {% elif b.status not in ['completed', 'cancelled'] %}
@@ -1088,23 +1273,14 @@
         <form id="reschedule-form" onsubmit="return submitReschedule(event)">
           <div class="form-group">
             <label>New Date</label>
-            <input type="date" id="reschedule-date" required>
+            <input type="date" id="reschedule-date" required onchange="loadRescheduleSlots()">
           </div>
           <div class="form-group">
             <label>New Time</label>
             <select id="reschedule-time" required>
-              <option value="">Select a time…</option>
-              <option value="08:00">8:00 AM</option>
-              <option value="09:00">9:00 AM</option>
-              <option value="10:00">10:00 AM</option>
-              <option value="11:00">11:00 AM</option>
-              <option value="13:00">1:00 PM</option>
-              <option value="14:00">2:00 PM</option>
-              <option value="15:00">3:00 PM</option>
-              <option value="16:00">4:00 PM</option>
-              <option value="17:00">5:00 PM</option>
-              <option value="18:00">6:00 PM</option>
+              <option value="">Pick a date first…</option>
             </select>
+            <div id="reschedule-slot-note" style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem;">Only open times are listed.</div>
           </div>
           <div id="reschedule-error" style="display:none;color:#b91c1c;font-size:0.8rem;margin-bottom:0.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.6rem 0.8rem;"></div>
           <div class="modal-actions">
@@ -1199,10 +1375,17 @@
           <div class="page-sub">Track and update parts and accessories orders.</div>
         </div>
       </div>
-      <div class="filter-bar">
-        <input type="text" placeholder="Search customer or product..." oninput="filterTable('orders-table', this.value)">
-        <select onchange="filterTableByCol('orders-table', 3, this.value)">
-          <option value="">All Status</option>
+      {% set ord_online = all_orders|rejectattr('is_instore')|list|length %}
+      {% set ord_instore = all_orders|length - ord_online %}
+      <div class="filter-bar" style="align-items:center;">
+        <input type="text" placeholder="Search order #, customer or product..." id="orders-search" oninput="applyOrderFilters()">
+        <select id="orders-type-filter" onchange="applyOrderFilters()">
+          <option value="">All types ({{ all_orders|length }})</option>
+          <option value="online">Online orders ({{ ord_online }})</option>
+          <option value="instore">In-store sales ({{ ord_instore }})</option>
+        </select>
+        <select id="orders-status-filter" onchange="applyOrderFilters()">
+          <option value="">All statuses</option>
           <option>pending</option>
           <option>confirmed</option>
           <option>processing</option>
@@ -1210,8 +1393,11 @@
           <option>ready for pickup</option>
           <option>delivered</option>
           <option>completed</option>
+          <option>refunded</option>
           <option>cancelled</option>
         </select>
+        <span id="orders-count" style="font-size:0.74rem;color:var(--muted);white-space:nowrap;"></span>
+        <a id="orders-clear" onclick="clearOrderFilters()" style="display:none;font-size:0.74rem;font-weight:700;color:var(--red);cursor:pointer;white-space:nowrap;">Clear filters</a>
       </div>
       <div class="card">
         {% if all_orders %}
@@ -1241,7 +1427,7 @@
               {% for o in all_orders %}
               {% set o_display_name = o.contact_name if o.is_instore else o.customer.fullname %}
               {% set o_display_ref = ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) %}
-              <tr>
+              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}">
                 <td style="white-space:nowrap;">
                   <a href="#" onclick="viewOrder({{ o.id }}, '{{ o_display_name|e }}', '{{ '' if o.is_instore else o.customer.email }}', '{{ '' if o.is_instore else o.customer.phone }}', '{{ o.customer.motorcycle_model or '' if not o.is_instore }}', '{{ o.customer.motorcycle_plate or '' if not o.is_instore }}', {{ o.total_amount }}, '{{ o.status }}', '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y — %I:%M %p') }}', {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
@@ -1265,6 +1451,8 @@
                     <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Item Received</span>
                   {% elif o.delivery_method != 'ship' and o.status == 'shipped' %}
                     <span class="badge badge-shipped">Ready For Pickup</span>
+                  {% elif o.delivery_method == 'ship' and o.status == 'completed' %}
+                    <span class="badge badge-completed">Delivered</span>
                   {% else %}
                     <span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span>
                   {% endif %}
@@ -1278,30 +1466,38 @@
                   {% endif %}
                 </td>
                 <td>
-                {% if o.delivery_method != 'ship' and o.status in ['completed', 'cancelled'] %}
-                  <span class="badge badge-{{ o.status }}">{{ o.status|title }}</span>
+                {% set o_final = o.is_instore or o.refund_status_label == 'Refunded' or o.status in ['completed', 'cancelled'] %}
+                {% if o.is_instore %}
+                  <span style="font-size:0.7rem;color:var(--muted);">Paid at the counter</span>
+                {% elif o_final %}
+                  <span style="font-size:0.7rem;color:var(--muted);">No more updates</span>
                 {% else %}
                 <form method="POST" action="{{ url_for('update_order_status', oid=o.id) }}" class="status-form">
-                  <select name="status">
+                  <select name="status" data-current="{{ o.status }}" onchange="this.form.querySelector('button[type=submit]').disabled = (this.value === this.dataset.current)">
+                    {# Starts on the current status. No "Pending" choice: a brand-new order shows it
+                       as a locked current state until staff pick Confirmed. #}
+                    {% if o.status in ['pending', 'awaiting_payment'] %}
+                      <option value="{{ o.status }}" selected disabled>{{ o.status|replace('_',' ')|title }}</option>
+                    {% endif %}
                     {% if o.delivery_method == 'ship' %}
-                      {# Ship-to-address: staff can move it up to "Shipped" (on the way) — only the
-                         customer's own receipt confirmation on their dashboard completes it from there. #}
-                      <option value="pending"    {% if o.status=='pending' %}selected{% endif %}>Pending</option>
+                      {# Ship-to-address: Confirmed → Processing → Shipped → Delivered, or Cancelled.
+                         Delivered is the customer's own receipt confirmation, so it can't be picked here. #}
                       <option value="confirmed"  {% if o.status=='confirmed' %}selected{% endif %}>Confirmed</option>
                       <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
                       <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Shipped</option>
+                      <option value="completed"  disabled {% if o.status=='completed' %}selected{% endif %}>Delivered</option>
                       <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
                     {% else %}
-                      {# Pick-up, cash or GCash: same four steps either way.
-                         Completed happens on the Billing page once the
-                         customer actually picks it up — never from here. #}
+                      {# Shop pick-up: Confirmed → Processing → Ready to Pick Up → Completed.
+                         Completed happens on the Billing page once the customer actually
+                         picks it up, so it can't be picked here. #}
                       <option value="confirmed"  {% if o.status=='confirmed' %}selected{% endif %}>Confirmed</option>
                       <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
                       <option value="shipped"    {% if o.status=='shipped' %}selected{% endif %}>Ready to Pick Up</option>
-                      <option value="cancelled"  {% if o.status=='cancelled' %}selected{% endif %}>Cancelled</option>
+                      <option value="completed"  disabled {% if o.status=='completed' %}selected{% endif %}>Completed</option>
                     {% endif %}
                   </select>
-                  <button type="submit">Save</button>
+                  <button type="submit" disabled>Save</button>
                   {% if o.delivery_method != 'ship' and o.status == 'shipped' %}
                     <span class="status-note" style="font-size:0.62rem;color:var(--muted);">Complete on Billing page</span>
                   {% endif %}
@@ -1312,7 +1508,7 @@
                 {% set age = (now - o.created_at).days %}
                 {% set min_days = 30 if o.status == 'completed' else 7 %}
                 {% if o.status in ['completed', 'cancelled'] and age >= min_days %}
-                  <form method="POST" action="{{ url_for('archive_order', oid=o.id) }}" onsubmit="return confirm('Archive ORD-{{ '%03d'|format(o.id) }}?')">
+                  <form method="POST" action="{{ url_for('archive_order', oid=o.id) }}" data-confirm-title="Archive order?" data-confirm="ORD-{{ '%03d'|format(o.id) }} will be moved to the archive." data-confirm-label="Yes, Archive">
                     <button type="submit" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:inherit;font-weight:700;cursor:pointer;">Archive</button>
                   </form>
                 {% elif o.status not in ['completed', 'cancelled'] %}
@@ -1345,8 +1541,26 @@
           <button class="btn-primary-custom" onclick="openModal('modal-import-csv')">Import CSV</button>
         </div>
       </div>
+      <div id="stock-alert-out" class="stock-alert stock-alert-out" style="display:none;">
+        <span class="sa-icon">!</span>
+        <div class="sa-body"><div class="sa-title"></div><div class="sa-names"></div></div>
+        <button type="button" class="sa-show" onclick="setStockFilter('out')">Show out of stock</button>
+        <button type="button" class="sa-hide" onclick="this.parentElement.style.display='none'">Hide</button>
+      </div>
+      <div id="stock-alert-low" class="stock-alert stock-alert-low" style="display:none;">
+        <span class="sa-icon">!</span>
+        <div class="sa-body"><div class="sa-title"></div><div class="sa-names"></div></div>
+        <button type="button" class="sa-show" onclick="setStockFilter('low')">Show low stock</button>
+        <button type="button" class="sa-hide" onclick="this.parentElement.style.display='none'">Hide</button>
+      </div>
       <div class="filter-bar">
         <input type="text" placeholder="Search product..." oninput="filterProducts(this.value)" id="products-search-input">
+        <div class="stock-legend" id="stock-legend">
+          <button type="button" class="stock-chip active" data-filter="all" onclick="setStockFilter('all')">All <span class="cnt"></span></button>
+          <button type="button" class="stock-chip" data-filter="in" onclick="setStockFilter('in')"><span class="dot" style="background:#16a34a;"></span>In stock <span class="cnt"></span></button>
+          <button type="button" class="stock-chip" data-filter="low" onclick="setStockFilter('low')"><span class="dot" style="background:#f97316;"></span>Low stock <span class="cnt"></span></button>
+          <button type="button" class="stock-chip" data-filter="out" onclick="setStockFilter('out')"><span class="dot" style="background:#dc2626;"></span>Out of stock <span class="cnt"></span></button>
+        </div>
       </div>
       <div class="card">
         {% if all_products %}
@@ -1365,9 +1579,9 @@
                 <td>{{ p.category }}</td>
                 <td>₱{{ '%.2f'|format(p.price) }}</td>
                 <td>
-                  {% if p.stock == 0 %}<span style="color:var(--red);font-weight:700;">{{ p.stock }}</span>
-                  {% elif p.stock < 5 %}<span style="color:#d97706;font-weight:700;">{{ p.stock }}</span>
-                  {% else %}<span style="color:var(--green);font-weight:700;">{{ p.stock }}</span>{% endif %}
+                  {% if p.stock <= 0 %}<span class="stock-label stock-label-out">Out of stock</span>
+                  {% elif p.stock < 5 %}<span class="stock-label stock-label-low">{{ p.stock }} left</span>
+                  {% else %}<span class="stock-label stock-label-in">{{ p.stock }} in stock</span>{% endif %}
                 </td>
               </tr>
               {% endfor %}
@@ -1429,7 +1643,7 @@
                             data-flagged="{{ 'true' if u.is_flagged else 'false' }}"
                             data-fullname="{{ u.fullname }}"
                             onclick="toggleUserMenu(event, this)">Manage ▾</button>
-                    <form method="POST" action="{{ url_for('delete_user', uid=u.id) }}" onsubmit="return confirm('Delete {{ u.fullname|e }}?')">
+                    <form method="POST" action="{{ url_for('delete_user', uid=u.id) }}" data-confirm-title="Delete user?" data-confirm="{{ u.fullname|e }}'s account will be deleted." data-confirm-label="Yes, Delete" data-confirm-danger="1">
                       <button type="submit" class="btn-action-delete">Delete</button>
                     </form>
                   </div>
@@ -1463,6 +1677,12 @@
     </div>
   </div>
 
+  <div class="mech-switch">
+    <button type="button" id="mech-tab-roster" class="active" onclick="switchMechView('roster')">Mechanics</button>
+    <button type="button" id="mech-tab-attendance" onclick="switchMechView('attendance')">Attendance</button>
+  </div>
+
+  <div id="mech-view-roster">
   <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
     <div style="flex:1;min-width:140px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem;text-align:center;">
       <div id="mech-stat-total" style="font-size:1.9rem;font-weight:700;color:var(--text);">0</div>
@@ -1487,6 +1707,29 @@
         </tr></thead>
         <tbody id="mechanics-roster-list"><tr><td colspan="8"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
       </table>
+    </div>
+  </div>
+  </div>
+
+  <div id="mech-view-attendance" style="display:none;">
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <label for="att-date" style="font-size:0.82rem;font-weight:700;color:var(--text);">Date</label>
+      <input type="date" id="att-date" onchange="loadAttendance()" style="padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.82rem;">
+      <span style="margin-left:auto;font-size:0.7rem;color:var(--muted);">Shift 8:00 AM – 6:30 PM · Lunch 12:00 – 12:30 PM (not counted) · Late after 8:15 AM</span>
+    </div>
+    <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+      <div class="att-card" style="background:#F0FDF4;border-color:#bbf7d0;color:#15803D;"><div class="n" id="att-count-present">0</div><div class="l">Present</div></div>
+      <div class="att-card" style="background:#FEFCE8;border-color:#fde68a;color:#B45309;"><div class="n" id="att-count-late">0</div><div class="l">Late</div></div>
+      <div class="att-card" style="background:#FEF2F2;border-color:#fecaca;color:#B91C1C;"><div class="n" id="att-count-absent">0</div><div class="l">Absent</div></div>
+      <div class="att-card" style="background:#fff;border-color:var(--border);color:var(--muted);"><div class="n" id="att-count-not_in" style="color:var(--text);">0</div><div class="l">Not timed in yet</div></div>
+    </div>
+    <div class="card">
+      <div style="overflow-x:auto;">
+        <table class="table">
+          <thead><tr><th>Mechanic</th><th>Time in</th><th>Time out</th><th>Hours worked</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="att-list"><tr><td colspan="6"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>
@@ -1531,7 +1774,7 @@
               </form>
             </td>
             <td>
-              <form method="POST" action="{{ url_for('delete_service', sid=s.id) }}" onsubmit="return confirm('Delete service {{ s.name|e }}? This cannot be undone.')">
+              <form method="POST" action="{{ url_for('delete_service', sid=s.id) }}" data-confirm-title="Delete service?" data-confirm="{{ s.name|e }} will be deleted. This cannot be undone." data-confirm-label="Yes, Delete" data-confirm-danger="1">
                 <button type="submit" class="btn-action-delete">Delete</button>
               </form>
             </td>
@@ -1670,7 +1913,11 @@
               <tbody>
                 {% for m in rpt.mechanic_performance[:5] %}
                 <tr>
-                  <td style="font-weight:600;color:var(--text);">{{ m.name }}</td>
+                  <td style="font-weight:600;color:var(--text);">
+                    <span style="display:inline-flex;align-items:center;gap:0.5rem;">
+                      <span style="width:26px;height:26px;border-radius:50%;background:#eef2ff;color:var(--blue);display:inline-flex;align-items:center;justify-content:center;font-size:0.62rem;font-weight:700;flex-shrink:0;">{{ (m.name.split()|map('first')|join)[:2]|upper }}</span>{{ m.name }}
+                    </span>
+                  </td>
                   <td>
                     <div style="display:flex;align-items:center;gap:0.5rem;">
                       <div style="width:70px;height:5px;border-radius:99px;background:#eef2ff;overflow:hidden;"><div style="height:100%;border-radius:99px;background:var(--blue);width:{{ ((m.completed / rpt_mech_max * 100)|int) if rpt_mech_max > 0 else 0 }}%;"></div></div>
@@ -1695,7 +1942,7 @@
               </tfoot>
             </table>
             {% else %}
-            <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></div><p>No completed bookings in this period.</p></div>
+            <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></div><p>No completed bookings or job orders in this period.</p></div>
             {% endif %}
           </div>
           <div id="rpt-mechanic-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0.75rem 0 0.25rem;flex-wrap:wrap;"></div>
@@ -1714,14 +1961,14 @@
                 <div class="chart-bar-item">
                   <span class="bar-label" style="width:180px;">{{ p.name }}</span>
                   <div class="chart-bar-track"><div class="chart-bar-fill" style="background:#f97316;" data-width="{{ ppct }}"></div></div>
-                  <span class="bar-val" style="width:auto;white-space:nowrap;">₱{{ '{:,.2f}'.format(p.revenue) }}</span>
+                  <span class="bar-val" style="width:auto;min-width:78px;white-space:nowrap;text-align:right;line-height:1.25;">₱{{ '{:,.2f}'.format(p.revenue) }}<span style="display:block;font-size:0.64rem;font-weight:500;color:var(--muted);">{{ p.units|int }} sold</span></span>
                 </div>
               {% endfor %}
             {% else %}
               <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No product sales in this period.</p></div>
             {% endif %}
           </div>
-          <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Includes online orders, in-store sales, and parts used in bookings and job orders. Fully refunded orders are excluded.</div>
+          <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Includes online orders, in-store sales, and parts used in bookings and job orders. Refunded items are excluded.</div>
         </div>
       </div>
     </section>
@@ -1942,7 +2189,7 @@
       <div style="font-weight:700;font-size:0.95rem;color:var(--text);margin-bottom:0.25rem;">Bulk Archive</div>
       <div style="font-size:0.8rem;color:var(--muted);">Automatically archive all completed & cancelled records older than 30 days.</div>
     </div>
-    <form method="POST" action="{{ url_for('archive_all_old') }}" onsubmit="return confirm('Archive completed records older than 30 days and cancelled records older than 7 days?')">
+    <form method="POST" action="{{ url_for('archive_all_old') }}" data-confirm-title="Archive old records?" data-confirm="Completed records older than 30 days and cancelled records older than 7 days will be archived." data-confirm-label="Yes, Archive">
       <button type="submit" class="btn-primary-custom">Archive All Old Records</button>
     </form>
   </div>
@@ -2216,7 +2463,7 @@
 <div class="modal-overlay" id="modal-add-product">
   <div class="modal-box">
     <h5>Add New Product</h5>
-    <form method="POST" action="{{ url_for('add_product') }}" enctype="multipart/form-data">
+    <form method="POST" id="add-product-form" action="{{ url_for('add_product') }}" enctype="multipart/form-data">
       <div class="form-group"><label>Product Name</label><input type="text" name="name" placeholder="e.g. IRC MB99 Front Tire" required></div>
       <div class="form-group">
         <label>Product Image (optional)</label>
@@ -2264,7 +2511,7 @@
   <div class="modal-box">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
       <h5 style="margin:0;">Edit Product</h5>
-      <form method="POST" id="delete-product-form" action="" onsubmit="return confirm('Are you sure you want to delete this product?')">
+      <form method="POST" id="delete-product-form" action="" data-confirm-title="Delete product?" data-confirm="This product will be permanently deleted." data-confirm-label="Yes, Delete" data-confirm-danger="1">
         <button type="submit" class="btn-action-delete">Delete Product</button>
       </form>
     </div>
@@ -2301,7 +2548,9 @@
         </select>
       </div>
       <div class="form-group"><label>Price (₱)</label><input type="number" name="price" id="edit-product-price" step="0.01" min="0" required></div>
-      <div class="form-group"><label>Stock Quantity</label><input type="number" name="stock" id="edit-product-stock" min="0" required></div>
+      <div class="form-group"><label>Stock Quantity</label><input type="number" name="stock" id="edit-product-stock" min="0" required oninput="updateStockPreview()">
+        <div style="margin-top:0.35rem;font-size:0.7rem;color:var(--muted);">Will show as: <span id="edit-stock-preview"></span></div>
+      </div>
       <div class="form-group"><label>Description (optional)</label><textarea name="description" id="edit-product-desc" rows="2"></textarea></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-product')">Cancel</button>
@@ -2582,6 +2831,258 @@
   </div>
 </div>
 
+<!-- MARK PART RECEIVED CONFIRMATION MODAL -->
+<div class="modal-overlay" id="modal-part-received" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-part-received')">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;color:var(--text);display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    </div>
+    <h5 style="margin-bottom:0.5rem;">Mark part as received?</h5>
+    <p id="pr-message" style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1.5rem;"></p>
+    <div class="modal-actions" style="justify-content:center;margin-top:0;">
+      <button type="button" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-part-received')">Cancel</button>
+      <button type="button" id="pr-confirm-btn" class="btn-primary-custom" style="flex:1;background:#111827;" onclick="confirmReturnItemReceived()">Yes, Mark Received</button>
+    </div>
+  </div>
+</div>
+
+<!-- MARK READY FOR PICKUP CONFIRMATION MODAL -->
+<div class="modal-overlay" id="modal-ready-pickup" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-ready-pickup')">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;color:var(--text);display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16 9"/></svg>
+    </div>
+    <h5 style="margin-bottom:0.5rem;">Mark ready for pickup?</h5>
+    <p style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1.5rem;">This resolves the claim and tells the customer their replacement is ready to pick up at the shop.</p>
+    <div class="modal-actions" style="justify-content:center;margin-top:0;">
+      <button type="button" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-ready-pickup')">Cancel</button>
+      <button type="button" id="rp-confirm-btn" class="btn-primary-custom" style="flex:1;background:#111827;" onclick="confirmReadyForPickup()">Yes, Ready for Pickup</button>
+    </div>
+  </div>
+</div>
+
+<!-- MARK AS PICKED UP CONFIRMATION MODAL -->
+<div class="modal-overlay" id="modal-picked-up" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-picked-up')">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;color:var(--text);display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+    </div>
+    <h5 style="margin-bottom:0.5rem;">Mark as picked up?</h5>
+    <p style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1.5rem;">Confirm the customer has collected their replacement at the shop. They will be emailed that the claim is complete.</p>
+    <div class="modal-actions" style="justify-content:center;margin-top:0;">
+      <button type="button" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-picked-up')">Cancel</button>
+      <button type="button" id="pu-confirm-btn" class="btn-primary-custom" style="flex:1;background:#111827;" onclick="confirmPickedUp()">Yes, Picked Up</button>
+    </div>
+  </div>
+</div>
+
+<!-- MARK AS HANDED OVER CONFIRMATION MODAL -->
+<div class="modal-overlay" id="modal-handed-over" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-handed-over')">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;color:var(--text);display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><polyline points="9 14 11 16 15 12"/></svg>
+    </div>
+    <h5 style="margin-bottom:0.5rem;">Mark as handed over?</h5>
+    <p style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1.5rem;">This closes the claim without waiting for the customer to confirm they received the replacement.</p>
+    <div class="modal-actions" style="justify-content:center;margin-top:0;">
+      <button type="button" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-handed-over')">Cancel</button>
+      <button type="button" id="ho-confirm-btn" class="btn-primary-custom" style="flex:1;background:#111827;" onclick="confirmHandedOver()">Yes, Handed Over</button>
+    </div>
+  </div>
+</div>
+
+<!-- GENERIC CONFIRMATION MODAL (replaces every browser confirm()) -->
+<div class="modal-overlay" id="modal-confirm" style="z-index:1200;" onclick="if(event.target===this) resolveConfirm(false)">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div id="mc-icon" style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;color:var(--text);display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <h5 id="mc-title" style="margin-bottom:0.5rem;"></h5>
+    <p id="mc-message" style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1.5rem;"></p>
+    <div class="modal-actions" style="justify-content:center;margin-top:0;">
+      <button type="button" id="mc-cancel" class="btn-cancel" style="flex:1;" onclick="resolveConfirm(false)">Cancel</button>
+      <button type="button" id="mc-ok" class="btn-primary-custom" style="flex:1;background:#111827;" onclick="resolveConfirm(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- CASH REFUND: READY TO CLAIM MODAL -->
+<div class="modal-overlay" id="modal-cash-ready" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-cash-ready')">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+    <h5 style="margin-bottom:0.4rem;">Mark refund ready to claim?</h5>
+    <p id="cr-message" style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1rem;"></p>
+    <div style="background:#f5f5f4;border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.9rem;font-size:0.82rem;text-align:left;margin-bottom:1.2rem;">
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Method</span><strong>Cash at the shop counter</strong></div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.25rem;"><span style="color:var(--muted);">Amount</span><strong id="cr-amount"></strong></div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.25rem;"><span style="color:var(--muted);">Claim</span><strong id="cr-ref"></strong></div>
+    </div>
+    <div class="modal-actions" style="justify-content:center;margin-top:0;">
+      <button type="button" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-cash-ready')">Cancel</button>
+      <button type="button" id="cr-confirm-btn" class="btn-primary-custom" style="flex:1;background:#111827;" onclick="confirmCashReady()">Yes, Notify Customer</button>
+    </div>
+  </div>
+</div>
+
+<!-- CASH REFUND: MARK CASH GIVEN MODAL -->
+<div class="modal-overlay" id="modal-cash-given" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-cash-given')">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg></div>
+    <h5 id="cg-title" style="margin-bottom:0.4rem;"></h5>
+    <p style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1rem;">Hand the cash to the customer at the counter, then confirm. The claim closes and the customer is notified.</p>
+    <div style="background:#f5f5f4;border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.9rem;font-size:0.82rem;text-align:left;margin-bottom:0.8rem;">
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Give to</span><strong id="cg-who"></strong></div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.25rem;"><span style="color:var(--muted);">Claim</span><strong id="cg-ref"></strong></div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.25rem;"><span style="color:var(--muted);">Amount</span><strong id="cg-amount"></strong></div>
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:0.5rem;text-align:left;font-size:0.8rem;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.75rem;margin-bottom:1.1rem;cursor:pointer;">
+      <input type="checkbox" id="cg-check" onchange="document.getElementById('cg-confirm-btn').disabled = !this.checked" style="margin-top:0.15rem;">
+      <span id="cg-check-text"></span>
+    </label>
+    <div class="modal-actions" style="justify-content:center;margin-top:0;">
+      <button type="button" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-cash-given')">Cancel</button>
+      <button type="button" id="cg-confirm-btn" class="btn-primary-custom" disabled style="flex:1;background:#111827;" onclick="confirmCashGiven()">Mark Cash Given</button>
+    </div>
+  </div>
+</div>
+
+<!-- GCASH REFUND: RELEASE MODAL -->
+<div class="modal-overlay" id="modal-gcash-release" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-gcash-release')">
+  <div class="modal-box" style="max-width:440px;">
+    <div style="text-align:center;">
+      <div style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 6V4h10v2"/></svg></div>
+      <h5 id="gr-title" style="margin-bottom:0.4rem;"></h5>
+      <p style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1rem;">Send the money from the shop's GCash first, then upload the receipt. The claim closes and the customer is notified.</p>
+    </div>
+    <div style="font-size:0.82rem;margin-bottom:0.6rem;"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#111827;color:#fff;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;margin-right:0.45rem;">1</span><strong>Open the shop's GCash app</strong></div>
+    <div style="font-size:0.82rem;margin-bottom:0.4rem;"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#111827;color:#fff;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;margin-right:0.45rem;">2</span><strong>Send exactly this amount to the customer</strong></div>
+    <div style="background:#f5f5f4;border:1px solid var(--border);border-radius:10px;padding:0.6rem 0.8rem;font-size:0.8rem;margin:0 0 0.8rem 1.6rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:var(--muted);">GCash number</span><span><strong id="gr-number"></strong> <button type="button" class="btn-cancel" style="padding:0.1rem 0.5rem;font-size:0.7rem;" onclick="copyText(document.getElementById('gr-number').textContent, this)">Copy</button></span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.3rem;"><span style="color:var(--muted);">Account name</span><strong id="gr-name"></strong></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.3rem;"><span style="color:var(--muted);">Amount</span><span><strong id="gr-amount"></strong> <button type="button" class="btn-cancel" style="padding:0.1rem 0.5rem;font-size:0.7rem;" onclick="copyText(_gcashReleaseAmountPlain, this)">Copy</button></span></div>
+    </div>
+    <div style="font-size:0.82rem;margin-bottom:0.4rem;"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#111827;color:#fff;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;margin-right:0.45rem;">3</span><strong>Upload a screenshot of the GCash receipt</strong></div>
+    <div style="margin-left:1.6rem;">
+      <div id="gr-drop" onclick="document.getElementById('gr-file').click()" ondragover="event.preventDefault()" ondrop="onGcashReceiptDrop(event)" style="border:1.5px dashed var(--border);border-radius:10px;padding:1rem;text-align:center;cursor:pointer;font-size:0.8rem;color:var(--muted);">
+        <div id="gr-drop-label"><strong style="color:var(--text);">Choose a screenshot</strong> or drag it here</div>
+        <img id="gr-preview" style="display:none;max-height:120px;margin:0.4rem auto 0;border-radius:6px;border:1px solid var(--border);">
+      </div>
+      <input type="file" id="gr-file" accept="image/*" style="display:none;" onchange="setGcashReceiptFile(this.files[0])">
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.35rem;">Images only, up to 5MB. The customer sees this as proof of the refund.</div>
+      <div id="gr-error" style="display:none;font-size:0.76rem;color:#b91c1c;margin-top:0.35rem;"></div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;margin-top:1.2rem;">
+      <button type="button" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-gcash-release')">Cancel</button>
+      <button type="button" id="gr-confirm-btn" class="btn-primary-custom" disabled style="flex:1;background:#111827;" onclick="confirmGcashRelease()">Mark Refund Sent</button>
+    </div>
+  </div>
+</div>
+
+<!-- BACK JOB DONE CONFIRMATION MODAL -->
+<div class="modal-overlay" id="modal-backjob-done" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-backjob-done')">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+    <h5 style="margin-bottom:0.4rem;">Mark back job as done?</h5>
+    <p id="bj-message" style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1rem;"></p>
+    <div style="background:#f5f5f4;border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.9rem;font-size:0.82rem;text-align:left;margin-bottom:1.2rem;">
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Service</span><strong id="bj-service"></strong></div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.25rem;"><span style="color:var(--muted);">Mechanic</span><strong id="bj-mechanic"></strong></div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.25rem;"><span style="color:var(--muted);">Scheduled</span><strong id="bj-when"></strong></div>
+    </div>
+    <div class="modal-actions" style="justify-content:center;margin-top:0;">
+      <button type="button" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-backjob-done')">Cancel</button>
+      <button type="button" id="bj-confirm-btn" class="btn-primary-custom" style="flex:1;background:#111827;" onclick="confirmBackJobDone()">Yes, Back Job Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- DAY SCHEDULE: MARK COMPLETED MODAL -->
+<div class="modal-overlay" id="modal-ds-complete" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-ds-complete')">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <h5 style="margin-bottom:0.4rem;">Mark this booking completed?</h5>
+    <p id="dc-note" style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1rem;"></p>
+    <div style="background:#f5f5f4;border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.9rem;font-size:0.82rem;text-align:left;margin-bottom:1.2rem;">
+      <div style="display:flex;justify-content:space-between;gap:0.6rem;"><span style="color:var(--muted);">Customer</span><strong id="dc-customer"></strong></div>
+      <div style="display:flex;justify-content:space-between;gap:0.6rem;margin-top:0.25rem;"><span style="color:var(--muted);">Service</span><strong id="dc-service" style="text-align:right;"></strong></div>
+      <div style="display:flex;justify-content:space-between;gap:0.6rem;margin-top:0.25rem;"><span style="color:var(--muted);">Mechanic</span><strong id="dc-mechanic"></strong></div>
+      <div id="dc-extra-row" style="display:none;justify-content:space-between;gap:0.6rem;margin-top:0.25rem;"><span style="color:var(--muted);">Approved extra</span><strong id="dc-extra"></strong></div>
+      <div id="dc-price-row" style="display:none;justify-content:space-between;gap:0.6rem;margin-top:0.25rem;"><span style="color:var(--muted);">Back job</span><strong style="color:#15803d;">Free (₱0)</strong></div>
+    </div>
+    <div class="modal-actions" style="justify-content:center;margin-top:0;">
+      <button type="button" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-ds-complete')">Go Back</button>
+      <button type="button" id="dc-confirm-btn" class="btn-primary-custom" style="flex:1;background:#111827;" onclick="confirmDsComplete()">Yes, Mark Completed</button>
+    </div>
+  </div>
+</div>
+
+<!-- DAY SCHEDULE: CANCEL BOOKING (REASON) MODAL -->
+<div class="modal-overlay" id="modal-ds-cancel" style="z-index:1100;" onclick="if(event.target===this) closeModal('modal-ds-cancel')">
+  <div class="modal-box" style="max-width:440px;">
+    <div style="text-align:center;">
+      <div style="width:46px;height:46px;border-radius:50%;background:#fef2f2;color:#dc2626;display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="10" y1="14" x2="14" y2="18"/><line x1="14" y1="14" x2="10" y2="18"/></svg></div>
+      <h5 style="margin-bottom:0.4rem;">Cancel this booking?</h5>
+      <p style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1rem;">The time slot will be freed and the customer will be notified and emailed with your reason.</p>
+    </div>
+    <div style="background:#f5f5f4;border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.9rem;font-size:0.82rem;margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;gap:0.8rem;"><span style="color:var(--muted);">Customer</span><strong id="dx-customer" style="text-align:right;"></strong></div>
+      <div style="display:flex;justify-content:space-between;gap:0.8rem;margin-top:0.3rem;"><span style="color:var(--muted);">Booking</span><strong id="dx-ref"></strong></div>
+      <div style="display:flex;justify-content:space-between;gap:0.8rem;margin-top:0.3rem;"><span style="color:var(--muted);">Date &amp; time</span><strong id="dx-when" style="text-align:right;"></strong></div>
+      <div style="display:flex;justify-content:space-between;gap:0.8rem;margin-top:0.3rem;"><span style="color:var(--muted);">Mechanic</span><strong id="dx-mechanic" style="text-align:right;"></strong></div>
+      <div style="display:flex;justify-content:space-between;gap:0.8rem;margin-top:0.3rem;"><span style="color:var(--muted);">Service</span><strong id="dx-service" style="text-align:right;"></strong></div>
+    </div>
+    <div style="font-size:0.8rem;font-weight:700;margin-bottom:0.4rem;">Reason for cancelling <span style="color:#dc2626;font-weight:600;">(required — the customer sees this)</span></div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.5rem;">
+      <button type="button" class="dx-chip" onclick="dxPickReason('The customer asked to cancel.')">Customer asked to cancel</button>
+      <button type="button" class="dx-chip" onclick="dxPickReason('The mechanic assigned to your booking is unavailable on this day.')">Mechanic unavailable</button>
+      <button type="button" class="dx-chip" onclick="dxPickReason('The shop is closed on this day.')">Shop closed</button>
+      <button type="button" class="dx-chip" onclick="dxPickReason('The parts needed for your service are not available.')">Parts not available</button>
+    </div>
+    <textarea id="dx-reason" maxlength="300" oninput="dxUpdate()" placeholder="e.g. The mechanic assigned to your booking is unavailable on this day." style="width:100%;min-height:76px;padding:0.5rem 0.65rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.82rem;resize:vertical;"></textarea>
+    <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);margin-top:0.25rem;"><span>Pick a reason or type your own.</span><span id="dx-count">0 / 300</span></div>
+    <div id="dx-error" style="display:none;margin-top:0.4rem;font-size:0.76rem;color:#b91c1c;"></div>
+    <div class="modal-actions" style="justify-content:space-between;margin-top:1.1rem;">
+      <button type="button" id="dx-keep-btn" class="btn-cancel" style="flex:1;" onclick="closeModal('modal-ds-cancel')">Keep Booking</button>
+      <button type="button" id="dx-confirm-btn" class="btn-primary-custom" disabled style="flex:1;background:#dc2626;opacity:0.5;cursor:not-allowed;" onclick="confirmDsCancel()">Yes, Cancel Booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ATTENDANCE MODAL -->
+<div class="modal-overlay" id="modal-edit-attendance">
+  <div class="modal-box" style="max-width:380px;">
+    <h5 style="margin-bottom:0.2rem;">Edit attendance</h5>
+    <div id="ea-sub" style="font-size:0.8rem;color:var(--muted);margin-bottom:1.1rem;"></div>
+    <div class="form-group"><label>Time in</label><input type="time" id="ea-in"></div>
+    <div class="form-group"><label>Time out</label><input type="time" id="ea-out"></div>
+    <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.84rem;margin-top:0.4rem;cursor:pointer;"><input type="checkbox" id="ea-absent" onchange="syncEditAttendanceAbsent()"> Absent today</label>
+    <div id="ea-error" style="display:none;color:#b91c1c;font-size:0.78rem;margin-top:0.6rem;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-attendance')">Cancel</button>
+      <button type="button" class="btn-primary-custom" onclick="saveEditAttendance()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- START EARLY CONFIRMATION MODAL -->
+<div class="modal-overlay" id="modal-early-start" style="display:none;">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <h5 style="margin-bottom:0.25rem;">Start early?</h5>
+    <p id="modal-es-customer" style="color:var(--text);font-weight:700;font-size:1rem;margin-bottom:0.25rem;"></p>
+    <p id="modal-es-service" style="color:#c2410c;font-size:0.875rem;margin-bottom:1rem;"></p>
+    <div style="display:flex;flex-direction:column;gap:0.35rem;text-align:left;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;">
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Booked time</span><strong id="modal-es-booked"></strong></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Current time</span><strong id="modal-es-now"></strong></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Arrived</span><strong id="modal-es-early" style="color:#c2410c;"></strong></div>
+    </div>
+    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:1.25rem;">Only start if the customer is here now. The actual start time will be saved.</p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn-cancel" onclick="document.getElementById('modal-early-start').style.display='none'">Go back</button>
+      <button onclick="confirmEarlyStart()" style="padding:0.6rem 1.5rem;background:#f97316;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">Yes, customer is here</button>
+    </div>
+  </div>
+</div>
+
 <!-- LOGOUT MODAL -->
 <!-- START SERVICE CONFIRMATION MODAL -->
 <div class="modal-overlay" id="modal-start-service" style="display:none;">
@@ -2708,6 +3209,158 @@
     if (typeof dsView !== 'undefined' && dsView === 'list') loadBookingList();
   }
 
+  // ── In-page confirmation: await askConfirm({...}) → true / false ──
+  let _confirmResolve = null;
+  function askConfirm(o) {
+    return new Promise(resolve => {
+      if (_confirmResolve) _confirmResolve(false);
+      _confirmResolve = resolve;
+      document.getElementById('mc-title').textContent   = o.title || 'Are you sure?';
+      document.getElementById('mc-message').textContent = o.message || '';
+      const ok = document.getElementById('mc-ok');
+      ok.textContent = o.confirmLabel || 'Confirm';
+      ok.style.background = o.danger ? '#dc2626' : '#111827';
+      document.getElementById('mc-cancel').textContent = o.cancelLabel || 'Cancel';
+      const icon = document.getElementById('mc-icon');
+      icon.style.background = o.danger ? '#fef2f2' : '#f3f4f6';
+      icon.style.color = o.danger ? '#dc2626' : 'var(--text)';
+      openModal('modal-confirm');
+    });
+  }
+  function resolveConfirm(answer) {
+    closeModal('modal-confirm');
+    const r = _confirmResolve; _confirmResolve = null;
+    if (r) r(answer);
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && _confirmResolve) resolveConfirm(false);
+  });
+
+  // Forms marked data-confirm ask first. Capture phase, so it runs before any
+  // other submit handler (e.g. the product AJAX one); once confirmed the form
+  // is re-submitted and passes straight through.
+  document.addEventListener('submit', async function (ev) {
+    const form = ev.target;
+    if (!form.dataset || form.dataset.confirm === undefined) return;
+    if (form._confirmed) { form._confirmed = false; return; }
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+    const yes = await askConfirm({
+      title: form.dataset.confirmTitle, message: form.dataset.confirm,
+      confirmLabel: form.dataset.confirmLabel, danger: form.dataset.confirmDanger === '1',
+    });
+    if (yes) { form._confirmed = true; form.requestSubmit(); }
+  }, true);
+
+  // ── MECHANICS: Mechanics / Attendance switch ──
+  function switchMechView(view) {
+    const att = view === 'attendance';
+    document.getElementById('mech-view-roster').style.display = att ? 'none' : '';
+    document.getElementById('mech-view-attendance').style.display = att ? '' : 'none';
+    document.getElementById('mech-tab-roster').classList.toggle('active', !att);
+    document.getElementById('mech-tab-attendance').classList.toggle('active', att);
+    const addBtn = document.querySelector('#sec-mechanics .page-actions');
+    if (addBtn) addBtn.style.display = att ? 'none' : '';
+    if (att) {
+      const dateEl = document.getElementById('att-date');
+      if (!dateEl.value) dateEl.value = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);   // shop time (PH)
+      loadAttendance();
+    }
+  }
+
+  let _attRows = [];
+  let _attDate = '';
+  let _attIsToday = true;
+  let _attEditId = null;
+
+  async function loadAttendance() {
+    const dateEl = document.getElementById('att-date');
+    const tbody  = document.getElementById('att-list');
+    try {
+      const res  = await fetch('/api/attendance?date=' + encodeURIComponent(dateEl.value || ''));
+      const data = await res.json();
+      if (data.success === false) { showToast(data.error, 'error'); return; }
+      _attRows = data.rows; _attDate = data.date; _attIsToday = data.is_today;
+      dateEl.max = data.today;     // no future days
+      dateEl.value = data.date;
+      ['present', 'late', 'absent', 'not_in'].forEach(k => { document.getElementById('att-count-' + k).textContent = data.counts[k]; });
+      renderAttendance();
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Could not load attendance.</p></div></td></tr>';
+    }
+  }
+
+  function renderAttendance() {
+    const tbody = document.getElementById('att-list');
+    if (!_attRows.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No mechanics yet.</p></div></td></tr>'; return; }
+    const none = '<span style="color:var(--muted);">None</span>';
+    tbody.innerHTML = _attRows.map(r => {
+      let actions = '';
+      if (_attIsToday) {
+        if (r.status === 'not_in' || r.status === 'absent') actions += `<button type="button" class="att-btn dark" onclick="attAction(${r.mechanic_id}, 'time-in')">Time in</button> `;
+        else if (r.on_duty && !r.time_out) actions += `<button type="button" class="att-btn dark" onclick="attAction(${r.mechanic_id}, 'time-out')">Time out</button> `;
+        if (r.status !== 'absent') actions += `<button type="button" class="att-btn" onclick="attAction(${r.mechanic_id}, 'absent')">Absent</button> `;
+      }
+      actions += `<button type="button" class="att-btn link" onclick="openEditAttendance(${r.mechanic_id})">Edit</button>`;
+      const hours = r.worked_label || (r.on_duty && _attIsToday ? '<span style="color:var(--muted);">On duty</span>' : none);
+      return `<tr>
+        <td><div style="font-weight:600;color:var(--text);">${r.name}</div><div style="font-size:0.7rem;color:var(--muted);">${r.specialization}</div></td>
+        <td>${r.time_in || none}</td><td>${r.time_out || none}</td><td>${hours}</td>
+        <td><span class="att-pill att-${r.status}">${r.status_label}</span></td>
+        <td style="white-space:nowrap;">${actions}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function attPost(mid, action, body) {
+    try {
+      const res  = await fetch(`/api/attendance/${mid}/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: _attDate, ...body }) });
+      const data = await res.json();
+      if (!data.success) { return data.error || 'Could not save.'; }
+      return null;
+    } catch (e) { return 'Network error — please try again.'; }
+  }
+
+  async function attAction(mid, action) {
+    const err = await attPost(mid, action, {});
+    if (err) { showToast(err, 'error'); return; }
+    loadAttendance();
+    loadMechanicsRoster();   // keeps the "today" line on the Mechanics side in step
+  }
+
+  function openEditAttendance(mid) {
+    const r = _attRows.find(x => x.mechanic_id === mid);
+    if (!r) return;
+    _attEditId = mid;
+    const pretty = new Date(_attDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    document.getElementById('ea-sub').textContent = `${r.name}, ${pretty}`;
+    document.getElementById('ea-in').value  = r.time_in_value;
+    document.getElementById('ea-out').value = r.time_out_value;
+    document.getElementById('ea-absent').checked = r.status === 'absent';
+    document.getElementById('ea-error').style.display = 'none';
+    syncEditAttendanceAbsent();
+    openModal('modal-edit-attendance');
+  }
+
+  function syncEditAttendanceAbsent() {
+    const absent = document.getElementById('ea-absent').checked;
+    document.getElementById('ea-in').disabled = absent;
+    document.getElementById('ea-out').disabled = absent;
+  }
+
+  async function saveEditAttendance() {
+    const tIn = document.getElementById('ea-in').value, tOut = document.getElementById('ea-out').value;
+    const absent = document.getElementById('ea-absent').checked;
+    const errEl = document.getElementById('ea-error');
+    if (!absent && tIn && tOut && tOut < tIn) { errEl.textContent = "Time out can't be earlier than time in."; errEl.style.display = 'block'; return; }
+    const err = await attPost(_attEditId, 'edit', { time_in: tIn, time_out: tOut, absent });
+    if (err) { errEl.textContent = err; errEl.style.display = 'block'; return; }
+    closeModal('modal-edit-attendance');
+    showToast('Attendance saved.', 'success');
+    loadAttendance();
+    loadMechanicsRoster();
+  }
+
   // ── MECHANICS: the roster behind the bookings calendar ──
   let _mechanicsRoster = [];
 
@@ -2780,6 +3433,7 @@
       <tr>
         <td>
           <div style="font-weight:600;color:var(--text);">${m.name}</div>
+          ${m.attendance ? `<div style="margin-top:0.2rem;"><span class="att-pill att-${m.attendance.status}">${m.attendance.status_label}</span>${m.attendance.time_in ? `<span style="font-size:0.68rem;color:var(--muted);margin-left:0.4rem;">in ${m.attendance.time_in}${m.attendance.time_out ? ' · out ' + m.attendance.time_out : ''}</span>` : ''}</div>` : ''}
           ${m.note ? `<div style="font-size:0.72rem;color:var(--muted);">${m.note}</div>` : ''}
         </td>
         <td>${m.phone || '<span style="color:var(--muted);">—</span>'}</td>
@@ -2913,7 +3567,7 @@
     const consequence = activeJobsCount > 0
       ? ` ${activeJobsCount} booking${activeJobsCount !== 1 ? 's' : ''} assigned to ${name} will become unassigned and show up as clashes until you reassign them.`
       : '';
-    if (!confirm(`Delete ${name}?${consequence} This cannot be undone.`)) return;
+    if (!await askConfirm({ title: `Delete ${name}?`, message: `${consequence.trim()} This cannot be undone.`.trim(), confirmLabel: 'Yes, Delete', danger: true })) return;
     try {
       const res = await fetch(`/mechanic/${id}/delete`, { method: 'POST' });
       const data = await res.json();
@@ -3402,6 +4056,9 @@
           </div>
         </div>
         <div style="display:flex;gap:0.4rem;">${badges.join('')}</div>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:-0.5rem 0 1.2rem;">
+        ${DS_STEPS.map(st => `<span style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.74rem;font-weight:600;padding:0.3rem 0.7rem;border-radius:99px;background:${st.bg};color:${st.color};border:1px solid ${st.border};"><span style="width:7px;height:7px;border-radius:50%;background:${st.dot};"></span>${st.label} <strong>${(data.status_counts || {})[st.key] || 0}</strong></span>`).join('')}
       </div>`;
   }
 
@@ -3425,7 +4082,7 @@
   }
 
   async function markReadyForPickup(bid) {
-    if (!confirm("Mark this job ready for pickup? This closes the job, frees the mechanic's bay, and emails the customer.")) return;
+    if (!await askConfirm({ title: 'Mark job ready for pickup?', message: "This closes the job, frees the mechanic's bay, and emails the customer.", confirmLabel: 'Yes, Ready for Pickup' })) return;
     try {
       const res = await fetch(`/booking/${bid}/ready-for-pickup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await res.json();
@@ -3581,10 +4238,10 @@
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;${s.cards.length ? 'margin-bottom:0.7rem;' : ''}">
           <div>
             <span style="font-weight:700;font-family:'Syne',sans-serif;">${s.label}</span>
-            <span style="font-size:0.76rem;color:var(--muted);margin-left:0.5rem;">${s.booked_count} booked &middot; ${s.free_mechanics} of ${s.mechanic_count} mechanics free</span>
+            <span style="font-size:0.76rem;color:var(--muted);margin-left:0.5rem;">${s.booked_count} booked &middot; ${s.free_mechanics} of ${s.mechanic_count} mechanics free${s.dot_status ? ` <span title="${s.dot_status.replace('_', ' ')}" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:0.25rem;background:${(DS_STEP_BY_KEY[s.dot_status] || {}).dot || '#9ca3af'};"></span>` : ''}</span>
             ${s.blocked ? '<span class="badge" style="background:#e5e7eb;color:#374151;border:1px solid #d1d5db;margin-left:0.5rem;">Blocked</span>' : ''}
           </div>
-          <button type="button" class="btn-cancel" style="padding:0.3rem 0.7rem;font-size:0.73rem;" onclick="toggleSlotBlock('${s.time}', ${s.blocked})">${s.blocked ? 'Unblock' : 'Block'}</button>
+          <button type="button" class="btn-cancel" style="padding:0.3rem 0.7rem;font-size:0.73rem;" onclick="toggleSlotBlock('${s.time}', ${s.blocked}, ${s.booked_count})">${s.blocked ? 'Unblock' : 'Block'}</button>
         </div>
         ${s.cards.length ? `<div style="display:flex;flex-direction:column;gap:0.55rem;">${s.cards.map(bookingCardHTML).join('')}</div>` : ''}
       </div>`).join('');
@@ -3596,7 +4253,15 @@
       </div>`;
   }
 
-  async function toggleSlotBlock(time, currentlyBlocked) {
+  async function toggleSlotBlock(time, currentlyBlocked, bookedCount) {
+    if (!currentlyBlocked && bookedCount > 0) {
+      const ok = await askConfirm({
+        title: 'Block a slot that has bookings?',
+        message: `${bookedCount} booking${bookedCount === 1 ? '' : 's'} already ${bookedCount === 1 ? 'sits' : 'sit'} in this slot. Blocking it stops new bookings, but ${bookedCount === 1 ? 'that booking' : 'those bookings'} will need to be rescheduled.`,
+        confirmLabel: 'Block anyway', cancelLabel: 'Go back', danger: true,
+      });
+      if (!ok) return;
+    }
     const dateInput = document.getElementById('day-schedule-date');
     try {
       const res = await fetch('/api/blocked-slots', {
@@ -3610,46 +4275,251 @@
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
 
+  const DS_STEPS = [
+    { key: 'confirmed',   label: 'Confirmed',               bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', dot: '#2563eb', line: '#2563eb' },
+    { key: 'inspection',  label: 'Inspection & Estimation', bg: '#fffbeb', color: '#a16207', border: '#fde68a', dot: '#ca8a04', line: '#ca8a04' },
+    { key: 'in_progress', label: 'In Progress',             bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', dot: '#ea580c', line: '#ea580c' },
+    { key: 'completed',   label: 'Completed',               bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', dot: '#16a34a', line: '#16a34a' },
+  ];
+  const DS_STEP_BY_KEY = Object.fromEntries(DS_STEPS.map(x => [x.key, x]));
+  let _dsCards = {};
+
+  // The four-step progress bar: green up to where the booking is, a ring on the
+  // current step, each step stamped with when it was reached.
+  function dsProgressBar(c) {
+    const idx = Math.max(0, DS_STEPS.findIndex(x => x.key === c.status_key));
+    return `
+      <div style="display:flex;align-items:flex-start;margin:0.9rem 0 0.7rem;padding:0 1.4rem;">
+        ${DS_STEPS.map((st, i) => {
+          const reached = i <= idx, current = i === idx && c.status_key !== 'completed';
+          const dot = current
+            ? `<span style="width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #111827;display:block;"></span>`
+            : `<span style="width:12px;height:12px;border-radius:50%;background:${reached ? '#15803d' : '#e5e7eb'};display:block;"></span>`;
+          const when = c.steps[st.key];
+          return `
+            ${i ? `<span style="flex:1;height:2px;margin-top:6px;background:${i <= idx ? '#15803d' : '#e5e7eb'};"></span>` : ''}
+            <span style="display:flex;flex-direction:column;align-items:center;min-width:0;width:0;overflow:visible;">
+              ${dot}
+              <span style="margin-top:0.3rem;font-size:0.66rem;font-weight:${current ? '700' : '600'};color:${reached ? 'var(--text)' : 'var(--muted)'};white-space:nowrap;">${st.label}</span>
+              <span style="font-size:0.62rem;color:var(--muted);white-space:nowrap;">${reached && when ? when : '&nbsp;'}</span>
+            </span>`;
+        }).join('')}
+      </div>`;
+  }
+
+  function dsNote(text, tone) {
+    const tones = {
+      grey:   'background:#f3f4f6;border:1px solid #e5e7eb;color:#4b5563;',
+      yellow: 'background:#fffbeb;border:1px solid #fde68a;color:#92400e;',
+      green:  'background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;',
+    };
+    return `<div style="${tones[tone]}border-radius:6px;padding:0.45rem 0.7rem;font-size:0.76rem;margin-top:0.55rem;">${text}</div>`;
+  }
+
   function bookingCardHTML(c) {
-    const strike = c.status === 'cancelled' ? 'text-decoration:line-through;opacity:0.6;' : '';
-    const tagsHTML = c.tags.map(t => {
-      const s = TAG_STYLES[t] || { bg: '#f3f4f6', color: '#374151', border: '#d1d5db' };
-      return `<span class="badge" style="background:${s.bg};color:${s.color};border:1px solid ${s.border};font-size:0.6rem;">${t}</span>`;
+    _dsCards[c.id] = c;
+    const st = DS_STEP_BY_KEY[c.status_key] || DS_STEPS[0];
+    const cancelled = c.status === 'cancelled';
+    const strike = cancelled ? 'text-decoration:line-through;opacity:0.6;' : '';
+    const tagsHTML = c.tags.filter(t => t !== 'Running long').map(t => {
+      const ts = TAG_STYLES[t] || { bg: '#f3f4f6', color: '#374151', border: '#d1d5db' };
+      return `<span class="badge" style="background:${ts.bg};color:${ts.color};border:1px solid ${ts.border};font-size:0.6rem;">${t}</span>`;
     }).join(' ');
+    const pill = cancelled ? '' : `<span class="badge" style="background:${st.bg};color:${st.color};border:1px solid ${st.border};font-size:0.64rem;display:inline-flex;align-items:center;gap:0.3rem;"><span style="width:6px;height:6px;border-radius:50%;background:${st.dot};"></span>${st.label}</span>`;
     const mechLine = c.mechanic
       ? `${c.mechanic}${c.specialization ? ` — ${c.specialization}` : ''}`
       : '<span style="color:var(--muted);">No mechanic assigned</span>';
     const lenLabel = c.is_multiday ? 'Drop-off (30m intake)' : c.duration_label;
-    const canAct = c.status !== 'cancelled' && c.status !== 'completed';
+    const runningLate = c.overrun_minutes > 0
+      ? ` &middot; <span style="color:#c2410c;font-weight:600;">running ${c.overrun_minutes} min long</span>` : '';
+    const serviceLine = c.is_backjob
+      ? `Back job — ${c.customer_service}${c.rma_ref ? ` &middot; ${c.rma_ref}` : ''} <span style="display:inline-block;font-size:0.58rem;font-weight:700;letter-spacing:0.04em;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;border-radius:4px;padding:0 0.35rem;vertical-align:middle;">FREE · ₱0</span>`
+      : c.services;
+    const q = c.quotation;
+    const pesoN = n => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    // What the card says about where this booking is, and what comes next.
+    let note = '', primary = '', undo = '';
+    const undoLink = `<a href="javascript:void(0)" onclick="dsUndo(${c.id})" style="font-size:0.74rem;color:var(--muted);align-self:center;margin-left:0.2rem;">Undo</a>`;
+    if (c.status_key === 'confirmed') {
+      // Start is clicked in Manage Bookings; this card only shows where that stands.
+    } else if (c.status_key === 'inspection') {
+      const waiting = q && q.status === 'awaiting_customer';
+      if (waiting) note = dsNote(`<strong>Waiting for the customer</strong> to answer the quotation (${pesoN(q.extra)} extra work). Start Work is on hold until they reply.`, 'yellow');
+      else if (q && q.status === 'approved') note = dsNote(`The customer <strong>approved</strong> the quotation (${pesoN(q.extra)} extra work). You can start work.`, 'green');
+      else if (q && q.status === 'declined') note = dsNote('The customer <strong>declined</strong> the quotation — only the booked service will be done. You can start work.', 'grey');
+      else note = dsNote('Inspect the motorcycle. Send a quotation if extra work is needed, or start work if not.', 'grey');
+      primary = `
+        <button type="button" class="btn-cancel" style="padding:0.4rem 0.8rem;font-size:0.76rem;font-weight:700;" onclick="window.location.href='/quotation/new?booking_id=${c.id}'">Send Quotation</button>
+        <button type="button" class="btn-primary-custom" ${waiting ? 'disabled' : ''} style="padding:0.4rem 0.9rem;font-size:0.76rem;${waiting ? 'opacity:0.5;cursor:not-allowed;' : ''}" onclick="dsSetStatus(${c.id}, 'in_progress', 'Work started — customer notified.')">No Extra Work — Start Work</button>`;
+      undo = undoLink;
+    } else if (c.status_key === 'in_progress') {
+      if (q && q.status === 'approved') note = dsNote(`The customer approved the quotation — ${pesoN(q.extra)} extra work.`, 'green');
+      else if (q && q.status === 'declined') note = dsNote('The customer declined the quotation — only the booked service is being done.', 'grey');
+      primary = `<button type="button" class="btn-primary-custom" style="padding:0.4rem 0.9rem;font-size:0.76rem;" onclick="openDsComplete(${c.id})">Mark Completed</button>`;
+      undo = undoLink;
+    } else if (c.status_key === 'completed') {
+      note = dsNote(c.is_backjob
+        ? `Completed at ${c.completed_label || ''}. Back job done — <strong>Free (₱0)</strong>${c.rma_ref ? `, claim ${c.rma_ref} closed` : ''}.`
+        : `Completed at ${c.completed_label || ''}. Invoice sent to the customer.`, 'green');
+    }
+
+    const canAct = !cancelled && c.status_key !== 'completed';
+    const confirmedOnly = c.status_key === 'confirmed';
+    const started = c.status_key === 'inspection' || c.status_key === 'in_progress';
+    const border = cancelled ? '#d1d5db' : st.line;
+    const off = 'opacity:0.45;cursor:not-allowed;';
+    // While Confirmed: Reschedule / Cancel work, running-late controls wait for Start.
+    // Once started: running-late works, Reschedule / Cancel are greyed out.
+    const lateOff = confirmedOnly ? off : '';
+    const backOnTimeOn = started && c.overrun_minutes > 0;
+    const moveOff = confirmedOnly ? '' : off;
+    const hint = confirmedOnly
+      ? '+30m, +1h and Back on time unlock once Start is clicked in Bookings.'
+      : (started ? "Reschedule and Cancel aren't available once work has started." : '');
     return `
-      <div id="booking-card-${c.id}" style="border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.8rem;transition:box-shadow 0.3s, border-color 0.3s;">
-        <div style="display:flex;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;${strike}">
-          <div>
-            <div style="font-weight:700;font-size:0.86rem;">${c.customer}</div>
-            <div style="font-size:0.74rem;color:var(--muted);">${c.time_label} – ${c.end_label} &middot; ${lenLabel} &middot; ${c.ref}</div>
+      <div id="booking-card-${c.id}" style="border:1px solid var(--border);border-left:3px solid ${border};border-radius:8px;padding:0.65rem 0.8rem;transition:box-shadow 0.3s, border-color 0.3s;">
+        <div style="display:flex;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+          <div style="${strike}">
+            <div style="font-weight:700;font-size:0.9rem;">${c.customer}</div>
+            <div style="font-size:0.74rem;color:var(--muted);">${c.time_label} – ${c.end_label} &middot; ${lenLabel} &middot; ${c.ref}${runningLate}</div>
           </div>
-          <div style="display:flex;gap:0.3rem;flex-wrap:wrap;align-content:flex-start;">${tagsHTML}</div>
+          <div style="display:flex;gap:0.3rem;flex-wrap:wrap;align-content:flex-start;">${tagsHTML} ${pill}</div>
         </div>
         <div style="font-size:0.8rem;margin-top:0.45rem;${strike}">${mechLine}</div>
         ${c.chosen_by ? `<div style="font-size:0.71rem;color:var(--muted);">${c.chosen_by}</div>` : ''}
         <div style="font-size:0.76rem;color:var(--muted);margin-top:0.2rem;">${c.motorcycle || '—'}</div>
-        <div style="font-size:0.76rem;color:var(--muted);">${c.services}</div>
+        <div style="font-size:0.76rem;color:var(--muted);">${serviceLine}</div>
+        ${cancelled ? '' : dsProgressBar(c)}
+        ${note}
         ${canAct ? `
-        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.6rem;">
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.65rem;align-items:center;">
           <select id="card-mech-${c.id}" style="font-size:0.73rem;padding:0.3rem;border:1px solid var(--border);border-radius:6px;" onchange="if(this.value!=='__noop__')assignCardMechanic(${c.id}, this.value)">
             <option value="__noop__">Assign mechanic…</option>
           </select>
-          <button type="button" class="btn-cancel" style="padding:0.3rem 0.55rem;font-size:0.71rem;" onclick="runningLong(${c.id}, 'add30')">+30m</button>
-          <button type="button" class="btn-cancel" style="padding:0.3rem 0.55rem;font-size:0.71rem;" onclick="runningLong(${c.id}, 'add60')">+1h</button>
-          <button type="button" class="btn-cancel" style="padding:0.3rem 0.55rem;font-size:0.71rem;" onclick="runningLong(${c.id}, 'reset')">Back on time</button>
-          <button type="button" class="btn-action-edit" style="padding:0.3rem 0.55rem;font-size:0.71rem;" onclick='openRescheduleModal(${c.id}, ${JSON.stringify(c.services)}, ${JSON.stringify(c.customer)}, ${JSON.stringify(c.time_label + " – " + c.end_label)})'>Reschedule</button>
-          <button type="button" class="btn-cancel" style="padding:0.3rem 0.55rem;font-size:0.71rem;color:#b91c1c;" onclick="cancelCardBooking(${c.id})">Cancel</button>
-        </div>` : (c.status === 'cancelled' ? `
+          <button type="button" class="btn-cancel" ${confirmedOnly ? 'disabled' : ''} style="padding:0.3rem 0.55rem;font-size:0.71rem;${lateOff}" onclick="runningLong(${c.id}, 'add30')">+30m</button>
+          <button type="button" class="btn-cancel" ${confirmedOnly ? 'disabled' : ''} style="padding:0.3rem 0.55rem;font-size:0.71rem;${lateOff}" onclick="runningLong(${c.id}, 'add60')">+1h</button>
+          <button type="button" class="btn-cancel" ${backOnTimeOn ? '' : 'disabled'} style="padding:0.3rem 0.55rem;font-size:0.71rem;${backOnTimeOn ? '' : off}" onclick="runningLong(${c.id}, 'reset')">Back on time</button>
+          <button type="button" class="btn-action-edit" ${confirmedOnly ? '' : 'disabled'} style="padding:0.3rem 0.55rem;font-size:0.71rem;${moveOff}" ${confirmedOnly ? `onclick='openRescheduleModal(${c.id}, ${JSON.stringify(c.services)}, ${JSON.stringify(c.customer)}, ${JSON.stringify(c.time_label + " – " + c.end_label)})'` : ''}>Reschedule</button>
+          <button type="button" class="btn-cancel" ${confirmedOnly ? '' : 'disabled'} style="padding:0.3rem 0.55rem;font-size:0.71rem;color:#b91c1c;${moveOff}" ${confirmedOnly ? `onclick="openDsCancel(${c.id})"` : ''}>Cancel</button>
+          ${confirmedOnly ? `<span style="margin-left:auto;font-size:0.73rem;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:0.3rem 0.65rem;white-space:nowrap;">Start it from Bookings</span>` : ''}
+        </div>
+        ${started ? `<div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;align-items:center;">${primary}${undo}</div>` : ''}
+        ${hint ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.45rem;">${hint}</div>` : ''}
+        ${c.late_notice ? `<div style="margin-top:0.5rem;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:0.4rem 0.7rem;font-size:0.72rem;color:#9a3412;display:flex;flex-wrap:wrap;gap:0.3rem 1rem;align-items:center;">
+          <span style="color:#15803d;font-weight:600;">✓ ${c.late_notice.first_name} notified in the portal</span>
+          ${c.late_notice.email ? `<span style="color:#15803d;font-weight:600;">✓ Email sent to ${c.late_notice.email}</span>` : ''}
+          <span style="margin-left:auto;color:#9a3412;">${c.late_notice.text} · sent ${c.late_notice.sent_at}</span></div>` : ''}` : (cancelled ? `
         <div style="margin-top:0.6rem;">
           <button type="button" class="btn-primary-custom" style="padding:0.3rem 0.6rem;font-size:0.71rem;" onclick="restoreCardBooking(${c.id})">Restore</button>
         </div>` : '')}
       </div>`;
+  }
+
+  // ── Workflow actions on a card ──
+  async function dsSetStatus(bid, status, okMsg) {
+    try {
+      const res = await fetch(`/booking/${bid}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: `status=${encodeURIComponent(status)}`,
+      });
+      const data = await res.json();
+      if (data.success) { showToast(okMsg || 'Updated.', 'success'); loadDaySchedule(); }
+      else showToast(data.error || 'Could not update this booking.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  async function dsUndo(bid) {
+    try {
+      const res = await fetch(`/booking/${bid}/undo-status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (data.success) { showToast('Moved back one step.', 'success'); loadDaySchedule(); }
+      else showToast(data.error || 'Could not undo.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
+  }
+
+  // Mark Completed: confirm first — it sends the invoice (or, for a free back job, closes the claim).
+  let _dsCompleteId = null;
+  function openDsComplete(bid) {
+    const c = _dsCards[bid];
+    if (!c) return;
+    _dsCompleteId = bid;
+    const peso = n => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const approved = c.quotation && c.quotation.status === 'approved' ? c.quotation.extra : 0;
+    document.getElementById('dc-customer').textContent = c.customer;
+    document.getElementById('dc-service').textContent  = c.is_backjob ? `Back job — ${c.customer_service}` : c.services;
+    document.getElementById('dc-mechanic').textContent = c.mechanic || '—';
+    const extraRow = document.getElementById('dc-extra-row');
+    extraRow.style.display = approved > 0 ? 'flex' : 'none';
+    document.getElementById('dc-extra').textContent = peso(approved);
+    const priceRow = document.getElementById('dc-price-row');
+    priceRow.style.display = c.is_backjob ? 'flex' : 'none';
+    document.getElementById('dc-note').textContent = c.is_backjob
+      ? `This sets the back job to Completed${approved > 0 ? ' and invoices only the approved extra work' : ' — it is free, so no invoice is sent'}, and closes the claim${c.rma_ref ? ' ' + c.rma_ref : ''}. The customer is notified.`
+      : 'This sets the booking to Completed, sends the customer their invoice, and notifies them.';
+    openModal('modal-ds-complete');
+  }
+  async function confirmDsComplete() {
+    const btn = document.getElementById('dc-confirm-btn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/booking/${_dsCompleteId}/complete-invoice`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      closeModal('modal-ds-complete');
+      if (data.success) { showToast('Completed — customer notified.', 'success'); loadDaySchedule(); }
+      else showToast(data.error || 'Could not complete this booking.', 'error');
+    } catch (e) { closeModal('modal-ds-complete'); showToast('Network error — please try again.', 'error'); }
+    finally { btn.disabled = false; }
+  }
+
+  // Cancel (Confirmed only): a reason is required — the customer sees it by notification and email.
+  let _dsCancelId = null;
+  function openDsCancel(bid) {
+    const c = _dsCards[bid];
+    if (!c) return;
+    _dsCancelId = bid;
+    const day = document.getElementById('day-schedule-date').value;
+    const dayLabel = day ? new Date(day + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    document.getElementById('dx-customer').textContent = c.customer;
+    document.getElementById('dx-ref').textContent = c.ref;
+    document.getElementById('dx-when').textContent = `${dayLabel}, ${c.time_label} – ${c.end_label}`;
+    document.getElementById('dx-mechanic').textContent = c.mechanic ? `${c.mechanic}${c.specialization ? ' — ' + c.specialization : ''}` : 'Not assigned';
+    document.getElementById('dx-service').textContent = c.services;
+    document.getElementById('dx-reason').value = '';
+    document.getElementById('dx-error').style.display = 'none';
+    dxUpdate();
+    openModal('modal-ds-cancel');
+    setTimeout(() => document.getElementById('dx-keep-btn').focus(), 50);   // "Keep Booking" is focused first
+  }
+  function dxPickReason(text) {
+    document.getElementById('dx-reason').value = text;
+    dxUpdate();
+    document.getElementById('dx-reason').focus();
+  }
+  // The red button stays off until there's a reason to send.
+  function dxUpdate() {
+    const v = document.getElementById('dx-reason').value;
+    document.getElementById('dx-count').textContent = `${v.length} / 300`;
+    const ok = v.trim().length > 0;
+    const btn = document.getElementById('dx-confirm-btn');
+    btn.disabled = !ok;
+    btn.style.opacity = ok ? '1' : '0.5';
+    btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+  }
+  async function confirmDsCancel() {
+    const reason = document.getElementById('dx-reason').value.trim();
+    const errEl = document.getElementById('dx-error');
+    if (!reason) { errEl.textContent = 'Say why — the customer will see this reason.'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('dx-confirm-btn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/booking/${_dsCancelId}/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notify: true, reason }) });
+      const data = await res.json();
+      if (data.success) { closeModal('modal-ds-cancel'); showToast(data.message || 'Cancelled.', 'success'); loadDaySchedule(); }
+      else { errEl.textContent = data.error || 'Could not cancel.'; errEl.style.display = 'block'; }
+    } catch (e) { errEl.textContent = 'Network error — please try again.'; errEl.style.display = 'block'; }
+    finally { btn.disabled = false; }
   }
 
   function populateCardMechanicSelects(data) {
@@ -3694,26 +4564,10 @@
         body: JSON.stringify({ action }),
       });
       const data = await res.json();
-      if (data.success) { showToast('Updated.', 'success'); loadDaySchedule(); }
-      else showToast(data.error || 'Could not update.', 'error');
-    } catch (e) { showToast('Network error — please try again.', 'error'); }
-  }
-
-  async function cancelCardBooking(bid) {
-    if (!confirm('Cancel this booking?')) return;
-    const notify = confirm('Tell the customer?\n\nOK = yes, notify them. Cancel = no, stay quiet.');
-    let reason = '';
-    if (notify) {
-      reason = prompt('Reason (one honest sentence — this goes in the message the customer sees):', '') || '';
-    }
-    try {
-      const res = await fetch(`/booking/${bid}/cancel`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notify, reason }),
-      });
-      const data = await res.json();
-      if (data.success) { showToast(data.message || 'Cancelled.', 'success'); loadDaySchedule(); }
-      else showToast(data.error || 'Could not cancel.', 'error');
+      if (data.success) {
+        showToast(data.warning || (data.notified ? (data.emailed ? 'Updated — customer notified by portal and email.' : 'Updated — customer notified in the portal.') : 'Updated.'), data.warning ? 'warning' : 'success');
+        loadDaySchedule();
+      } else showToast(data.error || 'Could not update.', 'error');
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
 
@@ -3956,7 +4810,7 @@
   }
 
   async function confirmCashReceived(bookingId) {
-    if (!confirm('Confirm that the cashier received this cash payment in full?')) return;
+    if (!await askConfirm({ title: 'Cash received in full?', message: 'Confirm that the cashier received this cash payment in full.', confirmLabel: 'Yes, Received' })) return;
     try {
       const res = await fetch(`/booking/${bookingId}/invoice/record-cash`, { method: 'POST' });
       const data = await res.json();
@@ -4045,6 +4899,7 @@
     if (r.status === 'cancelled') return 'Cancelled';
     if (r.status === 'approved') {
       if (r.kind === 'product' && !r.item_returned) return 'Waiting for your item';
+      if (r.resolution === 'refund' && r.cash_ready_at && r.refund_method !== 'gcash') return 'Ready to Claim';
       if (r.kind === 'product' && r.item_returned && r.resolution === 'refund') return 'Item Received';
       if (r.kind === 'service' && r.resolution === 'redo_service' && r.redo_date) return 'Back job booked';
       return 'Approved';
@@ -4070,6 +4925,7 @@
     'Replacement has arrived': { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
     'Completed':              { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
     'Back job booked':        { bg: '#ede9fe', color: '#5b21b6', border: '#8b5cf6' },
+    'Ready to Claim':         { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
     'Refunded':               { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
     'Declined':               { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
     'Closed':                 { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
@@ -4231,6 +5087,7 @@
     const r = _returnsItems.find(x => x.id === rid);
     if (!r) return;
     document.getElementById('rr-modal-body').innerHTML = returnModalBodyHTML(r);
+    tickBackJobs();
     openModal('modal-return-review');
   }
 
@@ -4254,7 +5111,7 @@
   // when, built from the same timestamps the queue already tracks.
   function adminReturnTimelineEntries(r) {
     const entries = [{ time: r.created_at, text: `Claim filed — ${returnOutcomeLabel(r.kind, r.desired_outcome)} requested.` }];
-    if (r.info_request_note) entries.push({ time: r.created_at, text: `Shop asked: "${r.info_request_note}"` });
+    if (r.info_request_note) entries.push({ time: r.info_requested_at || r.created_at, text: `Shop asked: "${r.info_request_note}"` });
     if (r.info_provided_at) entries.push({ time: r.info_provided_at, text: 'Customer replied with the requested information.' });
     if (r.decided_at) {
       entries.push({ time: r.decided_at, text: r.status === 'denied'
@@ -4262,8 +5119,13 @@
         : `Approved — ${returnOutcomeLabel(r.kind, r.resolution)}${r.resolution === 'refund' && r.refund_amount ? ` (₱${Number(r.refund_amount).toFixed(2)})` : ''}. ${r.decision_reason || ''}`.trim() });
     }
     if (r.item_returned_at) entries.push({ time: r.item_returned_at, text: 'Item marked received at the shop.' });
-    if (r.redo_date) entries.push({ time: r.decided_at, text: `Back job scheduled for ${r.redo_date}${r.redo_time ? ' ' + r.redo_time : ''}${r.redo_mechanic_name ? ' with ' + r.redo_mechanic_name : ''}.` });
-    if (r.resolved_at) entries.push({ time: r.resolved_at, text: 'Marked resolved — remedy carried out.' });
+    if (r.redo_date) entries.push({ time: r.decided_at, text: `Back job scheduled for ${r.redo_when || r.redo_date}${r.redo_mechanic_name ? ' with ' + r.redo_mechanic_name : ''}.` });
+    if (r.cash_ready_at) entries.push({ time: r.cash_ready_at, text: `Cash refund ready to claim at the counter — customer notified.` });
+    if (r.resolved_at) entries.push({ time: r.resolved_at, text: r.resolution === 'refund'
+      ? (r.refund_method === 'gcash'
+          ? `Refund of ₱${Number(r.refund_amount || 0).toFixed(2)} sent via GCash. Claim closed.`
+          : `Refund of ₱${Number(r.refund_amount || 0).toFixed(2)} given in cash at the shop counter. Claim closed.`)
+      : (r.resolution === 'redo_service' ? 'Back job done — claim closed.' : 'Marked resolved — remedy carried out.') });
     if (r.replacement_shipped_at) entries.push({ time: r.replacement_shipped_at, text: r.is_pickup
       ? 'Replacement ready — waiting for the customer to pick it up at the shop.'
       : `Replacement shipped — on its way to ${r.delivery_address || 'the customer'}.` });
@@ -4412,6 +5274,19 @@
       </div>` : '';
     const mechanicHTML = r.requested_mechanic_name
       ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">Requested (not guaranteed): ${r.requested_mechanic_name} to handle the back job</div>` : '';
+    // Refund Method: where the money goes. Older claims with no method on file follow the cash flow.
+    const rfMethod = r.desired_outcome === 'refund' ? (r.refund_method || 'cash') : null;
+    const refundViaHTML = rfMethod === 'gcash' ? `
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;font-size:0.85rem;color:var(--text);">
+        <span style="background:#f3f4f6;border:1px solid var(--border);border-radius:999px;padding:0.2rem 0.7rem;font-size:0.78rem;font-weight:600;">GCash</span>
+        <strong>${r.gcash_number || '—'}</strong>
+        <span style="color:var(--muted);">&middot; ${r.gcash_account_name || ''}</span>
+        <button type="button" class="btn-cancel" style="padding:0.15rem 0.55rem;font-size:0.72rem;" onclick="copyText('${(r.gcash_number || '').replace(/'/g, '')}', this)">Copy</button>
+      </div>` : (rfMethod === 'cash' ? `
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;font-size:0.85rem;color:var(--text);">
+        <span style="background:#f3f4f6;border:1px solid var(--border);border-radius:999px;padding:0.2rem 0.7rem;font-size:0.78rem;font-weight:600;">Cash</span>
+        <span style="color:var(--muted);">Customer claims it at the shop counter</span>
+      </div>` : '');
     const askHTML = r.desired_outcome === 'refund' && r.requested_refund_amount
       ? `${returnOutcomeLabel(r.kind, r.desired_outcome)} (asked for ₱${Number(r.requested_refund_amount).toFixed(2)})`
       : returnOutcomeLabel(r.kind, r.desired_outcome);
@@ -4421,7 +5296,7 @@
         ${r.resolution ? ` — ${returnOutcomeLabel(r.kind, r.resolution)}` : ''}
         ${r.resolution === 'refund' && r.refund_amount ? ` (₱${Number(r.refund_amount).toFixed(2)})` : ''}: ${r.decision_reason}
       </div>` : '';
-    const infoHTML = (r.info_request_note || r.info_provided_text) ? `
+    const infoHTML = (!r.awaiting_customer_info && (r.info_request_note || r.info_provided_text)) ? `
       <div style="margin-top:0.6rem;padding:0.6rem 0.75rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:0.8rem;">
         ${r.info_request_note ? `<div><strong>Asked:</strong> ${r.info_request_note}</div>` : ''}
         ${r.info_provided_text ? `<div style="margin-top:0.3rem;"><strong>Customer replied:</strong> ${r.info_provided_text}</div>` : ''}
@@ -4441,7 +5316,13 @@
     const claimValueHTML = r.claim_value ? `₱${Number(r.claim_value).toFixed(2)}` : '—';
 
     let actionsHTML = '';
-    if ((r.status === 'submitted' || r.status === 'under_review') && !r.awaiting_customer_info) {
+    if ((r.status === 'submitted' || r.status === 'under_review') && r.awaiting_customer_info) {
+      actionsHTML = `
+        <div style="margin-top:0.9rem;padding:0.75rem 0.9rem;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;font-size:0.82rem;color:#78350f;line-height:1.5;">
+          <div><strong>Asked:</strong> ${r.info_request_note || ''}</div>
+          <div style="margin-top:0.3rem;font-weight:700;color:#92400e;">Waiting for the customer to reply.</div>
+        </div>`;
+    } else if ((r.status === 'submitted' || r.status === 'under_review') && !r.awaiting_customer_info) {
       const alt = returnAlternateOutcome(r) || {};
       actionsHTML = `
         <div style="margin-top:0.9rem;padding-top:0.75rem;border-top:1px dashed var(--border);">
@@ -4455,7 +5336,7 @@
           <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
             <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="showReturnDecisionPanel(${r.id}, 'asked')">Approve As Asked</button>
             <button type="button" class="btn-cancel" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="showReturnDecisionPanel(${r.id}, 'alt')">Approve, But Offer Something Else</button>
-            <button type="button" class="btn-cancel" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="requestReturnInfo(${r.id})">Ask For More From The Customer</button>
+            <button type="button" class="btn-cancel" id="rr-btn-info-${r.id}" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="showReturnDecisionPanel(${r.id}, 'info')">Ask For More From The Customer</button>
             <button type="button" class="btn-cancel" style="padding:0.4rem 0.8rem;font-size:0.78rem;color:#b91c1c;" onclick="showReturnDecisionPanel(${r.id}, 'decline')">Decline</button>
           </div>
 
@@ -4471,6 +5352,21 @@
             ${alt.value === 'refund' ? `<input type="number" id="rr-alt-amount-${r.id}" step="0.01" min="0" placeholder="Refund amount (₱)" style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:6px;margin-bottom:0.4rem;">` : ''}
             <textarea id="rr-alt-reason-${r.id}" placeholder="Say what changed and why — the customer sees this word for word…" style="width:100%;min-height:60px;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.8rem;resize:vertical;"></textarea>
             <button type="button" class="btn-primary-custom" style="margin-top:0.5rem;padding:0.35rem 0.7rem;font-size:0.76rem;" onclick="confirmApproveAlternate(${r.id}, '${alt.value || ''}')">Confirm — Offer ${alt.title || 'Alternate'}</button>
+          </div>
+
+          <div id="rr-panel-info-${r.id}" style="display:none;margin-top:0.7rem;padding:0.7rem 0.75rem;background:#fafafa;border:1px solid var(--border);border-radius:8px;">
+            <div style="font-size:0.8rem;color:var(--text);margin-bottom:0.5rem;">Asking the customer for more. <strong>This becomes the notification they see.</strong></div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.5rem;">
+              ${[['Clearer photo', 'Could you send a clearer photo of the problem?'],
+                 ['Short video of the problem', 'Could you send a short video showing the problem?'],
+                 ['Receipt or order proof', 'Could you send your receipt or proof of order?']].map(([label, text]) => `
+                <button type="button" onclick="fillReturnInfoChip(${r.id}, '${text.replace(/'/g, "\\'")}')" style="font-family:inherit;font-size:0.72rem;padding:0.2rem 0.6rem;border:1px solid var(--border);border-radius:99px;background:#fff;color:var(--text);cursor:pointer;">${label}</button>`).join('')}
+            </div>
+            <textarea id="rr-info-text-${r.id}" maxlength="500" oninput="updateReturnInfoPanel(${r.id})" placeholder="What do you need from the customer? — they see this word for word…" style="width:100%;min-height:70px;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.8rem;resize:vertical;"></textarea>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.5rem;">
+              <span id="rr-info-count-${r.id}" style="font-size:0.72rem;color:var(--muted);">0 / 500</span>
+              <button type="button" id="rr-info-send-${r.id}" class="btn-primary-custom" disabled style="padding:0.35rem 0.7rem;font-size:0.76rem;opacity:0.5;cursor:not-allowed;" onclick="requestReturnInfo(${r.id})">Confirm — Ask the Customer</button>
+            </div>
           </div>
 
           <div id="rr-panel-decline-${r.id}" style="display:none;margin-top:0.7rem;padding:0.7rem 0.75rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;">
@@ -4495,27 +5391,71 @@
             <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Schedule The Back Job</div>
             ${returnRedoSchedulerHTML(r)}
           </div>`;
-      } else if (r.resolution === 'refund') {
+      } else if (r.resolution === 'refund' && r.refund_method === 'gcash') {
         actionsHTML = `
           <div style="margin-top:0.9rem;">
-            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">Release ₱${Number(r.refund_amount || 0).toFixed(2)}</button>
+            <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Send the money from the shop's GCash, then upload the receipt.</div>
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="openGcashRelease(${r.id})">Release ${fmtPeso(r.refund_amount)}</button>
+          </div>`;
+      } else if (r.resolution === 'refund' && !r.cash_ready_at) {
+        actionsHTML = `
+          <div style="margin-top:0.9rem;">
+            <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">The item is back. Let the customer know their cash refund is ready to claim at the counter.</div>
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="openCashReady(${r.id})">Ready to Claim</button>
+          </div>`;
+      } else if (r.resolution === 'refund') {
+        actionsHTML = `
+          <div style="margin-top:0.9rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:0.8rem 0.9rem;">
+            <div style="display:flex;gap:0.7rem;align-items:flex-start;">
+              <span style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+              <div style="font-size:0.8rem;line-height:1.7;color:var(--text);">
+                <div style="font-weight:700;color:#1d4ed8;font-size:0.84rem;">Waiting for ${r.customer.split(' ')[0]} to claim ${fmtPeso(r.refund_amount)}</div>
+                <div><span style="display:inline-block;min-width:60px;color:var(--muted);">Where</span><strong>Shop counter</strong></div>
+                <div><span style="display:inline-block;min-width:60px;color:var(--muted);">Notified</span><strong>${rrFmt(r.cash_ready_at)}</strong></div>
+                <div><span style="display:inline-block;min-width:60px;color:var(--muted);">Ask for</span><strong>${r.ref}</strong></div>
+              </div>
+            </div>
+            <button type="button" class="btn-primary-custom" style="margin-top:0.6rem;padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="openCashGiven(${r.id})">Mark Cash Given</button>
           </div>`;
       } else if (r.resolution === 'replacement') {
         actionsHTML = `
           <div style="margin-top:0.9rem;">
-            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">${r.is_pickup ? 'Mark Ready for Pickup' : 'Mark Replacement Shipped'}</button>
+            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="${r.is_pickup ? `askReadyForPickup(${r.id})` : `resolveReturn(${r.id})`}">${r.is_pickup ? 'Mark Ready for Pickup' : 'Mark Replacement Shipped'}</button>
           </div>`;
       } else {
+        // A scheduled back job: Done unlocks at its start time (and not while a
+        // quotation is unanswered); Reschedule stays available throughout.
+        const row = (label, value) => `<div><span style="display:inline-block;min-width:62px;color:var(--muted);">${label}</span><strong>${value}</strong></div>`;
+        const extra = Number(r.redo_extra_total || 0);
+        const priceText = extra > 0 ? `Free (₱0) + ${fmtPeso(extra)} extra work` : 'Free (₱0)';
         actionsHTML = `
-          <div style="margin-top:0.9rem;">
-            <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="resolveReturn(${r.id})">Back Job Done</button>
+          <div style="margin-top:0.9rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:0.8rem 0.9rem;">
+            <div style="display:flex;gap:0.7rem;align-items:flex-start;">
+              <span style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+              <div style="font-size:0.8rem;line-height:1.7;color:var(--text);">
+                <div style="font-weight:700;color:#1d4ed8;font-size:0.84rem;">Back job scheduled</div>
+                ${row('When', r.redo_when || '—')}
+                ${row('Mechanic', r.redo_mechanic_name || '—')}
+                ${row('Service', `${r.subject} (back job)`)}
+                ${row('Price', priceText)}
+              </div>
+            </div>
+            <div style="display:flex;gap:0.4rem;margin-top:0.6rem;">
+              <button type="button" id="rr-bj-done-${r.id}" class="btn-primary-custom" disabled style="padding:0.4rem 0.8rem;font-size:0.78rem;opacity:0.5;cursor:not-allowed;" onclick="openBackJobDone(${r.id})">Back Job Done</button>
+              <button type="button" class="btn-cancel" style="padding:0.4rem 0.8rem;font-size:0.78rem;border-color:#93c5fd;color:#1d4ed8;" onclick="document.getElementById('rr-bj-resched-${r.id}').style.display='block'">Reschedule</button>
+            </div>
+            <div class="bj-countdown" id="rr-bj-count-${r.id}" data-rid="${r.id}" data-start="${r.redo_start_iso || ''}" data-await="${r.redo_quotation_status === 'awaiting_customer' ? '1' : ''}" style="margin-top:0.5rem;font-size:0.76rem;color:var(--muted);display:flex;align-items:center;gap:0.35rem;"></div>
+            <div id="rr-bj-resched-${r.id}" style="display:none;margin-top:0.7rem;padding-top:0.7rem;border-top:1px dashed #bfdbfe;">
+              <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Pick a new date and time</div>
+              ${returnRedoSchedulerHTML(r)}
+            </div>
           </div>`;
       }
     } else if (r.status === 'replacement_shipped') {
       actionsHTML = r.is_pickup ? `
         <div style="margin-top:0.9rem;">
           <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Ready and waiting at the shop for the customer to pick up.</div>
-          <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="markReturnArrived(${r.id})">Mark Picked Up</button>
+          <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="askPickedUp(${r.id})">Mark Picked Up</button>
         </div>` : `
         <div style="margin-top:0.9rem;">
           <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">On its way to ${r.delivery_address || 'the customer'}.</div>
@@ -4528,7 +5468,48 @@
       actionsHTML = `
         <div style="margin-top:0.9rem;">
           <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">${r.is_pickup ? 'Picked up at the shop' : `Delivered to ${r.delivery_address || 'the customer'}`} — waiting on them to confirm receipt, or close it out here yourself.</div>
-          <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="completeReturn(${r.id})">Mark Handed Over</button>
+          <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="askHandedOver(${r.id})">Mark Handed Over</button>
+        </div>`;
+    } else if (r.status === 'resolved' && r.resolution === 'redo_service') {
+      const t = r.redo_done_texts || {};
+      const extra = Number(r.redo_extra_total || 0);
+      actionsHTML = `
+        <div style="margin-top:0.9rem;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:0.8rem 0.9rem;">
+          <div style="display:flex;gap:0.7rem;align-items:flex-start;">
+            <span style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#15803d;color:#fff;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <div style="font-size:0.8rem;line-height:1.7;color:var(--text);">
+              <div style="font-weight:700;color:#15803d;font-size:0.84rem;">Back job done — claim closed</div>
+              <div><span style="display:inline-block;min-width:62px;color:var(--muted);">Service</span><strong>${r.subject} (back job)</strong></div>
+              <div><span style="display:inline-block;min-width:62px;color:var(--muted);">Mechanic</span><strong>${r.redo_mechanic_name || '—'}</strong></div>
+              <div><span style="display:inline-block;min-width:62px;color:var(--muted);">Finished</span><strong>${r.resolved_at ? fmtWhen(r.resolved_at) : '—'}</strong></div>
+              <div><span style="display:inline-block;min-width:62px;color:var(--muted);">Price</span><strong>${extra > 0 ? `Free (₱0) + ${fmtPeso(extra)} extra work` : 'Free (₱0)'}</strong></div>
+            </div>
+          </div>
+          ${t.body ? `
+          <details style="margin-top:0.7rem;background:#fff;border:1px solid #d1fae5;border-radius:8px;padding:0.55rem 0.75rem;font-size:0.78rem;">
+            <summary style="cursor:pointer;font-weight:700;">What the customer was sent</summary>
+            <div style="margin-top:0.5rem;">
+              <div style="font-size:0.64rem;font-weight:700;letter-spacing:0.06em;color:var(--muted);text-transform:uppercase;">Notification</div>
+              <div style="margin:0.15rem 0 0.5rem;">${t.body}</div>
+              <div style="font-size:0.64rem;font-weight:700;letter-spacing:0.06em;color:var(--muted);text-transform:uppercase;">Email</div>
+              <div style="margin-top:0.15rem;"><strong>Subject: ${t.email_subject}</strong></div>
+              <div style="margin-top:0.2rem;line-height:1.5;">Hi ${t.first_name}, ${t.email_body}</div>
+            </div>
+          </details>` : ''}
+        </div>`;
+    } else if (r.status === 'resolved' && r.resolution === 'refund') {
+      const viaGcash = r.refund_method === 'gcash';
+      const receiptUrl = (viaGcash && r.refund_receipt) ? returnPhotoUrl(r.refund_receipt) : '';
+      actionsHTML = `
+        <div style="margin-top:0.9rem;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:0.8rem 0.9rem;display:flex;gap:0.8rem;align-items:flex-start;">
+          <span style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#15803d;color:#fff;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <div style="flex:1;font-size:0.8rem;line-height:1.7;color:var(--text);">
+            <div style="font-weight:700;color:#15803d;font-size:0.84rem;">${fmtPeso(r.refund_amount)} refunded ${viaGcash ? 'via GCash' : 'in cash'}</div>
+            <div><span style="display:inline-block;min-width:68px;color:var(--muted);">${viaGcash ? 'Sent to' : 'Given to'}</span><strong>${viaGcash ? `${r.gcash_number || ''} &middot; ${r.gcash_account_name || ''}` : r.customer}</strong></div>
+            ${viaGcash ? `<div><span style="display:inline-block;min-width:68px;color:var(--muted);">Receipt</span><strong>${receiptUrl ? 'Attached — click to view' : '—'}</strong></div>` : `<div><span style="display:inline-block;min-width:68px;color:var(--muted);">Where</span><strong>Shop counter</strong></div>`}
+            <div><span style="display:inline-block;min-width:68px;color:var(--muted);">Released</span><strong>${rrFmt(r.resolved_at)}</strong></div>
+          </div>
+          ${receiptUrl ? `<img src="${receiptUrl}" onclick="openReturnLightbox('${receiptUrl}')" title="View the receipt" style="width:64px;height:84px;object-fit:cover;border-radius:6px;border:1px solid #a7f3d0;cursor:zoom-in;background:#fff;">` : ''}
         </div>`;
     }
 
@@ -4557,6 +5538,7 @@
       </div>
       ${lineItemsHTML}
       ${mechanicHTML}
+      ${rfMethod ? sectionHead('Refund Method') + refundViaHTML : ''}
 
       ${r.is_pickup ? `
       ${sectionHead('Delivery')}
@@ -4573,6 +5555,11 @@
       ${sectionHead('Photos')}
       ${photosHTML}
 
+      ${r.redo_not_covered ? sectionHead('Inspection finding — not covered') + `
+        <div style="font-size:0.82rem;color:var(--text);background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:0.6rem 0.75rem;">
+          ${r.redo_not_covered.reason}
+          ${r.redo_not_covered.photos.length ? `<div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">${r.redo_not_covered.photos.map(ph => `<img src="${returnPhotoUrl(ph)}" onclick="openReturnLightbox('${returnPhotoUrl(ph)}')" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;">`).join('')}</div>` : ''}
+        </div>` : ''}
       ${infoHTML}
       ${decisionHTML}
 
@@ -4618,10 +5605,40 @@
       showToast('Tick the photo check before approving.', 'error');
       return;
     }
-    ['asked', 'alt', 'decline'].forEach(k => {
+    ['asked', 'alt', 'info', 'decline'].forEach(k => {
       const el = document.getElementById(`rr-panel-${k}-${rid}`);
       if (el) el.style.display = (k === which) ? 'block' : 'none';
     });
+    // "Ask For More" stays highlighted for as long as its panel is open.
+    const infoBtn = document.getElementById(`rr-btn-info-${rid}`);
+    if (infoBtn) {
+      const on = which === 'info';
+      infoBtn.style.borderColor = on ? '#111827' : '';
+      infoBtn.style.background  = on ? '#f3f4f6' : '';
+      infoBtn.style.fontWeight  = on ? '700' : '';
+      infoBtn.style.boxShadow   = on ? '0 0 0 1px #111827' : '';
+    }
+    if (which === 'info') document.getElementById(`rr-info-text-${rid}`)?.focus();
+  }
+
+  function fillReturnInfoChip(rid, text) {
+    const ta = document.getElementById(`rr-info-text-${rid}`);
+    if (!ta) return;
+    ta.value = text;
+    updateReturnInfoPanel(rid);
+    ta.focus();
+  }
+
+  // Counter + keeps the send button off until something is actually typed.
+  function updateReturnInfoPanel(rid) {
+    const ta = document.getElementById(`rr-info-text-${rid}`);
+    const btn = document.getElementById(`rr-info-send-${rid}`);
+    if (!ta || !btn) return;
+    document.getElementById(`rr-info-count-${rid}`).textContent = `${ta.value.length} / 500`;
+    const ready = ta.value.trim().length > 0;
+    btn.disabled = !ready;
+    btn.style.opacity = ready ? '1' : '0.5';
+    btn.style.cursor = ready ? 'pointer' : 'not-allowed';
   }
 
   async function submitReturnDecision(rid, payload) {
@@ -4668,8 +5685,7 @@
   }
 
   async function requestReturnInfo(rid) {
-    const note = prompt('What do you need from the customer? This becomes the notification they see.', '');
-    if (note === null) return;
+    const note = (document.getElementById(`rr-info-text-${rid}`)?.value || '');
     if (!note.trim()) { showToast('Say what you need from the customer.', 'error'); return; }
     try {
       const res = await fetch(`/returns/${rid}/request-info`, {
@@ -4682,19 +5698,214 @@
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
 
-  async function markReturnItemReceived(rid) {
-    if (!confirm('Mark the returned item as received at the shop?')) return;
+  // ── Back job: countdown to its start, then Back Job Done unlocks ──
+  function fmtWhen(iso) {
+    const d = new Date(iso);
+    return d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' });
+  }
+  function bjCountdownText(ms) {
+    const mins = Math.max(1, Math.ceil(ms / 60000));
+    const d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
+    if (d) return `${d} day${d === 1 ? '' : 's'} ${h} hr`;
+    if (h) return `${h} hr ${m} min`;
+    return `${m} min`;
+  }
+  const _CLOCK_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  function tickBackJobs() {
+    document.querySelectorAll('.bj-countdown').forEach(el => {
+      const btn = document.getElementById(`rr-bj-done-${el.dataset.rid}`);
+      const start = el.dataset.start ? new Date(el.dataset.start).getTime() : 0;
+      const waitingQuote = el.dataset.await === '1';
+      const started = start && Date.now() >= start;
+      const enabled = started && !waitingQuote;
+      if (btn) { btn.disabled = !enabled; btn.style.opacity = enabled ? '1' : '0.5'; btn.style.cursor = enabled ? 'pointer' : 'not-allowed'; }
+      if (waitingQuote) el.innerHTML = `${_CLOCK_SVG}<span>Waiting for the customer's answer to the quotation — you can mark it done after they reply.</span>`;
+      else if (!started) el.innerHTML = `${_CLOCK_SVG}<span>You can mark it done once it starts — in <strong style="color:var(--text);">${bjCountdownText(start - Date.now())}</strong>.</span>`;
+      else el.innerHTML = `<span style="color:#15803d;">The back job has started. Mark it done once the work is finished.</span>`;
+    });
+  }
+  setInterval(tickBackJobs, 15000);
+
+  let _bjRid = null;
+  function openBackJobDone(rid) {
+    const r = _returnsItems.find(x => x.id === rid);
+    if (!r) return;
+    _bjRid = rid;
+    document.getElementById('bj-message').textContent = `Confirm ${r.redo_mechanic_name || 'the mechanic'} finished redoing the ${r.subject}. The claim closes and ${r.customer.split(' ')[0]} is notified.`;
+    document.getElementById('bj-service').textContent = `${r.subject} (back job)`;
+    document.getElementById('bj-mechanic').textContent = r.redo_mechanic_name || '—';
+    document.getElementById('bj-when').textContent = r.redo_when || '—';
+    openModal('modal-backjob-done');
+  }
+  async function confirmBackJobDone() {
+    const btn = document.getElementById('bj-confirm-btn');
+    btn.disabled = true;
+    try { await resolveReturn(_bjRid, true); } finally { btn.disabled = false; closeModal('modal-backjob-done'); }
+  }
+
+  // ── Refund release (GCash receipt upload, or the two cash steps) ──
+  function fmtPeso(n) {
+    return '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function copyText(text, btn) {
+    const done = () => { if (btn) { const old = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = old; }, 1200); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+    else { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e) {} t.remove(); done(); }
+  }
+
+  async function postRefundStep(url, opts, modalId) {
+    try {
+      const res = await fetch(url, opts);
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Done.', 'success');
+        closeModal(modalId);
+        closeModal('modal-return-review');
+        loadReturns();
+        return null;
+      }
+      return data.error || 'Could not save this.';
+    } catch (e) { return 'Network error — please try again.'; }
+  }
+
+  let _cashRid = null;
+  function openCashReady(rid) {
+    const r = _returnsItems.find(x => x.id === rid);
+    if (!r) return;
+    _cashRid = rid;
+    document.getElementById('cr-message').textContent = `${r.customer.split(' ')[0]} will get a notification and an email to claim ${fmtPeso(r.refund_amount)} in cash at the shop counter.`;
+    document.getElementById('cr-amount').textContent = fmtPeso(r.refund_amount);
+    document.getElementById('cr-ref').textContent = r.ref;
+    openModal('modal-cash-ready');
+  }
+  async function confirmCashReady() {
+    const btn = document.getElementById('cr-confirm-btn');
+    btn.disabled = true;
+    const err = await postRefundStep(`/returns/${_cashRid}/cash-ready`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }, 'modal-cash-ready');
+    btn.disabled = false;
+    if (err) { closeModal('modal-cash-ready'); showToast(err, 'error'); }
+  }
+
+  function openCashGiven(rid) {
+    const r = _returnsItems.find(x => x.id === rid);
+    if (!r) return;
+    _cashRid = rid;
+    document.getElementById('cg-title').textContent = `Give ${fmtPeso(r.refund_amount)} in cash?`;
+    document.getElementById('cg-who').textContent = r.customer;
+    document.getElementById('cg-ref').textContent = r.ref;
+    document.getElementById('cg-amount').textContent = fmtPeso(r.refund_amount);
+    document.getElementById('cg-check-text').textContent = `I counted ${fmtPeso(r.refund_amount)} and handed it to the customer.`;
+    document.getElementById('cg-check').checked = false;
+    document.getElementById('cg-confirm-btn').disabled = true;
+    openModal('modal-cash-given');
+  }
+  async function confirmCashGiven() {
+    if (!document.getElementById('cg-check').checked) return;
+    const btn = document.getElementById('cg-confirm-btn');
+    btn.disabled = true;
+    const err = await postRefundStep(`/returns/${_cashRid}/cash-given`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ counted: true }) }, 'modal-cash-given');
+    if (err) { btn.disabled = false; showToast(err, 'error'); }
+  }
+
+  let _gcashRid = null, _gcashFile = null, _gcashReleaseAmountPlain = '';
+  function openGcashRelease(rid) {
+    const r = _returnsItems.find(x => x.id === rid);
+    if (!r) return;
+    _gcashRid = rid; _gcashFile = null;
+    _gcashReleaseAmountPlain = Number(r.refund_amount || 0).toFixed(2);
+    document.getElementById('gr-title').textContent = `Release ${fmtPeso(r.refund_amount)} refund`;
+    document.getElementById('gr-number').textContent = r.gcash_number || '';
+    document.getElementById('gr-name').textContent = r.gcash_account_name || '';
+    document.getElementById('gr-amount').textContent = fmtPeso(r.refund_amount);
+    document.getElementById('gr-file').value = '';
+    document.getElementById('gr-preview').style.display = 'none';
+    document.getElementById('gr-drop-label').innerHTML = '<strong style="color:var(--text);">Choose a screenshot</strong> or drag it here';
+    document.getElementById('gr-error').style.display = 'none';
+    document.getElementById('gr-confirm-btn').disabled = true;
+    openModal('modal-gcash-release');
+  }
+  function onGcashReceiptDrop(ev) {
+    ev.preventDefault();
+    if (ev.dataTransfer.files && ev.dataTransfer.files[0]) setGcashReceiptFile(ev.dataTransfer.files[0]);
+  }
+  function setGcashReceiptFile(file) {
+    const errEl = document.getElementById('gr-error');
+    errEl.style.display = 'none';
+    _gcashFile = null;
+    document.getElementById('gr-confirm-btn').disabled = true;
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { errEl.textContent = 'Images only — upload a screenshot of the receipt.'; errEl.style.display = 'block'; return; }
+    if (file.size > 5 * 1024 * 1024) { errEl.textContent = 'That image is over 5MB — upload a smaller screenshot.'; errEl.style.display = 'block'; return; }
+    _gcashFile = file;
+    const img = document.getElementById('gr-preview');
+    img.src = URL.createObjectURL(file);
+    img.style.display = 'block';
+    document.getElementById('gr-drop-label').textContent = file.name;
+    document.getElementById('gr-confirm-btn').disabled = false;
+  }
+  async function confirmGcashRelease() {
+    if (!_gcashFile) return;
+    const btn = document.getElementById('gr-confirm-btn');
+    btn.disabled = true;
+    const fd = new FormData();
+    fd.append('receipt', _gcashFile);
+    const err = await postRefundStep(`/returns/${_gcashRid}/release-gcash`, { method: 'POST', body: fd }, 'modal-gcash-release');
+    if (err) { btn.disabled = false; const el = document.getElementById('gr-error'); el.textContent = err; el.style.display = 'block'; }
+  }
+
+  // Opens the in-page confirmation (no browser confirm()); the request only
+  // goes out from "Yes, Mark Received".
+  let _partReceivedRid = null;
+  function markReturnItemReceived(rid) {
+    _partReceivedRid = rid;
+    // A refund claim names the amount that's about to be released.
+    const row = (typeof _returnsItems !== 'undefined' ? _returnsItems : []).find(x => x.id === rid);
+    const isRefund = row && (row.resolution === 'refund' || (!row.resolution && row.desired_outcome === 'refund'));
+    const amount = row ? Number(row.refund_amount || row.requested_refund_amount || 0) : 0;
+    const next = (isRefund && amount > 0)
+      ? `This lets you release the ₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} refund.`
+      : 'This lets you continue with the refund or replacement.';
+    document.getElementById('pr-message').textContent = `Only confirm once the returned item is physically at the shop. ${next}`;
+    openModal('modal-part-received');
+  }
+
+  async function confirmReturnItemReceived() {
+    const rid = _partReceivedRid;
+    if (!rid) return;
+    const btn = document.getElementById('pr-confirm-btn');
+    btn.disabled = true;
     try {
       const res = await fetch(`/returns/${rid}/item-received`, { method: 'POST' });
       const data = await res.json();
+      closeModal('modal-part-received');
       if (data.success) { showToast(data.message || 'Marked received.', 'success'); closeModal('modal-return-review'); loadReturns(); }
       else showToast(data.error || 'Could not mark it received.', 'error');
-    } catch (e) { showToast('Network error — please try again.', 'error'); }
+    } catch (e) {
+      closeModal('modal-part-received');
+      showToast('Network error — please try again.', 'error');
+    } finally { btn.disabled = false; _partReceivedRid = null; }
   }
 
 
-  async function resolveReturn(rid) {
-    if (!confirm('Mark this claim resolved? The customer will be told it is done.')) return;
+  // Pick-up replacements: in-page confirmation instead of a browser confirm().
+  let _readyPickupRid = null;
+  function askReadyForPickup(rid) {
+    _readyPickupRid = rid;
+    openModal('modal-ready-pickup');
+  }
+  async function confirmReadyForPickup() {
+    const rid = _readyPickupRid;
+    if (!rid) return;
+    const btn = document.getElementById('rp-confirm-btn');
+    btn.disabled = true;
+    try {
+      await resolveReturn(rid, true);
+    } finally { btn.disabled = false; _readyPickupRid = null; closeModal('modal-ready-pickup'); }
+  }
+
+  async function resolveReturn(rid, alreadyConfirmed) {
+    if (!alreadyConfirmed && !await askConfirm({ title: 'Mark replacement as shipped?', message: 'This resolves the claim and tells the customer their replacement is on its way.', confirmLabel: 'Yes, Shipped' })) return;
     try {
       const res = await fetch(`/returns/${rid}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await res.json();
@@ -4703,8 +5914,24 @@
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
 
-  async function markReturnArrived(rid) {
-    if (!confirm('Mark this replacement as arrived at the delivery address? The customer will be emailed.')) return;
+  // Pick-up replacements: in-page confirmation instead of a browser confirm().
+  let _pickedUpRid = null;
+  function askPickedUp(rid) {
+    _pickedUpRid = rid;
+    openModal('modal-picked-up');
+  }
+  async function confirmPickedUp() {
+    const rid = _pickedUpRid;
+    if (!rid) return;
+    const btn = document.getElementById('pu-confirm-btn');
+    btn.disabled = true;
+    try {
+      await markReturnArrived(rid, true);
+    } finally { btn.disabled = false; _pickedUpRid = null; closeModal('modal-picked-up'); }
+  }
+
+  async function markReturnArrived(rid, alreadyConfirmed) {
+    if (!alreadyConfirmed && !await askConfirm({ title: 'Mark as arrived?', message: 'Confirm the replacement reached the delivery address. The customer will be emailed.', confirmLabel: 'Yes, Arrived' })) return;
     try {
       const res = await fetch(`/returns/${rid}/mark-arrived`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await res.json();
@@ -4713,8 +5940,24 @@
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
 
-  async function completeReturn(rid) {
-    if (!confirm('Mark this replacement as handed over to the customer?')) return;
+  // In-page confirmation instead of a browser confirm().
+  let _handedOverRid = null;
+  function askHandedOver(rid) {
+    _handedOverRid = rid;
+    openModal('modal-handed-over');
+  }
+  async function confirmHandedOver() {
+    const rid = _handedOverRid;
+    if (!rid) return;
+    const btn = document.getElementById('ho-confirm-btn');
+    btn.disabled = true;
+    try {
+      await completeReturn(rid, true);
+    } finally { btn.disabled = false; _handedOverRid = null; closeModal('modal-handed-over'); }
+  }
+
+  async function completeReturn(rid, alreadyConfirmed) {
+    if (!alreadyConfirmed && !await askConfirm({ title: 'Mark as handed over?', message: 'This closes the claim without waiting for the customer to confirm they received the replacement.', confirmLabel: 'Yes, Handed Over' })) return;
     try {
       const res = await fetch(`/returns/${rid}/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await res.json();
@@ -4737,10 +5980,32 @@
     _rescheduleBookingId = bid;
     document.getElementById('reschedule-summary').innerHTML =
       `<strong>${customer}</strong> — ${service}<br>Currently: ${when}`;
-    document.getElementById('reschedule-date').value = document.getElementById('day-schedule-date').value;
-    document.getElementById('reschedule-time').value = '';
+    const dateEl = document.getElementById('reschedule-date');
+    dateEl.min = todayISO();   // no past days
+    dateEl.value = document.getElementById('day-schedule-date').value;
     document.getElementById('reschedule-error').style.display = 'none';
     openModal('modal-reschedule');
+    loadRescheduleSlots();
+  }
+
+  // The time picker lists only the slots this booking can really move to on that day.
+  async function loadRescheduleSlots() {
+    const sel = document.getElementById('reschedule-time');
+    const note = document.getElementById('reschedule-slot-note');
+    const date = document.getElementById('reschedule-date').value;
+    sel.innerHTML = '<option value="">Loading…</option>';
+    if (!date) { sel.innerHTML = '<option value="">Pick a date first…</option>'; return; }
+    try {
+      const res = await fetch(`/booking/${_rescheduleBookingId}/reschedule-slots?date=${encodeURIComponent(date)}`);
+      const data = await res.json();
+      const slots = data.slots || [];
+      sel.innerHTML = slots.length
+        ? '<option value="">Select a time…</option>' + slots.map(x => `<option value="${x.time}">${x.label}</option>`).join('')
+        : '<option value="">No open times this day</option>';
+      note.textContent = slots.length ? 'Only open times are listed.' : 'Nothing is open that day — pick another date.';
+    } catch (e) {
+      sel.innerHTML = '<option value="">Could not load times</option>';
+    }
   }
 
   async function submitReschedule(e) {
@@ -4823,11 +6088,10 @@
       if (st === 'in_progress') {
         actionHtml = `<div style="font-size:0.7rem;color:#d97706;font-weight:600;">Collect via Billing</div>`;
       } else if (st === 'confirmed') {
-        const schedDT   = new Date(`${svcDates[i] || d.date} ${svcTimes[i] || d.time}`);
-        const notYetDue = !isNaN(schedDT) && schedDT > new Date();
-        const startBtnHtml = notYetDue
-          ? `<button type="button" disabled title="Cannot start before ${svcDates[i] || d.date} ${svcTimes[i] || d.time}" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button>`
-          : `<button type="button" class="bd-svc-start-btn" data-bid="${bid}" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start</button>`;
+        // The server decides (scheduled time reached / 30-min early window /
+        // mechanic busy) — the slot below is filled in once it answers.
+        const notYetDue = false;
+        const startBtnHtml = `<span class="bd-svc-start-slot" data-bid="${bid}"><button type="button" disabled style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button></span>`;
         actionHtml = `
           <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
             <form method="POST" action="/booking/${bid}/status" class="status-form" id="start-service-form-${bid}">
@@ -4856,8 +6120,8 @@
         ${actionHtml}`;
       servicesList.appendChild(card);
 
-      const startBtn = card.querySelector('.bd-svc-start-btn');
-      if (startBtn) startBtn.addEventListener('click', () => openStartServiceModal(bid, d.customer, svc));
+      const startSlot = card.querySelector('.bd-svc-start-slot');
+      if (startSlot) fillStartSlot(startSlot, bid, d.customer, svc);
       const cancelBtn = card.querySelector('.bd-svc-cancel-btn');
       if (cancelBtn) cancelBtn.addEventListener('click', () => openCancelBookingModal(bid, d.customer, svc));
     });
@@ -4984,6 +6248,44 @@
     }
   }
 
+  // Start-early (up to 30 min before the booked time). Eligibility always
+  // comes from the server so the clock and the mechanic check can't drift.
+  const _START_BTN_CSS = 'padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;';
+  async function fillStartSlot(slot, bid, customer, service) {
+    let e;
+    try { e = await (await fetch(`/booking/${bid}/start-eligibility`)).json(); }
+    catch (err) { return; }
+    const note = t => `<div style="width:100%;font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">${t}</div>`;
+    if (e.state === 'ready') {
+      slot.innerHTML = `<button type="button" onclick="openStartServiceModal(${bid}, ${JSON.stringify(customer)}, ${JSON.stringify(service)})" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;cursor:pointer;${_START_BTN_CSS}">▶ Start</button>`;
+    } else if (e.state === 'early_ok') {
+      slot.innerHTML = `<button type="button" onclick="openEarlyStartModal(${bid}, ${JSON.stringify(customer)}, ${JSON.stringify(service)})" style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;cursor:pointer;${_START_BTN_CSS}">▶ Start early</button>`;
+    } else {
+      const why = e.state === 'early_busy' ? e.message : `Can start from ${e.opens_at}`;
+      slot.querySelector('button').title = why;
+      slot.insertAdjacentHTML('beforeend', note(why));
+    }
+  }
+
+  async function openEarlyStartModal(bookingId, customer, service) {
+    let e;
+    try { e = await (await fetch(`/booking/${bookingId}/start-eligibility`)).json(); }
+    catch (err) { alert('Network error. Please try again.'); return; }
+    if (e.state === 'ready') { openStartServiceModal(bookingId, customer, service); return; }
+    if (e.state !== 'early_ok') { alert(e.state === 'early_busy' ? e.message : `This booking can start from ${e.opens_at}.`); return; }
+    _startServiceFormId = 'start-service-form-' + bookingId;
+    document.getElementById('modal-es-customer').textContent = customer;
+    document.getElementById('modal-es-service').textContent  = service;
+    document.getElementById('modal-es-booked').textContent   = e.scheduled_time;
+    document.getElementById('modal-es-now').textContent      = e.now;
+    document.getElementById('modal-es-early').textContent    = `${e.minutes_early} minute${e.minutes_early === 1 ? '' : 's'} early`;
+    document.getElementById('modal-early-start').style.display = 'flex';
+  }
+  function confirmEarlyStart() {
+    document.getElementById('modal-early-start').style.display = 'none';
+    if (_startServiceFormId) submitBookingStatusForm(_startServiceFormId);
+  }
+
   // Same endpoint as the modal-less flows below, but as AJAX (X-Requested-With)
   // so a stray flash message never gets queued into the session and leaking
   // onto whatever admin page is opened next.
@@ -5101,9 +6403,9 @@
         + (a.danger ? 'color:#b91c1c;' : 'color:#111827;');
       item.onmouseover = () => { item.style.background = '#f9fafb'; };
       item.onmouseout  = () => { item.style.background = 'none'; };
-      item.onclick = function(e) {
+      item.onclick = async function(e) {
         e.stopPropagation();
-        if (!confirm(a.confirmMsg)) return;
+        if (!await askConfirm({ title: a.label + '?', message: a.confirmMsg, confirmLabel: 'Yes, ' + a.label, danger: !!a.danger })) return;
         submitUserAction(uid, a.action);
       };
       menu.appendChild(item);
@@ -5153,6 +6455,79 @@
   const PRODUCTS_PER_PAGE = 50;
   let currentProductPage = 1;
   let productSearchQuery = '';
+  let productStockFilter = 'all';   // all | in | low | out
+
+  // Low = 4 or fewer left (matches the table label and the server's pop-up rule).
+  function stockState(n) { n = parseInt(n, 10) || 0; return n <= 0 ? 'out' : (n < 5 ? 'low' : 'in'); }
+  function stockLabelHtml(n) {
+    n = parseInt(n, 10) || 0;
+    const st = stockState(n);
+    const text = st === 'out' ? 'Out of stock' : (st === 'low' ? `${n} left` : `${n} in stock`);
+    return `<span class="stock-label stock-label-${st}">${text}</span>`;
+  }
+  function updateStockPreview() {
+    const v = document.getElementById('edit-product-stock').value;
+    document.getElementById('edit-stock-preview').innerHTML = v === '' ? '—' : stockLabelHtml(v);
+  }
+
+  // Dashboard → Manage Products, pre-filtered (always sets, never toggles off).
+  function openProductsFiltered(f) {
+    goToSection('products');
+    productStockFilter = f;
+    currentProductPage = 1;
+    renderProductPage();
+  }
+
+  // "Restock" on the dashboard list: jump to the product and open its edit
+  // form with the cursor on the stock field.
+  function restockProduct(id) {
+    goToSection('products');
+    productStockFilter = 'all';
+    renderProductPage();
+    const row = document.querySelector(`#products-table tbody tr[data-id="${id}"]`);
+    if (!row) return;
+    openEditProductFromRow(row);
+    const input = document.getElementById('edit-product-stock');
+    if (input) { input.focus(); input.select(); }
+  }
+
+  function toggleInvCatView() {
+    const table = document.getElementById('inv-cat-table');
+    const chart = document.getElementById('inv-cat-chart');
+    const showTable = table.style.display === 'none';
+    table.style.display = showTable ? '' : 'none';
+    chart.style.display = showTable ? 'none' : '';
+    document.getElementById('inv-cat-toggle').textContent = showTable ? 'Chart' : 'Table';
+  }
+
+  function setStockFilter(f) {
+    productStockFilter = (productStockFilter === f && f !== 'all') ? 'all' : f;
+    currentProductPage = 1;
+    renderProductPage();
+  }
+
+  // Alerts + legend counts are derived from the table rows, so they're always
+  // in step with what the page was just rendered with (it reloads after a save).
+  function refreshStockSummary() {
+    const rows = getProductRows();
+    const by = { in: [], low: [], out: [] };
+    rows.forEach(r => by[stockState(r.dataset.stock)].push(r.dataset.name));
+    const counts = { all: rows.length, in: by.in.length, low: by.low.length, out: by.out.length };
+    document.querySelectorAll('#stock-legend .stock-chip').forEach(chip => {
+      chip.querySelector('.cnt').textContent = counts[chip.dataset.filter];
+      chip.classList.toggle('active', chip.dataset.filter === productStockFilter);
+    });
+    [['out', 'out of stock'], ['low', 'running low']].forEach(([key, phrase]) => {
+      const box = document.getElementById('stock-alert-' + key);
+      if (!box) return;
+      const names = by[key];
+      if (!names.length) { box.style.display = 'none'; return; }
+      box.style.display = '';
+      box.querySelector('.sa-title').textContent = `${names.length} product${names.length === 1 ? ' is' : 's are'} ${phrase}`;
+      const shown = names.slice(0, 5).join(', ');
+      box.querySelector('.sa-names').textContent = names.length > 5 ? `${shown}, and ${names.length - 5} more` : shown;
+    });
+  }
 
   function filterProducts(query) {
     productSearchQuery = query.toLowerCase();
@@ -5166,7 +6541,8 @@
 
   function getVisibleProductRows() {
     return getProductRows().filter(row =>
-      row.textContent.toLowerCase().includes(productSearchQuery)
+      row.textContent.toLowerCase().includes(productSearchQuery) &&
+      (productStockFilter === 'all' || stockState(row.dataset.stock) === productStockFilter)
     );
   }
 
@@ -5178,9 +6554,9 @@
     const start = (currentProductPage - 1) * PRODUCTS_PER_PAGE;
     const pageRows = new Set(filtered.slice(start, start + PRODUCTS_PER_PAGE));
     allRows.forEach(row => {
-      const matchesSearch = row.textContent.toLowerCase().includes(productSearchQuery);
-      row.style.display = (matchesSearch && pageRows.has(row)) ? '' : 'none';
+      row.style.display = pageRows.has(row) ? '' : 'none';
     });
+    refreshStockSummary();
     renderProductPagination(filtered.length, totalPages);
   }
 
@@ -5278,6 +6654,32 @@
     });
   }
 
+  // Manage Orders: search + type + status all apply together.
+  function applyOrderFilters() {
+    const q      = document.getElementById('orders-search').value.trim().toLowerCase();
+    const type   = document.getElementById('orders-type-filter').value;
+    const status = document.getElementById('orders-status-filter').value.toLowerCase().replace(/\s+/g, '');
+    const rows   = [...document.querySelectorAll('#orders-table tbody tr')];
+    let shown = 0;
+    rows.forEach(row => {
+      const statusText = (row.cells[3] ? row.cells[3].textContent : '').toLowerCase().replace(/\s+/g, '');
+      const ok = (!q || row.textContent.toLowerCase().includes(q))
+              && (!type || row.dataset.type === type)
+              && (!status || statusText.includes(status));
+      row.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    });
+    document.getElementById('orders-count').textContent = `Showing ${shown} of ${rows.length}`;
+    document.getElementById('orders-clear').style.display = (q || type || status) ? '' : 'none';
+  }
+  function clearOrderFilters() {
+    document.getElementById('orders-search').value = '';
+    document.getElementById('orders-type-filter').value = '';
+    document.getElementById('orders-status-filter').value = '';
+    applyOrderFilters();
+  }
+  document.addEventListener('DOMContentLoaded', () => { if (document.getElementById('orders-search')) applyOrderFilters(); });
+
   function filterTableByCol(tableId, colIndex, value) {
     document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
       const cell = row.cells[colIndex];
@@ -5297,13 +6699,17 @@
 
   function openEditProduct(id, name, category, price, stock, description, image) {
     document.getElementById('edit-product-name').value    = name;
-    document.getElementById('edit-product-price').value   = price;
+    document.getElementById('edit-product-price').value   = (parseFloat(price) || 0).toFixed(2);
     document.getElementById('edit-product-stock').value   = stock;
     document.getElementById('edit-product-desc').value    = description;
     document.getElementById('edit-product-form').action   = '/product/' + id + '/edit';
     document.getElementById('delete-product-form').action = '/product/' + id + '/delete';
     const sel = document.getElementById('edit-product-category');
-    for (let opt of sel.options) { opt.selected = opt.value === category; }
+    // Pre-select the product's current category; if it isn't one of the
+    // standard options (older data), add it so it's never silently blanked.
+    if (category && ![...sel.options].some(o => o.value === category)) sel.add(new Option(category, category));
+    sel.value = category || '';
+    updateStockPreview();
     resetProductImagePicker('add');   // in case "Add" was used earlier this session
     resetProductImagePicker('edit');
     if (image) setProductImagePreview('edit', image);
@@ -5813,6 +7219,40 @@ function showToast(msg, type) {
   setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 350); }, 2800);
 }
 
+// ── Product add / edit / delete ─────────────────────────────────────────────
+// Saved over AJAX so no flash() is ever queued server-side (a queued flash
+// would surface on Quotations or any other page). The pop-up is shown here,
+// on Manage Products, right after the page refreshes with the new data:
+// green when saved, orange when the product is now low or out of stock.
+(function () {
+  const KEY = 'pendingProductToast';
+  try {
+    const pending = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+    if (pending) {
+      sessionStorage.removeItem(KEY);
+      showToast(pending.message, pending.level);
+    }
+  } catch (e) {}
+
+  ['add-product-form', 'edit-product-form', 'delete-product-form'].forEach(id => {
+    const form = document.getElementById(id);
+    if (!form) return;
+    form.addEventListener('submit', async ev => {
+      if (ev.defaultPrevented) return;   // e.g. the delete confirm() was cancelled
+      ev.preventDefault();
+      try {
+        const res  = await fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: new FormData(form) });
+        const data = await res.json();
+        if (!data.success) { showToast(data.error || 'Could not save this product.', 'error'); return; }
+        try { sessionStorage.setItem(KEY, JSON.stringify({ message: data.message, level: data.level })); } catch (e) {}
+        location.reload();
+      } catch (e) {
+        showToast('Could not save this product — please try again.', 'error');
+      }
+    });
+  });
+})();
+
 // ── AJAX status-form interceptor ────────────────────────────────────────────
 const _STATUS_BADGE = {
   pending:'badge-pending', confirmed:'badge-confirmed', inprogress:'badge-inprogress',
@@ -5871,34 +7311,24 @@ document.addEventListener('submit', function(e) {
         form.closest('td').innerHTML = '<span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:0.25rem 0.6rem;border-radius:6px;">Cancelled</span>';
       } else {
         row.classList.remove('booking-done', 'booking-cancelled');
-        // Narrow the select options to reflect the new valid transitions
-        // Mirrors update_order_status()'s own allowed_next maps in admin_app.py
-        // exactly — "Completed" is deliberately never offered here for a pickup
-        // order (gcash included): the backend hard-rejects it with "completed
-        // on the Billing page", so listing it here would just be a selectable
-        // option that always errors on save.
-        const ORDER_NEXT = {
-          gcashpickup: {
-            confirmed:  [['confirmed','Confirmed'],['processing','Processing'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
-            processing: [['processing','Processing'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
-            shipped:    [['shipped','Ready to Pick Up'],['cancelled','Cancelled']]
-          },
-          cashpickup: {
-            pending:          [['pending','Pending'],['confirmed','Confirm Order'],['cancelled','Cancelled']],
-            awaiting_payment: [['awaiting_payment','Awaiting Payment'],['confirmed','Confirm Order'],['cancelled','Cancelled']],
-            confirmed:        [['confirmed','Confirmed'],['processing','Processing'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
-            processing:       [['processing','Processing'],['shipped','Ready to Pick Up'],['cancelled','Cancelled']],
-            shipped:          [['shipped','Ready to Pick Up'],['cancelled','Cancelled']]
+        // Pick-up orders always list the same four steps (no "Pending" choice);
+        // Completed is shown but locked — it happens on the Billing page. Ship
+        // orders keep the server-rendered list as-is.
+        if (sel && isOrderForm && isPickupFlow) {
+          sel.innerHTML = [['confirmed','Confirmed'],['processing','Processing'],['shipped','Ready to Pick Up']]
+            .map(([v,l]) => `<option value="${v}"${v===newStatus?' selected':''}>${l}</option>`).join('')
+            + '<option value="completed" disabled>Completed</option>';
+        } else if (sel && !isOrderForm) {
+          const nextOptions = {
+            confirmed:   [['in_progress','In Progress'],['cancelled','Cancelled']],
+            in_progress: [['completed','Completed'],['cancelled','Cancelled']]
+          };
+          if (nextOptions[newStatus]) {
+            sel.innerHTML = nextOptions[newStatus].map(([v,l]) => `<option value="${v}"${v===newStatus?' selected':''}>${l}</option>`).join('');
           }
-        };
-        const nextOptions = isOrderForm ? (ORDER_NEXT[orderFlow] || {}) : {
-          confirmed:   [['in_progress','In Progress'],['cancelled','Cancelled']],
-          in_progress: [['completed','Completed'],['cancelled','Cancelled']]
-        };
-        if (sel && nextOptions[newStatus]) {
-          sel.innerHTML = nextOptions[newStatus].map(([v,l]) => `<option value="${v}"${v===newStatus?' selected':''}>${l}</option>`).join('');
         }
-        if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+        if (btn) { btn.disabled = isOrderForm; btn.textContent = 'Save'; }
+        if (sel && isOrderForm) sel.dataset.current = newStatus;
       }
     }
     showToast(data.message, 'success');
@@ -6372,7 +7802,7 @@ function _renderRecentBookings(rows) {
       : (b.status || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     return `<tr>
       <td>${b.customer}<div class="pending-sub">${b.ref}</div></td>
-      <td>${b.service}</td>
+      <td>${b.service}${b.is_backjob ? '<span class="backjob-tag">Back job</span>' : ''}</td>
       <td>${b.date}</td>
       <td>${b.time}</td>
       <td><span class="badge" style="background:${sc.bg};color:${sc.fg};border:1px solid ${sc.fg}33;">${label}</span></td>

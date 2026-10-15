@@ -1505,16 +1505,15 @@
 
 <!-- ═══ QUOTATION DECISION CONFIRM ═══ -->
 <div class="modal-overlay" id="modal-quotation-confirm" onclick="if (event.target === this) closeQuotationConfirmModal()">
-  <div class="modal-box" style="width:380px;max-width:92vw;padding:1.75rem 1.5rem;text-align:center;">
+  <div class="modal-box" style="width:400px;max-width:92vw;padding:1.75rem 1.5rem;text-align:center;">
     <div id="qc-icon" style="width:52px;height:52px;border-radius:50%;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;"></div>
-    <h5 id="qc-title" style="margin:0 0 0.4rem;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--fg-1);"></h5>
-    <div id="qc-subtitle" style="font-size:0.82rem;color:var(--fg-3);line-height:1.5;margin-bottom:1.25rem;"></div>
-    <div id="qc-amount-box" style="border-radius:10px;padding:0.9rem;margin-bottom:1.25rem;">
-      <div id="qc-amount-label" style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem;"></div>
-      <div id="qc-amount-value" style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;"></div>
-    </div>
+    <h5 id="qc-title" style="margin:0 0 0.4rem;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.04em;color:var(--fg-1);text-transform:uppercase;"></h5>
+    <div id="qc-subtitle" style="font-size:0.82rem;color:var(--fg-3);line-height:1.5;margin-bottom:1rem;"></div>
+    <div id="qc-items" style="text-align:left;border:1px solid var(--line-2);border-radius:10px;padding:0.35rem 0.85rem 0.85rem;margin-bottom:0.8rem;"></div>
+    <div id="qc-note" style="text-align:left;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.74rem;color:var(--fg-3);line-height:1.5;margin-bottom:1.1rem;"></div>
+    <div id="qc-error" style="display:none;margin-bottom:0.8rem;padding:0.5rem 0.7rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.76rem;color:#b91c1c;"></div>
     <div style="display:flex;gap:0.6rem;">
-      <button type="button" onclick="closeQuotationConfirmModal()" style="flex:1;padding:0.75rem;background:#fff;border:1px solid var(--line-2);border-radius:10px;color:var(--fg-2);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Go back</button>
+      <button type="button" id="qc-back-btn" onclick="closeQuotationConfirmModal()" style="flex:1;padding:0.75rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;color:var(--fg-1);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Go Back</button>
       <button type="button" id="qc-confirm-btn" onclick="confirmQuotationDecision()" style="flex:1;padding:0.75rem;border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;background:var(--brand-red);"></button>
     </div>
   </div>
@@ -1760,8 +1759,21 @@
         <div id="rf-photos-skipped" style="display:none;font-size:0.76rem;color:#b91c1c;margin-top:0.4rem;"></div>
       </div>
 
+      <div class="form-group" id="rf-section-refund-method" style="display:none;">
+        <label data-step-title="How do you want to be refunded?">5 · How do you want to be refunded?</label>
+        <div id="rf-refund-method-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;"></div>
+        <input type="hidden" id="rf-refund-method" value="cash">
+        <div id="rf-gcash-fields" style="display:none;margin-top:0.6rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.8rem 0.9rem;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+            <div><label style="font-weight:400;text-transform:uppercase;font-size:0.66rem;color:var(--fg-3);">GCash number</label><input type="text" id="rf-gcash-number" inputmode="numeric" maxlength="13" placeholder="09XX XXX XXXX" oninput="updateRfSummary()"></div>
+            <div><label style="font-weight:400;text-transform:uppercase;font-size:0.66rem;color:var(--fg-3);">Account name</label><input type="text" id="rf-gcash-name" maxlength="100" placeholder="Name registered on GCash" oninput="updateRfSummary()"></div>
+          </div>
+          <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.5rem;">Double-check the number. Money sent to the wrong account can't be recovered.</div>
+        </div>
+      </div>
+
       <div class="form-group">
-        <label data-step-title="Check Before Sending">5 · Check Before Sending</label>
+        <label data-step-title="Check Before Sending">6 · Check Before Sending</label>
         <div id="rf-summary" style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.9rem 1rem;font-size:0.83rem;color:var(--fg-1);line-height:1.6;"></div>
       </div>
 
@@ -1771,6 +1783,16 @@
         <button type="submit" class="btn-submit" id="rf-submit-btn">Submit Request</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ═══ REFUND RECEIPT LIGHTBOX ═══ -->
+<div class="modal-overlay" id="modal-refund-receipt" onclick="if (event.target === this) closeModal('modal-refund-receipt')" style="z-index:1300;">
+  <div style="max-width:340px;width:92vw;text-align:center;">
+    <div style="background:#fff;border-radius:16px;padding:0.6rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <img id="refund-receipt-img" alt="GCash refund receipt" style="width:100%;max-height:70vh;object-fit:contain;border-radius:10px;display:block;">
+    </div>
+    <div style="color:#fff;font-size:0.78rem;margin-top:0.7rem;">Receipt uploaded by MotoTyres North Caloocan</div>
   </div>
 </div>
 
@@ -3238,6 +3260,10 @@ const NOTIF_COLOR_MAP = {
   shipped:     { bg: 'rgba(6,182,212,0.2)',    color: '#67e8f9' },
   delivered:   { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
   completed:   { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
+  refunded:    { bg: '#dcfce7',                color: '#15803d' },
+  running_late: { bg: '#ffedd5',               color: '#c2410c' },
+  on_schedule:  { bg: '#dcfce7',               color: '#15803d' },
+  ready_to_claim: { bg: '#dbeafe',             color: '#1d4ed8' },
   cancelled:   { bg: 'rgba(220,38,38,0.15)',   color: '#fca5a5' },
   inprogress:  { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
   in_progress: { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
@@ -3324,7 +3350,8 @@ function renderNotifications() {
   list.querySelectorAll('.notif-item').forEach(el => el.remove());
 
   toShow.forEach(n => {
-    const icon   = icons[n.type] || icons.update;
+    const TIMER_ICON = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 14.5 14.5"/><line x1="9" y1="2" x2="15" y2="2"/></svg>';
+    const icon   = (n.status === 'running_late' || n.status === 'on_schedule') ? TIMER_ICON : (icons[n.type] || icons.update);
     const scheme = colorMap[n.status] || colorMap.default;
     const time   = new Date(n.created_at).toLocaleString('en-PH', {
       month: 'short', day: 'numeric',
@@ -3463,6 +3490,10 @@ function renderNotifications() {
         </div>
         <div style="font-size:0.78rem;color:var(--fg-3);line-height:1.5;margin-bottom:0.3rem;white-space:pre-line;">${n.message}</div>
         ${n.status ? `<span style="font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.2em 0.55em;border-radius:5px;">${n.status.replace('inprogress','in progress').replace(/_/g,' ')}</span>` : ''}
+        ${(n.status === 'cancelled' && n.booking_id && n.type === 'booking')
+          ? `<div style="margin-top:0.4rem;"><button type="button" onclick="event.stopPropagation(); notifOpen = false; document.getElementById('notif-panel').style.display = 'none'; showSection('book', null);" style="padding:0.3rem 0.8rem;background:var(--brand-red);border:none;border-radius:7px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;">Book Again</button></div>` : ''}
+        ${(n.status === 'refunded' && n.return_request_id && returnsData[n.return_request_id] && returnsData[n.return_request_id].refund_receipt)
+          ? `<div style="margin-top:0.35rem;"><a href="javascript:void(0)" onclick="event.stopPropagation(); goToReturnClaim(${n.return_request_id})" style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.74rem;font-weight:700;color:var(--brand-red);text-decoration:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Tap to view the receipt</a></div>` : ''}
         <div style="font-size:0.7rem;color:#4b5563;margin-top:0.3rem;">${time}</div>
       </div>
       <button onclick="deleteNotif(event, ${n.id})" style="background:none;border:none;color:#4b5563;font-size:0.9rem;cursor:pointer;padding:0.25rem;border-radius:6px;flex-shrink:0;align-self:flex-start;line-height:1;transition:all 0.15s;" onmouseover="this.style.color='#fca5a5';this.style.background='rgba(220,38,38,0.1)'" onmouseout="this.style.color='#4b5563';this.style.background='none'" title="Delete notification">✕</button>
@@ -3555,6 +3586,20 @@ function closeNotifDetailModal() {
 
 function _notifDetailEscHandler(e) {
   if (e.key === 'Escape') closeNotifDetailModal();
+}
+
+// Straight to a claim in Returns & Warranty (used by the bell's receipt link).
+function openRefundReceipt(url) {
+  document.getElementById('refund-receipt-img').src = url;
+  document.getElementById('modal-refund-receipt').classList.add('open');
+}
+
+function goToReturnClaim(rid) {
+  notifOpen = false;
+  const panel = document.getElementById('notif-panel');
+  if (panel) panel.style.display = 'none';
+  showSection('returns', null);
+  setTimeout(() => { setReturnsTab('requests'); openReturnDetails(rid); }, 150);
 }
 
 function notifDetailGoTo() {
@@ -4287,6 +4332,10 @@ const returnsData = {
     decision_reason: {{ (r.decision_reason or '')|tojson }},
     resolution: {{ (r.resolution or '')|tojson }},
     refund_amount: {{ r.refund_amount if r.refund_amount else 'null' }},
+    refund_method: {{ (r.refund_method or '')|tojson }},
+    gcash_number: {{ (r.gcash_number or '')|tojson }},
+    refund_receipt: {{ (r.refund_receipt or '')|tojson }},
+    cash_ready_at: {{ (r.cash_ready_at.strftime("%b %d, %Y at %I:%M %p") if r.cash_ready_at else none)|tojson }},
     awaiting_customer_info: {{ 'true' if r.awaiting_customer_info else 'false' }},
     info_request_note: {{ (r.info_request_note or '')|tojson }},
     info_provided_at: {{ (r.info_provided_at.strftime("%b %d, %Y at %I:%M %p") if r.info_provided_at else none)|tojson }},
@@ -4600,6 +4649,9 @@ function openReturnForm(kind, id) {
   _rfPhotos = [];
 
   document.getElementById('rf-outcome').value = '';
+  document.getElementById('rf-refund-method').value = 'cash';
+  document.getElementById('rf-gcash-number').value = '';
+  document.getElementById('rf-gcash-name').value = '';
   document.getElementById('rf-other-text').value = '';
   document.getElementById('rf-want-mechanic').checked = false;
   document.getElementById('rf-errors').style.display = 'none';
@@ -4660,6 +4712,12 @@ function _findQuotationData(qid) {
 }
 
 async function _submitQuotationDecision(decision, qid, btn) {
+  const errEl = document.getElementById('qc-error');
+  const showErr = msg => {
+    if (errEl && document.getElementById('modal-quotation-confirm').classList.contains('open')) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    else showToast(msg, 'error');
+  };
+  if (errEl) errEl.style.display = 'none';
   if (btn) btn.disabled = true;
   try {
     const res = await fetch(`/quotation/${qid}/decision`, {
@@ -4668,15 +4726,36 @@ async function _submitQuotationDecision(decision, qid, btn) {
     });
     const data = await res.json();
     if (data.success) {
-      window.location.reload();
+      applyQuotationAnswer(qid, data.new_status);
     } else {
-      alert(data.error || 'Could not record your decision.');
+      showErr(data.error || 'Could not record your decision.');
       if (btn) btn.disabled = false;
     }
   } catch (e) {
-    alert('Network error — please try again.');
+    showErr('Network error — please try again.');
     if (btn) btn.disabled = false;
   }
+}
+
+// Swap the Approve / Decline buttons for the customer's answer everywhere the
+// quotation is showing, without a page reload. (The server has already told the shop.)
+function applyQuotationAnswer(qid, status) {
+  const q = _findQuotationData(qid);
+  if (q) q.status = status;
+  closeQuotationConfirmModal();
+  Object.values(bookingsData).forEach(b => { if (b.quotation && b.quotation.id === qid) b.quotation.status = status; });
+  if (document.getElementById('modal-quotation-full').classList.contains('open')) openQuotationModal(qid);
+  const wrap = document.getElementById('bd-quotation-wrap');
+  if (wrap && parseInt(wrap.dataset.quotationId) === qid) {
+    document.getElementById('bd-quotation-actions').style.display = 'none';
+    document.getElementById('bd-quotation-pending-box').style.display = 'none';
+    const decided = document.getElementById('bd-quotation-decided');
+    decided.style.display = 'block';
+    decided.textContent = status === 'approved' ? 'You approved this quotation.' : 'You declined this quotation.';
+    decided.style.color = status === 'approved' ? 'var(--green,#16a34a)' : 'var(--fg-2)';
+  }
+  renderNotifications();
+  showToast(status === 'approved' ? 'You approved the quotation — the shop has been told.' : 'You declined the quotation — the shop has been told.', 'success');
 }
 
 let _qcState = { decision: null, qid: null };
@@ -4690,40 +4769,60 @@ function decideQuotation(decision, qidOverride) {
 
 function openQuotationConfirmModal(decision, qid, q) {
   _qcState = { decision, qid };
-  const approveTotal = q ? q.total    : 0;
-  const declineTotal = q ? q.original : 0;
-  const hasMaterials = q ? (q.materials || 0) > 0 : false;
+  q = q || { items: [], total: 0, original: 0, extra: 0, materials: 0 };
+  const approve   = decision === 'approve';
+  const isBackjob = !!q.is_backjob || String(q.service || '').startsWith('Back job');
+  const peso = n => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const booked    = q.items.filter(it => it.locked);
+  const findings  = q.items.filter(it => !it.locked && it.item_type !== 'product');
+  const materials = q.items.filter(it => !it.locked && it.item_type === 'product');
+  const youPay    = approve ? q.total : q.original;
+  // Declining crosses out the extra work — and, on a back job, the materials too (they only go with the extra work).
+  const strikeExtra = !approve;
+  const strikeMats  = !approve && isBackjob;
+
+  const head = t => `<div style="font-size:0.6rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--fg-3);margin:0.7rem 0 0.3rem;">${t}</div>`;
+  const line = (it, strike, free) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;font-size:0.8rem;padding:0.25rem 0;${strike ? 'text-decoration:line-through;color:var(--fg-3);' : 'color:var(--fg-1);'}">
+      <span>${it.name}${free ? ' <span style="text-decoration:none;display:inline-block;font-size:0.56rem;font-weight:700;letter-spacing:0.05em;background:#dcfce7;color:#15803d;border-radius:4px;padding:0.05rem 0.35rem;vertical-align:middle;">FREE</span>' : ''}${it.item_type === 'product' && it.quantity > 1 ? ` ×${it.quantity}` : ''}</span>
+      <span style="font-family:'Syne',sans-serif;font-weight:700;white-space:nowrap;${free ? 'color:#15803d;' : ''}">${peso(it.price)}</span>
+    </div>`;
+  let html = head('Your booked service') + booked.map(it => line(it, false, isBackjob && Number(it.price) === 0)).join('');
+  if (findings.length)  html += head('Extra work') + findings.map(it => line(it, strikeExtra, false)).join('');
+  if (materials.length) html += head('Materials used') + materials.map(it => line(it, strikeMats, false)).join('');
+  html += `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:0.7rem;padding-top:0.6rem;border-top:1px solid var(--line-2);">
+      <span style="font-size:0.82rem;font-weight:700;color:var(--fg-1);">You will pay</span>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--fg-1);">${peso(youPay)}</span></div>`;
+  document.getElementById('qc-items').innerHTML = html;
 
   const icon = document.getElementById('qc-icon');
-  const amountBox   = document.getElementById('qc-amount-box');
-  const amountLabel = document.getElementById('qc-amount-label');
-  const amountValue = document.getElementById('qc-amount-value');
-  const confirmBtn  = document.getElementById('qc-confirm-btn');
-
-  if (decision === 'approve') {
+  const confirmBtn = document.getElementById('qc-confirm-btn');
+  if (approve) {
     icon.style.background = '#dcfce7';
     icon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-    document.getElementById('qc-title').textContent = 'Approve Quotation?';
-    document.getElementById('qc-subtitle').textContent = 'The shop will do the extra work and bill the full amount.';
-    amountBox.style.background = '#f0fdf4'; amountBox.style.border = '1px solid #bbf7d0';
-    amountLabel.textContent = 'Your new total'; amountLabel.style.color = '#166534';
-    amountValue.textContent = `₱${approveTotal.toFixed(2)}`; amountValue.style.color = '#166534';
-    confirmBtn.textContent = `Approve ₱${approveTotal.toFixed(2)}`;
+    document.getElementById('qc-title').textContent = 'Approve this quotation?';
+    document.getElementById('qc-subtitle').textContent = `The shop will do the extra work and use the materials below. You'll pay ${peso(q.total)}${isBackjob ? ' — your back job stays free.' : '.'}`;
+    document.getElementById('qc-note').textContent = "Pay by cash or GCash when the work is done. You can't change this answer after approving.";
+    confirmBtn.textContent = `Yes, Approve ${peso(q.total)}`;
+    confirmBtn.style.background = 'var(--brand-red)';
   } else {
-    icon.style.background = '#fef3c7';
-    icon.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-    document.getElementById('qc-title').textContent = 'Decline Quotation?';
-    document.getElementById('qc-subtitle').textContent = hasMaterials
-      ? 'The shop will proceed with just the booked service and materials already used.'
-      : 'The shop will proceed with just the booked service.';
-    amountBox.style.background = 'var(--bg-subtle)'; amountBox.style.border = '1px solid var(--line-2)';
-    amountLabel.textContent = 'Your total'; amountLabel.style.color = 'var(--fg-3)';
-    amountValue.textContent = `₱${declineTotal.toFixed(2)}`; amountValue.style.color = 'var(--fg-1)';
-    confirmBtn.textContent = `Decline ₱${declineTotal.toFixed(2)}`;
+    icon.style.background = '#f3f4f6';
+    icon.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+    document.getElementById('qc-title').textContent = 'Decline this quotation?';
+    document.getElementById('qc-subtitle').textContent = isBackjob
+      ? 'The shop will only do your free back job. None of the extra work or materials below will be used.'
+      : `The shop will only do your booked service${materials.length ? ' and the materials already used' : ''}. The extra work below won't be done.`;
+    document.getElementById('qc-note').textContent = isBackjob
+      ? "Only your free back job will be done. If the problem comes back later because of the work you declined, it won't be covered by this claim."
+      : "Only your booked service will be done. You can't change this answer after declining.";
+    confirmBtn.textContent = 'Yes, Decline';
+    confirmBtn.style.background = '#111827';
   }
-
+  document.getElementById('qc-error').style.display = 'none';
+  confirmBtn.disabled = false;
   document.getElementById('modal-quotation-confirm').classList.add('open');
   document.addEventListener('keydown', _qcEscHandler);
+  setTimeout(() => document.getElementById('qc-back-btn').focus(), 50);   // "Go Back" is focused first
 }
 function closeQuotationConfirmModal() {
   document.getElementById('modal-quotation-confirm').classList.remove('open');
@@ -4826,7 +4925,23 @@ function openQuotationModal(qid) {
   const decisionActions = document.getElementById('qf-decision-actions');
   const ackBtn = document.getElementById('qf-acknowledge-btn');
 
-  if (hasExtra) {
+  const isBackjobQ = !!q.is_backjob || String(q.service || '').startsWith('Back job');
+  const pesoQ = n => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (hasExtra && q.status !== 'awaiting_customer') {
+    // Already answered: the customer's answer replaces Approve / Decline.
+    const extraAndMaterials = Number(q.extra || 0) + Number(q.materials || 0);
+    document.getElementById('qf-totals').innerHTML = q.status === 'approved' ? `
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:0.8rem 0.9rem;margin-top:0.5rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.86rem;color:#15803d;">You approved ${pesoQ(extraAndMaterials)} of extra work${materials.length ? ' and materials' : ''}</div>
+        <div style="font-size:0.78rem;color:#166534;margin-top:0.25rem;line-height:1.5;">The shop will do it ${isBackjobQ ? 'with your free back job' : 'with your booked service'}. Pay by cash or GCash when it's done.</div>
+      </div>` : `
+      <div style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.8rem 0.9rem;margin-top:0.5rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.86rem;color:var(--fg-1);">You declined the extra work${materials.length ? ' and materials' : ''}</div>
+        <div style="font-size:0.78rem;color:var(--fg-2);margin-top:0.25rem;line-height:1.5;">The shop will only do your ${isBackjobQ ? 'free back job' : 'booked service'}. You pay ${pesoQ(q.original)}.</div>
+      </div>`;
+    decisionActions.style.display = 'none';
+    ackBtn.style.display = 'none';
+  } else if (hasExtra) {
     document.getElementById('qf-totals').innerHTML = buildQuotationTotalsHTML(q);
     decisionActions.style.display = 'flex';
     ackBtn.style.display = 'none';
@@ -5095,7 +5210,39 @@ function updateRfDeliveryVisibility() {
   const outcome = document.getElementById('rf-outcome').value;
   const show = _rfKind === 'product' && outcome === 'replacement';
   document.getElementById('rf-section-delivery').style.display = show ? 'block' : 'none';
+  // Refund method only matters when the customer asked for a refund.
+  const refund = outcome === 'refund';
+  document.getElementById('rf-section-refund-method').style.display = refund ? 'block' : 'none';
+  if (refund) renderRefundMethodCards();
   renumberReturnFormSteps();
+}
+
+// 5 · How do you want to be refunded? (refund requests only)
+const REFUND_METHODS = [
+  { value: 'cash',  title: 'Cash',  detail: 'Claim it at the shop counter' },
+  { value: 'gcash', title: 'GCash', detail: 'Sent to your GCash account' },
+];
+
+function renderRefundMethodCards() {
+  const current = document.getElementById('rf-refund-method').value;
+  document.getElementById('rf-refund-method-cards').innerHTML = REFUND_METHODS.map(m => {
+    const on = m.value === current;
+    return `
+      <div onclick="selectRefundMethod('${m.value}')" style="display:flex;align-items:center;gap:0.6rem;border:1.5px solid ${on ? 'var(--brand-red)' : 'var(--line-2)'};background:${on ? 'rgba(208,0,25,0.06)' : '#fff'};border-radius:10px;padding:0.7rem 0.85rem;cursor:pointer;transition:all 0.15s;">
+        <span style="flex-shrink:0;width:16px;height:16px;border-radius:50%;border:1.5px solid ${on ? 'var(--brand-red)' : 'var(--line-2)'};display:flex;align-items:center;justify-content:center;">${on ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--brand-red);"></span>' : ''}</span>
+        <span>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.86rem;color:var(--fg-1);">${m.title}</div>
+          <div style="font-size:0.74rem;color:var(--fg-2);margin-top:0.1rem;">${m.detail}</div>
+        </span>
+      </div>`;
+  }).join('');
+  document.getElementById('rf-gcash-fields').style.display = current === 'gcash' ? 'block' : 'none';
+}
+
+function selectRefundMethod(value) {
+  document.getElementById('rf-refund-method').value = value;
+  renderRefundMethodCards();
+  updateRfSummary();
 }
 
 function renumberReturnFormSteps() {
@@ -5308,11 +5455,19 @@ function updateRfSummary() {
   if (reasonTicks.includes('other') && otherText) reasonLabels.push(otherText);
   const reasonsLine = reasonLabels.length ? reasonLabels.join('; ') : '(no reason selected yet)';
 
-  const explainer = outcome === 'refund'
-    ? (_rfKind === 'product'
-        ? 'How a refund is released: return the item first, then 5 to 7 banking days to your original payment method.'
-        : 'How a refund is released: 5 to 7 banking days to your original payment method.')
-    : (outcome ? 'No money is returned — we are replacing the part or redoing the job.' : '');
+  const refundMethod = document.getElementById('rf-refund-method').value;
+  const refundViaLine = outcome === 'refund'
+    ? `<div style="margin-top:0.3rem;"><strong>Refund via:</strong> ${refundMethod === 'gcash' ? 'GCash' : 'Cash at the shop'}</div>` : '';
+  let explainer = '';
+  if (outcome === 'refund') {
+    const first = _rfKind === 'product' ? 'return the item first, then ' : '';
+    const when  = _rfKind === 'product' ? 'once the return is approved' : 'once the request is approved';
+    explainer = refundMethod === 'gcash'
+      ? `How a refund is released: ${first}we send it to your GCash within 5 to 7 banking days ${when}.`
+      : `How a refund is released: ${first}claim your cash at the shop counter ${when}.`;
+  } else if (outcome) {
+    explainer = 'No money is returned — we are replacing the part or redoing the job.';
+  }
 
   let deliveryLine = '';
   if (_rfKind === 'product' && outcome === 'replacement') {
@@ -5336,6 +5491,7 @@ function updateRfSummary() {
   summary.innerHTML = `
     <div><strong>${_rfKind === 'product' ? 'Items' : 'Service'}:</strong> ${itemsLine}</div>
     <div style="margin-top:0.3rem;"><strong>Asking for:</strong> ${askLine}</div>
+    ${refundViaLine}
     ${deliveryLine}
     <div style="margin-top:0.3rem;"><strong>Reasons:</strong> ${reasonsLine}</div>
     <div style="margin-top:0.3rem;"><strong>Photos:</strong> ${_rfPhotos.length}</div>
@@ -5394,6 +5550,12 @@ function submitReturnForm(e) {
   const needsPhoto = reasonTicks.some(c => reasonMeta[c]);
   if (needsPhoto && _rfPhotos.length === 0) errors.push('The reason you picked needs at least one photo of the problem.');
 
+  if (outcome === 'refund' && document.getElementById('rf-refund-method').value === 'gcash') {
+    const num = document.getElementById('rf-gcash-number').value.replace(/[\s-]/g, '');
+    if (!/^09\d{9}$/.test(num)) errors.push('Enter a valid GCash number — 11 digits starting with 09.');
+    if (document.getElementById('rf-gcash-name').value.trim().length < 2) errors.push('Enter the name registered on the GCash account.');
+  }
+
   let addressFields = null;
   if (_rfKind === 'product' && outcome === 'replacement') {
     const mode = document.querySelector('input[name="rf-address-mode"]:checked');
@@ -5450,6 +5612,14 @@ async function doSubmitReturnForm(outcome, itemRows, reasonTicks, otherText, add
     fd.append('booking_id', _rfBooking.id);
     if (document.getElementById('rf-want-mechanic').checked) fd.append('requested_mechanic', 'yes');
   }
+  if (outcome === 'refund') {
+    const method = document.getElementById('rf-refund-method').value;
+    fd.append('refund_method', method);
+    if (method === 'gcash') {
+      fd.append('gcash_number', document.getElementById('rf-gcash-number').value.trim());
+      fd.append('gcash_account_name', document.getElementById('rf-gcash-name').value.trim());
+    }
+  }
   if (addressFields) {
     fd.append('address_mode', addressFields.mode);
     if (addressFields.mode === 'custom') {
@@ -5493,6 +5663,7 @@ function returnStatusLabel(r) {
   if (r.status === 'cancelled') return 'Cancelled';
   if (r.status === 'approved') {
     if (r.kind === 'product' && !r.item_returned) return 'Waiting for your item';
+    if (r.resolution === 'refund' && r.cash_ready_at && r.refund_method !== 'gcash') return 'Ready to Claim';
     if (r.kind === 'product' && r.item_returned && r.resolution === 'refund') return 'Item Received';
     if (r.kind === 'service' && r.resolution === 'redo_service' && r.redo_date) return 'Back job booked';
     return 'Approved';
@@ -5518,6 +5689,7 @@ const RETURN_STATUS_LABEL_COLORS = {
   'Replacement has arrived': { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
   'Completed':              { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
   'Back job booked':        { bg: '#ede9fe', color: '#5b21b6', border: '#8b5cf6' },
+  'Ready to Claim':         { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
   'Refunded':               { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
   'Declined':               { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
   'Closed':                 { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
@@ -5539,6 +5711,14 @@ function returnOutcomeLine(r) {
 }
 
 // Customer-language timeline — what happened, in plain words, not a system log.
+function pesoFmt(n) {
+  return '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function formatGcashNumber(n) {
+  const d = String(n || '').replace(/\D/g, '');
+  return d.length === 11 ? `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}` : (n || '');
+}
+
 function returnTimelineEntries(r) {
   const entries = [{ time: r.created_at, text: `You filed ${r.kind === 'product' ? 'a return' : 'a warranty claim'} for ${r.subject}.` }];
 
@@ -5573,11 +5753,18 @@ function returnTimelineEntries(r) {
   if (r.item_returned_at) {
     entries.push({ time: r.item_returned_at, text: 'The shop marked your returned item as received.' });
   }
+  if (r.cash_ready_at) {
+    entries.push({ time: r.cash_ready_at, text: `Your ${pesoFmt(r.refund_amount)} cash refund is ready. Claim it at the shop counter.` });
+  }
   if (r.redo_date && r.redo_time) {
     entries.push({ time: r.decided_at, text: `Back job booked for ${r.redo_date}, ${r.redo_time}${r.redo_mechanic_name ? ' with ' + r.redo_mechanic_name : ''}.` });
   }
   if (r.status === 'resolved') {
-    if (r.resolution === 'refund' && r.refund_amount) {
+    if (r.resolution === 'refund' && r.refund_amount && r.refund_method === 'gcash') {
+      entries.push({ time: r.resolved_at, text: `Your ${pesoFmt(r.refund_amount)} refund was sent to your GCash (${formatGcashNumber(r.gcash_number)}). View the receipt above.` });
+    } else if (r.resolution === 'refund' && r.refund_amount && r.cash_ready_at) {
+      entries.push({ time: r.resolved_at, text: `You received your ${pesoFmt(r.refund_amount)} refund in cash. This claim is closed.` });
+    } else if (r.resolution === 'refund' && r.refund_amount) {
       entries.push({ time: r.resolved_at, text: `₱${Number(r.refund_amount).toFixed(2)} refunded to your original payment method.` });
     } else if (r.resolution === 'redo_service') {
       entries.push({ time: r.resolved_at, text: 'Your back job is complete.' });
@@ -5617,11 +5804,14 @@ function myRequestCardHTML(r) {
 
   const timeline = returnTimelineEntries(r);
   const timelineHTML = `<div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid var(--line-2);display:flex;flex-direction:column;gap:0.45rem;">
-    ${timeline.map(e => `
+    ${timeline.map((e, i) => {
+      // The newest refund step (ready to claim / refunded) reads in green.
+      const highlight = i === timeline.length - 1 && r.resolution === 'refund' && (r.cash_ready_at || r.status === 'resolved');
+      return `
       <div style="display:flex;gap:0.6rem;font-size:0.78rem;">
         <div style="color:var(--fg-3);white-space:nowrap;min-width:118px;">${e.time || ''}</div>
-        <div style="color:var(--fg-2);line-height:1.5;">${e.text}</div>
-      </div>`).join('')}
+        <div style="color:${highlight ? '#15803d' : 'var(--fg-2)'};${highlight ? 'font-weight:600;' : ''}line-height:1.5;">${e.text}</div>
+      </div>`; }).join('')}
   </div>`;
 
   const cancelHTML = (r.status === 'submitted' || r.status === 'under_review') ? `
@@ -5641,6 +5831,46 @@ function myRequestCardHTML(r) {
     </div>
   ` : '';
 
+  // Where the money stands: a green "sent" card with the receipt (GCash), or a
+  // blue "ready at the counter" card (cash) until it's handed over.
+  let refundPanelHTML = '';
+  if (r.status === 'resolved' && r.resolution === 'refund' && r.refund_method === 'gcash' && r.refund_receipt) {
+    const url = returnPhotoUrl(r.refund_receipt);
+    refundPanelHTML = `
+      <div style="margin-top:0.8rem;display:flex;gap:0.85rem;align-items:center;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:0.8rem 0.9rem;">
+        <img src="${url}" onclick="openRefundReceipt('${url}')" style="width:56px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #bbf7d0;background:#fff;cursor:zoom-in;">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#15803d;">${pesoFmt(r.refund_amount)} sent to your GCash</div>
+          <div style="font-size:0.74rem;color:var(--fg-3);margin:0.15rem 0 0.45rem;">${formatGcashNumber(r.gcash_number)} &middot; ${r.resolved_at || ''}</div>
+          <button type="button" onclick="openRefundReceipt('${url}')" style="padding:0.3rem 0.7rem;background:#fff;border:1px solid #86efac;border-radius:7px;color:#15803d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;">View receipt</button>
+        </div>
+      </div>`;
+  } else if (r.status === 'approved' && r.resolution === 'refund' && r.cash_ready_at && r.refund_method !== 'gcash') {
+    const row = (label, value) => `<div style="display:flex;gap:0.6rem;font-size:0.78rem;line-height:1.7;"><span style="min-width:58px;color:var(--fg-3);">${label}</span><span style="color:var(--fg-1);font-weight:600;">${value}</span></div>`;
+    refundPanelHTML = `
+      <div style="margin-top:0.8rem;display:flex;gap:0.8rem;align-items:flex-start;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:0.8rem 0.9rem;">
+        <span style="flex-shrink:0;width:30px;height:30px;border-radius:8px;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#1d4ed8;margin-bottom:0.2rem;">Your cash refund is ready to claim</div>
+          ${row('Amount', pesoFmt(r.refund_amount))}
+          ${row('Where', 'MotoTyres North Caloocan — shop counter')}
+          ${row('Hours', '8:00 AM – 6:30 PM')}
+          ${row('Mention', `<span style="display:inline-block;background:#fff;border:1px solid #bfdbfe;border-radius:6px;padding:0 0.45rem;">${ref}</span>`)}
+        </div>
+      </div>`;
+  } else if (r.status === 'resolved' && r.resolution === 'refund' && r.refund_method !== 'gcash' && r.cash_ready_at) {
+    const row = (label, value) => `<div style="display:flex;gap:0.6rem;font-size:0.78rem;line-height:1.7;"><span style="min-width:62px;color:var(--fg-3);">${label}</span><span style="color:var(--fg-1);font-weight:600;">${value}</span></div>`;
+    refundPanelHTML = `
+      <div style="margin-top:0.8rem;display:flex;gap:0.8rem;align-items:flex-start;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:0.8rem 0.9rem;">
+        <span style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#15803d;color:#fff;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;color:#15803d;margin-bottom:0.2rem;">${pesoFmt(r.refund_amount)} refunded in cash</div>
+          ${row('Given at', 'Shop counter')}
+          ${row('Date', (r.resolved_at || '').replace(' at ', ', '))}
+        </div>
+      </div>`;
+  }
+
   return `
     <div class="card" id="my-request-card-${r.id}" style="padding:1.1rem 1.25rem;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
@@ -5654,7 +5884,9 @@ function myRequestCardHTML(r) {
 
       <div style="margin-top:0.7rem;font-size:0.82rem;color:var(--fg-1);"><strong>Asked for:</strong> ${returnOutcomeLine(r)}${r.requested_mechanic_name ? ` — requested ${r.requested_mechanic_name} (not guaranteed)` : ''}</div>
       <div style="margin-top:0.25rem;font-size:0.8rem;color:var(--fg-2);"><strong>Why:</strong> ${reasonLabels.join('; ') || '—'}</div>
+      ${r.desired_outcome === 'refund' ? `<div style="margin-top:0.25rem;font-size:0.8rem;color:var(--fg-2);"><strong>Refund via:</strong> ${r.refund_method === 'gcash' ? `GCash &middot; ${formatGcashNumber(r.gcash_number)}` : 'Cash at the shop counter'}</div>` : ''}
       ${photosHTML}
+      ${refundPanelHTML}
       ${infoFormHTML}
       ${timelineHTML}
       ${cancelHTML}

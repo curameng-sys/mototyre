@@ -430,6 +430,7 @@ class User(db.Model, UserMixin):
     phone            = db.Column(db.String(20), nullable=False)
     password_hash    = db.Column(db.String(255), nullable=False)
     role             = db.Column(db.String(20), default='customer')
+    billing_seen_at  = db.Column(db.DateTime, nullable=True)  # admin: when Billing History was last opened — anything paid after this is NEW
     address          = db.Column(db.String(255))
     motorcycle_model = db.Column(db.String(100))
     profile_pic      = db.Column(db.String(255))
@@ -500,6 +501,12 @@ class Booking(db.Model):
     invoice_change        = db.Column(db.Float, nullable=True)
     invoice_receipt_no    = db.Column(db.String(20), nullable=True)
     invoice_gcash_ref     = db.Column(db.String(50), nullable=True)
+    actual_start_at       = db.Column(db.DateTime, nullable=True)  # when the shop really started the job (may be earlier than the booked time)
+    inspection_at    = db.Column(db.DateTime, nullable=True)  # when the booking reached Inspection & Estimation
+    in_progress_at   = db.Column(db.DateTime, nullable=True)  # when work started (In Progress)
+    late_notice_at   = db.Column(db.DateTime, nullable=True)   # when the customer was last told about running late / back on time
+    late_notice_text = db.Column(db.String(120), nullable=True) # e.g. 'New finish 11:30 AM' — shown on the Day Schedule card
+    late_notice_emailed = db.Column(db.Boolean, default=False)
 
 
 class BlockedSlot(db.Model):
@@ -551,6 +558,7 @@ class Order(db.Model):
     total_amount    = db.Column(db.Float, nullable=False)
     status          = db.Column(db.String(20), default='pending')
     payment_method  = db.Column(db.String(20), default='cash')
+    payment_ref     = db.Column(db.String(80), nullable=True)  # PayMongo checkout id for GCash orders
     delivery_method = db.Column(db.String(20), default='pickup')
     ship_address    = db.Column(db.Text)
     created_at      = db.Column(db.DateTime, default=ph_now)
@@ -663,6 +671,12 @@ class ReturnRequest(db.Model):
     delivery_street    = db.Column(db.String(255))
     delivery_zip       = db.Column(db.String(10))
     is_pickup          = db.Column(db.Boolean, default=False)  # customer picks the replacement up at the shop — no delivery_* fields set
+    refund_method          = db.Column(db.String(10), nullable=True)    # 'cash' (claim at the shop counter) | 'gcash' — refund requests only
+    gcash_number           = db.Column(db.String(20), nullable=True)    # where to send it when refund_method == 'gcash'
+    gcash_account_name     = db.Column(db.String(100), nullable=True)
+    refund_receipt         = db.Column(db.String(500), nullable=True)   # GCash receipt screenshot (URL, or a filename under static/return_evidence/) uploaded when the refund was sent
+    cash_ready_at          = db.Column(db.DateTime, nullable=True)      # cash refunds: when the shop told the customer it's ready to claim at the counter
+    info_requested_at      = db.Column(db.DateTime, nullable=True)      # when the shop last asked the customer for more ("Shop asked: …" in History)
 
 
 class ReturnRequestItem(db.Model):
@@ -1263,9 +1277,13 @@ def customer_dashboard():
             b.quotation_data = None
         else:
             _qbd = _quotation_breakdown(q.items)
+            _is_backjob = b.service.startswith('Back job — ')
             b.quotation_data = {
                 'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
-                'original': _qbd['decline_total'], 'extra': _qbd['extra'], 'total': q.total_amount,
+                'service': b.service, 'is_backjob': _is_backjob,
+                # A back job is free: declining the extra work leaves nothing to pay, materials included.
+                'original': _qbd['booked'] if _is_backjob else _qbd['decline_total'],
+                'extra': _qbd['extra'], 'total': q.total_amount,
                 'booked': _qbd['booked'], 'materials': _qbd['materials'],
                 'items': [{'name': i.name, 'price': i.unit_price, 'locked': i.locked, 'item_type': i.item_type} for i in q.items],
             }
@@ -2266,6 +2284,23 @@ def create_return_request():
         else:
             errors.append('Please choose shop pickup or a delivery address for the replacement.')
 
+    # Refund requests also say HOW to be paid back: cash at the counter, or
+    # GCash (which needs a real number and the account holder's name).
+    refund_method = gcash_number = gcash_account_name = None
+    if desired_outcome == 'refund':
+        refund_method = clean_str(request.form.get('refund_method', ''), max_len=10)
+        if refund_method not in ('cash', 'gcash'):
+            errors.append('Choose how you want to be refunded: cash at the shop or GCash.')
+            refund_method = None
+        elif refund_method == 'gcash':
+            import re as _re
+            gcash_number = _re.sub(r'[\s-]', '', clean_str(request.form.get('gcash_number', ''), max_len=20))
+            gcash_account_name = clean_str(request.form.get('gcash_account_name', ''), max_len=100)
+            if not _re.fullmatch(r'09\d{9}', gcash_number):
+                errors.append('Enter a valid GCash number — 11 digits starting with 09.')
+            if len(gcash_account_name) < 2:
+                errors.append('Enter the name registered on the GCash account.')
+
     if errors:
         return jsonify({'success': False, 'errors': errors}), 400
 
@@ -2292,7 +2327,8 @@ def create_return_request():
         reasons=','.join(reasons), other_reason_text=other_text if 'other' in reasons else None,
         desired_outcome=desired_outcome, requested_mechanic_name=requested_mechanic_name,
         requested_refund_amount=requested_refund_amount, photos=','.join(saved_filenames) or None,
-        is_pickup=is_pickup, **delivery_fields,
+        is_pickup=is_pickup, refund_method=refund_method, gcash_number=gcash_number,
+        gcash_account_name=gcash_account_name, **delivery_fields,
     )
     db.session.add(rr)
     db.session.flush()
@@ -2308,7 +2344,9 @@ def create_return_request():
     outcome_label = RETURN_OUTCOME_LABELS[kind][desired_outcome]
     # The bell and the email must always say the same thing — one body, two
     # deliveries, never two different tellings of the same event.
-    filed_title = f'We received your return request ({ref})'
+    # Product claims are return requests; a service claim is named for what was asked.
+    request_noun = 'return request' if kind == 'product' else ('back job request' if desired_outcome == 'redo_service' else 'refund request')
+    filed_title = f'We received your {request_noun} ({ref})'
     filed_body = (f"We got your report about {what} ({ref}) — {reasons_text}. You asked for: {outcome_label}. "
                   f"We'll review the evidence and get back to you with a decision.")
     send_notification(
@@ -2326,7 +2364,7 @@ def create_return_request():
 
     for admin in User.query.filter_by(role='admin').all():
         send_notification(
-            admin.id, f'New return request ({ref})',
+            admin.id, f'New {request_noun} ({ref})',
             f'{current_user.fullname} reported {what} — {reasons_text}. Wants: {outcome_label}.',
             type='booking' if kind == 'service' else 'order', status='submitted',
         )
@@ -2444,6 +2482,7 @@ def quotation_decision(qid):
     # also wait for an admin to click "No extra work" before work starts.
     if booking.status == 'inspection':
         booking.status = 'in_progress'
+        booking.in_progress_at = ph_now()
     db.session.commit()
 
     ref = f'BKG-{booking.id:03d}'
@@ -2671,8 +2710,9 @@ def get_notifications():
         breakdown = _quotation_breakdown(q.items)
         payload = {
             'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
-            'service': service, 'ref': ref,
-            'original': breakdown['decline_total'], 'extra': breakdown['extra'], 'total': q.total_amount,
+            'service': service, 'ref': ref, 'is_backjob': service.startswith('Back job — '),
+            'original': breakdown['booked'] if service.startswith('Back job — ') else breakdown['decline_total'],
+            'extra': breakdown['extra'], 'total': q.total_amount,
             'booked': breakdown['booked'], 'materials': breakdown['materials'],
             'sent_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
             'items': [{'name': i.name, 'price': i.unit_price,
@@ -2918,6 +2958,7 @@ def payment_success():
             order = Order.query.get(int(order_id))
             if order and order.status == 'awaiting_payment':
                 order.status = 'confirmed'
+                order.payment_ref = (checkout_id or None)
                 db.session.commit()
                 flash('GCash payment successful — order confirmed!', 'success')
                 items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
@@ -3104,6 +3145,20 @@ with app.app_context():
         "ALTER TABLE user ADD COLUMN profile_pic VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN booking_batch VARCHAR(36) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN actual_start_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `user` ADD COLUMN billing_seen_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN payment_ref VARCHAR(80) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN inspection_at DATETIME DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN in_progress_at DATETIME DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN late_notice_at DATETIME DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN late_notice_text VARCHAR(120) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN late_notice_emailed TINYINT(1) DEFAULT 0",
+        "ALTER TABLE return_request ADD COLUMN refund_method VARCHAR(10) DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN gcash_number VARCHAR(20) DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN gcash_account_name VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN refund_receipt VARCHAR(500) DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN cash_ready_at DATETIME DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN info_requested_at DATETIME DEFAULT NULL",
     ]:
         try:
             from sqlalchemy import text as _t

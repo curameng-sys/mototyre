@@ -328,6 +328,22 @@
         </div>
         <input type="hidden" id="inspected-by" value="{{ booking.assigned_mechanic_name or '' }}">
 
+        {% if booking.is_backjob %}
+        <div id="nc-box" style="border:1px solid #fed7aa;background:#fff7ed;border-radius:10px;padding:.7rem .8rem;margin-bottom:.8rem;">
+          <label style="display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;font-size:.8rem;color:#7c2d12;font-weight:600;margin:0;">
+            <input type="checkbox" id="nc-toggle" onchange="toggleNotCovered(this.checked)" style="margin-top:.15rem;">
+            <span>This problem isn't covered — it wasn't caused by the shop's work<br><span style="font-weight:400;font-size:.72rem;">Back jobs are free. If it's not covered, the redo is charged at the normal price ({{ '₱%.2f'|format(booking.regular_price) }}).</span></span>
+          </label>
+          <div id="nc-fields" style="display:none;margin-top:.65rem;">
+            <label>Why isn't it covered? <span style="color:var(--red);">*</span></label>
+            <textarea class="svc-inp" id="nc-reason" maxlength="500" placeholder="e.g. Customer fitted a non-standard part after our service" style="width:100%;"></textarea>
+            <label style="margin-top:.5rem;">Photos <span style="color:var(--red);">*</span> <span style="font-weight:400;color:var(--muted);">— at least one, images only, up to 5MB each</span></label>
+            <input type="file" id="nc-file" accept="image/*" multiple style="display:none;" onchange="uploadNotCoveredPhotos(this.files)">
+            <button type="button" class="btn-add-svc" onclick="document.getElementById('nc-file').click()" style="margin-top:.2rem;">+ Add photos</button>
+            <div id="nc-photos" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;"></div>
+          </div>
+        </div>
+        {% endif %}
         <label>What did the mechanic find?</label>
         <textarea class="svc-inp" id="finding-desc" placeholder="e.g. Steering bearings are worn and loose" style="width:100%;" {{ 'disabled' if not booking.assigned_mechanic_name }}></textarea>
         <label>Price</label>
@@ -457,10 +473,43 @@
 <script>
   const HAS_BOOKING = {{ 'true' if booking else 'false' }};
   const BOOKING_ID  = {{ booking.id if booking else 'null' }};
+  const IS_BACKJOB = {{ 'true' if (booking and booking.is_backjob) else 'false' }};
+  const BACKJOB_REGULAR_PRICE = {{ (booking.regular_price if booking else 0) or 0 }};
   let items = [];
   {% if booking %}
   items.push({ item_type: 'service', name: {{ booking.service_name|tojson }}, unit_price: {{ booking.service_price }}, quantity: 1, locked: true });
   {% endif %}
+  // Back job only: the mechanic's "not covered" finding (reason + photos)
+  const notCovered = { on: false, photos: [] };
+  function toggleNotCovered(on) {
+    notCovered.on = on;
+    document.getElementById('nc-fields').style.display = on ? 'block' : 'none';
+    // The back job is a free ₱0 line — unless it isn't covered, then it's the normal price.
+    items.filter(i => i.locked).forEach(i => { i.unit_price = on ? BACKJOB_REGULAR_PRICE : 0; });
+    renderItems();
+  }
+  async function uploadNotCoveredPhotos(fileList) {
+    for (const f of Array.from(fileList)) {
+      if (notCovered.photos.length >= 5) { toast('Up to 5 photos.', 'error'); break; }
+      if (!f.type.startsWith('image/')) { toast('Images only.', 'error'); continue; }
+      if (f.size > 5 * 1024 * 1024) { toast(`${f.name} is over 5MB.`, 'error'); continue; }
+      const fd = new FormData(); fd.append('photo', f);
+      try {
+        const res = await fetch('/api/quotation/evidence', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) notCovered.photos.push(data.photo); else toast(data.error || 'Could not upload that photo.', 'error');
+      } catch (e) { toast('Network error — photo not uploaded.', 'error'); }
+    }
+    document.getElementById('nc-file').value = '';
+    renderNotCoveredPhotos();
+  }
+  function removeNotCoveredPhoto(i) { notCovered.photos.splice(i, 1); renderNotCoveredPhotos(); }
+  function renderNotCoveredPhotos() {
+    const url = p => p.startsWith('http') ? p : `/static/return_evidence/${p}`;
+    document.getElementById('nc-photos').innerHTML = notCovered.photos.map((p, i) => `
+      <div style="position:relative;"><img src="${url(p)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+      <button type="button" onclick="removeNotCoveredPhoto(${i})" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:.65rem;line-height:1;">✕</button></div>`).join('');
+  }
   let currentTab = HAS_BOOKING ? 'inspection' : 'products';
   let allProducts = [...document.querySelectorAll('#products-panel .product-card')];
 
@@ -572,7 +621,7 @@
         div.innerHTML = `
           <div class="ci-icon service"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
           <div class="ci-info">
-            <div class="ci-name">${item.name}<span class="locked-tag">Booked · Locked</span></div>
+            <div class="ci-name">${item.name}<span class="locked-tag">${IS_BACKJOB ? (notCovered.on ? 'Not covered · normal price' : 'Back job · Free') : 'Booked · Locked'}</span></div>
             <div class="ci-unit">₱${item.unit_price.toFixed(2)} each</div>
           </div>
           <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#111827;min-width:60px;text-align:right;">
@@ -673,6 +722,10 @@
       toast('Assign a mechanic before sending the quotation.', 'error');
       return;
     }
+    if (IS_BACKJOB && notCovered.on) {
+      if (!document.getElementById('nc-reason').value.trim()) { toast("Say why it isn't covered — the reason is required.", 'error'); return; }
+      if (notCovered.photos.length === 0) { toast("Add at least one photo showing why it isn't covered.", 'error'); return; }
+    }
 
     const btn = document.getElementById('save-btn');
     const savingLabel = HAS_BOOKING ? 'Sending...' : 'Saving...';
@@ -689,6 +742,7 @@
     if (HAS_BOOKING) {
       payload.booking_id   = {{ booking.id if booking else 'null' }};
       payload.inspected_by = document.getElementById('inspected-by') ? document.getElementById('inspected-by').value.trim() : '';
+      if (IS_BACKJOB && notCovered.on) payload.not_covered = { reason: document.getElementById('nc-reason').value.trim(), photos: notCovered.photos };
     }
 
     try {

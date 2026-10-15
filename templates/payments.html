@@ -53,7 +53,8 @@
     .ref{font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:#111827;}
     .ref-bkg{color:#7c3aed;}
     .ref-jo{color:#2563eb;}
-    .ref-ord{color:#059669;}
+    .ref-ord{color:#ea580c;}
+    .b-nocharge{background:#f3f4f6;color:#4b5563;border:1px solid #e5e7eb;}
     .name{font-weight:600;color:#111827;font-size:.88rem;}
     .sub{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
     .amount{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#111827;letter-spacing:.03em;}
@@ -88,6 +89,29 @@
     .search-box input{width:100%;padding:.5rem .75rem .5rem 2.1rem;background:#fff;border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.84rem;outline:none;}
     .search-box input:focus{border-color:var(--green);}
     .search-box input::placeholder{color:#9ca3af;}
+    .bill-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:1.25rem;align-items:start;}
+    .recent-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;position:sticky;top:1rem;overflow:hidden;}
+    .recent-head{padding:1rem 1.1rem;border-bottom:1px solid var(--border);}
+    .recent-head .rh-title{font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);}
+    .recent-head .rh-total{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#111827;margin-top:.25rem;}
+    .recent-head .rh-sub{font-size:.72rem;color:var(--muted);}
+    .recent-day{padding:.6rem 1.1rem .25rem;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--surface);}
+    .recent-item{display:flex;align-items:center;gap:.6rem;padding:.65rem 1.1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+    .recent-item:hover{background:rgba(0,0,0,.025);}
+    .recent-item .ri-main{flex:1;min-width:0;}
+    .recent-item .ri-cust{font-size:.82rem;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .recent-item .ri-ref{font-size:.68rem;color:var(--muted);}
+    .recent-item .ri-side{text-align:right;flex-shrink:0;}
+    .recent-item .ri-amt{font-size:.82rem;font-weight:700;color:#111827;}
+    .recent-item .ri-time{font-size:.66rem;color:var(--muted);margin-top:.1rem;}
+    .recent-all{display:block;width:100%;padding:.75rem;border:none;background:none;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--red);cursor:pointer;text-align:center;text-decoration:none;}
+    @media (max-width:1000px){.bill-layout{grid-template-columns:1fr;}.recent-panel{position:static;}}
+    .filter-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.75rem;}
+    .filter-row .search-box{flex:1;min-width:220px;max-width:340px;}
+    .filter-row select{padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.84rem;outline:none;}
+    .clear-filters{display:none;font-size:.78rem;font-weight:700;color:var(--red);cursor:pointer;white-space:nowrap;}
+    .match-bar{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--muted);margin-bottom:.6rem;}
+    .match-bar b{color:var(--text);}
 
     /* ── BILLING MODAL ── */
     .bill-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9000;align-items:center;justify-content:center;padding:1rem;}
@@ -142,12 +166,13 @@
 
     /* ── HISTORY TYPE BADGE ── */
     .h-type{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-right:.3rem;}
-    .h-bkg{background:rgba(124,58,237,.2);color:#c4b5fd;}
-    .h-jo {background:rgba(37,99,235,.2);color:#93c5fd;}
-    .h-ord{background:rgba(16,185,129,.2);color:#6ee7b7;}
-    .h-sale{background:rgba(13,148,136,.2);color:#5eead4;}
+    .h-bkg{background:#ede9fe;color:#6d28d9;}
+    .h-jo {background:#dbeafe;color:#1d4ed8;}
+    .h-ord{background:#ffedd5;color:#c2410c;}
+    .h-sale{background:#ccfbf1;color:#0f766e;}
     .ref-sale{color:#0d9488;}
-    .hist-row.is-new{animation:newRowFade 2.5s ease forwards;}
+    .hist-row.is-new{background:#fff5f4;box-shadow:inset 3px 0 0 var(--red);}
+    .new-tag{display:inline-block;margin-left:.45rem;background:var(--red);color:#fff;border-radius:4px;padding:.08rem .38rem;font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.06em;vertical-align:middle;}
     @keyframes newRowFade{0%{background:rgba(22,163,74,.22);}100%{background:transparent;}}
 
     /* ── METHOD TAGS ── */
@@ -227,12 +252,15 @@
   </div>
 </header>
 
+{% set rcpt_icon %}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>{% endset %}
 <div class="main">
   <div class="page-header">
     <div class="page-title">BILLING <span class="accent">CENTER</span></div>
     <div class="page-sub">Collect payments for bookings, job orders, and orders paid through GCash or cash, whether for pickup or delivery.</div>
   </div>
 
+  <div class="bill-layout">
+  <div class="bill-left">
   <!-- TABS -->
   <div class="tab-bar">
     <a href="?tab=pending" class="tab {% if tab=='pending' %}active{% endif %}">
@@ -242,22 +270,31 @@
     </a>
     <a href="?tab=history" class="tab {% if tab=='history' %}active{% endif %}">
       History
-      {% if history_count > 0 %}<span style="margin-left:.4rem;background:rgba(107,114,128,.25);color:#d1d5db;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ history_count }}</span>{% endif %}
-      {% if instore_unseen_count > 0 %}<span title="New in-store sales" style="margin-left:.3rem;background:var(--red);color:#fff;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ instore_unseen_count }}</span>{% endif %}
+      <span style="margin-left:.4rem;background:rgba(107,114,128,.18);color:#374151;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ history_count }}</span>
+      {% if instore_unseen_count > 0 %}<span title="New payments since you last opened History" style="margin-left:.3rem;background:var(--red);color:#fff;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ instore_unseen_count }}</span>{% endif %}
     </a>
   </div>
 
   {% if tab == 'pending' %}
 
-  <div class="search-wrap">
+  <div class="filter-row">
     <div class="search-box">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="pending-search" placeholder="Search customer, reference…" oninput="filterPending()">
+      <input type="text" id="pending-search" placeholder="Search customer, reference…" oninput="applyBillingFilters()">
     </div>
+    <select id="type-filter" onchange="applyBillingFilters()">
+      <option value="">All types ({{ pending_bookings|length + pending_jos|length + pending_orders|length }})</option>
+      <option value="booking">Bookings ({{ pending_bookings|length }})</option>
+      <option value="joborder">Job orders ({{ pending_jos|length }})</option>
+      <option value="online">Online orders ({{ pending_orders|length }})</option>
+      <option value="instore">In-store sales (0)</option>
+    </select>
+    <a class="clear-filters" id="clear-filters" onclick="clearBillingFilters()">Clear filters</a>
   </div>
+  <div class="match-bar"><span id="match-count"></span><span id="match-total"></span></div>
 
   {# ── CUSTOMER BOOKINGS ── #}
-  <div class="sec-label">Customer Bookings <span class="sec-count">{{ pending_bookings|length }}</span></div>
+  <div class="sec-label">Customer Bookings <span class="sec-count" data-sec="booking">{{ pending_bookings|length }}</span></div>
   <div class="tbl-wrap">
     {% if pending_bookings %}
     <table id="pending-bkg-table">
@@ -269,13 +306,13 @@
         {% set row_amount = b.total_amount if (b.is_invoice_flow and b.total_amount) else svc_price.val %}
         {% set b_items %}[{"name":{{ b.service|tojson }},"qty":1,"price":{{ svc_price.val }}}]{% endset %}
         {% set cust_name = b.contact_name if b.walkin_customer_id else (b.contact_name or b.customer.fullname) %}
-        <tr class="pending-row" data-s="{{ cust_name|lower }} bkg-{{ '%03d'|format(b.id) }}">
+        <tr class="pending-row" data-type="booking" data-amount="{{ row_amount }}" data-s="{{ cust_name|lower }} bkg-{{ '%03d'|format(b.id) }}">
           <td><span class="ref ref-bkg">BKG-{{ '%03d'|format(b.id) }}</span></td>
           <td>
             <div class="name">{{ cust_name }}</div>
             <div class="sub">{{ b.service }}{% if b.is_invoice_flow and b.extra_item_count %} + {{ b.extra_item_count }} extra item{{ 's' if b.extra_item_count != 1 else '' }}{% endif %}</div>
           </td>
-          <td><span class="amount">₱{{ '%.2f'|format(row_amount) }}</span></td>
+          <td><span class="amount">₱{{ '{:,.2f}'.format(row_amount) }}</span></td>
           <td>
             {% if b.is_invoice_flow %}
               {% if b.invoice_payment_method == 'cash' %}
@@ -327,7 +364,7 @@
   </div>
 
   {# ── JOB ORDERS ── #}
-  <div class="sec-label">Job Orders <span class="sec-count">{{ pending_jos|length }}</span></div>
+  <div class="sec-label">Job Orders <span class="sec-count" data-sec="joborder">{{ pending_jos|length }}</span></div>
   <div class="tbl-wrap">
     {% if pending_jos %}
     <table>
@@ -335,7 +372,7 @@
       <tbody>
         {% for jo in pending_jos %}
         {% set jo_items %}[{% for item in jo.items %}{"name":{{ item.name|tojson }},"qty":{{ item.quantity }},"price":{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}]{% endset %}
-        <tr class="pending-row" data-s="{{ jo.customer_name|lower }} jo-{{ '%03d'|format(jo.id) }}">
+        <tr class="pending-row" data-type="joborder" data-amount="{{ jo.total_amount }}" data-s="{{ jo.customer_name|lower }} jo-{{ '%03d'|format(jo.id) }}">
           <td><span class="ref ref-jo">JO-{{ '%03d'|format(jo.id) }}</span></td>
           <td>
             <div class="name">{{ jo.customer_name }}</div>
@@ -346,7 +383,7 @@
             <div style="font-size:.82rem;">{{ jo.items|length }} item(s)</div>
             <div class="sub">{% for item in jo.items[:2] %}{{ item.name }}{% if not loop.last %}, {% endif %}{% endfor %}{% if jo.items|length > 2 %} +{{ jo.items|length - 2 }} more{% endif %}</div>
           </td>
-          <td><span class="amount">₱{{ '%.2f'|format(jo.total_amount) }}</span></td>
+          <td><span class="amount">₱{{ '{:,.2f}'.format(jo.total_amount) }}</span></td>
           <td class="date-cell">{{ jo.created_at.strftime('%b %d, %Y') }}</td>
           <td>
             <button class="btn-collect btn-collect-jo"
@@ -371,7 +408,7 @@
   </div>
 
   {# ── ONLINE PICK-UPS ── #}
-  <div class="sec-label">Online Pick-ups <span class="sec-count">{{ pending_orders|length }}</span></div>
+  <div class="sec-label">Online Pick-ups <span class="sec-count" data-sec="online">{{ pending_orders|length }}</span></div>
   <div class="tbl-wrap">
     {% if pending_orders %}
     <table>
@@ -379,7 +416,7 @@
       <tbody>
         {% for o in pending_orders %}
         {% set ord_items %}[{% for item in o.items %}{"name":{{ (item.product.name if item.product else 'Unknown')|tojson }},"qty":{{ item.quantity }},"price":{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}]{% endset %}
-        <tr class="pending-row" data-s="{{ o.customer.fullname|lower }} ord-{{ '%03d'|format(o.id) }}">
+        <tr class="pending-row" data-type="online" data-amount="{{ o.total_amount }}" data-s="{{ o.customer.fullname|lower }} ord-{{ '%03d'|format(o.id) }}">
           <td><span class="ref ref-ord">ORD-{{ '%03d'|format(o.id) }}</span></td>
           <td>
             <div class="name">{{ o.customer.fullname }}</div>
@@ -389,7 +426,7 @@
             <div style="font-size:.82rem;">{{ o.items|length }} item(s)</div>
             <div class="sub">{% for item in o.items[:2] %}{{ item.product.name if item.product else 'Unknown' }} ×{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}{% if o.items|length > 2 %} +{{ o.items|length - 2 }} more{% endif %}</div>
           </td>
-          <td><span class="amount">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
+          <td><span class="amount">₱{{ '{:,.2f}'.format(o.total_amount) }}</span></td>
           <td>
             <span class="badge b-pending">{{ 'Ready For Pickup' if o.status == 'shipped' else o.status|replace('_',' ')|title }}</span>
             {% if (o.payment_method or '')|lower == 'gcash' %}<div class="sub" style="margin-top:.2rem;">GCash · already paid</div>{% endif %}
@@ -431,27 +468,38 @@
   {% else %}
 
   {# ── HISTORY ── #}
-  <div class="search-wrap">
+  {% set hist_instore = history_orders|selectattr('is_instore')|list|length %}
+  {% set hist_online = history_orders|length - hist_instore %}
+  {% set has_history = history_jos or history_bookings or history_orders %}
+  <div class="filter-row">
     <div class="search-box">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="hist-search" placeholder="Search customer, reference…" oninput="filterHistory()">
+      <input type="text" id="hist-search" placeholder="Search customer, reference…" oninput="applyBillingFilters()">
     </div>
+    <select id="type-filter" onchange="applyBillingFilters()">
+      <option value="">All types ({{ history_jos|length + history_bookings|length + history_orders|length }})</option>
+      <option value="booking">Bookings ({{ history_bookings|length }})</option>
+      <option value="joborder">Job orders ({{ history_jos|length }})</option>
+      <option value="online">Online orders ({{ hist_online }})</option>
+      <option value="instore">In-store sales ({{ hist_instore }})</option>
+    </select>
+    <a class="clear-filters" id="clear-filters" onclick="clearBillingFilters()">Clear filters</a>
   </div>
+  <div class="match-bar"><span id="match-count"></span><span id="match-total"></span></div>
 
-  {% set has_history = history_jos or history_bookings or history_orders %}
   {% if has_history %}
   <div class="tbl-wrap">
     <table id="hist-table">
       <thead><tr><th>Reference</th><th>Customer</th><th>Amount</th><th>Method</th><th>Date</th><th></th></tr></thead>
       <tbody>
         {% for jo in history_jos %}
-        <tr class="hist-row" data-s="{{ jo.customer_name|lower }} jo-{{ '%03d'|format(jo.id) }} {{ jo.customer_phone or '' }}{% if jo.payment and jo.payment.reference_no %} {{ jo.payment.reference_no }}{% endif %}">
-          <td><span class="h-type h-jo">JO</span><span class="ref ref-jo">JO-{{ '%03d'|format(jo.id) }}</span></td>
+        <tr class="hist-row{% if jo.id in new_jo_ids %} is-new{% endif %}" data-type="joborder" data-amount="{{ jo.total_amount }}" data-ts="{{ (jo.payment.paid_at if jo.payment else jo.created_at).strftime('%Y%m%d%H%M%S') }}" data-s="{{ jo.customer_name|lower }} jo-{{ '%03d'|format(jo.id) }} {{ jo.customer_phone or '' }}{% if jo.payment and jo.payment.reference_no %} {{ jo.payment.reference_no }}{% endif %}">
+          <td><span class="h-type h-jo">JO</span><span class="ref ref-jo">JO-{{ '%03d'|format(jo.id) }}</span>{% if jo.id in new_jo_ids %}<span class="new-tag">NEW</span>{% endif %}</td>
           <td>
             <div class="name">{{ jo.customer_name }}</div>
-            {% if jo.customer_phone %}<div class="sub">{{ jo.customer_phone }}</div>{% endif %}
+            <div class="sub">Job order{% if jo.items %} · {{ jo.items|map(attribute='name')|join(', ') }}{% endif %}</div>
           </td>
-          <td><span class="amount">₱{{ '%.2f'|format(jo.total_amount) }}</span></td>
+          <td><span class="amount">₱{{ '{:,.2f}'.format(jo.total_amount) }}</span></td>
           <td>
             {% if jo.payment %}
             <span class="badge b-{{ jo.payment.payment_method }}">{{ jo.payment.payment_method|upper }}</span>
@@ -459,24 +507,42 @@
             {% endif %}
           </td>
           <td class="date-cell">{% if jo.payment %}{{ jo.payment.paid_at.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ jo.payment.paid_at.strftime('%I:%M %p') }}</span>{% endif %}</td>
-          <td>{% if jo.payment %}<a href="{{ url_for('payment_receipt', pid=jo.payment.id) }}" class="btn-receipt" target="_blank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Receipt</a>{% endif %}</td>
+          <td>{% if jo.payment %}<a href="{{ url_for('payment_receipt', pid=jo.payment.id) }}" class="btn-receipt" target="_blank">{{ rcpt_icon }} Receipt</a>{% endif %}</td>
         </tr>
         {% endfor %}
         {% for b in history_bookings %}
         {% set used_method = b.invoice_payment_method or b.payment_method %}
-        <tr class="hist-row" data-bid="{{ b.id }}" data-s="{{ (b.contact_name or b.customer.fullname)|lower }} bkg-{{ '%03d'|format(b.id) }} {{ b.customer.phone }}{% if b.invoice_receipt_no %} {{ b.invoice_receipt_no|lower }}{% endif %} inv-{{ '%03d'|format(b.id) }}">
-          <td><span class="h-type h-bkg">BKG</span><span class="ref ref-bkg">BKG-{{ '%03d'|format(b.id) }}</span></td>
+        <tr class="hist-row{% if b.id in new_bkg_ids %} is-new{% endif %}" data-type="booking" data-amount="{{ b.total_amount }}" data-ts="{{ b.paid_at_display.strftime('%Y%m%d%H%M%S') }}" data-bid="{{ b.id }}" data-s="{{ (b.contact_name or b.customer.fullname)|lower }} bkg-{{ '%03d'|format(b.id) }} {{ b.customer.phone }}{% if b.invoice_receipt_no %} {{ b.invoice_receipt_no|lower }}{% endif %} inv-{{ '%03d'|format(b.id) }}">
+          <td><span class="h-type h-bkg">BKG</span><span class="ref ref-bkg">BKG-{{ '%03d'|format(b.id) }}</span>{% if b.id in new_bkg_ids %}<span class="new-tag">NEW</span>{% endif %}</td>
           <td>
             <div class="name">{{ b.contact_name or b.customer.fullname }}</div>
+            {% if b.is_backjob %}
+            <div class="sub">{{ b.service }}{% if b.bj_state == 'approved' %} + approved quotation{% elif b.bj_state == 'declined' %} · quotation declined{% else %} · no extra work found{% endif %}</div>
+            {% else %}
             <div class="sub">{{ b.service }}{% if b.extra_item_count %} + {{ b.extra_item_count }} extra item{{ 's' if b.extra_item_count != 1 else '' }}{% endif %}</div>
+            {% endif %}
           </td>
-          <td><span class="amount">₱{{ '%.2f'|format(b.total_amount) }}</span></td>
-          <td><span class="badge b-{{ used_method }}">{{ used_method|upper }}</span></td>
+          <td>
+            <span class="amount">₱{{ '{:,.2f}'.format(b.total_amount) }}</span>
+            {% if b.is_backjob %}
+            <div class="sub">{% if b.bj_state == 'approved' %}Back job ₱{{ '{:,.0f}'.format(b.bj_free) }} · Work ₱{{ '{:,.0f}'.format(b.bj_work) }} · Materials ₱{{ '{:,.0f}'.format(b.bj_mat) }}{% else %}Back job only · free{% endif %}</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if b.is_backjob and b.bj_state != 'approved' %}
+              <span class="badge b-nocharge">NO CHARGE</span>
+            {% else %}
+              <span class="badge b-{{ used_method }}">{{ used_method|upper }}</span>
+              {% if used_method == 'gcash' and b.invoice_gcash_ref %}<div class="sub">Ref {{ b.invoice_gcash_ref }}</div>{% endif %}
+            {% endif %}
+          </td>
          <td class="date-cell">{{ b.paid_at_display.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ b.paid_at_display.strftime('%I:%M %p') }}</span></td>
           <td>
+            {% if b.is_backjob and b.bj_state != 'approved' %}<span class="sub">—</span>{% else %}
             <button class="btn-receipt" onclick="openReceiptModal({{ b.id }})">
-              Receipt
+              {{ rcpt_icon }} Receipt
             </button>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -484,18 +550,21 @@
         {% set o_ref = ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) %}
         {% set o_name = o.contact_name if o.is_instore else o.customer.fullname %}
         {% set o_phone = '' if o.is_instore else o.customer.phone %}
-        <tr class="hist-row{% if o.id in new_instore_ids %} is-new{% endif %}" data-s="{{ o_name|lower }} {{ o_ref|lower }} {{ o_phone }}">
-          <td><span class="h-type {{ 'h-sale' if o.is_instore else 'h-ord' }}">{{ 'SALE' if o.is_instore else 'ORD' }}</span><span class="ref {{ 'ref-sale' if o.is_instore else 'ref-ord' }}">{{ o_ref }}</span></td>
+        <tr class="hist-row{% if o.id in new_ord_ids %} is-new{% endif %}" data-type="{{ 'instore' if o.is_instore else 'online' }}" data-amount="{{ o.total_amount }}" data-ts="{{ (o.delivered_at or o.created_at).strftime('%Y%m%d%H%M%S') }}" data-s="{{ o_name|lower }} {{ o_ref|lower }} {{ o_phone }}">
+          <td><span class="h-type {{ 'h-sale' if o.is_instore else 'h-ord' }}">{{ 'SALE' if o.is_instore else 'ORD' }}</span><span class="ref {{ 'ref-sale' if o.is_instore else 'ref-ord' }}">{{ o_ref }}</span>{% if o.id in new_ord_ids %}<span class="new-tag">NEW</span>{% endif %}</td>
           <td>
             <div class="name">{{ o_name }}</div>
-            <div class="sub">{{ o.items|length }} item(s)</div>
+            <div class="sub">{% if o.is_instore %}In-store{% endif %} {{ o.items|length }} item{{ '' if o.items|length == 1 else 's' }}{% if not o.is_instore %} · {{ 'Ship to address' if o.delivery_method == 'ship' else 'Shop pickup' }}{% endif %}</div>
           </td>
-          <td><span class="amount">₱{{ '%.2f'|format(o.total_amount) }}</span></td>
-          <td><span class="badge b-{{ o.payment_method }}">{{ o.payment_method|upper }}</span></td>
-          <td class="date-cell">{{ o.created_at.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o.created_at.strftime('%I:%M %p') }}</span></td>
+          <td><span class="amount">₱{{ '{:,.2f}'.format(o.total_amount) }}</span></td>
+          <td>
+            <span class="badge b-{{ o.payment_method }}">{{ o.payment_method|upper }}</span>
+            {% if o.payment_method == 'gcash' and not o.is_instore %}<div class="sub">PayMongo{% if o.payment_ref %} · {{ o.payment_ref[:16] }}{% if o.payment_ref|length > 16 %}…{% endif %}{% endif %}</div>{% endif %}
+          </td>
+          <td class="date-cell">{% set o_paid = o.delivered_at or o.created_at %}{{ o_paid.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o_paid.strftime('%I:%M %p') }}</span></td>
           <td>
             <button class="btn-receipt" onclick="printOrdReceipt('{{ o_ref }}', '{{ o_name|e }}', '{{ o_phone }}', {{ o.total_amount }}, '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}], '{{ o.delivery_method }}', {{ 'true' if o.is_instore else 'false' }})">
-              Receipt
+              {{ rcpt_icon }} Receipt
             </button>
           </td>
         </tr>
@@ -510,6 +579,37 @@
   {% endif %}
 
   {% endif %}
+  </div>{# /bill-left #}
+
+  {# ── RECENT TRANSACTIONS ── #}
+  <aside class="recent-panel" id="recent-panel">
+    <div class="recent-head">
+      <div class="rh-title">Recent Transactions</div>
+      <div class="rh-total">₱{{ '{:,.2f}'.format(recent_today_total) }}</div>
+      <div class="rh-sub">Collected today · {{ recent_today_count }} payment{{ '' if recent_today_count == 1 else 's' }}</div>
+    </div>
+    {% for g in recent_groups %}
+      <div class="recent-day">{{ g.label }}</div>
+      {% for r in g['items'] %}
+      <div class="recent-item" onclick="openRecentReceipt(this)" data-kind="{{ r.kind }}" data-id="{{ r.id }}"{% if r.receipt_url %} data-url="{{ r.receipt_url }}"{% endif %}{% if r.ord %} data-ord='{{ r.ord|tojson }}'{% endif %}>
+        <span class="h-type h-{{ r.tag|lower }}">{{ r.tag }}</span>
+        <div class="ri-main">
+          <div class="ri-cust">{{ r.customer }}</div>
+          <div class="ri-ref">{{ r.ref }}</div>
+        </div>
+        <div class="ri-side">
+          <div class="ri-amt">₱{{ '{:,.2f}'.format(r.amount or 0) }}</div>
+          <div><span class="badge b-{{ r.method }}">{{ r.method|upper }}</span></div>
+          <div class="ri-time">{{ r.time }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty" style="padding:1.5rem;"><p>No payments yet.</p></div>
+    {% endfor %}
+    <a class="recent-all" href="?tab=history">View all in History</a>
+  </aside>
+  </div>{# /bill-layout #}
 </div>
 
 <!-- ── BILLING MODAL ── -->
@@ -878,12 +978,40 @@ async function submitPickedUp() {
   }
 }
 
-function filterHistory() {
-  const q = document.getElementById('hist-search').value.toLowerCase().trim();
-  document.querySelectorAll('.hist-row').forEach(r => {
-    r.style.display = !q || r.dataset.s.includes(q) ? '' : 'none';
+// Search + Type apply together on whichever tab is open (Pending or History).
+const _peso = n => '₱' + n.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+function applyBillingFilters() {
+  const searchEl = document.getElementById('pending-search') || document.getElementById('hist-search');
+  const q    = searchEl.value.toLowerCase().trim();
+  const type = document.getElementById('type-filter').value;
+  const isPending = !!document.getElementById('pending-search');
+  const rows = [...document.querySelectorAll(isPending ? '.pending-row' : '.hist-row')];
+  const secCounts = {};
+  let shown = 0, total = 0;
+  rows.forEach(r => {
+    const ok = (!q || r.dataset.s.includes(q)) && (!type || r.dataset.type === type);
+    r.style.display = ok ? '' : 'none';
+    if (ok) { shown++; total += parseFloat(r.dataset.amount) || 0; secCounts[r.dataset.type] = (secCounts[r.dataset.type] || 0) + 1; }
   });
+  document.querySelectorAll('.sec-count[data-sec]').forEach(el => { el.textContent = secCounts[el.dataset.sec] || 0; });
+  document.getElementById('match-count').innerHTML = `Showing <b>${shown}</b> of ${rows.length} ${isPending ? 'pending ' : ''}payment${rows.length === 1 ? '' : 's'}`;
+  document.getElementById('match-total').innerHTML = `${isPending ? 'Total due' : 'Total collected'}: <b>${_peso(total)}</b>`;
+  document.getElementById('clear-filters').style.display = (q || type) ? 'inline' : 'none';
 }
+function clearBillingFilters() {
+  (document.getElementById('pending-search') || document.getElementById('hist-search')).value = '';
+  document.getElementById('type-filter').value = '';
+  applyBillingFilters();
+}
+// History is newest-first across all payment types, whichever list a row came from.
+(function sortHistoryNewestFirst() {
+  const body = document.querySelector('#hist-table tbody');
+  if (!body) return;
+  [...body.querySelectorAll('tr.hist-row')]
+    .sort((a, b) => (b.dataset.ts || '').localeCompare(a.dataset.ts || ''))
+    .forEach(r => body.appendChild(r));
+})();
+document.addEventListener('DOMContentLoaded', () => { if (document.getElementById('type-filter')) applyBillingFilters(); });
 
 function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
   const w = window.open('', '_blank', 'width=400,height=600');
@@ -963,11 +1091,15 @@ function printOrdReceipt(ref, customer, phone, amount, method, date, items, deli
   w.document.close();
 }
 
-function filterPending() {
-  const q = document.getElementById('pending-search').value.toLowerCase().trim();
-  document.querySelectorAll('.pending-row').forEach(r => {
-    r.style.display = !q || r.dataset.s.includes(q) ? '' : 'none';
-  });
+// Recent Transactions: open that payment's receipt, same as its History row.
+function openRecentReceipt(el) {
+  const kind = el.dataset.kind;
+  if (kind === 'jo') { window.open(el.dataset.url, '_blank'); }
+  else if (kind === 'bkg') { openReceiptModal(parseInt(el.dataset.id, 10)); }
+  else if (kind === 'ord') {
+    const o = JSON.parse(el.dataset.ord);
+    printOrdReceipt(o.ref, o.customer, o.phone, o.amount, o.method, o.date, o.items, o.delivery, o.is_instore);
+  }
 }
 
 function showBottomToast(msg) {
