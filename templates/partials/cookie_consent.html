@@ -1,0 +1,167 @@
+<!-- Cookie banner, Cookie Settings and Cookie Policy (shared by the public pages) -->
+<style>
+  .ck-banner{position:fixed;left:20px;bottom:20px;z-index:1200;width:min(360px,calc(100vw - 40px));background:#fff;border:1px solid var(--line-1,#e5e7eb);border-radius:16px;box-shadow:0 18px 50px rgba(28,24,20,.28),0 3px 10px rgba(28,24,20,.12);padding:18px 18px 14px;font-family:var(--font-body,'DM Sans',sans-serif);color:var(--fg-1,#1c1814);display:none}
+  .ck-banner.show{display:block;animation:ckIn .35s ease both}
+  @keyframes ckIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.ck-banner.show{animation:none}}
+  .ck-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .ck-ico{width:34px;height:34px;border-radius:10px;background:var(--brand-red-soft,#fdecee);color:var(--brand-red,#d00019);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ck-title{font-family:var(--font-display,'Bebas Neue',sans-serif);font-size:22px;letter-spacing:.03em;line-height:1;text-transform:uppercase}
+  .ck-text{font-size:12.5px;line-height:1.55;color:var(--fg-2,#4b5563);margin:0 0 12px}
+  .ck-link{color:var(--brand-red,#d00019);font-weight:700;text-decoration:underline;background:none;border:0;padding:0;font:inherit;font-weight:700;cursor:pointer}
+  .ck-btns{display:flex;gap:10px}
+  .ck-btn{flex:1;padding:10px 12px;border-radius:10px;font-family:var(--font-label,'Syne',sans-serif);font-weight:700;font-size:12.5px;cursor:pointer;border:1.5px solid var(--fg-1,#1c1814);background:#fff;color:var(--fg-1,#1c1814)}
+  .ck-btn.red{background:var(--brand-red,#d00019);border-color:var(--brand-red,#d00019);color:#fff}
+  .ck-btn:focus-visible,.ck-link:focus-visible,.ck-x:focus-visible,.ck-switch:focus-visible{outline:2px solid var(--brand-red,#d00019);outline-offset:2px}
+  .ck-choose{display:block;text-align:center;margin:12px auto 0;font-size:12.5px}
+  .ck-overlay{position:fixed;inset:0;z-index:1300;background:rgba(20,16,12,.55);display:none;align-items:center;justify-content:center;padding:16px}
+  .ck-overlay.open{display:flex}
+  .ck-modal{position:relative;background:#fff;border-radius:18px;width:min(560px,100%);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.35);font-family:var(--font-body,'DM Sans',sans-serif);color:var(--fg-1,#1c1814)}
+  .ck-modal.sm{width:min(480px,100%)}
+  .ck-mhead{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 14px;border-bottom:1px solid var(--line-1,#e5e7eb)}
+  .ck-mtitle{font-family:var(--font-display,'Bebas Neue',sans-serif);font-size:30px;letter-spacing:.03em;line-height:1;text-transform:uppercase;margin:0}
+  .ck-mtitle span{color:var(--brand-red,#d00019)}
+  .ck-x{width:34px;height:34px;border-radius:50%;border:0;background:transparent;color:var(--fg-2,#4b5563);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .ck-x:hover{background:var(--bg-subtle,#f3f4f6)}
+  .ck-mbody{padding:18px 24px;overflow-y:auto;font-size:13.5px;line-height:1.6;color:var(--fg-2,#4b5563)}
+  .ck-mbody h3{font-family:var(--font-label,'Syne',sans-serif);font-size:14px;font-weight:700;color:var(--fg-1,#1c1814);margin:18px 0 6px}
+  .ck-mbody h3:first-of-type{margin-top:12px}
+  .ck-mbody p{margin:0 0 6px}
+  .ck-updated{font-size:12px;color:var(--fg-3,#6b7280)}
+  .ck-table-wrap{border:1px solid var(--line-1,#e5e7eb);border-radius:12px;overflow:hidden;overflow-x:auto;margin-top:6px}
+  .ck-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px}
+  .ck-table th{background:var(--bg-subtle,#f3f4f6);text-align:left;font-family:var(--font-label,'Syne',sans-serif);font-weight:700;color:var(--fg-1,#1c1814);padding:10px 12px}
+  .ck-table td{padding:10px 12px;border-top:1px solid var(--line-1,#e5e7eb);vertical-align:top}
+  .ck-code{font-family:var(--font-mono,'DM Mono',monospace);font-size:11.5px;background:var(--bg-subtle,#f3f4f6);border-radius:5px;padding:2px 6px;white-space:nowrap}
+  .ck-pill{display:inline-block;font-family:var(--font-label,'Syne',sans-serif);font-weight:700;font-size:10.5px;padding:3px 9px;border-radius:99px}
+  .ck-pill.ess{background:#dcfce7;color:#15803d}.ck-pill.opt{background:#fee2e2;color:#b91c1c}
+  .ck-mfoot{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px 18px;border-top:1px solid var(--line-1,#e5e7eb);background:var(--bg-subtle,#f9fafb);border-radius:0 0 18px 18px}
+  .ck-mfoot .ck-btn{flex:0 0 auto;min-width:130px}
+  .ck-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:14px 0}
+  .ck-row + .ck-row{border-top:1px solid var(--line-1,#e5e7eb)}
+  .ck-row h3{margin:0 0 4px !important}
+  .ck-on{font-family:var(--font-label,'Syne',sans-serif);font-weight:700;font-size:12px;color:#15803d;white-space:nowrap}
+  .ck-switch{position:relative;flex-shrink:0;width:44px;height:26px;border-radius:99px;border:0;background:#d1d5db;cursor:pointer;transition:background .15s;padding:0}
+  .ck-switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s}
+  .ck-switch[aria-checked="true"]{background:var(--brand-red,#d00019)}
+  .ck-switch[aria-checked="true"]::after{transform:translateX(18px)}
+  @media (max-width:520px){.ck-banner{left:12px;right:12px;bottom:12px;width:auto}.ck-mfoot .ck-btn{flex:1}.ck-mhead,.ck-mbody,.ck-mfoot{padding-left:18px;padding-right:18px}}
+</style>
+
+<div class="ck-banner" id="ckBanner" role="dialog" aria-label="Cookies" aria-live="polite">
+  <div class="ck-head">
+    <span class="ck-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.6 12.4a4 4 0 0 1-4.9-5 4 4 0 0 1-5-4.9A10 10 0 1 0 21.6 12.4z"/><circle cx="8.5" cy="12" r="1"/><circle cx="12" cy="16.5" r="1"/><circle cx="15.5" cy="12.5" r="1"/></svg></span>
+    <div class="ck-title">We use cookies</div>
+  </div>
+  <p class="ck-text">Cookies keep you signed in and keep your bookings and orders secure. With your OK, we'll also use analytics cookies to see which pages riders use most. <button type="button" class="ck-link" onclick="ckOpenPolicy()">Read our Cookie Policy</button></p>
+  <div class="ck-btns">
+    <button type="button" class="ck-btn" onclick="ckChoose(false)">Essential only</button>
+    <button type="button" class="ck-btn red" onclick="ckChoose(true)">Accept all</button>
+  </div>
+  <button type="button" class="ck-link ck-choose" onclick="ckOpenSettings()">Choose which cookies</button>
+</div>
+
+<div class="ck-overlay" id="ckSettings" onclick="if(event.target===this)ckClose('ckSettings')">
+  <div class="ck-modal sm" role="dialog" aria-modal="true" aria-labelledby="ckSettingsTitle">
+    <div class="ck-mhead"><h2 class="ck-mtitle" id="ckSettingsTitle">COOKIE <span>SETTINGS</span></h2>
+      <button type="button" class="ck-x" aria-label="Close" onclick="ckClose('ckSettings')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
+    <div class="ck-mbody">
+      <div class="ck-row"><div><h3>Essential cookies</h3><p>Keep you signed in, protect your account and forms, and remember your cookie choice. The site can't work without them.</p></div><span class="ck-on">Always on</span></div>
+      <div class="ck-row"><div><h3>Analytics cookies</h3><p>Show us which pages riders visit and where they get stuck, so we can improve the site. They don't identify you by name.</p></div>
+        <button type="button" class="ck-switch" id="ckAnalytics" role="switch" aria-checked="false" aria-label="Analytics cookies" onclick="this.setAttribute('aria-checked', this.getAttribute('aria-checked') === 'true' ? 'false' : 'true')"></button></div>
+    </div>
+    <div class="ck-mfoot">
+      <button type="button" class="ck-btn" onclick="ckChoose(document.getElementById('ckAnalytics').getAttribute('aria-checked') === 'true')">Save my choices</button>
+      <button type="button" class="ck-btn red" onclick="ckChoose(true)">Accept all</button>
+    </div>
+  </div>
+</div>
+
+<div class="ck-overlay" id="ckPolicy" onclick="if(event.target===this)ckClose('ckPolicy')">
+  <div class="ck-modal" role="dialog" aria-modal="true" aria-labelledby="ckPolicyTitle">
+    <div class="ck-mhead"><h2 class="ck-mtitle" id="ckPolicyTitle">COOKIE <span>POLICY</span></h2>
+      <button type="button" class="ck-x" aria-label="Close" onclick="ckClose('ckPolicy')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
+    <div class="ck-mbody">
+      <div class="ck-updated">Last updated: October 14, 2026</div>
+      <h3>What cookies are</h3>
+      <p>Cookies are small files a website saves in your browser. MotoTyres North Caloocan uses them to keep you signed in, keep your account secure, and remember your settings.</p>
+      <h3>Cookies we use</h3>
+      <div class="ck-table-wrap"><table class="ck-table">
+        <thead><tr><th>Cookie</th><th>Type</th><th>What it does</th><th>How long it lasts</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ck-code">session</span></td><td><span class="ck-pill ess">Essential</span></td><td>Keeps you signed in while you book services, place orders, and check your account.</td><td>Until you sign out or close the browser</td></tr>
+          <tr><td><span class="ck-code">remember_token</span></td><td><span class="ck-pill ess">Essential</span></td><td>Keeps you signed in on this device if you choose to stay signed in.</td><td>Until you sign out</td></tr>
+          <tr><td><span class="ck-code">mt_cookie_consent</span></td><td><span class="ck-pill ess">Essential</span></td><td>Remembers your cookie choice so we don't ask on every visit.</td><td>12 months</td></tr>
+          <tr><td>Analytics</td><td><span class="ck-pill opt">Optional</span></td><td>Counts page visits so we can improve the site. Only used if you allow it.</td><td>Up to 12 months</td></tr>
+        </tbody></table></div>
+      <h3>Payments</h3>
+      <p>When you pay with GCash, you're taken to PayMongo's secure checkout. PayMongo may set its own cookies there to process your payment, and its privacy policy applies to them.</p>
+      <h3>Map</h3>
+      <p>The map in our Contact section is from Google Maps. Google may set its own cookies when the map loads, and its privacy policy applies to them.</p>
+      <h3>Changing your choice</h3>
+      <p>Click <button type="button" class="ck-link" onclick="ckClose('ckPolicy'); ckOpenSettings()">Cookie Settings</button> at the bottom of any page to turn analytics cookies on or off. You can also delete cookies in your browser settings, but you'll be signed out.</p>
+      <h3>Your privacy rights</h3>
+      <p>Under the Data Privacy Act of 2012 (Republic Act No. 10173), you can ask what personal data we keep about you and ask us to correct or delete it. Call or text us at 0915 269 8366, or message MotoTyres North Caloocan on Facebook.</p>
+    </div>
+    <div class="ck-mfoot"><button type="button" class="ck-btn red" onclick="ckClose('ckPolicy')">Got it</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const NAME = 'mt_cookie_consent';
+  function read() {
+    const m = document.cookie.split('; ').find(c => c.startsWith(NAME + '='));
+    return m ? decodeURIComponent(m.split('=')[1]) : null;      // 'all' | 'essential' | null
+  }
+  function write(analytics) {
+    document.cookie = NAME + '=' + (analytics ? 'all' : 'essential') + '; max-age=' + (60 * 60 * 24 * 365) + '; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+  }
+  const banner = document.getElementById('ckBanner');
+  let lastFocus = null;
+
+  function apply(analytics) {
+    window.MT_ANALYTICS_ALLOWED = !!analytics;                   // the hook any analytics script checks before it loads
+    document.dispatchEvent(new CustomEvent('mt-cookie-consent', { detail: { analytics: !!analytics } }));
+  }
+  window.ckChoose = function (analytics) {
+    write(analytics); apply(analytics);
+    banner.classList.remove('show');
+    ckClose('ckSettings');
+  };
+  window.ckOpenSettings = function () {
+    document.getElementById('ckAnalytics').setAttribute('aria-checked', read() === 'all' ? 'true' : 'false');
+    openModal('ckSettings');
+  };
+  window.ckOpenPolicy = function () { openModal('ckPolicy'); };
+  window.ckClose = function (id) {
+    const el = document.getElementById(id);
+    if (!el.classList.contains('open')) return;
+    el.classList.remove('open');
+    if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) {} }
+  };
+  function openModal(id) {
+    lastFocus = document.activeElement;
+    const el = document.getElementById(id);
+    el.classList.add('open');
+    const first = el.querySelector('.ck-btn:not(.red), .ck-x');
+    setTimeout(() => { (el.querySelector('.ck-mfoot .ck-btn') || first).focus(); }, 30);
+  }
+  // Esc closes the open window; Tab stays inside it.
+  document.addEventListener('keydown', function (e) {
+    const open = document.querySelector('.ck-overlay.open');
+    if (!open) return;
+    if (e.key === 'Escape') { e.preventDefault(); ckClose(open.id); return; }
+    if (e.key !== 'Tab') return;
+    const f = Array.from(open.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])')).filter(el => !el.disabled && el.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (!open.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  const saved = read();
+  if (saved === null) banner.classList.add('show'); else apply(saved === 'all');
+})();
+</script>

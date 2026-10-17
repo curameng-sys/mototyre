@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sign In – MotoTyre</title>
+  <title>Sign In – MotoTyres</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -467,7 +467,7 @@
     <div class="photo-scrim"></div>
     <div class="photo-content">
       <!-- Logo -->
-      <div class="photo-logo">MOTO<span class="accent">TYRE</span></div>
+      <div class="photo-logo">MOTO<span class="accent">TYRES</span></div>
 
       <!-- Tagline -->
       <div class="photo-tagline">
@@ -666,7 +666,7 @@
     <!-- Footer -->
     <div class="form-footer">
       <div class="footer-dot"></div>
-      MOTOTYRE © {{ current_year }}
+      MOTOTYRES © {{ current_year }}
       <div class="footer-dot"></div>
       BAGUMBONG, CALOOCAN
     </div>
@@ -781,5 +781,6 @@
     btn.textContent = el.type === 'password' ? 'SHOW' : 'HIDE';
   }
 </script>
+{% include 'partials/cookie_consent.html' %}
 </body>
 </html>

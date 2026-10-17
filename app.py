@@ -122,9 +122,16 @@ FACEBOOK_PAGE_URL = os.getenv("FACEBOOK_PAGE_URL", "https://www.facebook.com/sha
 SHOP_PHONE         = os.getenv("SHOP_PHONE", "+639152698366")
 SHOP_PHONE_DISPLAY = os.getenv("SHOP_PHONE_DISPLAY", "0915 269 8366")
 SHOP_HOURS         = os.getenv("SHOP_HOURS", "Open daily, 8:00 AM to 6:30 PM")
-SHOP_MAPS_URL      = os.getenv("SHOP_MAPS_URL",
-    "https://www.google.com/maps/search/?api=1&query=" +
-    quote("Saranay Rd, Brgy. 171 Bagumbong, Caloocan City, Metro Manila 1421"))
+SHOP_MAPS_URL      = os.getenv("SHOP_MAPS_URL", "https://maps.app.goo.gl/is6D6eVZwThGj6dx9")
+# The map on the landing page. SHOP_MAP_EMBED_URL is the "Share -> Embed a map" link from Google Maps
+# (the src="..." of the iframe it gives you); set it in the environment to pin the exact spot.
+SHOP_ADDRESS       = "Saranay Rd, Brgy 171 Bagumbong, Caloocan City, Metro Manila 1421"
+SHOP_MAP_EMBED_URL = os.getenv("SHOP_MAP_EMBED_URL",
+    "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3858.25151396601!2d121.02582719999998!3d14.754854999999997"
+    "!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397b1cec7594813%3A0x3df04b9ad63327b0"
+    "!2sSaranay%20Rd%2C%20Barangay%20171%2C%20Caloocan%2C%20Metro%20Manila!5e0!3m2!1sen!2sph!4v1792217430805!5m2!1sen!2sph")
+SHOP_DIRECTIONS_URL = os.getenv("SHOP_DIRECTIONS_URL",
+    "https://www.google.com/maps/dir/?api=1&destination=14.754855,121.0258272")
 
 # Hosts the customer is allowed to be redirected back to after payment.
 # ALLOWED_ORIGIN lets a deployed host (Render, etc.) add itself without a
@@ -219,7 +226,7 @@ def send_order_receipt_email(order, override_email=None):
               <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;text-align:right;font-weight:600;">&#8369;{subtotal:.2f}</td>
             </tr>"""
 
-        delivery_label = "Shop Pickup — MotoTyre North Caloocan" if order.delivery_method == 'pickup' else "Ship to Address"
+        delivery_label = "Shop Pickup — MotoTyres North Caloocan" if order.delivery_method == 'pickup' else "Ship to Address"
         delivery_detail = ""
         if order.delivery_method == 'ship' and order.ship_address:
             addr = order.ship_address.replace('\n', '<br>')
@@ -231,7 +238,7 @@ def send_order_receipt_email(order, override_email=None):
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
           <div style="background:#0c0d0f;padding:28px 32px;text-align:center;">
-            <div style="font-family:Georgia,serif;font-size:26px;font-weight:900;letter-spacing:4px;color:#ffffff;">MOTO<span style="color:#ff0f0f;">TYRE</span></div>
+            <div style="font-family:Georgia,serif;font-size:26px;font-weight:900;letter-spacing:4px;color:#ffffff;">MOTO<span style="color:#ff0f0f;">TYRES</span></div>
             <div style="color:#6b7280;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:4px;">Order Receipt</div>
           </div>
           <div style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;padding:16px 32px;display:flex;align-items:center;gap:12px;">
@@ -302,15 +309,15 @@ def send_order_receipt_email(order, override_email=None):
           </div>
           <div style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 32px;text-align:center;">
             <div style="color:#6b7280;font-size:12px;line-height:1.7;">
-              <strong style="color:#111827;">MotoTyre North Caloocan</strong><br>
+              <strong style="color:#111827;">MotoTyres North Caloocan</strong><br>
               Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>
               &#128222; 0915 269 8366 &nbsp;|&nbsp; Mon–Sun 8:00 AM – 6:30 PM
             </div>
-            <div style="margin-top:12px;color:#9ca3af;font-size:11px;">Thank you for choosing MotoTyre! &#127947;</div>
+            <div style="margin-top:12px;color:#9ca3af;font-size:11px;">Thank you for choosing MotoTyres! &#127947;</div>
           </div>
         </div>"""
 
-        _send_gmail(recipient_email, f"Your MotoTyre Receipt — {order_num}", html)
+        _send_gmail(recipient_email, f"Your MotoTyres Receipt — {order_num}", html)
         order.receipt_sent = True
         db.session.commit()
         print(f"[receipt email] sent to {recipient_email} for {order_num}")
@@ -368,7 +375,7 @@ def send_booking_confirmation_email(booking):
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
           <div style="background:#0c0d0f;padding:28px 32px;text-align:center;">
-            <div style="font-family:Georgia,serif;font-size:26px;font-weight:900;letter-spacing:4px;color:#ffffff;">MOTO<span style="color:#ff0f0f;">TYRE</span></div>
+            <div style="font-family:Georgia,serif;font-size:26px;font-weight:900;letter-spacing:4px;color:#ffffff;">MOTO<span style="color:#ff0f0f;">TYRES</span></div>
             <div style="color:#6b7280;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:4px;">Booking Confirmed</div>
           </div>
           <div style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;padding:16px 32px;display:flex;align-items:center;gap:12px;">
@@ -397,7 +404,7 @@ def send_booking_confirmation_email(booking):
           </div>
           <div style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 32px;text-align:center;">
             <div style="color:#6b7280;font-size:12px;line-height:1.7;">
-              <strong style="color:#111827;">MotoTyre North Caloocan</strong><br>
+              <strong style="color:#111827;">MotoTyres North Caloocan</strong><br>
               Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>
               &#128222; 0915 269 8366 &nbsp;|&nbsp; Mon–Sun 8:00 AM – 6:30 PM
             </div>
@@ -766,9 +773,9 @@ def _notify_order_customer(order, title, body, status=None):
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
       <p>Hi {customer.fullname},</p>
       <p>{body}</p>
-      <p>— MotoTyre North Caloocan</p>
+      <p>— MotoTyres North Caloocan</p>
     </div>"""
-    _send_gmail(customer.email, f'{title} — MotoTyre', html)
+    _send_gmail(customer.email, f'{title} — MotoTyres', html)
     return True
 
 
@@ -853,7 +860,7 @@ def check_day_before_reminders():
                   <p>Reminder: your <strong>{f['services']}</strong> appointment ({f['ref']}) is tomorrow, <strong>{f['date_str']} at {f['time_label']}</strong>.</p>
                   <p>Mechanic: {f['mechanic_label']}<br>Motorcycle: {f['motorcycle']}</p>
                   <p>Reply to this email if you need to move it.</p>
-                  <p>— MotoTyre North Caloocan</p>
+                  <p>— MotoTyres North Caloocan</p>
                 </div>"""
                 _send_gmail(user.email, f"Reminder — tomorrow at {f['time_str']} ({f['ref']})", html)
             print(f'[DAY-BEFORE REMINDER] Sent for booking #{b.id} to user {b.user_id}')
@@ -961,7 +968,10 @@ def cleanup_abandoned_gcash_orders():
 
 @app.route('/')
 def home():
-    return render_template('landing.html', FACEBOOK_PAGE_URL=FACEBOOK_PAGE_URL)
+    return render_template('landing.html', FACEBOOK_PAGE_URL=FACEBOOK_PAGE_URL,
+                           SHOP_ADDRESS=SHOP_ADDRESS, SHOP_PHONE=SHOP_PHONE, SHOP_PHONE_DISPLAY=SHOP_PHONE_DISPLAY,
+                           SHOP_MAP_EMBED_URL=SHOP_MAP_EMBED_URL, SHOP_DIRECTIONS_URL=SHOP_DIRECTIONS_URL,
+                           SHOP_MAPS_URL=SHOP_MAPS_URL)
 
 @app.route('/products')
 def products():
@@ -1105,12 +1115,38 @@ def register():
         suffix    = clean_str(request.form.get('suffix', ''), max_len=10)
         fullname  = f"{firstname} {lastname}" + (f" {suffix}" if suffix else "")
 
+        # Optional default delivery address: all four parts, or none.
+        d_city   = clean_str(request.form.get('dl_city', ''), max_len=50)
+        d_brgy   = clean_str(request.form.get('dl_barangay', ''), max_len=50)
+        d_street = clean_str(request.form.get('dl_street', ''), max_len=255)
+        d_zip    = clean_str(request.form.get('dl_zip', ''), max_len=10)
+        parts = [d_city, d_brgy, d_street, d_zip]
+        has_address = any(parts)
+        if has_address:
+            missing = [lbl for lbl, v in zip(['city', 'barangay', 'house no. and street', 'ZIP code'], parts) if not v]
+            if missing:
+                flash('Your delivery address is missing: ' + ', '.join(missing) + '. Finish it or clear it.', 'danger')
+                return redirect(url_for('register'))
+            if not is_in_delivery_zone(d_city, d_brgy):
+                flash('That delivery address is outside our delivery area. Clear it to continue — you can still book services and use Shop Pickup.', 'danger')
+                return redirect(url_for('register'))
+            if not (d_zip.isdigit() and len(d_zip) == 4):
+                flash('The ZIP code has 4 digits.', 'danger')
+                return redirect(url_for('register'))
+
         user = User(
             fullname=fullname, email=email, phone=phone,
-            address=clean_str(request.form.get('address', ''), max_len=255),
+            address=(f'{d_street}, Brgy. {d_brgy}, {d_city} {d_zip}' if has_address else None),
             motorcycle_model=clean_str(request.form.get('model', ''), max_len=100),
             email_verified=False
         )
+        if has_address:     # saved as the default delivery address, with the account's own name and number
+            user.default_delivery_name     = fullname
+            user.default_delivery_mobile   = phone
+            user.default_delivery_city     = d_city
+            user.default_delivery_barangay = d_brgy
+            user.default_delivery_street   = d_street
+            user.default_delivery_zip      = d_zip
         user.set_password(request.form['password'])
         db.session.add(user)
         db.session.commit()
@@ -1125,7 +1161,8 @@ def register():
         session['pending_verify_email'] = email
         return redirect(url_for('register'))
 
-    return render_template('register.html')
+    return render_template('register.html', delivery_zone_barangays=DELIVERY_ZONE_BARANGAYS,
+                           delivery_zone_cities=DELIVERY_ZONE_CITIES)
 
 
 @app.route('/verify-email-otp', methods=['GET', 'POST'])
@@ -2054,16 +2091,16 @@ def customer_transactions_email():
         lines += f"<tr><td style='padding:4px 0'>Delivery fee</td><td style='padding:4px 0;text-align:right'>₱{tx['delivery_fee']:,.2f}</td></tr>"
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
-      <h2 style="margin-bottom:0">MotoTyre North Caloocan</h2>
+      <h2 style="margin-bottom:0">MotoTyres North Caloocan</h2>
       <p style="color:#666;margin-top:4px">{'Refund' if refund else 'Payment'} receipt · {badge}</p>
       <p>Receipt no. <b>{tx['receipt_no']}</b><br>{tx['ref']} · {when}</p>
       <table style="width:100%;border-collapse:collapse">{lines}
         <tr><td style="padding-top:8px;border-top:1px solid #ddd"><b>{'Refunded' if refund else 'Total paid'}</b></td>
             <td style="padding-top:8px;border-top:1px solid #ddd;text-align:right"><b>₱{tx['amount']:,.2f}</b></td></tr>
       </table>
-      <p style="color:#888;font-size:12px">Thank you for choosing MotoTyre. This is your digital receipt.</p>
+      <p style="color:#888;font-size:12px">Thank you for choosing MotoTyres. This is your digital receipt.</p>
     </div>"""
-    _send_gmail(current_user.email, f"Your MotoTyre receipt {tx['receipt_no']}", html)
+    _send_gmail(current_user.email, f"Your MotoTyres receipt {tx['receipt_no']}", html)
     return jsonify({'success': True, 'email': current_user.email})
 
 
@@ -2367,7 +2404,7 @@ def cart_checkout():
     db.session.commit()
 
     if payment_method.lower() == 'gcash':
-        desc   = f"MotoTyre Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
+        desc   = f"MotoTyres Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
         result = create_gcash_payment(amount=total, description=desc[:100], order_id=order.id, origin=request.host_url)
         if result['success']:
             return jsonify({'success': True, 'gcash': True, 'checkout_url': result['checkout_url']})
@@ -2457,7 +2494,7 @@ def place_order():
         )
 
     if payment_method.lower() == 'gcash':
-        description = f"MotoTyre Order #{order.id:03d}: {product.name} x{quantity}"
+        description = f"MotoTyres Order #{order.id:03d}: {product.name} x{quantity}"
         result = create_gcash_payment(amount=total, description=description, order_id=order.id, origin=request.host_url)
         if result["success"]:
             return redirect(result["checkout_url"])
@@ -2915,9 +2952,9 @@ def create_return_request():
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
           <p>Hi {current_user.fullname},</p>
           <p>{filed_body}</p>
-          <p>— MotoTyre North Caloocan</p>
+          <p>— MotoTyres North Caloocan</p>
         </div>"""
-        _send_gmail(current_user.email, f'{filed_title} — MotoTyre', html)
+        _send_gmail(current_user.email, f'{filed_title} — MotoTyres', html)
 
     for admin in User.query.filter_by(role='admin').all():
         send_notification(
@@ -2997,7 +3034,7 @@ def confirm_return_received(rid):
     ref = f'RMA-{rr.id:03d}'
     subject = _return_subject_label(rr)
     title = 'Replacement received — thank you!'
-    body = f'You confirmed receipt of your replacement for {subject} ({ref}). Thanks for choosing MotoTyre North Caloocan!'
+    body = f'You confirmed receipt of your replacement for {subject} ({ref}). Thanks for choosing MotoTyres North Caloocan!'
     send_notification(current_user.id, title, body,
                        type='booking' if rr.kind == 'service' else 'order', status='completed', return_request_id=rr.id)
     if current_user.email:
@@ -3005,9 +3042,9 @@ def confirm_return_received(rid):
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
           <p>Hi {current_user.fullname},</p>
           <p>{body}</p>
-          <p>— MotoTyre North Caloocan</p>
+          <p>— MotoTyres North Caloocan</p>
         </div>"""
-        _send_gmail(current_user.email, f'{title} — MotoTyre', html)
+        _send_gmail(current_user.email, f'{title} — MotoTyres', html)
 
     for admin in User.query.filter_by(role='admin').all():
         send_notification(
@@ -3420,7 +3457,7 @@ def pay_order(oid):
         flash('This order cannot be paid online.', 'warning')
         return redirect(url_for('customer_dashboard'))
     items_desc  = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
-    description = f"MotoTyre Order #{order.id:03d}: {items_desc[:100]}"
+    description = f"MotoTyres Order #{order.id:03d}: {items_desc[:100]}"
     result = create_gcash_payment(amount=order.total_amount, description=description, order_id=order.id, origin=request.host_url)
     if result["success"]:
         order.payment_method = 'gcash'
@@ -3441,7 +3478,7 @@ def pay_booking(bid):
         flash('This booking cannot be paid online.', 'warning')
         return redirect(url_for('customer_dashboard'))
     amount = booking_service_price(booking.service)
-    description = f"MotoTyre Booking #{booking.id}: {booking.service}"
+    description = f"MotoTyres Booking #{booking.id}: {booking.service}"
     result = create_gcash_payment(amount=amount, description=description, booking_id=booking.id, origin=request.host_url)
     if result["success"]:
         booking.payment_method = 'gcash'
@@ -3485,7 +3522,7 @@ def pay_invoice(bid):
     if booking.invoice_paid:
         flash('This invoice is already paid.', 'warning')
         return redirect(url_for('customer_dashboard'))
-    description = f"MotoTyre Invoice INV-{booking.id:03d}: {booking.service}"
+    description = f"MotoTyres Invoice INV-{booking.id:03d}: {booking.service}"
     result = create_gcash_payment(amount=booking.total_amount, description=description,
                                    booking_id=booking.id, origin=request.host_url)
     if result["success"]:
@@ -3557,7 +3594,7 @@ def payment_success():
                 ref = f'BKG-{booking.id:03d}'
                 send_notification(
                     booking.user_id, 'Payment received ✅',
-                    f'You paid ₱{booking.total_amount:,.2f} by GCash for {booking.service} ({ref}). Thank you for choosing MotoTyre!',
+                    f'You paid ₱{booking.total_amount:,.2f} by GCash for {booking.service} ({ref}). Thank you for choosing MotoTyres!',
                     type='invoice', status='paid', booking_id=booking.id,
                 )
                 user = User.query.get(booking.user_id)
@@ -3565,10 +3602,10 @@ def payment_success():
                     html = f"""
                     <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
                       <p>Hi {user.fullname},</p>
-                      <p>You paid ₱{booking.total_amount:,.2f} by GCash for {booking.service} ({ref}). Thank you for choosing MotoTyre North Caloocan!</p>
-                      <p>— MotoTyre North Caloocan</p>
+                      <p>You paid ₱{booking.total_amount:,.2f} by GCash for {booking.service} ({ref}). Thank you for choosing MotoTyres North Caloocan!</p>
+                      <p>— MotoTyres North Caloocan</p>
                     </div>"""
-                    _send_gmail(user.email, 'Payment received — MotoTyre', html)
+                    _send_gmail(user.email, 'Payment received — MotoTyres', html)
         except Exception as e:
             print(f"[payment/success] booking error: {e}")
 

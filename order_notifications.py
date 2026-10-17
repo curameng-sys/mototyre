@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 
 STAMP_FORMAT = '%b %d, %Y at %I:%M %p'
 
-SHOP_NAME = 'MotoTyre North Caloocan'
+SHOP_NAME = 'MotoTyres North Caloocan'
 
 # Per-status label for the timestamp line, so the stamp reads naturally.
 _STAMP_LABELS = {
@@ -88,7 +88,7 @@ def _ship_messages(ref, ship_address):
             f'confirm receipt on your dashboard.'),
         'completed': (
             'Order Completed! 🎉',
-            f'Your order {ref} is complete. Thank you for shopping with MotoTyre!'),
+            f'Your order {ref} is complete. Thank you for shopping with MotoTyres!'),
         'cancelled': (
             'Order Cancelled ❌',
             f'Your order {ref} has been cancelled and will no longer be shipped.'),

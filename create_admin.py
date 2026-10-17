@@ -4,7 +4,7 @@ from app import User  # User model lives in app.py
 
 ADMIN_EMAIL    = "mototyre0505@gmail.com"
 ADMIN_PASSWORD = "Admin@123"
-ADMIN_NAME     = "MotoTyre Admin"
+ADMIN_NAME     = "MotoTyres Admin"
 ADMIN_PHONE    = "09000000000"
 
 with app.app_context():

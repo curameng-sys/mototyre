@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Register – MotoTyre</title>
+  <title>Register – MotoTyres</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -649,7 +649,7 @@
 
 <!-- ── NAVBAR ── -->
 <nav class="nav-bar">
-  <span class="nav-logo">MOTO<span class="accent">TYRE</span></span>
+  <span class="nav-logo">MOTO<span class="accent">TYRES</span></span>
   <ul class="nav-links">
     <li><a href="{{ url_for('home') }}">Home</a></li>
     <li><a href="{{ url_for('home') }}#about">About</a></li>
@@ -671,7 +671,7 @@
 
       <img
         src="{{ url_for('static', filename='images/shop-front.jpg') }}"
-        alt="MotoTyre Shop"
+        alt="MotoTyres Shop"
         class="info-img"
         onerror="this.style.display='none'">
 
@@ -711,7 +711,7 @@
               <polyline points="20,6 9,17 4,12"/>
             </svg>
           </div>
-          Member Deals
+          Returns &amp; Warranty
         </div>
       </div>
     </aside>
@@ -723,7 +723,7 @@
       <div class="panel active" id="panel-reg">
         <h1 class="form-title">Create Account</h1>
         <div class="form-title-underline"></div>
-        <p class="form-sub">Join MotoTyre — Book &amp; Order Easily</p>
+        <p class="form-sub">Join MotoTyres — Book &amp; Order Easily</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% for category, message in messages %}
@@ -812,19 +812,6 @@
             </div>
           </div>
 
-          <!-- Address -->
-          <div class="field">
-            <label>Address</label>
-            <div class="input-wrap">
-              <span class="input-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                </svg>
-              </span>
-              <input type="text" name="address" placeholder="House No., Street, Barangay, City" maxlength="255">
-            </div>
-          </div>
-
           <!-- Motorcycle Model -->
           <div class="field">
             <label>Motorcycle Model <span class="opt">(Optional)</span></label>
@@ -840,6 +827,49 @@
               <div id="motorcycle-model-dropdown" class="moto-dropdown"></div>
             </div>
           </div>
+
+          <div class="section-divider">Default Delivery Address <span style="opacity:.7;">· Optional</span></div>
+          <div style="display:flex;gap:0.6rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:0.7rem 0.85rem;font-size:0.76rem;color:#1e3a8a;line-height:1.5;margin-bottom:0.9rem;">
+            <span style="flex-shrink:0;margin-top:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
+            <span>The shop only delivers within <strong>North Caloocan</strong> (Barangays 165–188) and <strong>Northern Quezon City</strong> (Districts 2, 5 and 6). This becomes your default delivery address for orders. You can change it anytime in Account Settings. <strong>Outside these areas?</strong> Leave it blank. You can still book services and use Shop Pickup.</span>
+          </div>
+          <div class="field-row cols-2">
+            <div class="field">
+              <label>City</label>
+              <div class="input-wrap">
+                <span class="input-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                <select name="dl_city" id="dl-city" onchange="dlCity()">
+                  <option value="">Choose city</option>
+                  {% for c in delivery_zone_cities %}<option value="{{ c }}">{{ 'Quezon City (North)' if c == 'Quezon City' else c }}</option>{% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Barangay</label>
+              <div class="input-wrap">
+                <span class="input-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+                <select name="dl_barangay" id="dl-brgy" onchange="dlCheck()" disabled><option value="">Choose city first</option></select>
+              </div>
+            </div>
+          </div>
+          <div class="field-row" style="grid-template-columns:1.6fr 1fr;">
+            <div class="field">
+              <label>House No. and Street</label>
+              <div class="input-wrap">
+                <span class="input-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+                <input type="text" name="dl_street" id="dl-street" placeholder="e.g. 12 Saranay Rd" maxlength="255" oninput="dlCheck()">
+              </div>
+            </div>
+            <div class="field">
+              <label>ZIP Code</label>
+              <div class="input-wrap">
+                <span class="input-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+                <input type="text" name="dl_zip" id="dl-zip" placeholder="e.g. 1421" maxlength="4" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4); dlCheck()">
+              </div>
+            </div>
+          </div>
+          <div id="dl-status" role="status" style="display:none;margin:-0.2rem 0 0.4rem;padding:0.55rem 0.8rem;border-radius:8px;font-size:0.76rem;line-height:1.45;"></div>
+          <a href="#" id="dl-clear" onclick="dlClear(); return false;" style="display:none;font-size:0.74rem;color:var(--fg-2);text-decoration:underline;margin-bottom:0.6rem;">Clear address</a>
 
           <div class="section-divider">Security</div>
 
@@ -892,7 +922,7 @@
               I have read and agree to the
               <a href="{{ url_for('terms') }}" target="_blank">Terms &amp; Conditions</a>
               and <a href="{{ url_for('privacy') }}" target="_blank">Data Privacy Policy</a>
-              of MotoTyre.
+              of MotoTyres.
             </label>
           </div>
 
@@ -968,7 +998,7 @@
 
       <div class="card-footer-row">
         <div class="footer-dot"></div>
-        MOTOTYRE © {{ current_year }}
+        MOTOTYRES © {{ current_year }}
         <div class="footer-dot"></div>
         BAGUMBONG, CALOOCAN
       </div>
@@ -1218,5 +1248,53 @@
       });
   }
 </script>
+
+<script>
+// Optional default delivery address: all four parts, or none.
+const DL_BRGYS = {{ delivery_zone_barangays|tojson }};
+function dlCity() {
+  const city = document.getElementById('dl-city').value, sel = document.getElementById('dl-brgy');
+  sel.disabled = !city;
+  sel.innerHTML = city ? '<option value="">Choose barangay</option>' + (DL_BRGYS[city] || []).map(b => `<option value="${b}">${b}</option>`).join('')
+                       : '<option value="">Choose city first</option>';
+  dlCheck();
+}
+function dlMissing() {
+  const v = { 'city': document.getElementById('dl-city').value, 'barangay': document.getElementById('dl-brgy').value,
+              'house no. and street': document.getElementById('dl-street').value.trim(), 'ZIP code': document.getElementById('dl-zip').value };
+  const any = Object.values(v).some(Boolean);
+  const missing = Object.keys(v).filter(k => !v[k]);
+  if (!missing.length && !/^\d{4}$/.test(v['ZIP code'])) missing.push('a 4-digit ZIP code');
+  return { any, missing };
+}
+function dlCheck() {
+  const st = document.getElementById('dl-status'), clr = document.getElementById('dl-clear');
+  const { any, missing } = dlMissing();
+  clr.style.display = any ? 'inline-block' : 'none';
+  if (!any) { st.style.display = 'none'; return; }
+  st.style.display = 'block';
+  if (!missing.length) {
+    st.style.cssText += ';background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-weight:600;';
+    st.textContent = '✓ We deliver here. This will be your default delivery address.';
+  } else {
+    st.style.cssText += ';background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-weight:400;';
+    st.textContent = 'Your delivery address is missing: ' + missing.join(', ') + '. Finish it, or use Clear address to skip it.';
+  }
+}
+function dlClear() {
+  document.getElementById('dl-city').value = ''; dlCity();
+  document.getElementById('dl-street').value = ''; document.getElementById('dl-zip').value = '';
+  dlCheck();
+}
+document.getElementById('reg-form').addEventListener('submit', function (e) {
+  const { any, missing } = dlMissing();
+  if (any && missing.length) {            // half-filled: stop and show what's missing
+    e.preventDefault(); e.stopImmediatePropagation();
+    dlCheck();
+    document.getElementById('dl-status').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}, true);
+</script>
+{% include 'partials/cookie_consent.html' %}
 </body>
 </html>

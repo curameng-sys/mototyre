@@ -82,9 +82,9 @@ def send_gmail_html(to: str, subject: str, html_body: str):
 
 def send_otp_email(email: str, otp: str, purpose: str = "login"):
     configs = {
-        "login":  ("Your MotoTyre login code",          "Sign-In Verification",    "complete your login"),
-        "verify": ("Verify your MotoTyre email",         "Email Verification",      "verify your email address"),
-        "reset":  ("Your MotoTyre password reset code",  "Password Reset",          "reset your password"),
+        "login":  ("Your MotoTyres login code",          "Sign-In Verification",    "complete your login"),
+        "verify": ("Verify your MotoTyres email",         "Email Verification",      "verify your email address"),
+        "reset":  ("Your MotoTyres password reset code",  "Password Reset",          "reset your password"),
     }
     subject, heading, action = configs.get(purpose, configs["login"])
 
@@ -93,7 +93,7 @@ def send_otp_email(email: str, otp: str, purpose: str = "login"):
                 border:1px solid #e5e7eb;border-radius:8px;background:#ffffff;">
       <div style="text-align:center;margin-bottom:24px;">
         <span style="font-family:Georgia,serif;font-size:22px;font-weight:900;
-                     letter-spacing:4px;color:#0c0d0f;">MOTO<span style="color:#ff0f0f;">TYRE</span></span>
+                     letter-spacing:4px;color:#0c0d0f;">MOTO<span style="color:#ff0f0f;">TYRES</span></span>
       </div>
       <h2 style="color:#111827;font-size:18px;margin-bottom:8px;">{heading}</h2>
       <p style="color:#6b7280;font-size:14px;margin-bottom:20px;">

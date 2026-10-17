@@ -168,8 +168,8 @@ def _send_gmail(to, subject, html_body):
 
 def send_otp_email(email, otp, purpose="login"):
     configs = {
-        "login": ("Your MotoTyre Admin login code", "Admin Login Verification", "complete your admin login"),
-        "reset": ("Your MotoTyre Admin password reset code", "Admin Password Reset", "reset your admin password"),
+        "login": ("Your MotoTyres Admin login code", "Admin Login Verification", "complete your admin login"),
+        "reset": ("Your MotoTyres Admin password reset code", "Admin Password Reset", "reset your admin password"),
     }
     subject, heading, action = configs.get(purpose, configs["login"])
     html = f"""
@@ -620,9 +620,9 @@ def _notify_order_customer(order, title, body, status=None):
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
       <p>Hi {customer.fullname},</p>
       <p>{body}</p>
-      <p>— MotoTyre North Caloocan</p>
+      <p>— MotoTyres North Caloocan</p>
     </div>"""
-    _send_gmail(customer.email, f'{title} — MotoTyre', html)
+    _send_gmail(customer.email, f'{title} — MotoTyres', html)
     return True
 
 
@@ -1452,9 +1452,9 @@ def _notify_customer(booking, title, body, priority=False, status=None, collapse
       <p>Hi {customer.fullname},</p>
       <p>{body}</p>
       {cta}
-      <p>— MotoTyre North Caloocan</p>
+      <p>— MotoTyres North Caloocan</p>
     </div>"""
-    _send_gmail(customer.email, f'{title} — MotoTyre', html)
+    _send_gmail(customer.email, f'{title} — MotoTyres', html)
     return True
 
 
@@ -1801,9 +1801,9 @@ def complete_booking_invoice(bid):
                 style="display:inline-block;padding:10px 18px;background:#d00019;color:#fff;
                        border-radius:6px;text-decoration:none;font-weight:bold;">Pay Invoice</a></p>
           <p>You can pay by cash at the shop counter, or by GCash online.</p>
-          <p>— MotoTyre North Caloocan</p>
+          <p>— MotoTyres North Caloocan</p>
         </div>"""
-        _send_gmail(customer.email, f'{title} — MotoTyre', html)
+        _send_gmail(customer.email, f'{title} — MotoTyres', html)
 
     return jsonify({'success': True, 'ref': ref, 'total': total, 'customer_first_name': customer_first_name})
 
@@ -1844,7 +1844,7 @@ def record_invoice_cash(bid):
     ref = f'BKG-{booking.id:03d}'
     send_notification(
         booking.user_id, 'Payment received ✅',
-        f'You paid ₱{booking.total_amount:,.2f} by cash for {booking.service} ({ref}). Thank you for choosing MotoTyre!',
+        f'You paid ₱{booking.total_amount:,.2f} by cash for {booking.service} ({ref}). Thank you for choosing MotoTyres!',
         type='invoice', status='paid', booking_id=booking.id,
     )
     customer = User.query.get(booking.user_id)
@@ -1854,10 +1854,10 @@ def record_invoice_cash(bid):
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
           <p>Hi {customer.fullname},</p>
-          <p>You paid ₱{booking.total_amount:,.2f} by cash for {booking.service} ({ref}). Thank you for choosing MotoTyre North Caloocan!</p>
-          <p>— MotoTyre North Caloocan</p>
+          <p>You paid ₱{booking.total_amount:,.2f} by cash for {booking.service} ({ref}). Thank you for choosing MotoTyres North Caloocan!</p>
+          <p>— MotoTyres North Caloocan</p>
         </div>"""
-        _send_gmail(customer.email, 'Payment received — MotoTyre', html)
+        _send_gmail(customer.email, 'Payment received — MotoTyres', html)
 
     return jsonify({'success': True, 'ref': ref, 'receipt_no': booking.invoice_receipt_no,
                      'customer_first_name': customer_first_name, 'change': booking.invoice_change})
@@ -3360,9 +3360,9 @@ def _notify_return_customer(rr, title, body, priority=True, email_body=None, sta
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
       <p>Hi {(customer.fullname or '').split(' ')[0] if first_name_only else customer.fullname},</p>
       <p>{email_body or body}</p>
-      <p>— MotoTyre North Caloocan</p>
+      <p>— MotoTyres North Caloocan</p>
     </div>"""
-    _send_gmail(customer.email, email_subject or f'{title} — MotoTyre', html)
+    _send_gmail(customer.email, email_subject or f'{title} — MotoTyres', html)
     return True
 
 
@@ -3996,7 +3996,7 @@ def release_gcash_refund(rid):
     title = f'Your {amount} refund was sent'
     body = f'We sent {amount} to your GCash ({_fmt_gcash(rr.gcash_number)}) for your {subject} {noun} ({ref}).'
     email_body = (f'Your refund of {amount} for {subject} ({ref}) was sent to your GCash. '
-                  f'Please view the receipt in your MotoTyre portal, under Returns &amp; Warranty.')
+                  f'Please view the receipt in your MotoTyres portal, under Returns &amp; Warranty.')
     emailed = _notify_return_customer(rr, title, body, priority=False, email_body=email_body, status='refunded')
     return jsonify({'success': True, 'emailed': emailed, 'message': 'Refund marked sent — customer notified.'})
 
@@ -4213,7 +4213,7 @@ def complete_return_request(rid):
     subject = _return_subject_label(rr)
     emailed = _notify_return_customer(
         rr, 'Replacement handed over',
-        f'The replacement for {subject} ({ref}) has been handed over. Thanks for choosing MotoTyre North Caloocan!',
+        f'The replacement for {subject} ({ref}) has been handed over. Thanks for choosing MotoTyres North Caloocan!',
         priority=False,
     )
     return jsonify({'success': True, 'emailed': emailed, 'message': 'Marked completed — customer notified.'})
@@ -5044,7 +5044,7 @@ def manage_user(uid):
         db.session.commit()
         send_notification(
             user.id, '🚫 Account Banned',
-            'Your account has been banned due to a violation of MotoTyre\'s policies. '
+            'Your account has been banned due to a violation of MotoTyres\' policies. '
             'You are no longer allowed to book appointments or place orders. '
             'If you believe this is a mistake, please contact our support team.',
             type='account', status='banned')
@@ -5056,7 +5056,7 @@ def manage_user(uid):
         db.session.commit()
         send_notification(
             user.id, '⚠️ Account Warning',
-            'Your account has been flagged for performing actions that violate MotoTyre\'s '
+            'Your account has been flagged for performing actions that violate MotoTyres\' '
             'terms of service. Please review our policies — repeated violations may lead to '
             'your account being suspended or banned.',
             type='account', status='flagged')
@@ -5389,9 +5389,9 @@ def save_quotation():
               <p><a href="{BASE_URL}/customer/dashboard?open_booking={booking.id}"
                     style="display:inline-block;padding:10px 18px;background:#d00019;color:#fff;
                            border-radius:6px;text-decoration:none;font-weight:bold;">Review Quotation</a></p>
-              <p>— MotoTyre North Caloocan</p>
+              <p>— MotoTyres North Caloocan</p>
             </div>"""
-            _send_gmail(customer.email, f'{title} — MotoTyre', html)
+            _send_gmail(customer.email, f'{title} — MotoTyres', html)
 
     customer_first_name = (q.customer_name or '').split(' ')[0] or None
     return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}',
@@ -6847,7 +6847,7 @@ def walkin_receipt():
     story.append(totals_tbl)
 
     story.append(HRFlowable(width='100%', thickness=2, color=RED, spaceBefore=7, spaceAfter=6))
-    story.append(Paragraph('Thank you for choosing MotoTyre!', sm))
+    story.append(Paragraph('Thank you for choosing MotoTyres!', sm))
     story.append(Paragraph(f'Transaction: {txn_ref}', s('tf', alignment=1, fontName='Helvetica', fontSize=7, textColor=LGREY)))
 
     doc.build(story)
@@ -7058,7 +7058,7 @@ def generate_report():
         t.setStyle(TableStyle(cmds))
         return t
 
-    story.append(Paragraph('MOTOTYRE MOTO SHOP', title_style))
+    story.append(Paragraph('MOTOTYRES MOTO SHOP', title_style))
     story.append(Paragraph('Sales & Operations Report', style('ST', fontSize=13, fontName='Helvetica-Bold', textColor=DARK, spaceAfter=2)))
     story.append(Paragraph(f'Period: {d_from.strftime("%b %d, %Y")} — {d_to.strftime("%b %d, %Y")}', sub_style))
     story.append(Paragraph(f'Generated: {ph_now().strftime("%b %d, %Y at %I:%M %p")}', sub_style))
@@ -7178,7 +7178,7 @@ def generate_report():
 
     story.append(Spacer(1, 10))
     story.append(HRFlowable(width=W, thickness=1, color=MUTED, spaceAfter=6))
-    story.append(Paragraph('This report was automatically generated by MotoTyre Admin Dashboard.', small_style))
+    story.append(Paragraph('This report was automatically generated by MotoTyres Admin Dashboard.', small_style))
 
     doc.build(story)
     buffer.seek(0)

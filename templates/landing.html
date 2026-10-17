@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MotoTyre — Motorcycle Shop Caloocan</title>
+  <title>MotoTyres — Motorcycle Shop Caloocan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -200,7 +200,18 @@
     .testi-meta{font-family:var(--font-body);font-size:12px;color:var(--fg-3)}
 
     /* ── CONTACT ── */
-    .contact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+    .contact-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:20px;align-items:stretch}
+    .contact-panel{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;box-shadow:var(--shadow-2);padding:8px 24px 24px;display:flex;flex-direction:column;min-width:0}
+    .contact-row{display:flex;gap:16px;padding:18px 0;border-bottom:1px solid var(--line-1);color:inherit;text-decoration:none;transition:opacity 160ms var(--ease)}
+    a.contact-row:hover{opacity:.8}
+    .contact-cta{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 18px;border-radius:10px;background:var(--brand-red);color:#fff;font-family:var(--font-label);font-weight:700;font-size:13px;letter-spacing:0.04em;text-decoration:none;transition:filter 160ms var(--ease)}
+    .contact-cta:hover{filter:brightness(.92)}
+    .map-box{position:relative;border-radius:16px;overflow:hidden;box-shadow:var(--shadow-2);border:1px solid var(--line-1);background:var(--bg-panel);min-height:420px}
+    .map-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+    .map-fallback{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;background:var(--bg-panel)}
+    .map-fallback.show{display:flex}
+    .map-fallback .contact-icon{width:52px;height:52px}
+    .map-fallback a{color:var(--brand-red);font-family:var(--font-label);font-weight:700;font-size:13px}
     .contact-card{background:var(--bg-panel);border:1px solid var(--line-1);border-radius:16px;padding:24px;display:flex;gap:16px;transition:all 160ms var(--ease);box-shadow:var(--shadow-2)}
     .contact-card:hover{border-color:var(--line-2);box-shadow:var(--shadow-3)}
     .contact-icon{width:44px;height:44px;border-radius:10px;background:var(--brand-red-soft);color:var(--brand-red);display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -316,6 +327,7 @@
       .cta-btns{flex-direction:column}
       .products-grid{grid-template-columns:1fr 1fr}
       .contact-grid{grid-template-columns:1fr}
+      .map-box{min-height:320px}
     }
 
     /* Very small phone */
@@ -416,7 +428,7 @@
       <div class="about-img-wrap">
         <div class="about-img-corner"></div>
         <div class="about-img-inner">
-          <img src="{{ url_for('static', filename='images/shop-front.jpg') }}" alt="MotoTyre shop front">
+          <img src="{{ url_for('static', filename='images/shop-front.jpg') }}" alt="MotoTyres shop front">
         </div>
         <div class="about-yrs-badge">
           <div class="yrs">8 YRS</div>
@@ -672,27 +684,46 @@
       </div>
     </div>
     <div class="contact-grid">
-      <a class="contact-card" href="https://www.google.com/maps/search/?api=1&query=Saranay+Rd%2C+Brgy+171+Bagumbong%2C+Caloocan+City%2C+Metro+Manila+1421" target="_blank" rel="noopener">
-        <div class="contact-icon"><i data-lucide="map-pin" style="width:20px;height:20px"></i></div>
-        <div>
-          <div class="contact-lbl">LOCATION</div>
-          <div class="contact-val">Saranay Rd, Brgy 171 Bagumbong, Caloocan City, Metro Manila 1421</div>
+      <div class="contact-panel">
+        <div class="contact-row">
+          <div class="contact-icon"><i data-lucide="map-pin" style="width:20px;height:20px"></i></div>
+          <div>
+            <div class="contact-lbl">LOCATION</div>
+            <div class="contact-val">{{ SHOP_ADDRESS }}</div>
+          </div>
         </div>
-      </a>
-      <a class="contact-card" href="tel:+639152698366">
-        <div class="contact-icon"><i data-lucide="phone" style="width:20px;height:20px"></i></div>
-        <div>
-          <div class="contact-lbl">CALL / TEXT</div>
-          <div class="contact-val">0915 269 8366</div>
+        <a class="contact-row" href="tel:{{ SHOP_PHONE }}">
+          <div class="contact-icon"><i data-lucide="phone" style="width:20px;height:20px"></i></div>
+          <div>
+            <div class="contact-lbl">CALL OR TEXT</div>
+            <div class="contact-val">{{ SHOP_PHONE_DISPLAY }}</div>
+          </div>
+        </a>
+        <a class="contact-row" href="{{ FACEBOOK_PAGE_URL }}" target="_blank" rel="noopener">
+          <div class="contact-icon"><i data-lucide="facebook" style="width:20px;height:20px"></i></div>
+          <div>
+            <div class="contact-lbl">FACEBOOK</div>
+            <div class="contact-val">MotoTyres North Caloocan</div>
+          </div>
+        </a>
+        <div class="contact-row" style="border-bottom:0;margin-bottom:8px;">
+          <div class="contact-icon"><i data-lucide="clock" style="width:20px;height:20px"></i></div>
+          <div>
+            <div class="contact-lbl">HOURS</div>
+            <div class="contact-val">Open daily, 8:00 AM – 6:30 PM</div>
+          </div>
         </div>
-      </a>
-      <a class="contact-card" href="{{ FACEBOOK_PAGE_URL }}" target="_blank" rel="noopener">
-        <div class="contact-icon"><i data-lucide="facebook" style="width:20px;height:20px"></i></div>
-        <div>
-          <div class="contact-lbl">FACEBOOK</div>
-          <div class="contact-val">MotoTyres North Caloocan</div>
+        <a class="contact-cta" href="{{ SHOP_DIRECTIONS_URL }}" target="_blank" rel="noopener"><i data-lucide="route" style="width:16px;height:16px"></i> Get directions</a>
+      </div>
+      <div class="map-box" id="mapBox">
+        <iframe id="mapFrame" src="{{ SHOP_MAP_EMBED_URL }}" title="Map to MotoTyres North Caloocan" onload="this.dataset.ok=1" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+        <div class="map-fallback" id="mapFallback">
+          <div class="contact-icon"><i data-lucide="map-pin" style="width:24px;height:24px"></i></div>
+          <div class="contact-lbl">MOTOTYRES NORTH CALOOCAN</div>
+          <div class="contact-val" style="max-width:280px">{{ SHOP_ADDRESS }}</div>
+          <a href="{{ SHOP_MAPS_URL }}" target="_blank" rel="noopener">Open in Google Maps →</a>
         </div>
-      </a>
+      </div>
     </div>
   </div>
 </section>
@@ -764,7 +795,7 @@
 <!-- FOOTER -->
 <footer class="footer">
   <div class="footer-left">
-    <div class="footer-logo">MOTO<span>TYRE</span></div>
+    <div class="footer-logo">MOTO<span>TYRES</span></div>
     <span class="footer-copy">© <span id="footer-year"></span> MotoTyres North Caloocan. All rights reserved.</span>
   </div>
   <div class="footer-links">
@@ -777,6 +808,8 @@
     <a href="#feedback">Feedback</a>
     <a href="{{ url_for('login') }}">Login</a>
     <a href="{{ url_for('register') }}">Register</a>
+    <a href="#" onclick="ckOpenPolicy(); return false;">Cookie Policy</a>
+    <a href="#" onclick="ckOpenSettings(); return false;">Cookie Settings</a>
   </div>
 </footer>
 
@@ -1033,5 +1066,19 @@
   requestAnimationFrame(tick);
 })();
 </script>
+
+<script>
+// If the map can't load (offline, blocked, or too slow), show the address card instead.
+(function () {
+  const frame = document.getElementById('mapFrame'), fb = document.getElementById('mapFallback');
+  if (!frame || !fb) return;
+  const fail = () => { if (!frame.dataset.ok) { fb.classList.add('show'); frame.style.display = 'none'; } };
+  frame.addEventListener('error', fail);
+  setTimeout(fail, 10000);
+  if (!navigator.onLine) fail();
+  window.addEventListener('offline', fail);
+})();
+</script>
+{% include 'partials/cookie_consent.html' %}
 </body>
 </html>

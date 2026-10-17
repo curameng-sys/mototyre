@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Collect Payment – MotoTyre Admin</title>
+  <title>Collect Payment – MotoTyres Admin</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -131,7 +131,7 @@
 <body>
 
 <header class="topbar">
-  <div class="topbar-brand">MOTO<span>TYRE</span></div>
+  <div class="topbar-brand">MOTO<span>TYRES</span></div>
   <a href="{{ url_for('payments') }}" class="btn-back"><i class="fas fa-arrow-left"></i> Back</a>
 </header>
 
@@ -214,7 +214,7 @@
 <!-- PRINT RECEIPT (hidden, shown only on print) -->
 <div id="print-receipt">
   <div class="pr-shop">
-    <div class="pr-shop-name">MOTOTYRE</div>
+    <div class="pr-shop-name">MOTOTYRES</div>
     <div class="pr-shop-addr">Saranay Rd, Brgy. 171 Bagumbong<br>North Caloocan City</div>
   </div>
   <hr class="pr-divider">
@@ -240,7 +240,7 @@
   {% endfor %}
   <div class="pr-total"><span>TOTAL</span><span>₱{{ '%.2f'|format(jo.total_amount) }}</span></div>
   <hr class="pr-divider">
-  <div class="pr-footer">This serves as your official receipt.<br>Thank you for trusting MotoTyre!</div>
+  <div class="pr-footer">This serves as your official receipt.<br>Thank you for trusting MotoTyres!</div>
   <div class="pr-thank">★ See you next time! ★</div>
 </div>
 
@@ -262,7 +262,7 @@
       <hr class="receipt-divider">
       <div class="receipt-row bold"><span>Amount Paid</span><span id="r-amount">—</span></div>
       <div style="margin-top:.75rem;text-align:center;font-size:.72rem;color:var(--muted);">
-        MotoTyre North Caloocan · Saranay Rd, Brgy. 171 Bagumbong<br>
+        MotoTyres North Caloocan · Saranay Rd, Brgy. 171 Bagumbong<br>
         Job order marked as <strong style="color:#86efac;">Completed</strong>. Thank you!
       </div>
     </div>

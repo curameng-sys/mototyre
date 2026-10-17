@@ -1,5 +1,5 @@
 """
-security.py — Input validation & sanitization utilities for MotoTyre.
+security.py — Input validation & sanitization utilities for MotoTyres.
 
 SQLAlchemy ORM already parameterizes queries, but these helpers defend
 against bad data, unexpected crashes, and enum-field tampering.
