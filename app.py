@@ -694,6 +694,12 @@ class ReturnRequest(db.Model):
     cash_ready_at          = db.Column(db.DateTime, nullable=True)      # cash refunds: when the shop told the customer it's ready to claim at the counter
     info_requested_at      = db.Column(db.DateTime, nullable=True)      # when the shop last asked the customer for more ("Shop asked: …" in History)
     refund_given_by        = db.Column(db.String(100), nullable=True)   # staff member who handed over a cash refund
+    replacement_out_of_stock = db.Column(db.Boolean, default=False)   # the replacement part was out of stock when the request was filed
+    customer_at_shop         = db.Column(db.Boolean, default=False)   # the customer (or the person they sent) is at the counter right now
+    replacement_reserved     = db.Column(db.Boolean, default=False)   # a replacement has been set aside for this claim (taken out of stock)
+    customer_arrived_at      = db.Column(db.DateTime, nullable=True)  # first visit: the customer arrived to hand in the item
+    customer_back_at         = db.Column(db.DateTime, nullable=True)  # second visit: back to pick up the replacement that was set aside
+    completed_by_shop        = db.Column(db.Boolean, default=False)   # the shop completed it (the customer did not press I Received My Replacement)
 
 
 class ReturnRequestItem(db.Model):
@@ -2662,6 +2668,7 @@ def profile_pic_blob(uid):
 
 
 RETURN_PHOTOS_MAX = 5
+RETURN_NEW_PHOTOS_MAX = 4     # a new request takes up to 4 photos
 RETURN_PHOTO_MAX_BYTES = 5 * 1024 * 1024
 RETURN_OUTCOME_LABELS = {
     'product': {'replacement': 'Return and replacement', 'refund': 'Return and refund'},
@@ -2763,9 +2770,9 @@ def create_return_request():
     needs_photo = any(reason_meta.get(r, False) for r in reasons)
 
     incoming_photos = [f for f in request.files.getlist('photos') if f and f.filename]
-    if len(incoming_photos) > RETURN_PHOTOS_MAX:
-        errors.append(f'Only {RETURN_PHOTOS_MAX} photos may be attached — the rest were left out.')
-        incoming_photos = incoming_photos[:RETURN_PHOTOS_MAX]
+    if len(incoming_photos) > RETURN_NEW_PHOTOS_MAX:
+        errors.append(f'Only {RETURN_NEW_PHOTOS_MAX} photos may be attached — the rest were left out.')
+        incoming_photos = incoming_photos[:RETURN_NEW_PHOTOS_MAX]
     valid_photo_count = 0
     for f in incoming_photos:
         if not allowed_file(f.filename):
@@ -2838,45 +2845,10 @@ def create_return_request():
                 requested_mechanic_name = booking.assigned_mechanic_name
         what = booking.service if booking else 'your appointment'
 
-    # Delivery address — only matters for a product replacement; nothing
-    # ships for a refund or a service warranty claim, so this step is
-    # skipped (and never required) for anything else.
-    address_mode = clean_str(request.form.get('address_mode', ''), max_len=10)
+    # Replacements are in-store only — the customer brings the item to the shop, nothing is delivered,
+    # so there is no address to collect. Every product replacement is a shop pick-up.
     delivery_fields = {}
-    is_pickup = False
-    if kind == 'product' and desired_outcome == 'replacement':
-        if address_mode == 'pickup':
-            is_pickup = True
-        elif address_mode == 'default':
-            u = current_user
-            if not (u.default_delivery_city and is_in_delivery_zone(u.default_delivery_city, u.default_delivery_barangay)):
-                errors.append('Your saved default address is outside the delivery area — please use a different address for this claim.')
-            else:
-                delivery_fields = {
-                    'delivery_name': u.default_delivery_name, 'delivery_mobile': u.default_delivery_mobile,
-                    'delivery_city': u.default_delivery_city, 'delivery_barangay': u.default_delivery_barangay,
-                    'delivery_street': u.default_delivery_street, 'delivery_zip': u.default_delivery_zip,
-                }
-        elif address_mode == 'custom':
-            d_name   = clean_str(request.form.get('delivery_name', ''), max_len=100)
-            d_mobile = clean_str(request.form.get('delivery_mobile', ''), max_len=13)
-            d_city   = clean_str(request.form.get('delivery_city', ''), max_len=50)
-            d_brgy   = clean_str(request.form.get('delivery_barangay', ''), max_len=50)
-            d_street = clean_str(request.form.get('delivery_street', ''), max_len=255)
-            d_zip    = clean_str(request.form.get('delivery_zip', ''), max_len=10)
-            if not (d_name and d_mobile and d_street):
-                errors.append('Please fill in the full delivery address.')
-            elif not is_valid_phone(d_mobile):
-                errors.append('Invalid delivery mobile number.')
-            elif not is_in_delivery_zone(d_city, d_brgy):
-                errors.append('We only deliver replacements within North Caloocan or Northern Quezon City.')
-            else:
-                delivery_fields = {
-                    'delivery_name': d_name, 'delivery_mobile': d_mobile, 'delivery_city': d_city,
-                    'delivery_barangay': d_brgy, 'delivery_street': d_street, 'delivery_zip': d_zip,
-                }
-        else:
-            errors.append('Please choose shop pickup or a delivery address for the replacement.')
+    is_pickup = (kind == 'product' and desired_outcome == 'replacement')
 
     # Refund requests also say HOW to be paid back: cash at the counter, or
     # GCash (which needs a real number and the account holder's name).
@@ -2898,14 +2870,6 @@ def create_return_request():
     if errors:
         return jsonify({'success': False, 'errors': errors}), 400
 
-    if address_mode == 'custom' and delivery_fields and request.form.get('save_as_default') == 'on':
-        current_user.default_delivery_name     = delivery_fields['delivery_name']
-        current_user.default_delivery_mobile   = delivery_fields['delivery_mobile']
-        current_user.default_delivery_city     = delivery_fields['delivery_city']
-        current_user.default_delivery_barangay = delivery_fields['delivery_barangay']
-        current_user.default_delivery_street   = delivery_fields['delivery_street']
-        current_user.default_delivery_zip      = delivery_fields['delivery_zip']
-
     saved_filenames, _skipped = _save_return_photos(incoming_photos)
 
     requested_refund_amount = None
@@ -2915,8 +2879,13 @@ def create_return_request():
         else:
             requested_refund_amount = booking.total_amount or 0
 
+    # An in-store replacement is made on the spot when the part is on the shelf; if any chosen item has less
+    # stock than the quantity returned, the shop has to wait for it — it's flagged so the admin side can tell.
+    out_of_stock = bool(kind == 'product' and desired_outcome == 'replacement'
+                        and any((oi.product.stock if oi.product else 0) < qty for oi, qty in item_rows))
+
     rr = ReturnRequest(
-        user_id=current_user.id, kind=kind,
+        user_id=current_user.id, kind=kind, replacement_out_of_stock=out_of_stock,
         order_id=order.id if order else None, booking_id=booking.id if booking else None,
         reasons=','.join(reasons), other_reason_text=other_text if 'other' in reasons else None,
         desired_outcome=desired_outcome, requested_mechanic_name=requested_mechanic_name,
@@ -2942,7 +2911,10 @@ def create_return_request():
     request_noun = 'return request' if kind == 'product' else ('back job request' if desired_outcome == 'redo_service' else 'refund request')
     filed_title = f'We received your {request_noun} ({ref})'
     filed_body = (f"We got your report about {what} ({ref}) — {reasons_text}. You asked for: {outcome_label}. "
-                  f"We'll review the evidence and get back to you with a decision.")
+                  + ("This is an in-store replacement at MotoTyres North Caloocan"
+                     + (" — it's out of stock right now, so we'll tell you when it's ready to pick up. " if out_of_stock else ". ")
+                     if (kind == 'product' and desired_outcome == 'replacement') else "")
+                  + "We'll review the evidence and get back to you with a decision.")
     send_notification(
         current_user.id, filed_title, filed_body,
         type='booking' if kind == 'service' else 'order', status='submitted', return_request_id=rr.id,
@@ -2963,7 +2935,7 @@ def create_return_request():
             type='booking' if kind == 'service' else 'order', status='submitted',
         )
 
-    return jsonify({'success': True, 'ref': ref, 'id': rr.id})
+    return jsonify({'success': True, 'ref': ref, 'id': rr.id, 'out_of_stock': out_of_stock})
 
 
 @app.route('/returns/<int:rid>/cancel', methods=['POST'])
@@ -3288,6 +3260,8 @@ def get_notifications():
             if rr.awaiting_customer_info:
                 return True
             if rr.kind == 'product' and rr.status == 'approved' and not rr.item_returned:
+                return True
+            if rr.status == 'replacement_arrived':
                 return True
         if n.type == 'quotation':
             q = quotations_by_booking.get(n.booking_id)
@@ -3766,6 +3740,12 @@ with app.app_context():
         "ALTER TABLE return_request ADD COLUMN cash_ready_at DATETIME DEFAULT NULL",
         "ALTER TABLE return_request ADD COLUMN info_requested_at DATETIME DEFAULT NULL",
         "ALTER TABLE return_request ADD COLUMN refund_given_by VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN replacement_out_of_stock TINYINT(1) DEFAULT 0",
+        "ALTER TABLE return_request ADD COLUMN customer_at_shop TINYINT(1) DEFAULT 0",
+        "ALTER TABLE return_request ADD COLUMN replacement_reserved TINYINT(1) DEFAULT 0",
+        "ALTER TABLE return_request ADD COLUMN customer_arrived_at DATETIME DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN customer_back_at DATETIME DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN completed_by_shop TINYINT(1) DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN invoice_received_by VARCHAR(100) DEFAULT NULL",
     ]:
         try:

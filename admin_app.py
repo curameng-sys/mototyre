@@ -549,6 +549,12 @@ class ReturnRequest(db.Model):
     cash_ready_at          = db.Column(db.DateTime, nullable=True)      # cash refunds: when the shop told the customer it's ready to claim at the counter
     info_requested_at      = db.Column(db.DateTime, nullable=True)      # when the shop last asked the customer for more ("Shop asked: …" in History)
     refund_given_by        = db.Column(db.String(100), nullable=True)   # staff member who handed over a cash refund
+    replacement_out_of_stock = db.Column(db.Boolean, default=False)   # the replacement part was out of stock when the request was filed
+    customer_at_shop         = db.Column(db.Boolean, default=False)   # the customer (or the person they sent) is at the counter right now
+    replacement_reserved     = db.Column(db.Boolean, default=False)   # a replacement has been set aside for this claim (taken out of stock)
+    customer_arrived_at      = db.Column(db.DateTime, nullable=True)  # first visit: the customer arrived to hand in the item
+    customer_back_at         = db.Column(db.DateTime, nullable=True)  # second visit: back to pick up the replacement that was set aside
+    completed_by_shop        = db.Column(db.Boolean, default=False)   # the shop completed it (the customer did not press I Received My Replacement)
 
 
 class ReturnRequestItem(db.Model):
@@ -3509,6 +3515,13 @@ def api_returns():
             'delivery_address': format_delivery_address(r.delivery_name, r.delivery_mobile, r.delivery_street,
                                                           r.delivery_barangay, r.delivery_city, r.delivery_zip) if r.delivery_street else None,
             'is_pickup': bool(r.is_pickup),
+            'out_of_stock': (not _replacement_stock(r)[0]) if (r.kind == 'product' and r.resolution == 'replacement' and r.status in ('approved',) and not r.item_returned) else bool(r.replacement_out_of_stock),
+            'stock_left': _replacement_stock(r)[1] if r.kind == 'product' else None,
+            'customer_at_shop': bool(r.customer_at_shop),
+            'customer_arrived_at': r.customer_arrived_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.customer_arrived_at else None,
+            'customer_back_at': r.customer_back_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.customer_back_at else None,
+            'completed_by_shop': bool(r.completed_by_shop),
+            'reserved': bool(r.replacement_reserved),
             'cancelled_at': r.cancelled_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if r.cancelled_at else None,
         })
 
@@ -3589,11 +3602,13 @@ def decide_return_request(rid):
                         (f'Your {subject} claim ({ref}) was approved: refund. Return the item to the shop so we '
                          f'can release the refund. Reason: {reason}.'))
             else:
-                title = 'Approved — replacement instead of a refund' if alternate else 'Approved — return the part for a replacement'
-                body = ((f'Your {subject} claim ({ref}) was approved, but instead of a refund we\'re sending a '
-                         f'replacement:{reason_line} Return the item to the shop so we can send the replacement.') if alternate else
-                        (f'Your {subject} claim ({ref}) was approved: replacement. Return the item to the shop '
-                         f'so we can send the replacement. Reason: {reason}.'))
+                title = 'Approved — bring your item to the shop'
+                _shop_line = ('Bring the item to MotoTyres North Caloocan, Saranay Rd, Barangay 171 Bagumbong, Caloocan City '
+                              '(Monday – Sunday · 7:00 AM – 6:30 PM). ')
+                _how = ("We'll check it in front of you and replace it right away." if _replacement_stock(rr)[0] else
+                        "We'll check it in front of you. The replacement is out of stock right now, so we'll notify you when it's ready to pick up.")
+                body = ((f'Your return for {subject} ({ref}) is approved — we\'re giving a replacement instead of a refund.{reason_line} ') if alternate
+                        else f'Your return for {subject} ({ref}) is approved. ') + _shop_line + _how
         else:
             if resolution == 'refund':
                 title = f'Approved — ₱{rr.refund_amount:,.2f} refund instead of a back job' if alternate else f'Approved — ₱{rr.refund_amount:,.2f} refund'
@@ -3668,6 +3683,129 @@ def save_return_notes(rid):
     return jsonify({'success': True})
 
 
+def _replacement_items(rr):
+    """[(Product, quantity)] for the lines of a part claim."""
+    out = []
+    for row in ReturnRequestItem.query.filter_by(return_request_id=rr.id).all():
+        oi = OrderItem.query.get(row.order_item_id)
+        prod = Product.query.get(oi.product_id) if oi else None
+        if prod:
+            out.append((prod, row.quantity))
+    return out
+
+
+def _replacement_stock(rr):
+    """(in_stock, left): whether every item has enough on the shelf for the quantity being replaced,
+    and the smallest number left among them."""
+    items = _replacement_items(rr)
+    if not items:
+        return True, 0
+    return all((p.stock or 0) >= q for p, q in items), min((p.stock or 0) for p, q in items)
+
+
+def _set_aside_replacement(rr):
+    """Takes the replacement out of stock for this claim."""
+    for p, q in _replacement_items(rr):
+        p.stock = max(0, (p.stock or 0) - q)
+    rr.replacement_reserved = True
+
+
+def _release_replacement(rr):
+    for p, q in _replacement_items(rr):
+        p.stock = (p.stock or 0) + q
+    rr.replacement_reserved = False
+
+
+@admin_app.route('/returns/<int:rid>/customer-arrived', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def mark_customer_arrived(rid):
+    """The customer (or the person they sent) is at the counter with the request number. Used twice for a
+    replacement: the first visit to hand in the item, and again to come back for a replacement that was set aside."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    if rr.kind != 'product' or rr.resolution != 'replacement':
+        return jsonify({'success': False, 'error': 'Only an in-store replacement uses this step.'}), 400
+    if rr.status not in ('approved', 'replacement_shipped') or rr.customer_at_shop:
+        return jsonify({'success': False, 'error': 'This claim is not waiting for the customer to arrive.'}), 400
+    if rr.status == 'approved' and rr.item_returned:
+        return jsonify({'success': False, 'error': 'The shop already has the item — mark the replacement ready for pickup once the stock is in.'}), 400
+    back_for_pickup = rr.status == 'replacement_shipped'
+    rr.customer_at_shop = True
+    if back_for_pickup:
+        rr.customer_back_at = ph_now()
+    else:
+        rr.customer_arrived_at = ph_now()
+    # Decided here from the live shelf, so a part that was restocked since the request was filed counts as in stock.
+    if not back_for_pickup:
+        rr.replacement_out_of_stock = not _replacement_stock(rr)[0]
+    db.session.commit()
+    ref = _return_ref(rr)
+    subject = _return_subject_label(rr)
+    if back_for_pickup:
+        title, body = "You've arrived for your replacement", f'We see you at MotoTyres North Caloocan for {ref}. We\'re getting your replacement ready now.'
+    else:
+        title, body = "You've arrived at the shop", f'We see you at MotoTyres North Caloocan for {ref}. Our staff is checking the {subject} with you now.'
+    emailed = _notify_return_customer(rr, title, body, priority=False, status='at_shop')
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Customer marked as arrived — notified.'})
+
+
+@admin_app.route('/returns/<int:rid>/replacement-given', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def mark_replacement_given(rid):
+    """The replacement was handed over at the counter. The customer is then asked to confirm they got it
+    (or the shop completes it for them)."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    if rr.kind != 'product' or rr.resolution != 'replacement' or not rr.customer_at_shop:
+        return jsonify({'success': False, 'error': 'Press Customer Arrived first.'}), 400
+    if rr.status == 'approved':                       # first visit, replacement on the shelf
+        if not _replacement_stock(rr)[0]:
+            return jsonify({'success': False, 'error': 'This item is out of stock — press Mark Part Received and keep the item instead.'}), 400
+        _set_aside_replacement(rr)
+        rr.item_returned = True
+        rr.item_returned_at = ph_now()
+    elif rr.status != 'replacement_shipped':          # back for pickup of the one set aside
+        return jsonify({'success': False, 'error': 'This claim is not at the counter for a replacement.'}), 400
+    rr.status = 'replacement_arrived'
+    rr.replacement_arrived_at = ph_now()
+    rr.customer_at_shop = False
+    db.session.commit()
+    ref = _return_ref(rr)
+    subject = _return_subject_label(rr)
+    emailed = _notify_return_customer(
+        rr, "Here's your replacement",
+        f'We gave you a new {subject} at the shop ({ref}). Please confirm in My Requests that you received it.',
+        priority=True, status='replacement_given')
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Replacement given — customer asked to confirm.'})
+
+
+@admin_app.route('/returns/<int:rid>/failed-check', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def mark_item_failed_check(rid):
+    """The item didn't pass the check at the counter — the claim is closed, with a reason the customer is shown."""
+    rr = ReturnRequest.query.get_or_404(rid)
+    reason = clean_str((request.get_json(silent=True) or {}).get('reason', ''), max_len=500)
+    if rr.kind != 'product' or rr.resolution != 'replacement' or not rr.customer_at_shop:
+        return jsonify({'success': False, 'error': 'Press Customer Arrived first.'}), 400
+    if not reason:
+        return jsonify({'success': False, 'error': 'Type the reason first.'}), 400
+    if rr.replacement_reserved:
+        _release_replacement(rr)
+    rr.status = 'resolved'
+    rr.resolved_at = ph_now()
+    rr.decision_reason = reason
+    rr.customer_at_shop = False
+    db.session.commit()
+    ref = _return_ref(rr)
+    subject = _return_subject_label(rr)
+    emailed = _notify_return_customer(
+        rr, "We can't replace this item",
+        f'We checked the {subject} with you at the shop ({ref}) and it didn\'t pass the check, so we can\'t replace it. {reason} The item stays with you.',
+        priority=False, status='closed')
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Claim closed — customer told why.'})
+
+
 @admin_app.route('/returns/<int:rid>/item-received', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -3678,6 +3816,13 @@ def mark_return_item_received(rid):
     rr = ReturnRequest.query.get_or_404(rid)
     if rr.kind != 'product' or rr.status != 'approved':
         return jsonify({'success': False, 'error': 'Only an approved product claim can have its item marked received.'}), 400
+    if rr.resolution == 'replacement':
+        if not rr.customer_at_shop:
+            return jsonify({'success': False, 'error': 'Press Customer Arrived first.'}), 400
+        if _replacement_stock(rr)[0]:
+            return jsonify({'success': False, 'error': 'It is in stock — press Replacement Given and hand it over now.'}), 400
+        rr.replacement_out_of_stock = True
+        rr.customer_at_shop = False
     rr.item_returned = True
     rr.item_returned_at = ph_now()
     db.session.commit()
@@ -3688,9 +3833,9 @@ def mark_return_item_received(rid):
         title = 'We received your item — refund next'
         body = f'We received the {subject} you sent back ({ref}). Your ₱{rr.refund_amount:,.2f} refund is next.'
     else:
-        title = 'We received your item — replacement next'
-        body = f'We received the {subject} you sent back ({ref}). Your replacement ships next, checked before it leaves.'
-    emailed = _notify_return_customer(rr, title, body, priority=False)
+        title = 'We have your item — waiting for stock'
+        body = f'We checked and kept the {subject} you brought in ({ref}). The replacement is out of stock, so we\'ll notify you here and by email when it\'s ready to pick up at the shop.'
+    emailed = _notify_return_customer(rr, title, body, priority=False, status='waiting_for_stock' if rr.resolution == 'replacement' else None)
     return jsonify({'success': True, 'emailed': emailed, 'message': 'Item marked received — customer notified.'})
 
 
@@ -4095,6 +4240,23 @@ def resolve_return_request(rid):
         return jsonify({'success': False, 'error': 'Only an approved claim can be marked resolved.'}), 400
     if rr.kind == 'product' and not rr.item_returned:
         return jsonify({'success': False, 'error': "Mark the item received first — the part hasn't come back yet."}), 400
+    if rr.resolution == 'replacement' and rr.kind == 'product':
+        # Mark Ready for Pickup — the part was out of stock and is now in: set one aside for this claim.
+        if not rr.item_returned or rr.replacement_reserved:
+            return jsonify({'success': False, 'error': 'This replacement is not waiting for stock.'}), 400
+        if not _replacement_stock(rr)[0]:
+            return jsonify({'success': False, 'error': 'Not enough stock yet — set one aside once it arrives.'}), 400
+        _set_aside_replacement(rr)
+        rr.status = 'replacement_shipped'
+        rr.replacement_shipped_at = ph_now()
+        db.session.commit()
+        ref = _return_ref(rr)
+        subject = _return_subject_label(rr)
+        emailed = _notify_return_customer(
+            rr, 'Your replacement is ready for pickup',
+            f'The replacement for {subject} ({ref}) is ready to pick up at the shop (Monday – Sunday, 7:00 AM – 6:30 PM). Just mention your request number {ref}.',
+            priority=False, status='ready_for_pickup')
+        return jsonify({'success': True, 'emailed': emailed, 'message': 'Marked ready for pickup — customer notified.'})
     if rr.resolution == 'refund':
         return jsonify({'success': False, 'error': 'Refunds are released from their own buttons — Release (GCash) or Ready to Claim / Mark Cash Given (cash).'}), 400
     if rr.kind == 'service' and rr.resolution == 'redo_service' and not rr.redo_date:
@@ -4147,7 +4309,7 @@ def resolve_return_request(rid):
         body = f'Your refund for {subject} ({ref}) — ₱{rr.refund_amount:,.2f} — has been released to your original payment method.'
     elif rr.resolution == 'replacement' and rr.is_pickup:
         title = 'Your replacement is ready for pickup'
-        body = f'The replacement for {subject} ({ref}) is ready at the shop — come by anytime during business hours to pick it up.'
+        body = f'The replacement for {subject} ({ref}) is ready to pick up at the shop (Monday – Sunday, 7:00 AM – 6:30 PM). Just mention your request number {ref}.'
     elif rr.resolution == 'replacement':
         addr = format_delivery_address(rr.delivery_name, rr.delivery_mobile, rr.delivery_street,
                                         rr.delivery_barangay, rr.delivery_city, rr.delivery_zip)
@@ -4168,33 +4330,6 @@ def resolve_return_request(rid):
     return jsonify({'success': True, 'emailed': emailed, 'message': msg})
 
 
-@admin_app.route('/returns/<int:rid>/mark-arrived', methods=['POST'])
-@login_required
-@require_admin_or_staff
-def mark_return_arrived(rid):
-    """The delivery step between 'on the way' and 'completed' — the part has
-    actually reached the customer's address, but the finish line is still
-    them (or staff, in person) confirming it's actually in hand."""
-    rr = ReturnRequest.query.get_or_404(rid)
-    if rr.resolution != 'replacement' or rr.status != 'replacement_shipped':
-        return jsonify({'success': False, 'error': 'This claim is not currently on the way.'}), 400
-    rr.status = 'replacement_arrived'
-    rr.replacement_arrived_at = ph_now()
-    db.session.commit()
-
-    ref = _return_ref(rr)
-    subject = _return_subject_label(rr)
-    if rr.is_pickup:
-        title, body = 'Replacement picked up', f'Your replacement for {subject} ({ref}) has been picked up at the shop.'
-    else:
-        addr = format_delivery_address(rr.delivery_name, rr.delivery_mobile, rr.delivery_street,
-                                        rr.delivery_barangay, rr.delivery_city, rr.delivery_zip)
-        title, body = 'Your replacement has arrived', f'The replacement for {subject} ({ref}) has arrived at {addr}.'
-    emailed = _notify_return_customer(rr, title, body, priority=False)
-    msg = 'Marked picked up — customer notified.' if rr.is_pickup else 'Marked arrived — customer notified.'
-    return jsonify({'success': True, 'emailed': emailed, 'message': msg})
-
-
 @admin_app.route('/returns/<int:rid>/complete', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -4208,6 +4343,7 @@ def complete_return_request(rid):
         return jsonify({'success': False, 'error': 'This claim is not waiting on a pickup.'}), 400
     rr.status = 'completed'
     rr.completed_at = ph_now()
+    rr.completed_by_shop = True
     db.session.commit()
     ref = _return_ref(rr)
     subject = _return_subject_label(rr)
@@ -7404,6 +7540,12 @@ with admin_app.app_context():
         "ALTER TABLE return_request ADD COLUMN cash_ready_at DATETIME DEFAULT NULL",
         "ALTER TABLE return_request ADD COLUMN info_requested_at DATETIME DEFAULT NULL",
         "ALTER TABLE return_request ADD COLUMN refund_given_by VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN replacement_out_of_stock TINYINT(1) DEFAULT 0",
+        "ALTER TABLE return_request ADD COLUMN customer_at_shop TINYINT(1) DEFAULT 0",
+        "ALTER TABLE return_request ADD COLUMN replacement_reserved TINYINT(1) DEFAULT 0",
+        "ALTER TABLE return_request ADD COLUMN customer_arrived_at DATETIME DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN customer_back_at DATETIME DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN completed_by_shop TINYINT(1) DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN invoice_received_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE quotation ADD COLUMN decided_at DATETIME DEFAULT NULL",
         "ALTER TABLE quotation ADD COLUMN not_covered TINYINT(1) DEFAULT 0",
