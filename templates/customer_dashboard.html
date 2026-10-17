@@ -251,6 +251,21 @@
     .ovp-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--brand-red); animation: ovpBlink 1.4s ease-in-out infinite; }
     @keyframes ovpBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
     @media (prefers-reduced-motion: reduce) { .ovp-dot { animation: none; } }
+    /* Ship to Address (Lalamove) statuses */
+    .badge-s-confirmed      { background: #dbeafe; color: #1e3a8a; border: 1px solid #3b82f6; }
+    .badge-s-in_progress    { background: #ede9fe; color: #4c1d95; border: 1px solid #8b5cf6; }
+    .badge-s-done_packaging { background: #ccfbf1; color: #115e59; border: 1px solid #14b8a6; }
+    .badge-s-shipping       { background: #e0f2fe; color: #0c4a6e; border: 1px solid #38bdf8; }
+    .badge-s-completed      { background: #dcfce7; color: #14532d; border: 1px solid #22c55e; }
+    .badge-s-refunded       { background: #fee2e2; color: #7f1d1d; border: 1px solid #ef4444; }
+    .badge-s-cancelled      { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
+    .badge-s-confirmed::before, .badge-s-in_progress::before, .badge-s-done_packaging::before, .badge-s-shipping::before,
+    .badge-s-completed::before, .badge-s-refunded::before {
+      content: ''; display: inline-block; width: 1.15em; height: 1.15em; margin-right: 0.4em; vertical-align: -0.2em;
+      background: currentColor; -webkit-mask: var(--bi) center / contain no-repeat; mask: var(--bi) center / contain no-repeat;
+    }
+    .badge-s-confirmed { --bi: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2.6'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpolyline%20points='20%206%209%2017%204%2012'/%3E%3C/svg%3E"); } .badge-s-in_progress { --bi: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2.6'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Ccircle%20cx='12'%20cy='12'%20r='3'/%3E%3Cpath%20d='M19.4%2015a1.65%201.65%200%200%200%20.33%201.82l.06.06a2%202%200%200%201-2.83%202.83l-.06-.06a1.65%201.65%200%200%200-1.82-.33%201.65%201.65%200%200%200-1%201.51V21a2%202%200%200%201-4%200v-.09A1.65%201.65%200%200%200%209%2019.4a1.65%201.65%200%200%200-1.82.33l-.06.06a2%202%200%200%201-2.83-2.83l.06-.06a1.65%201.65%200%200%200%20.33-1.82%201.65%201.65%200%200%200-1.51-1H3a2%202%200%200%201%200-4h.09A1.65%201.65%200%200%200%204.6%209a1.65%201.65%200%200%200-.33-1.82l-.06-.06a2%202%200%200%201%202.83-2.83l.06.06a1.65%201.65%200%200%200%201.82.33H9a1.65%201.65%200%200%200%201-1.51V3a2%202%200%200%201%204%200v.09a1.65%201.65%200%200%200%201%201.51%201.65%201.65%200%200%200%201.82-.33l.06-.06a2%202%200%200%201%202.83%202.83l-.06.06a1.65%201.65%200%200%200-.33%201.82V9a1.65%201.65%200%200%200%201.51%201H21a2%202%200%200%201%200%204h-.09a1.65%201.65%200%200%200-1.51%201z'/%3E%3C/svg%3E"); } .badge-s-done_packaging { --bi: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2.6'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M21%2016V8a2%202%200%200%200-1-1.73l-7-4a2%202%200%200%200-2%200l-7%204A2%202%200%200%200%203%208v8a2%202%200%200%200%201%201.73l7%204a2%202%200%200%200%202%200l7-4A2%202%200%200%200%2021%2016z'/%3E%3Cpolyline%20points='3.27%206.96%2012%2012.01%2020.73%206.96'/%3E%3Cline%20x1='12'%20y1='22.08'%20x2='12'%20y2='12'/%3E%3C/svg%3E"); }
+    .badge-s-shipping { --bi: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2.6'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Crect%20x='1'%20y='3'%20width='15'%20height='13'/%3E%3Cpolygon%20points='16%208%2020%208%2023%2011%2023%2016%2016%2016%2016%208'/%3E%3Ccircle%20cx='5.5'%20cy='18.5'%20r='2.5'/%3E%3Ccircle%20cx='18.5'%20cy='18.5'%20r='2.5'/%3E%3C/svg%3E"); } .badge-s-completed { --bi: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2.6'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpolyline%20points='20%206%209%2017%204%2012'/%3E%3C/svg%3E"); } .badge-s-refunded { --bi: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2.6'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpolyline%20points='1%204%201%2010%207%2010'/%3E%3Cpath%20d='M3.51%2015a9%209%200%201%200%202.13-9.36L1%2010'/%3E%3C/svg%3E"); }
     /* a small icon in front of each status label */
     .badge-confirmed::before, .badge-inspection::before, .badge-in_progress::before, .badge-inprogress::before,
     .badge-processing::before, .badge-shipped::before, .badge-pickup::before, .badge-completed::before {
@@ -1022,11 +1037,7 @@
                 </td>
                 <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
                 <td>
-              {% if o.delivery_method != 'ship' and o.status == 'shipped' %}
-                <span class="badge badge-pickup">Ready to Pick Up</span>
-              {% else %}
-                <span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span>
-              {% endif %}
+              {{ o|order_badge }}
             </td>
               </tr>
               {% endfor %}
@@ -1509,11 +1520,7 @@
               <div style="font-size:0.72rem;color:var(--fg-3);margin-left:1.35rem;">Ordered</div>
             </td>
             <td>
-              {% if o.delivery_method != 'ship' and o.status == 'shipped' %}
-                <span class="badge badge-pickup">Ready to Pick Up</span>
-              {% else %}
-                <span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span>
-              {% endif %}
+              {{ o|order_badge }}
             </td>
             <td>
               {% if o.open_claim %}
@@ -2054,6 +2061,8 @@
       <div id="od-products-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:240px;overflow-y:auto;"></div>
     </div>
 
+    <div id="od-ship-section" style="display:none;margin-bottom:1rem;"></div>
+
     <!-- Order Summary -->
     <div style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:1rem;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Summary</div>
@@ -2063,7 +2072,7 @@
       </div>
       <div id="od-shipping-row" style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--fg-3);margin-bottom:0.75rem;">
         <span>Shipping</span>
-        <span>To be arranged</span>
+        <span id="od-shipping-val">To be arranged</span>
       </div>
       <div style="border-top:1px solid var(--line-1);padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">Total</span>
@@ -2307,7 +2316,7 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel</button>
-        <button type="button" class="btn-submit" style="width:auto;" onclick="goToStep('step-shipping')">Proceed to Shipping ›</button>
+        <button type="button" id="btn-cart-next" class="btn-submit" style="width:auto;" onclick="goToStep('step-shipping')">Proceed to Shipping ›</button>
       </div>
     </div>
 
@@ -2387,12 +2396,12 @@
               </div>
               <div class="form-group">
                 <label>Mobile Number</label>
-                <input type="tel" id="ship-mobile" placeholder="09XX XXX XXXX"
-                  oninput="this.value=this.value.replace(/\D/g,'').slice(0,12)" maxlength="12">
+                <input type="tel" id="ship-mobile" placeholder="09XXXXXXXXX" inputmode="numeric" maxlength="11"
+                  oninput="this.value=this.value.replace(/\D/g,'').slice(0,11); this.style.borderColor=''">
               </div>
               <div class="form-group">
                 <label>Street Address</label>
-                <input type="text" id="ship-street" placeholder="123 Rizal St.">
+                <input type="text" id="ship-street" placeholder="123 Rizal St." oninput="this.style.borderColor=''">
               </div>
               <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
                 <div>
@@ -2404,17 +2413,18 @@
                 </div>
                 <div>
                   <label>Province</label>
-                  <input type="text" id="ship-province" value="Metro Manila" disabled>
+                  <input type="text" id="ship-province" value="Metro Manila" readonly>
                 </div>
               </div>
               <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
                 <div>
                   <label>Barangay</label>
-                  <select id="ship-barangay"><option value="">Select city first</option></select>
+                  <select id="ship-barangay" disabled onchange="onShipBarangayChange()"><option value="">Select city first</option></select>
                 </div>
                 <div>
-                  <label>ZIP Code</label>
-                  <input type="text" id="ship-zip" placeholder="1100">
+                  <label>Zip Code</label>
+                  <input type="text" id="ship-zip" readonly placeholder="">
+                  <div id="ship-zip-note" style="font-size:0.7rem;color:var(--fg-3);margin-top:0.25rem;">Fills in by itself from the barangay</div>
                 </div>
               </div>
               <label style="display:flex;align-items:center;gap:0.4rem;font-weight:400;text-transform:none;letter-spacing:normal;font-size:0.78rem;cursor:pointer;">
@@ -2454,6 +2464,7 @@
     <div style="flex:1;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.95rem;">GCash</div>
       <div style="font-size:0.78rem;color:var(--fg-3);margin-top:2px;">Pay online via GCash</div>
+      <div id="gcash-hold-note" style="display:none;font-size:0.76rem;color:#a16207;margin-top:4px;">Payment on hold until your order is packed and you choose shipping</div>
     </div>
     <div id="check-gcash" style="width:22px;height:22px;border-radius:50%;background:transparent;border:2px solid var(--line-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
       <span style="color:#fff;font-size:0.75rem;display:none;">✓</span>
@@ -2464,11 +2475,15 @@
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Order Summary</div>
     <div id="pay-items-list" style="margin-bottom:0.5rem;"></div>
     <div style="display:flex;justify-content:space-between;color:var(--fg-3);margin-bottom:0.4rem;"><span>Delivery</span><span id="pay-delivery-method"></span></div>
-    <div id="pay-shipping-row" style="display:none;justify-content:space-between;color:var(--fg-3);margin-bottom:0.4rem;"><span>Shipping Fee</span><span>To be calculated</span></div>
+    <div id="pay-shipping-row" style="display:none;justify-content:space-between;color:var(--fg-3);margin-bottom:0.4rem;"><span>Shipping Fee</span><span style="color:#a16207;">To be calculated</span></div>
     <div style="border-top:1px solid var(--line-1);padding-top:0.75rem;margin-top:0.5rem;display:flex;justify-content:space-between;">
       <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">Total</span>
       <span id="pay-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--brand-red);"></span>
     </div>
+  </div>
+  <div id="ship-pay-note" style="display:none;background:#fefce8;border:1px solid #eab308;border-radius:8px;padding:0.75rem 0.9rem;margin-bottom:1rem;font-size:0.78rem;color:#713f12;line-height:1.55;">
+    <div>Nothing is charged yet. Once your order is packed, we'll check Lalamove and send you the shipping options: Priority, Regular and Pooling. You'll have 24 hours to choose and pay for your items and shipping together with GCash.</div>
+    <div style="margin-top:0.5rem;">Big, heavy or many items may need a bigger Lalamove vehicle, like a Sedan, which costs more. You'll see which vehicle and why with your shipping options.</div>
   </div>
   <div class="modal-actions">
     <button type="button" class="btn-cancel-modal" onclick="goToStep('step-shipping')">‹ Back</button>
@@ -2486,19 +2501,23 @@
         <div id="conf-delivery-label" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Delivery Method</div>
         <div id="conf-delivery-info" style="color:var(--fg-1);line-height:1.6;margin-bottom:0.75rem;"></div>
         <div style="border-top:1px solid var(--line-1);margin:0.75rem 0;"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.6rem;">
           <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.06em;">Payment</span>
-          <span style="color:#4ade80;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;" id="conf-payment-display">Cash</span>
+          <span style="text-align:right;">
+            <span style="color:#4ade80;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;" id="conf-payment-display">Cash</span>
+            <div id="conf-payment-hold" style="display:none;font-size:0.74rem;color:#a16207;margin-top:0.2rem;">On hold. You'll pay after you choose your shipping option.</div>
+          </span>
         </div>
         <div style="border-top:1px solid var(--line-1);margin:0.75rem 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">Total</span>
           <span id="conf-total" style="color:var(--brand-red);font-family:'Bebas Neue',sans-serif;font-size:1.3rem;"></span>
         </div>
+        <div id="conf-nothing-charged" style="display:none;text-align:right;font-size:0.74rem;color:var(--fg-3);margin-top:0.2rem;">Nothing is charged now.</div>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel Order</button>
-        <button type="button" id="confirm-pay-btn" class="btn-submit" style="width:auto;background:#15803d;" onclick="submitCartOrder()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Confirm and Pay</button>
+        <button type="button" id="confirm-pay-btn" class="btn-submit" style="width:auto;background:#15803d;" onclick="submitCartOrder()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> <span id="confirm-pay-label">Confirm and Pay</span></button>
       </div>
     </div>
 
@@ -2709,6 +2728,7 @@
     const category = btn.dataset.category || '';
     const existing = cart.find(i => i.id === id);
     if (existing) {
+      if (existing.qty >= MAX_ONLINE_QTY) { showCartToast(`Up to ${MAX_ONLINE_QTY} per item online`); return; }
       if (existing.qty < stock) { existing.qty++; }
       else { showCartToast(name + ': max stock reached'); return; }
     } else {
@@ -2718,9 +2738,11 @@
     showCartToast(name + ' added to cart!');
   }
 
+  function cartLimit(item) { return Math.max(0, Math.min(MAX_ONLINE_QTY, item.stock)); }
+
   function updateCartBadge() {
     const badge = document.getElementById('cart-badge');
-    const total = cart.reduce((s, i) => s + i.qty, 0);
+    const total = cart.reduce((s, i) => s + (i.qty || 0), 0);
     badge.textContent = total;
     badge.style.display = total > 0 ? 'flex' : 'none';
   }
@@ -2730,10 +2752,11 @@
     deliveryMethod = 'pickup';
     selectDelivery('pickup');
     ['ship-name','ship-mobile','ship-street','ship-zip'].forEach(id => {
-      document.getElementById(id).value = '';
+      const el = document.getElementById(id); el.value = ''; el.style.borderColor = '';
     });
     document.getElementById('ship-city').value = '';
-    document.getElementById('ship-barangay').innerHTML = '<option value="">Select city first</option>';
+    document.getElementById('ship-city').style.borderColor = '';
+    onShipCityChange();
     document.getElementById('ship-save-default').checked = false;
     document.querySelectorAll('input[name="ship-address-mode"]').forEach(r => r.checked = false);
     document.getElementById('ship-address-custom-fields').style.display = 'none';
@@ -2741,6 +2764,49 @@
     renderCartStep();
     goToStep('step-cart');
     document.getElementById('modal-order').classList.add('open');
+  }
+
+  // What is wrong with an item's quantity right now, if anything: { text, fixTo } (fixTo = the number the button sets).
+  function cartQtyIssue(item) {
+    const q = item.qty;
+    if (!(q >= 1)) return { text: 'Type how many you want. You need at least 1 to check out.' };
+    if (q > MAX_ONLINE_QTY && q > item.stock) {
+      // over both limits: the stock message is the smaller number, so it comes first
+      return item.stock < MAX_ONLINE_QTY
+        ? { text: `Only ${item.stock} left in stock. Please lower the amount.`, fixTo: item.stock }
+        : { text: `${q} is a bulk order. You can order up to ${MAX_ONLINE_QTY} of this item online, so your order fits one Lalamove delivery. For ${MAX_ONLINE_QTY + 1} or more, please contact the shop or visit MotoTyres North Caloocan so we can arrange it.`, fixTo: MAX_ONLINE_QTY };
+    }
+    if (q > MAX_ONLINE_QTY) return { text: `${q} is a bulk order. You can order up to ${MAX_ONLINE_QTY} of this item online, so your order fits one Lalamove delivery. For ${MAX_ONLINE_QTY + 1} or more, please contact the shop or visit MotoTyres North Caloocan so we can arrange it.`, fixTo: MAX_ONLINE_QTY };
+    if (q > item.stock) return { text: `Only ${item.stock} left in stock. Please lower the amount.`, fixTo: item.stock };
+    return null;
+  }
+
+  function cartIssueHTML(item) {
+    const issue = cartQtyIssue(item);
+    if (!issue) return '';
+    return `<div style="margin-top:0.4rem;padding:0.5rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.76rem;color:#b91c1c;line-height:1.5;">
+      ${issue.text}${issue.fixTo ? `<div><button type="button" onclick="setCartQty(${item.id}, ${issue.fixTo})" style="margin-top:0.4rem;padding:0.3rem 0.75rem;background:#fff;border:1px solid #fca5a5;border-radius:99px;color:#b91c1c;font-family:'Syne',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;">Change to ${issue.fixTo}</button></div>` : ''}
+    </div>`;
+  }
+
+  function cartHasIssues() { return cart.some(i => cartQtyIssue(i)); }
+
+  function refreshCartState() {
+    cart.forEach(item => {
+      const box = document.getElementById('cart-issue-' + item.id);
+      const input = document.getElementById('cart-qty-' + item.id);
+      if (box) box.innerHTML = cartIssueHTML(item);
+      if (input) input.style.borderColor = cartQtyIssue(item) ? '#dc2626' : 'var(--line-2)';
+      const price = document.getElementById('cart-line-' + item.id);
+      if (price) price.textContent = '₱' + ((item.qty || 0) * item.price).toFixed(2);
+      const plus = document.getElementById('cart-plus-' + item.id), minus = document.getElementById('cart-minus-' + item.id);
+      if (plus) plus.disabled = !(item.qty < cartLimit(item));
+      if (minus) minus.disabled = !(item.qty > 1);
+    });
+    document.getElementById('cart-total').textContent = '₱' + getCartTotal().toFixed(2);
+    const next = document.getElementById('btn-cart-next');
+    if (next) { next.disabled = cartHasIssues(); next.style.opacity = next.disabled ? '0.45' : '1'; next.style.cursor = next.disabled ? 'not-allowed' : 'pointer'; }
+    updateCartBadge();
   }
 
   function renderCartStep() {
@@ -2751,27 +2817,55 @@
       return;
     }
     list.innerHTML = cart.map(item => `
-      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:0.5rem;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
-          <div style="font-size:0.72rem;color:var(--fg-3);">${item.category} · ₱${item.price.toFixed(2)} each</div>
+      <div style="padding:0.7rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;margin-bottom:0.5rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+            <div style="font-size:0.72rem;color:var(--fg-3);">${item.category} · ₱${item.price.toFixed(2)} each</div>
+          </div>
+          <div style="flex-shrink:0;text-align:center;">
+            <div style="display:flex;align-items:center;gap:0.35rem;">
+              <button type="button" id="cart-minus-${item.id}" onclick="updateCartItemQty(${item.id},-1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.9rem;">−</button>
+              <input type="text" inputmode="numeric" id="cart-qty-${item.id}" value="${item.qty}" oninput="onCartQtyInput(${item.id}, this)" aria-label="Quantity" style="width:46px;text-align:center;background:var(--bg-page);border:1px solid var(--line-2);border-radius:6px;padding:0.25rem;color:var(--fg-1);font-size:0.88rem;">
+              <button type="button" id="cart-plus-${item.id}" onclick="updateCartItemQty(${item.id},1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.9rem;">+</button>
+            </div>
+            <div style="font-size:0.66rem;color:var(--fg-3);margin-top:0.2rem;">Up to ${MAX_ONLINE_QTY} per item online</div>
+          </div>
+          <div id="cart-line-${item.id}" style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--brand-red);min-width:58px;text-align:right;flex-shrink:0;">₱${(item.price*item.qty).toFixed(2)}</div>
+          <button type="button" onclick="removeFromCart(${item.id})" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-size:1rem;padding:0 0.2rem;flex-shrink:0;" title="Remove">✕</button>
         </div>
-        <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
-          <button type="button" onclick="updateCartItemQty(${item.id},-1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.9rem;">−</button>
-          <span style="min-width:22px;text-align:center;color:var(--fg-1);font-size:0.88rem;">${item.qty}</span>
-          <button type="button" onclick="updateCartItemQty(${item.id},1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.9rem;">+</button>
-        </div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--brand-red);min-width:58px;text-align:right;flex-shrink:0;">₱${(item.price*item.qty).toFixed(2)}</div>
-        <button type="button" onclick="removeFromCart(${item.id})" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-size:1rem;padding:0 0.2rem;flex-shrink:0;" title="Remove">✕</button>
+        <div id="cart-issue-${item.id}"></div>
       </div>`).join('');
-    document.getElementById('cart-total').textContent = '₱' + getCartTotal().toFixed(2);
+    refreshCartState();
+  }
+
+  // Typing a quantity: no re-render (the box keeps focus); the red state, message and Checkout lock update live.
+  function onCartQtyInput(id, el) {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+    el.value = el.value.replace(/\D/g, '').slice(0, 4);
+    item.qty = parseInt(el.value, 10) || 0;
+    refreshCartState();
+  }
+
+  function setCartQty(id, qty) {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+    item.qty = qty;
+    const input = document.getElementById('cart-qty-' + id);
+    if (input) input.value = qty;
+    refreshCartState();
   }
 
   function updateCartItemQty(id, delta) {
     const item = cart.find(i => i.id === id);
     if (!item) return;
-    item.qty = Math.max(1, Math.min(item.stock, item.qty + delta));
-    renderCartStep();
+    // minus stops at 1, plus stops at the limit (10, or the stock if lower)
+    const base = item.qty >= 1 ? item.qty : (delta > 0 ? 0 : 1);
+    item.qty = Math.max(1, Math.min(cartLimit(item) || 1, base + delta));
+    const input = document.getElementById('cart-qty-' + id);
+    if (input) input.value = item.qty;
+    refreshCartState();
   }
 
   function removeFromCart(id) {
@@ -2782,7 +2876,7 @@
   }
 
   function getCartTotal() {
-    return cart.reduce((s, i) => s + i.price * i.qty, 0);
+    return cart.reduce((s, i) => s + i.price * (i.qty || 0), 0);
   }
 
   function showCartToast(msg) {
@@ -2828,8 +2922,9 @@
 
   async function submitCartOrder() {
     const btn = document.getElementById('confirm-pay-btn');
+    const btnLabel = btn.innerHTML;
     btn.disabled = true;
-    btn.textContent = 'Processing…';
+    btn.textContent = deliveryMethod === 'ship' ? 'Placing order…' : 'Processing…';
 
     let shipFields = {};
     if (deliveryMethod === 'ship') {
@@ -2865,12 +2960,12 @@
       } else {
         showCartToast(data.error || 'Order failed. Please try again.');
         btn.disabled = false;
-        btn.textContent = 'Confirm and Pay';
+        btn.innerHTML = btnLabel;
       }
     } catch(e) {
       showCartToast('Network error. Please try again.');
       btn.disabled = false;
-      btn.textContent = 'Confirm and Pay';
+      btn.innerHTML = btnLabel;
     }
   }
 
@@ -2969,16 +3064,33 @@ function onShipAddressModeChange() {
 function onShipCityChange() {
   const city = document.getElementById('ship-city').value;
   const brgySel = document.getElementById('ship-barangay');
-  const brgys = DELIVERY_ZONE_BARANGAYS[city] || [];
+  const groups = DELIVERY_ZONE_GROUPS[city] || [];
+  const labels = BARANGAY_LABELS[city] || {};
+  brgySel.disabled = !city;
   brgySel.innerHTML = city
-    ? brgys.map(b => `<option value="${b}">${b}</option>`).join('')
+    ? '<option value="">Select barangay</option>' + groups.map(([g, list]) =>
+        `<optgroup label="${g}">${list.map(b => `<option value="${b}">${labels[b] || b}</option>`).join('')}</optgroup>`).join('')
     : '<option value="">Select city first</option>';
+  // a new city clears the barangay and the zip code
+  onShipBarangayChange();
+  document.getElementById('ship-city').style.borderColor = '';
+}
+
+function onShipBarangayChange() {
+  const city = document.getElementById('ship-city').value, b = document.getElementById('ship-barangay').value;
+  const zip = (BARANGAY_ZIPS[city] || {})[b] || '';
+  document.getElementById('ship-zip').value = zip;
+  const note = document.getElementById('ship-zip-note');
+  if (zip) { note.style.color = '#15803d'; note.textContent = `Filled in for ${(BARANGAY_LABELS[city] || {})[b] || b}`; }
+  else { note.style.color = 'var(--fg-3)'; note.textContent = 'Fills in by itself from the barangay'; }
+  document.getElementById('ship-barangay').style.borderColor = '';
 }
 
 function updateCartTotal() {
   document.getElementById('cart-total').textContent = '₱' + getCartTotal().toFixed(2);
 }
 
+let _shipForcedGcash = false;
 function goToShipping() {
   const errEl = document.getElementById('ship-address-error');
   errEl.style.display = 'none';
@@ -2990,20 +3102,31 @@ function goToShipping() {
       return;
     }
     if (mode.value === 'custom') {
-      const fields = ['ship-name', 'ship-mobile', 'ship-street', 'ship-city', 'ship-barangay', 'ship-zip'];
-      for (const f of fields) {
-        if (!document.getElementById(f).value.trim()) {
-          document.getElementById(f).focus();
-          document.getElementById(f).style.borderColor = 'var(--brand-red)';
-          errEl.textContent = 'Please fill in the full delivery address.';
-          errEl.style.display = 'block';
-          return;
-        }
-        document.getElementById(f).style.borderColor = '';
+      const need = [['ship-name', 'full name'], ['ship-mobile', 'mobile number'], ['ship-street', 'street address'],
+                    ['ship-city', 'city'], ['ship-barangay', 'barangay']];
+      const missing = [];
+      need.forEach(([id, label]) => {
+        const el = document.getElementById(id);
+        const bad = !el.value.trim() || (id === 'ship-mobile' && !/^09\d{9}$/.test(el.value.trim()));
+        el.style.borderColor = bad ? 'var(--brand-red)' : '';
+        if (bad) missing.push(id === 'ship-mobile' && el.value.trim() ? 'mobile number (11 digits starting with 09)' : label);
+      });
+      if (missing.length) {
+        document.getElementById(need.find(([id]) => document.getElementById(id).style.borderColor)[0]).focus();
+        errEl.textContent = `Please add your ${missing.join(', ')}.`;
+        errEl.style.display = 'block';
+        return;
       }
     }
   }
   const total = getCartTotal();
+  const ship = deliveryMethod === 'ship';
+  // Payment step: Ship to Address is GCash only (on hold); Shop Pickup keeps Cash and GCash
+  document.getElementById('opt-cash').style.display = ship ? 'none' : 'flex';
+  document.getElementById('gcash-hold-note').style.display = ship ? 'block' : 'none';
+  document.getElementById('ship-pay-note').style.display = ship ? 'block' : 'none';
+  if (ship) { selectPayment('gcash'); _shipForcedGcash = true; }
+  else if (_shipForcedGcash) { selectPayment('cash'); _shipForcedGcash = false; }
   // Render items list in payment step
   document.getElementById('pay-items-list').innerHTML = cart.map(i =>
     `<div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
@@ -3011,8 +3134,8 @@ function goToShipping() {
       <span style="color:var(--fg-1);">₱${(i.price*i.qty).toFixed(2)}</span>
     </div>`
   ).join('');
-  document.getElementById('pay-total').textContent = '₱' + total.toFixed(2);
-  if (deliveryMethod === 'pickup') {
+  document.getElementById('pay-total').textContent = ship ? `₱${total.toFixed(2)} + shipping` : '₱' + total.toFixed(2);
+  if (!ship) {
     document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#86efac;">Shop Pickup (FREE)</span>';
     document.getElementById('pay-shipping-row').style.display = 'none';
   } else {
@@ -3030,7 +3153,11 @@ function goToConfirm() {
       <span style="color:var(--fg-1);">₱${(i.price*i.qty).toFixed(2)}</span>
     </div>`
   ).join('');
-  document.getElementById('conf-total').textContent = '₱' + total.toFixed(2);
+  const ship = deliveryMethod === 'ship';
+  document.getElementById('conf-total').textContent = ship ? `₱${total.toFixed(2)} + shipping` : '₱' + total.toFixed(2);
+  document.getElementById('conf-nothing-charged').style.display = ship ? 'block' : 'none';
+  document.getElementById('conf-payment-hold').style.display = ship ? 'block' : 'none';
+  document.getElementById('confirm-pay-label').textContent = ship ? 'Place Order' : 'Confirm and Pay';
   const paymentLabels = { cash: 'Cash', gcash: 'GCash' };
   document.getElementById('conf-payment-display').innerHTML = paymentLabels[selectedPayment] || 'Cash';
   const deliveryLabel = document.getElementById('conf-delivery-label');
@@ -3049,7 +3176,10 @@ function goToConfirm() {
       barangay: document.getElementById('ship-barangay').value,
       zip: document.getElementById('ship-zip').value,
     };
-    deliveryInfo.innerHTML = `<div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);margin-bottom:0.2rem;">${addr.name} · ${addr.mobile}</div><div style="font-size:0.8rem;color:var(--fg-3);">${addr.street}, Barangay ${addr.barangay}, ${addr.city}${addr.zip ? ', ' + addr.zip : ''}</div><div style="font-size:0.75rem;color:#fbbf24;margin-top:0.3rem;">Shipping fee to be calculated</div>`;
+    const cityShort = addr.city === 'Caloocan City (North)' ? 'Caloocan City' : addr.city;
+    const brgyLabel = (BARANGAY_LABELS[addr.city] || {})[addr.barangay] || ('Barangay ' + addr.barangay);
+    const zip = addr.zip || (BARANGAY_ZIPS[addr.city] || {})[addr.barangay] || '';
+    deliveryInfo.innerHTML = `<div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);margin-bottom:0.2rem;">${addr.name} · ${addr.mobile}</div><div style="font-size:0.8rem;color:var(--fg-3);">${addr.street}, ${brgyLabel}, ${cityShort}${zip ? ', ' + zip : ''}</div><div style="font-size:0.75rem;color:#a16207;margin-top:0.3rem;">Shipping fee to be calculated</div>`;
   }
   goToStep('step-confirm');
 }
@@ -5457,6 +5587,7 @@ const ordersData = {
     delivery_method: {{ (o.delivery_method or "pickup")|tojson }},
     created_at: '{{ o.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
     delivered_at: {{ (o.delivered_at.strftime("%b %d, %Y at %I:%M %p")|tojson) if o.delivered_at else 'null' }},
+    ship: {{ (o.ship_state or none)|tojson }},
     return_window: {{ ({'expired': o.return_window.expired, 'days_left': o.return_window.days_left, 'label': o.return_window.label} if o.return_window else none)|tojson }},
     open_claim: {{ ({'id': o.open_claim.id, 'ref': 'RMA-%03d'|format(o.open_claim.id), 'status': o.open_claim.status} if o.open_claim else none)|tojson }},
     replacement_stats: {{ (o.replacement_stats or none)|tojson }},
@@ -5497,9 +5628,14 @@ function openOrderDetails(orderId) {
   };
   const sc = statusColors[order.status] || statusColors.pending;
   const isPickupOrder = (order.delivery_method || 'pickup') !== 'ship';
+  const sh = order.ship || {};
   const statusLabel = (isPickupOrder && order.status === 'shipped') ? 'ready for pickup'
     : (!isPickupOrder && order.status === 'completed') ? 'delivered'
     : order.status.replace('_', ' ');
+  if (!isPickupOrder) {
+    const sb = shipBadge(order.status);
+    document.getElementById('od-status-badge').innerHTML = `<span class="${sb.cls}" style="font-size:0.72rem;padding:0.4em 0.9em;">${sb.label}</span>`;
+  } else
   document.getElementById('od-status-badge').innerHTML = `
     <span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.4em 0.9em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
       ${statusLabel}
@@ -5524,22 +5660,28 @@ function openOrderDetails(orderId) {
   // Summary — a shop-pickup order has nothing to arrange shipping for, so
   // that line (and the subtotal/total distinction it implies) doesn't apply.
   document.getElementById('od-subtotal').textContent = '₱' + order.total.toFixed(2);
-  document.getElementById('od-total').textContent = '₱' + order.total.toFixed(2);
+  const fee = (!isPickupOrder && sh.fee) ? Number(sh.fee) : null;
+  document.getElementById('od-total').textContent = isPickupOrder ? '₱' + order.total.toFixed(2)
+    : (fee ? '₱' + (order.total + fee).toFixed(2) : `₱${order.total.toFixed(2)} + shipping`);
   document.getElementById('od-shipping-row').style.display = isPickupOrder ? 'none' : 'flex';
+  document.getElementById('od-shipping-val').textContent = fee ? `₱${fee.toFixed(2)} · ${SHIP_OPTION_NAMES[sh.option] || ''}` : 'To be calculated';
+  document.getElementById('od-shipping-val').style.color = fee ? 'var(--fg-1)' : '#a16207';
   
   // Payment method
   const paymentLabels = { cash: 'Cash', gcash: 'GCash', cod: 'Cash on Delivery' };
-  document.getElementById('od-payment').textContent = paymentLabels[order.payment_method] || 'Cash';
+  document.getElementById('od-payment').textContent = (paymentLabels[order.payment_method] || 'Cash')
+    + (!isPickupOrder && !sh.paid && !['cancelled', 'refunded'].includes(order.status) ? ' · on hold' : '')
+    + (!isPickupOrder && sh.paid && order.status !== 'refunded' ? ' · paid' : '');
 
   // Status timeline
   const timeline = document.getElementById('od-timeline');
   const isPickup = order.delivery_method === 'pickup';
   const steps      = isPickup
     ? ['confirmed', 'processing', 'ready_for_pickup', 'completed']
-    : ['confirmed', 'processing', 'shipped', 'completed'];
+    : ['confirmed', 'in_progress', 'done_packaging', 'shipping', 'completed'];
   const stepLabels = isPickup
     ? { confirmed: 'Confirmed', processing: 'Processing', ready_for_pickup: 'Ready for Pickup', completed: 'Picked Up' }
-    : { confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', completed: 'Delivered' };
+    : { confirmed: 'Confirmed', in_progress: 'In Progress', done_packaging: 'Done Packaging', shipping: 'Shipping', completed: 'Completed' };
   const stepIcons = { confirmed: '', processing: '', ready_for_pickup: '', shipped: '', completed: '' };
 
   // Map backend statuses to pickup step keys — the backend only ever writes
@@ -5549,7 +5691,7 @@ function openOrderDetails(orderId) {
   if (isPickup && order.status === 'shipped') resolvedStatus = 'ready_for_pickup';
 
   const currentIdx = steps.indexOf(resolvedStatus);
-  const isCancelled = order.status === 'cancelled';
+  const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
   // Ship-to-address orders keep showing the 4-step tracker (with "Delivered"
   // checked off) once completed — only pick-up orders collapse to the banner,
   // since "picked up" has no further step worth tracking.
@@ -5558,7 +5700,7 @@ function openOrderDetails(orderId) {
   if (isCancelled) {
     timeline.innerHTML = `
       <div style="text-align:center;padding:1rem;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);border-radius:10px;">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fca5a5;font-size:0.85rem;">Order Cancelled</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:#b91c1c;font-size:0.85rem;">${order.status === 'refunded' ? 'Order Refunded' : 'Order Cancelled'}</div>
       </div>`;
   } else if (isCompleted) {
     timeline.innerHTML = `
@@ -5591,7 +5733,19 @@ function openOrderDetails(orderId) {
   const receivedWrap = document.getElementById('od-confirm-received-wrap');
   const isCashPickup = order.payment_method === 'cash' && isPickup;
   const packageIconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0.4rem;"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
-  if (order.status === 'shipped' && !isCashPickup) {
+  if (!isPickupOrder && order.status === 'shipping' && !sh.received_at) {
+    _confirmOrderId = order.id;
+    _confirmOrderIsPickup = false;
+    receivedWrap.style.display = 'block';
+    receivedWrap.innerHTML = `
+      <button id="od-confirm-received-btn" onclick="openOrderReceivedConfirm()" style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.12);border:1px solid rgba(21,128,61,0.3);border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;">
+        ${packageIconSvg}I received my order
+      </button>`;
+  } else if (!isPickupOrder && order.status === 'shipping') {
+    _confirmOrderId = null;
+    receivedWrap.style.display = 'block';
+    receivedWrap.innerHTML = `<div style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.12);border:1px solid rgba(21,128,61,0.3);border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;text-align:center;">${packageIconSvg}You confirmed you received it · ${sh.received_at}</div>`;
+  } else if (order.status === 'shipped' && !isCashPickup) {
     _confirmOrderId = order.id;
     _confirmOrderIsPickup = isPickup;
     receivedWrap.style.display = 'block';
@@ -5599,7 +5753,7 @@ function openOrderDetails(orderId) {
       <button id="od-confirm-received-btn" onclick="openOrderReceivedConfirm()" style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.12);border:1px solid rgba(21,128,61,0.3);border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:0.04em;transition:all 0.2s;" onmouseover="this.style.background='rgba(21,128,61,0.22)'" onmouseout="this.style.background='rgba(21,128,61,0.12)'">
         ${isPickup ? 'I Already Picked Up My Order' : packageIconSvg + 'I received my order'}
       </button>`;
-  } else if (!isPickup && order.status === 'completed') {
+  } else if (!isPickup && order.status === 'completed' && order.delivery_method !== 'ship') {
     _confirmOrderId = null;
     receivedWrap.style.display = 'block';
     receivedWrap.innerHTML = `
@@ -5611,6 +5765,7 @@ function openOrderDetails(orderId) {
     receivedWrap.style.display = 'none';
   }
 
+  renderShipSection(order);
   _currentOrderDetailId = order.id;
   const odWrap = document.getElementById('od-report-problem-wrap');
   if (['delivered', 'completed'].includes(order.status) && order.return_window) {
@@ -5630,6 +5785,65 @@ function openOrderDetails(orderId) {
 
 let _confirmOrderId = null;
 let _confirmOrderIsPickup = false;
+
+const SHIP_OPTION_NAMES = { priority: 'Priority', regular: 'Regular', pooling: 'Pooling' };
+const SHIP_OPTION_NOTES = { priority: 'Fastest · a rider just for your order', regular: 'Standard delivery', pooling: 'Cheapest · shares a vehicle with other orders' };
+
+// The Ship to Address part of the order window: choose and pay, paid, on its way, refunded or cancelled.
+function renderShipSection(order) {
+  const box = document.getElementById('od-ship-section');
+  if (order.delivery_method !== 'ship') { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const sh = order.ship || {};
+  const peso = n => '₱' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const head = t => `<div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">${t}</div>`;
+  const panel = (bg, border, inner) => `<div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:0.9rem 1rem;font-size:0.82rem;line-height:1.55;">${inner}</div>`;
+  let html = '';
+  if (order.status === 'done_packaging' && !sh.paid && sh.options_sent) {
+    const left = sh.deadline_iso ? Math.max(0, Date.parse(sh.deadline_iso) - Date.now()) : 0;
+    const hrs = Math.floor(left / 3600e3), mins = Math.floor(left % 3600e3 / 60e3);
+    const cards = ['priority', 'regular', 'pooling'].map(k => {
+      const price = sh.prices ? sh.prices[k] : null;
+      if (!price) return `<div style="border:1.5px dashed var(--line-2);border-radius:10px;padding:0.7rem 0.8rem;opacity:0.55;"><div style="font-family:'Syne',sans-serif;font-weight:700;">${SHIP_OPTION_NAMES[k]}</div><div style="font-size:0.74rem;color:var(--fg-3);">Not available for this order</div></div>`;
+      return `<div style="border:1.5px solid var(--line-2);border-radius:10px;padding:0.7rem 0.8rem;display:flex;align-items:center;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;background:#fff;">
+        <div style="min-width:0;"><div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">${SHIP_OPTION_NAMES[k]} · ${peso(price)}</div>
+          <div style="font-size:0.74rem;color:var(--fg-3);">${SHIP_OPTION_NOTES[k]}</div>
+          <div style="font-size:0.74rem;color:var(--fg-2);margin-top:0.15rem;">Items ${peso(order.total)} + shipping ${peso(price)} = <strong>${peso(order.total + price)}</strong></div></div>
+        <button type="button" onclick="chooseShipping(${order.id}, '${k}', this)" style="padding:0.5rem 0.9rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Choose &amp; pay with GCash</button>
+      </div>`;
+    }).join('');
+    html = head('Choose your shipping option')
+      + panel('#fefce8', '#eab308', `<div style="color:#713f12;"><strong>Lalamove ${sh.vehicle}</strong> · ${sh.reason}<br>You have until <strong>${sh.deadline}</strong> (${hrs}h ${mins}m left) to choose and pay with GCash. If not, the order cancels by itself and the items go back to stock.</div>`)
+      + `<div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.6rem;">${cards}</div>`;
+  } else if (order.status === 'done_packaging' && sh.paid) {
+    html = head('Shipping') + panel('#f0fdf4', '#bbf7d0', `<div style="color:#14532d;"><strong>Paid ${peso(sh.grand_total)} · GCash</strong><br>${SHIP_OPTION_NAMES[sh.option]} shipping ${peso(sh.fee)} · Lalamove ${sh.vehicle}. The shop is booking your delivery now.</div>`);
+  } else if (order.status === 'shipping') {
+    const who = sh.rider_type === 'driver' ? 'Driver' : 'Rider';
+    html = head('On the way with Lalamove')
+      + panel('#f0f9ff', '#bae6fd', `<div style="color:#0c4a6e;"><strong>${who}: ${sh.rider_name}</strong> · ${sh.rider_phone} · ${sh.rider_plate}<br>${SHIP_OPTION_NAMES[sh.option]} shipping · Paid ${peso(sh.grand_total)} · GCash</div>`)
+      + (sh.lalamove_link ? `<a href="${sh.lalamove_link}" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:0.6rem;padding:0.7rem;background:var(--brand-red);border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;text-decoration:none;">Track on Lalamove</a>` : '');
+  } else if (order.status === 'refunded') {
+    html = head('Refunded') + panel('#fef2f2', '#fecaca', `<div style="color:#7f1d1d;"><strong>${peso(sh.refund_amount)} back to your GCash via PayMongo</strong>${sh.refunded_at ? ' · ' + sh.refunded_at : ''}<br>Reason: ${sh.refund_reason || '—'}</div>`);
+  } else if (order.status === 'cancelled') {
+    const by = { auto: 'cancelled automatically, no payment in 24 hours', customer: 'cancelled by you', shop: 'cancelled by the shop' }[sh.cancelled_by] || 'cancelled';
+    html = head('Cancelled') + panel('#f3f4f6', '#e5e7eb', `<div style="color:#4b5563;"><strong>Not charged</strong> · ${by}</div>`);
+  } else if (order.status === 'completed' && sh.paid) {
+    html = head('Delivered') + panel('#f0fdf4', '#bbf7d0', `<div style="color:#14532d;"><strong>Paid ${peso(sh.grand_total)} · GCash</strong> · ${SHIP_OPTION_NAMES[sh.option] || ''} shipping ${peso(sh.fee)}</div>`);
+  }
+  box.innerHTML = html;
+  box.style.display = html ? 'block' : 'none';
+}
+
+async function chooseShipping(oid, option, btn) {
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Opening GCash…';
+  try {
+    const res = await fetch(`/customer/order/${oid}/choose-shipping`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ option }) });
+    const data = await res.json();
+    if (data.success) { window.location.href = data.checkout_url; return; }
+    showCartToast(data.error || 'Could not start the payment.');
+  } catch (e) { showCartToast('Network error. Please try again.'); }
+  btn.disabled = false; btn.textContent = label;
+}
 
 function openOrderReceivedConfirm() {
   if (!_confirmOrderId) return;
@@ -5689,6 +5903,7 @@ async function _submitOrderReceived() {
   }
   if (data.success) {
     ordersData[orderId].status = data.new_status || 'completed';
+    if (data.received_at && ordersData[orderId].ship) ordersData[orderId].ship.received_at = data.received_at;
     if (data.delivered_at) ordersData[orderId].delivered_at = data.delivered_at;
     _confirmOrderId = null;
     closeOrderReceivedConfirm();
@@ -5776,6 +5991,10 @@ const RETURN_OUTCOMES = {
 // itself validates against, so a customer never fills this in only to have
 // the whole claim rejected on submit.
 const DELIVERY_ZONE_BARANGAYS = {{ delivery_zone_barangays|tojson }};
+const DELIVERY_ZONE_GROUPS = {{ delivery_zone_groups|tojson }};
+const BARANGAY_ZIPS = {{ barangay_zips|tojson }};
+const BARANGAY_LABELS = {{ barangay_labels|tojson }};
+const MAX_ONLINE_QTY = 10;     // up to 10 of each item online, so an order fits one Lalamove delivery
 const DEFAULT_DELIVERY_ADDRESS = {
   name: {{ (current_user.default_delivery_name or '')|tojson }},
   mobile: {{ (current_user.default_delivery_mobile or '')|tojson }},
@@ -7765,14 +7984,14 @@ function openProductInfo(card) {
 function changeInfoQty(delta) {
   const input = document.getElementById('pi-qty');
   let val = parseInt(input.value) + delta;
-  const max = currentProductInfo ? currentProductInfo.stock : 99;
+  const max = currentProductInfo ? Math.min(currentProductInfo.stock, MAX_ONLINE_QTY) : 99;
   val = Math.max(1, Math.min(max, val));
   input.value = val;
 }
 
 function clampInfoQty() {
   const input = document.getElementById('pi-qty');
-  const max   = currentProductInfo ? currentProductInfo.stock : 99;
+  const max   = currentProductInfo ? Math.min(currentProductInfo.stock, MAX_ONLINE_QTY) : 99;
   let val     = parseInt(input.value) || 1;
   input.value = Math.max(1, Math.min(max, val));
 }
@@ -7784,8 +8003,8 @@ function addToCartFromInfo() {
   const existing = cart.find(i => i.id === currentProductInfo.id);
   if (existing) {
     const newQty = existing.qty + qty;
-    if (newQty > currentProductInfo.stock) {
-      showCartToast('Not enough stock for ' + currentProductInfo.name);
+    if (newQty > Math.min(currentProductInfo.stock, MAX_ONLINE_QTY)) {
+      showCartToast(newQty > MAX_ONLINE_QTY ? `Up to ${MAX_ONLINE_QTY} per item online` : 'Not enough stock for ' + currentProductInfo.name);
       return;
     }
     existing.qty = newQty;
@@ -8230,6 +8449,10 @@ function showToast(msg, type) {
   }
   function bookingBadgeClass(status) { return 'badge badge-' + status; }
   function orderBadgeClass(status)   { return 'badge badge-' + status.replace(/_/g, ''); }
+  // Ship to Address orders have their own statuses, labels and colours
+  const SHIP_LABELS = { confirmed: 'Confirmed', in_progress: 'In Progress', done_packaging: 'Done Packaging', shipping: 'Shipping',
+                        completed: 'Completed', refunded: 'Refunded', cancelled: 'Cancelled' };
+  function shipBadge(status) { return { cls: 'badge badge-s-' + status, label: SHIP_LABELS[status] || badgeText(status) }; }
 
   function updateBadge(el, cls, text) {
     if (!el) return;
@@ -8262,11 +8485,20 @@ function showToast(msg, type) {
       // ── Orders ──
       data.orders.forEach(o => {
         const known = ordersData[o.id];
-        if (!known || known.status === o.status) return;
+        if (!known) return;
+        const shipChanged = o.ship && JSON.stringify(o.ship) !== JSON.stringify(known.ship);
+        if (shipChanged) {
+          known.ship = o.ship;
+          if (typeof renderOverviewProgress === 'function') renderOverviewProgress();
+          if (typeof renderMyOrdersProgress === 'function') renderMyOrdersProgress();
+          if (_currentOrderDetailId === o.id && document.getElementById('modal-order-details').classList.contains('open')) openOrderDetails(o.id);
+        }
+        if (known.status === o.status) return;
         known.status = o.status;
         const isPickupOrder = (known.delivery_method || 'pickup') !== 'ship';
-        const label = (isPickupOrder && o.status === 'shipped') ? 'Ready to Pick Up' : badgeText(o.status);
-        const cls   = (isPickupOrder && o.status === 'shipped') ? 'badge badge-pickup' : orderBadgeClass(o.status);
+        const sb = isPickupOrder ? null : shipBadge(o.status);
+        const label = sb ? sb.label : ((isPickupOrder && o.status === 'shipped') ? 'Ready to Pick Up' : badgeText(o.status));
+        const cls   = sb ? sb.cls : ((isPickupOrder && o.status === 'shipped') ? 'badge badge-pickup' : orderBadgeClass(o.status));
         // Update full orders table row
         const row = document.querySelector(`tr[data-order-id="${o.id}"]`);
         if (row) updateBadge(row.querySelector('.badge'), cls, label);
@@ -8301,13 +8533,27 @@ function showToast(msg, type) {
 
 // ══ HOME: live progress under each unfinished booking / order ══
 const OVP_BOOKING = ['Confirmed', 'Inspection', 'In Progress', 'Completed'];
-const OVP_DELIVERY = ['Confirmed', 'Processing', 'Shipped', 'Completed'];
+const OVP_DELIVERY = ['Confirmed', 'In Progress', 'Done Packaging', 'Shipping', 'Completed'];
+const SHIP_STEP_INDEX = { confirmed: 0, in_progress: 1, done_packaging: 2, shipping: 3 };
+// One short line about where a Ship to Address order is right now.
+function shipProgressLine(o) {
+  const sh = o.ship || {};
+  if (o.status === 'confirmed') return 'Order received · nothing charged yet';
+  if (o.status === 'in_progress') return 'The shop is packing your order';
+  if (o.status === 'done_packaging') {
+    if (sh.paid) return 'Paid · the shop is booking your Lalamove delivery';
+    if (sh.options_sent) return `Choose your shipping option · by ${sh.deadline}`;
+    return 'Packed · shipping options coming soon';
+  }
+  if (o.status === 'shipping') return sh.received_at ? 'You confirmed you received it · the shop will complete it' : 'On the way with Lalamove';
+  return '';
+}
 const OVP_PICKUP = ['Confirmed', 'Processing', 'Ready', 'Completed'];
 
 function ovpHtml(steps, cur, line, ref) {
   const segs = steps.map((_, i) => `<span class="ovp-seg"><i style="width:${i < cur ? 100 : (i === cur ? 50 : 0)}%"></i></span>`).join('');
   const names = steps.map((n, i) => `<span class="${i === cur ? 'cur' : ''}">${n}</span>`).join('');
-  return `${ref ? `<div class="ovp-ref">${ref}</div>` : ''}<div class="ovp-bar" style="margin-top:0.4rem;">${segs}</div><div class="ovp-steps">${names}</div><div class="ovp-line"><span class="ovp-dot"></span><span>${line}</span></div>`;
+  return `${ref ? `<div class="ovp-ref">${ref}</div>` : ''}<div class="ovp-bar" style="margin-top:0.4rem;">${segs}</div><div class="ovp-steps" style="grid-template-columns:repeat(${steps.length}, 1fr);">${names}</div><div class="ovp-line"><span class="ovp-dot"></span><span>${line}</span></div>`;
 }
 
 function renderOverviewProgress() {
@@ -8336,17 +8582,14 @@ function renderOverviewProgress() {
       }
     } else {
       const o = ordersData[id];
-      const idx = o ? { confirmed: 0, processing: 1, shipped: 2 }[o.status] : undefined;
+      const idx = o ? (o.delivery_method === 'ship' ? SHIP_STEP_INDEX[o.status] : { confirmed: 0, processing: 1, shipped: 2 }[o.status]) : undefined;
       if (idx !== undefined) {
         const ship = o.delivery_method === 'ship';
         let line;
-        if (idx === 0) line = 'Order received';
+        if (ship) line = shipProgressLine(o);
+        else if (idx === 0) line = 'Order received';
         else if (idx === 1) line = 'The shop is preparing your items';
-        else if (ship) {
-          const made = new Date((o.created_at || '').replace(' at ', ' '));
-          const eta = isNaN(made) ? '' : new Date(made.getTime() + 3 * 86400e3).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          line = `On the way${eta ? ' · expected ' + eta : ''}`;
-        } else line = 'Ready at the counter · open 8:00 AM – 6:30 PM';
+        else line = 'Ready at the counter · open 8:00 AM – 6:30 PM';
         html = ovpHtml(ship ? OVP_DELIVERY : OVP_PICKUP, idx, line, '');
       }
     }
@@ -8402,11 +8645,11 @@ function renderMyBookingsProgress() {
 function renderMyOrdersProgress() {
   document.querySelectorAll('[data-orp]').forEach(el => {
     const o = ordersData[el.dataset.orp];
-    const idx = o ? { confirmed: 0, processing: 1, shipped: 2 }[o.status] : undefined;
+    const ship = o && o.delivery_method === 'ship';
+    const idx = o ? (ship ? SHIP_STEP_INDEX[o.status] : { confirmed: 0, processing: 1, shipped: 2 }[o.status]) : undefined;
     if (idx === undefined) { el.innerHTML = ''; return; }
-    const ship = o.delivery_method === 'ship';
-    const line = ['Order received', 'The shop is preparing your items',
-                  ship ? 'On the way to your address' : 'Ready at the shop counter · open 8:00 AM – 6:30 PM'][idx];
+    const line = ship ? shipProgressLine(o)
+      : ['Order received', 'The shop is preparing your items', 'Ready at the shop counter · open 8:00 AM – 6:30 PM'][idx];
     el.innerHTML = ovpHtml(ship ? OVP_DELIVERY : ['Confirmed', 'Processing', 'Ready to Pick Up', 'Completed'], idx, line, '');
   });
 }

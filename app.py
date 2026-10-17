@@ -29,7 +29,8 @@ from service_duration import (
 )
 from gmail_helper import send_gmail_html as _send_gmail, send_otp_email
 from delivery_zones import (DELIVERY_ZONE_BARANGAYS, DELIVERY_ZONE_CITIES,
-    is_in_delivery_zone, format_delivery_address)
+    is_in_delivery_zone, format_delivery_address,
+    BARANGAY_ZIPS, DELIVERY_ZONE_GROUPS, barangay_label, zip_for, city_short, full_address_line)
 from cloud_storage import upload_image
 import os, uuid, random, string, base64, requests
 from urllib.parse import quote, urlparse
@@ -582,6 +583,34 @@ class Order(db.Model):
     is_archived     = db.Column(db.Boolean, default=False)
     receipt_sent    = db.Column(db.Boolean, default=False)
     delivered_at    = db.Column(db.DateTime, nullable=True)  # when status actually reached delivered/completed — the return window's start
+    # ── Ship to Address (Lalamove) ──
+    paid_at                 = db.Column(db.DateTime, nullable=True)
+    shipping_vehicle        = db.Column(db.String(40), nullable=True)
+    shipping_reason         = db.Column(db.String(200), nullable=True)
+    shipping_prices         = db.Column(db.Text, nullable=True)
+    shipping_options_sent_at= db.Column(db.DateTime, nullable=True)
+    shipping_deadline_at    = db.Column(db.DateTime, nullable=True)
+    shipping_reminder_at    = db.Column(db.DateTime, nullable=True)
+    shipping_option         = db.Column(db.String(20), nullable=True)
+    shipping_fee            = db.Column(db.Float, nullable=True)
+    lalamove_fare           = db.Column(db.Float, nullable=True)
+    paymongo_payment_id     = db.Column(db.String(80), nullable=True)
+    rider_type              = db.Column(db.String(12), nullable=True)
+    rider_name              = db.Column(db.String(100), nullable=True)
+    rider_phone             = db.Column(db.String(20), nullable=True)
+    rider_plate             = db.Column(db.String(30), nullable=True)
+    lalamove_link           = db.Column(db.String(500), nullable=True)
+    shipping_started_at     = db.Column(db.DateTime, nullable=True)
+    received_at             = db.Column(db.DateTime, nullable=True)
+    received_reminder_at    = db.Column(db.DateTime, nullable=True)
+    completed_by_shop       = db.Column(db.Boolean, default=False)
+    completion_proof        = db.Column(db.String(500), nullable=True)
+    cancelled_by            = db.Column(db.String(12), nullable=True)
+    cancel_reason           = db.Column(db.String(300), nullable=True)
+    refunded_at             = db.Column(db.DateTime, nullable=True)
+    refund_amount           = db.Column(db.Float, nullable=True)
+    refund_reason           = db.Column(db.String(300), nullable=True)
+    stock_restocked         = db.Column(db.Boolean, nullable=True)
 
 
 class OrderItem(db.Model):
@@ -1296,6 +1325,7 @@ def customer_dashboard():
 
     for o in orders:
         o.return_window = return_window_info('product', o.delivered_at) if o.status in ('delivered', 'completed') else None
+        o.ship_state = ship_order_state(o) if o.delivery_method == 'ship' else None
         o.open_claim = open_by_order.get(o.id)
         o.replacement_stats = _order_replacement_stats(o) if o.return_window else None
     _booking_ids = [b.id for b in bookings]
@@ -1365,6 +1395,8 @@ def customer_dashboard():
                            products=products, services=services, returns=returns,
                            delivery_zone_barangays=DELIVERY_ZONE_BARANGAYS,
                            delivery_zone_cities=DELIVERY_ZONE_CITIES,
+                           delivery_zone_groups=DELIVERY_ZONE_GROUPS, barangay_zips=BARANGAY_ZIPS,
+                           barangay_labels={c: {b: barangay_label(c, b) for b in bl} for c, bl in DELIVERY_ZONE_BARANGAYS.items()},
                            default_delivery_eligible=default_delivery_eligible,
                            shop_phone=SHOP_PHONE, shop_phone_display=SHOP_PHONE_DISPLAY,
                            shop_hours=SHOP_HOURS, facebook_page_url=FACEBOOK_PAGE_URL,
@@ -2015,19 +2047,24 @@ def build_transactions(user):
         method = _tx_method(o.payment_method)
         if o.payment_method not in ('cash', 'gcash') or not o.items:
             continue
-        if method == 'gcash' and o.status in ('awaiting_payment', 'cancelled', 'pending'):
+        ship_flow = o.delivery_method == 'ship'
+        if ship_flow and not o.paid_at:        # Lalamove orders only count once the GCash payment really went through
+            continue
+        if method == 'gcash' and not ship_flow and o.status in ('awaiting_payment', 'cancelled', 'pending'):
             continue
         if method == 'cash' and o.status != 'completed':
             continue
-        paid_at = (o.delivered_at if method == 'cash' else None) or o.created_at
+        paid_at = o.paid_at if ship_flow else ((o.delivered_at if method == 'cash' else None) or o.created_at)
         rows = [{'name': (i.product.name if i.product else 'Product'), 'qty': i.quantity,
                  'price': round(i.unit_price * i.quantity, 2)} for i in o.items]
         fee = round(max(0.0, (o.total_amount or 0) - sum(r['price'] for r in rows)), 2)
         ship = o.delivery_method == 'ship'
+        if ship_flow:
+            fee = round(o.shipping_fee or 0, 2)
         rec = {
             'key': f'o{o.id}', 'kind': 'order', 'type': 'payment', 'tag': 'ORD', 'ref': f'ORD-{o.id:03d}',
             'name': 'Online order' if ship else 'Order — picked up at the shop',
-            'amount': round(o.total_amount or 0, 2), 'method': method,
+            'amount': round((o.total_amount or 0) + ((o.shipping_fee or 0) if ship_flow else 0), 2), 'method': method,
             'at': _tx_dt(paid_at), 'receipt_no': f'OR-ORD-{o.id:05d}',
             'customer': user.fullname, 'motorcycle': '', 'mechanic': '',
             'sections': [{'title': 'Items', 'rows': rows}], 'delivery_fee': fee, 'is_backjob': False,
@@ -2038,6 +2075,16 @@ def build_transactions(user):
         else:
             rec.update({'gcash_from': _mask_phone(user.phone), 'gcash_ref': o.payment_ref or ''})
         out.append(rec)
+        if ship_flow and o.status == 'refunded' and o.refund_amount:
+            out.append({
+                'key': f'of{o.id}', 'kind': 'refund', 'type': 'refund', 'tag': 'ORD', 'ref': f'ORD-{o.id:03d}',
+                'name': 'Refund — cancelled order', 'amount': round(o.refund_amount, 2), 'method': 'gcash',
+                'at': _tx_dt(o.refunded_at or paid_at), 'receipt_no': f'RF-ORD-{o.id:05d}',
+                'customer': user.fullname, 'motorcycle': '', 'mechanic': '',
+                'sections': [{'title': 'Refunded', 'rows': [{'name': 'Order ORD-%03d (items + shipping)' % o.id, 'qty': 1, 'price': round(o.refund_amount, 2)}]}],
+                'delivery_fee': 0, 'is_backjob': False, 'search': 'refund cancelled order',
+                'gcash_to': _mask_phone(user.phone), 'gcash_ref': o.paymongo_payment_id or '', 'screenshot': '',
+            })
 
     # ── refunds ──
     for r in ReturnRequest.query.filter_by(user_id=user.id, status='resolved', resolution='refund').all():
@@ -2325,6 +2372,22 @@ def book_multiple_services():
     })
 
 
+MAX_ONLINE_QTY = 10      # one Lalamove delivery: up to 10 of each item online
+
+
+def _check_online_qty(product, qty):
+    """The same limit the cart enforces, checked again when the order is placed. Returns an error text or None."""
+    if qty < 1:
+        return 'Type how many you want. You need at least 1 to check out.'
+    if qty > MAX_ONLINE_QTY:
+        return (f'{qty} is a bulk order. You can order up to {MAX_ONLINE_QTY} of this item online, so your order fits one '
+                f'Lalamove delivery. For {MAX_ONLINE_QTY + 1} or more, please contact the shop or visit MotoTyres North '
+                f'Caloocan so we can arrange it.')
+    if qty > (product.stock or 0):
+        return f'Only {product.stock or 0} left in stock of {product.name}. Please lower the amount.'
+    return None
+
+
 @app.route('/customer/cart/checkout', methods=['POST'])
 @login_required
 @require_active_account
@@ -2336,6 +2399,8 @@ def cart_checkout():
     items_data      = data['items']
     delivery_method = data.get('delivery_method', 'pickup')
     payment_method  = data.get('payment_method', 'cash')
+    if delivery_method == 'ship':
+        payment_method = 'gcash'      # Ship to Address is GCash only, and it is not charged until shipping is chosen
 
     ship_address = ''
     if delivery_method == 'ship':
@@ -2346,56 +2411,54 @@ def cart_checkout():
                 return jsonify({'success': False, 'error': 'Your saved default address is outside the delivery area — please use a different address.'}), 400
             ship_name, ship_mobile = u.default_delivery_name, u.default_delivery_mobile
             ship_city, ship_barangay = u.default_delivery_city, u.default_delivery_barangay
-            ship_street, ship_zip = u.default_delivery_street, u.default_delivery_zip
+            ship_street = u.default_delivery_street
         elif address_mode == 'custom':
             ship_name     = clean_str(data.get('ship_name', ''), max_len=100)
             ship_mobile   = clean_str(data.get('ship_mobile', ''), max_len=13)
             ship_city     = clean_str(data.get('ship_city', ''), max_len=50)
             ship_barangay = clean_str(data.get('ship_barangay', ''), max_len=50)
             ship_street   = clean_str(data.get('ship_street', ''), max_len=255)
-            ship_zip      = clean_str(data.get('ship_zip', ''), max_len=10)
             if not (ship_name and ship_mobile and ship_street):
                 return jsonify({'success': False, 'error': 'Please fill in the full delivery address.'}), 400
-            if not is_valid_phone(ship_mobile):
-                return jsonify({'success': False, 'error': 'Invalid delivery mobile number.'}), 400
+            if not _PHONE_RE.match(ship_mobile):
+                return jsonify({'success': False, 'error': 'Enter a delivery mobile number with 11 digits starting with 09.'}), 400
             if not is_in_delivery_zone(ship_city, ship_barangay):
                 return jsonify({'success': False, 'error': 'We only deliver within North Caloocan or Northern Quezon City.'}), 400
-            if data.get('save_as_default'):
-                current_user.default_delivery_name     = ship_name
-                current_user.default_delivery_mobile   = ship_mobile
-                current_user.default_delivery_city     = ship_city
-                current_user.default_delivery_barangay = ship_barangay
-                current_user.default_delivery_street   = ship_street
-                current_user.default_delivery_zip      = ship_zip
         else:
             return jsonify({'success': False, 'error': 'Please choose a delivery address.'}), 400
-        # Kept as the same "name / mobile / street line" shape the rest of the
-        # app already parses (shipping_destination(), the receipt email) —
-        # just with the barangay folded into that third line.
-        ship_address = f"{ship_name}\n{ship_mobile}\n{ship_street}, Brgy. {ship_barangay}, {ship_city}, Metro Manila {ship_zip}"
+        ship_zip = zip_for(ship_city, ship_barangay)            # always filled in from the barangay, never typed
+        if address_mode == 'custom' and data.get('save_as_default'):
+            current_user.default_delivery_name     = ship_name
+            current_user.default_delivery_mobile   = ship_mobile
+            current_user.default_delivery_city     = ship_city
+            current_user.default_delivery_barangay = ship_barangay
+            current_user.default_delivery_street   = ship_street
+            current_user.default_delivery_zip      = ship_zip
+        # name / mobile / full address — the 3-line shape the rest of the app already parses
+        ship_address = f"{ship_name}\n{ship_mobile}\n{full_address_line(ship_street, ship_barangay, ship_city, ship_zip)}"
 
     resolved = []
-    # Sorted by id so two concurrent checkouts touching the same products
-    # always lock them in the same order — otherwise two transactions each
-    # locking the same two products in opposite order can deadlock.
+    # Sorted by id so two concurrent checkouts touching the same products always lock them in the same order.
     for item in sorted(items_data, key=lambda i: i['product_id']):
-        # FOR UPDATE holds this row's lock until commit, so a second
-        # concurrent checkout on the same product has to wait its turn
-        # instead of reading the same "1 left" stock and also passing —
-        # without this, two people buying the last unit at once could both
-        # succeed and drive stock negative.
+        # FOR UPDATE holds this row's lock until commit, so two people buying the last unit at once can't both pass.
         product = Product.query.filter_by(id=item['product_id']).with_for_update().first()
         if not product:
             db.session.rollback()
             return jsonify({'success': False, 'error': 'Product not found'}), 400
-        qty = int(item['quantity'])
-        if product.stock < qty:
+        try:
+            qty = int(item['quantity'])
+        except (TypeError, ValueError):
+            qty = 0
+        problem = _check_online_qty(product, qty)
+        if problem:
             db.session.rollback()
-            return jsonify({'success': False, 'error': f'Not enough stock for {product.name}'}), 400
+            return jsonify({'success': False, 'error': problem}), 400
         resolved.append((product, qty))
 
-    total        = sum(p.price * q for p, q in resolved)
-    order_status = 'awaiting_payment' if payment_method.lower() == 'gcash' else 'pending'
+    total = sum(p.price * q for p, q in resolved)
+    is_ship = delivery_method == 'ship'
+    # Ship to Address: Confirmed straight away, payment on hold until the customer picks a shipping option.
+    order_status = 'confirmed' if is_ship else ('awaiting_payment' if payment_method.lower() == 'gcash' else 'pending')
 
     order = Order(user_id=current_user.id, total_amount=total,
                   payment_method=payment_method, delivery_method=delivery_method,
@@ -2405,9 +2468,25 @@ def cart_checkout():
 
     for product, qty in resolved:
         db.session.add(OrderItem(order_id=order.id, product_id=product.id, quantity=qty, unit_price=product.price))
-        product.stock -= qty
+        product.stock -= qty          # held for this order
 
     db.session.commit()
+
+    ref = f'ORD-{order.id:03d}'
+    items_desc = ', '.join(f"{p.name} x{q}" for p, q in resolved)
+
+    if is_ship:
+        held = sum(q for _, q in resolved)
+        _notify_order_customer(order, 'Order Confirmed ✅', with_stamp(
+            f'Your order {ref} ({items_desc[:80]}) is confirmed. Nothing is charged yet. Once it is packed, we\'ll check '
+            f'Lalamove and send you the shipping options (Priority, Regular and Pooling). You\'ll have 24 hours to choose '
+            f'one and pay for your items and shipping together with GCash.', 'confirmed', is_ship=True), status='confirmed')
+        for admin in User.query.filter_by(role='admin').all():
+            send_notification(admin.id, f'New order {ref}',
+                f'New order {ref}: {current_user.fullname} · Ship to Address · GCash on hold until the customer chooses shipping. {held} held from stock.',
+                type='order', status='confirmed')
+        flash(f'Order {ref} placed. Nothing was charged. We\'ll send your shipping options once it\'s packed.', 'success')
+        return jsonify({'success': True, 'gcash': False, 'placed': True, 'ref': ref})
 
     if payment_method.lower() == 'gcash':
         desc   = f"MotoTyres Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
@@ -2416,22 +2495,16 @@ def cart_checkout():
             return jsonify({'success': True, 'gcash': True, 'checkout_url': result['checkout_url']})
         return jsonify({'success': False, 'error': 'Could not create GCash payment'}), 500
 
-    items_desc = ', '.join(f"{p.name} x{q}" for p, q in resolved)
-    _is_ship   = delivery_method == 'ship'
-    _dest      = shipping_destination(ship_address)
-    _dest_text = f' We will ship it to {_dest} once confirmed.' if _is_ship and _dest else ''
     send_notification(current_user.id, 'Order Placed!',
         with_stamp(
-            f'Your order ORD-{order.id:03d} for {items_desc[:80]} worth ₱{total:.2f} '
-            f'is now pending.{_dest_text}',
-            'pending', is_ship=_is_ship),
+            f'Your order {ref} for {items_desc[:80]} worth ₱{total:.2f} is now pending.',
+            'pending', is_ship=False),
         type='order', status='pending')
     for admin in User.query.filter_by(role='admin').all():
         send_notification(admin.id, 'New Order Received',
             f'{current_user.fullname} placed an order for ₱{total:.2f}.', type='order', status='pending')
 
-    # submitCartOrder() reloads the page on success, so a flash here is picked
-    # up by that reload the same way the profile-update toasts are.
+    # submitCartOrder() reloads the page on success, so a flash here is picked up by that reload.
     flash('Order placed successfully!', 'success')
     return jsonify({'success': True, 'gcash': False})
 
@@ -2448,9 +2521,10 @@ def place_order():
     if not product:
         abort(404)
     quantity = clean_int(request.form.get('quantity', 1), default=1, min_val=1, max_val=9999)
-    if product.stock < quantity:
+    _problem = _check_online_qty(product, quantity)
+    if _problem:
         db.session.rollback()
-        flash('Not enough stock available.', 'danger')
+        flash(_problem, 'danger')
         return redirect(url_for('customer_dashboard'))
 
     total           = product.price * quantity
@@ -3382,7 +3456,7 @@ def customer_poll():
         user_id=current_user.id, is_read=False).count()
     return jsonify({
         'bookings': [{'id': b.id, 'status': b.status} for b in bookings],
-        'orders':   [{'id': o.id, 'status': o.status} for o in orders],
+        'orders':   [{'id': o.id, 'status': o.status, 'ship': ship_order_state(o) if o.delivery_method == 'ship' else None} for o in orders],
         'unread_notifications': unread_count
     })
 
@@ -3395,6 +3469,19 @@ def confirm_order_received(oid):
     order = Order.query.get_or_404(oid)
     if order.user_id != current_user.id:
         return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
+    if order.delivery_method == 'ship':
+        if order.status != 'shipping':
+            return jsonify({'success': False, 'message': 'This order is not on its way yet.'}), 400
+        if not order.received_at:
+            order.received_at = ph_now()
+            db.session.commit()
+            ref = f'ORD-{order.id:03d}'
+            _notify_order_customer(order, 'Thanks for confirming ✅',
+                f'You confirmed you received order {ref}. The shop will mark it completed shortly. Thank you!', status='shipping')
+            for admin in User.query.filter_by(role='admin').all():
+                send_notification(admin.id, f'Customer received {ref}',
+                    f'{current_user.fullname} confirmed they received {ref}. You can set it to Completed.', type='order', status='shipping')
+        return jsonify({'success': True, 'new_status': 'shipping', 'received_at': _fmt_when(order.received_at)})
     if order.status != 'shipped':
         return jsonify({'success': False, 'message': 'Order is not in shipped status.'}), 400
     if order.payment_method == 'cash' and order.delivery_method == 'pickup':
@@ -3527,7 +3614,12 @@ def payment_success():
     if order_id.isdigit():
         try:
             order = Order.query.get(int(order_id))
-            if order and order.status == 'awaiting_payment':
+            if order and order.delivery_method == 'ship' and order.status == 'done_packaging':
+                if _mark_ship_order_paid(order, checkout_id):
+                    flash("GCash payment successful. Thank you! We'll book your Lalamove delivery next.", 'success')
+                else:
+                    flash('We could not confirm your payment yet. If you paid, it will show up in a moment.', 'warning')
+            elif order and order.status == 'awaiting_payment':
                 order.status = 'confirmed'
                 order.payment_ref = (checkout_id or None)
                 db.session.commit()
@@ -3687,6 +3779,180 @@ def api_services():
         return jsonify([])
 
 
+
+# ═══════════════ SHIP TO ADDRESS (Lalamove) — the customer's side of the flow ═══════════════
+import json as _json_ship
+
+SHIP_OPTION_LABELS = {'priority': 'Priority', 'regular': 'Regular', 'pooling': 'Pooling'}
+
+
+def ship_prices(o):
+    try:
+        return _json_ship.loads(o.shipping_prices or '{}') or {}
+    except ValueError:
+        return {}
+
+
+def ship_grand_total(o):
+    return round((o.total_amount or 0) + (o.shipping_fee or 0), 2)
+
+
+def _fmt_when(dt):
+    return dt.strftime('%b %d, %Y at %I:%M %p').replace(' at 0', ' at ') if dt else ''
+
+
+def _restock_order(order):
+    for it in OrderItem.query.filter_by(order_id=order.id).all():
+        prod = Product.query.get(it.product_id)
+        if prod:
+            prod.stock = (prod.stock or 0) + it.quantity
+    order.stock_restocked = True
+
+
+def _paymongo_session_paid(checkout_id):
+    """Asks PayMongo whether this checkout session really has a paid payment. Returns (paid, payment_id)."""
+    try:
+        headers = {"Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"}
+        res = requests.get(f"{PAYMONGO_API_URL}/checkout_sessions/{checkout_id}", headers=headers, timeout=15)
+        if res.status_code != 200:
+            return False, None
+        attrs = res.json()['data']['attributes']
+        for pay in (attrs.get('payments') or []):
+            pa = pay.get('attributes', {})
+            if pa.get('status') == 'paid':
+                return True, pay.get('id')
+        pi = attrs.get('payment_intent') or {}
+        if (pi.get('attributes') or {}).get('status') == 'succeeded':
+            return True, None
+    except Exception as e:
+        print(f'[paymongo] could not verify checkout session: {e}')
+    return False, None
+
+
+def _mark_ship_order_paid(order, checkout_id):
+    """Called after the customer comes back from PayMongo. Only counts when PayMongo itself says it was paid."""
+    if order.paid_at or order.status != 'done_packaging' or not order.shipping_option:
+        return bool(order.paid_at)
+    if not checkout_id or checkout_id != order.payment_ref:
+        return False
+    paid, payment_id = _paymongo_session_paid(checkout_id)
+    if not paid:
+        return False
+    order.paid_at = ph_now()
+    order.paymongo_payment_id = payment_id
+    db.session.commit()
+    ref = f'ORD-{order.id:03d}'
+    label = SHIP_OPTION_LABELS.get(order.shipping_option, order.shipping_option)
+    total = ship_grand_total(order)
+    _notify_order_customer(order, 'Payment received ✅',
+        f'We received your GCash payment of ₱{total:,.2f} for order {ref} (items ₱{order.total_amount:,.2f} + {label} shipping ₱{order.shipping_fee:,.2f}). '
+        f"We'll book your Lalamove delivery next and let you know when it's on its way.", status='paid')
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(admin.id, f'Order {ref} paid',
+            f'Order {ref} paid: ₱{total:,.2f} via GCash · {label} shipping. Book the Lalamove {order.shipping_vehicle or "vehicle"}, then set the order to Shipping.',
+            type='order', status='paid')
+    return True
+
+
+@app.route('/customer/order/<int:oid>/choose-shipping', methods=['POST'])
+@login_required
+@require_active_account
+def choose_shipping_option(oid):
+    """The customer picks Priority / Regular / Pooling and is sent to PayMongo to pay items + shipping together."""
+    order = Order.query.filter_by(id=oid, user_id=current_user.id).first_or_404()
+    option = clean_str((request.get_json(silent=True) or {}).get('option', ''), max_len=12)
+    if order.delivery_method != 'ship' or order.status != 'done_packaging' or not order.shipping_options_sent_at:
+        return jsonify({'success': False, 'error': 'There are no shipping options to choose for this order right now.'}), 400
+    if order.paid_at:
+        return jsonify({'success': False, 'error': 'This order is already paid.'}), 400
+    if order.shipping_deadline_at and ph_now() > order.shipping_deadline_at:
+        return jsonify({'success': False, 'error': 'The 24 hours to choose have passed, so this order was cancelled.'}), 400
+    fee = ship_prices(order).get(option)
+    if option not in SHIP_OPTION_LABELS or not fee:
+        return jsonify({'success': False, 'error': 'That shipping option is not available.'}), 400
+    amount = round((order.total_amount or 0) + float(fee), 2)
+    ref = f'ORD-{order.id:03d}'
+    items_desc = ', '.join(f"{i.product.name} x{i.quantity}" for i in order.items if i.product)
+    desc = f"MotoTyres Order #{order.id:03d}: {items_desc} + {SHIP_OPTION_LABELS[option]} shipping"
+    result = create_gcash_payment(amount=amount, description=desc[:100], order_id=order.id, origin=request.host_url)
+    if not result['success']:
+        return jsonify({'success': False, 'error': 'Could not start the GCash payment. Please try again.'}), 502
+    order.shipping_option = option
+    order.shipping_fee = float(fee)
+    order.payment_ref = result['checkout_id']
+    db.session.commit()
+    return jsonify({'success': True, 'checkout_url': result['checkout_url']})
+
+
+SHIP_STATUS_LABELS = {'confirmed': 'Confirmed', 'in_progress': 'In Progress', 'done_packaging': 'Done Packaging',
+                      'shipping': 'Shipping', 'completed': 'Completed', 'refunded': 'Refunded', 'cancelled': 'Cancelled'}
+# orders placed before the Lalamove flow keep working: their old statuses read as the nearest new one
+_LEGACY_SHIP = {'pending': 'confirmed', 'awaiting_payment': 'confirmed', 'processing': 'in_progress',
+                'shipped': 'shipping', 'delivered': 'completed'}
+
+
+def ship_status_key(o):
+    return _LEGACY_SHIP.get(o.status, o.status)
+
+
+@app.template_filter('order_badge')
+def order_badge(o):
+    """The status pill for an order. Ship to Address uses its own statuses; Shop Pickup keeps its own."""
+    from markupsafe import Markup
+    if o.delivery_method == 'ship':
+        key = ship_status_key(o)
+        return Markup(f'<span class="badge badge-s-{key}">{SHIP_STATUS_LABELS.get(key, key.replace("_", " ").title())}</span>')
+    if o.status == 'shipped':
+        return Markup('<span class="badge badge-pickup">Ready to Pick Up</span>')
+    return Markup(f'<span class="badge badge-{o.status.replace("_", "")}">{o.status.replace("_", " ").title()}</span>')
+
+
+def ship_order_state(o):
+    """The moving parts of a Ship to Address order, as the customer's page needs them."""
+    return {
+        'status': o.status, 'paid': bool(o.paid_at),
+        'paid_at': _fmt_when(o.paid_at), 'options_sent': bool(o.shipping_options_sent_at),
+        'options_sent_at': _fmt_when(o.shipping_options_sent_at),
+        'deadline_iso': o.shipping_deadline_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if o.shipping_deadline_at else None,
+        'deadline': _fmt_when(o.shipping_deadline_at),
+        'vehicle': o.shipping_vehicle or '', 'reason': o.shipping_reason or '', 'prices': ship_prices(o),
+        'option': o.shipping_option or '', 'fee': o.shipping_fee, 'grand_total': ship_grand_total(o),
+        'rider_type': o.rider_type or '', 'rider_name': o.rider_name or '', 'rider_phone': o.rider_phone or '',
+        'rider_plate': o.rider_plate or '', 'lalamove_link': o.lalamove_link or '',
+        'received_at': _fmt_when(o.received_at), 'refund_amount': o.refund_amount, 'refunded_at': _fmt_when(o.refunded_at),
+        'refund_reason': o.refund_reason or '', 'cancelled_by': o.cancelled_by or '',
+    }
+
+
+def process_ship_deadlines():
+    """Every few minutes: remind 2 hours before the 24-hour deadline, and cancel by itself (items back to stock)
+    when the customer never chose and paid."""
+    with app.app_context():
+        now = ph_now()
+        waiting = Order.query.filter(Order.delivery_method == 'ship', Order.status == 'done_packaging',
+                                     Order.paid_at.is_(None), Order.shipping_deadline_at.isnot(None)).all()
+        for o in waiting:
+            ref = f'ORD-{o.id:03d}'
+            if now >= o.shipping_deadline_at:
+                _restock_order(o)
+                o.status = 'cancelled'
+                o.cancelled_by = 'auto'
+                o.cancel_reason = 'No payment within 24 hours'
+                db.session.commit()
+                _notify_order_customer(o, 'Order cancelled — no payment in 24 hours',
+                    f'Your order {ref} was cancelled because the shipping options were not chosen and paid within 24 hours. '
+                    f'You were not charged, and the items went back to stock. You can place the order again anytime.', status='cancelled')
+                for admin in User.query.filter_by(role='admin').all():
+                    send_notification(admin.id, f'Order {ref} cancelled',
+                        f'{ref} cancelled automatically: no payment in 24 hours. Items put back in stock.', type='order', status='cancelled')
+            elif not o.shipping_reminder_at and now >= o.shipping_deadline_at - timedelta(hours=2):
+                o.shipping_reminder_at = now
+                db.session.commit()
+                _notify_order_customer(o, 'Reminder: choose your shipping option',
+                    f'Your shipping options for order {ref} expire at {_fmt_when(o.shipping_deadline_at)} (about 2 hours from now). '
+                    f'Choose one and pay with GCash, or the order will be cancelled and the items put back in stock.', status='done_packaging')
+
+
 # ── Scheduler ─────────────────────────────────────────────────────────────────
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -3697,6 +3963,8 @@ scheduler.add_job(func=check_upcoming_bookings, trigger='interval', minutes=1,
                   id='booking_reminder_job', replace_existing=True)
 scheduler.add_job(func=check_day_before_reminders, trigger='interval', minutes=30,
                   id='day_before_reminder_job', replace_existing=True)
+scheduler.add_job(func=process_ship_deadlines, trigger='interval', minutes=5,
+                  id='ship_deadline_job', replace_existing=True)
 scheduler.start()
 print('[SCHEDULER] Booking reminder service started — checking every 1 minute (15-min) / 30 minutes (day-before)')
 atexit.register(lambda: scheduler.shutdown())
@@ -3725,6 +3993,33 @@ with app.app_context():
         "ALTER TABLE job_order ADD COLUMN mechanic_done_at DATETIME DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN billing_seen_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN payment_ref VARCHAR(80) DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN paid_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
+        "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",
+        "ALTER TABLE `order` ADD COLUMN shipping_prices TEXT",
+        "ALTER TABLE `order` ADD COLUMN shipping_options_sent_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN shipping_deadline_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN shipping_reminder_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN shipping_option VARCHAR(20)",
+        "ALTER TABLE `order` ADD COLUMN shipping_fee DOUBLE",
+        "ALTER TABLE `order` ADD COLUMN lalamove_fare DOUBLE",
+        "ALTER TABLE `order` ADD COLUMN paymongo_payment_id VARCHAR(80)",
+        "ALTER TABLE `order` ADD COLUMN rider_type VARCHAR(12)",
+        "ALTER TABLE `order` ADD COLUMN rider_name VARCHAR(100)",
+        "ALTER TABLE `order` ADD COLUMN rider_phone VARCHAR(20)",
+        "ALTER TABLE `order` ADD COLUMN rider_plate VARCHAR(30)",
+        "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
+        "ALTER TABLE `order` ADD COLUMN shipping_started_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN received_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN received_reminder_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN completed_by_shop TINYINT(1) DEFAULT 0",
+        "ALTER TABLE `order` ADD COLUMN completion_proof VARCHAR(500)",
+        "ALTER TABLE `order` ADD COLUMN cancelled_by VARCHAR(12)",
+        "ALTER TABLE `order` ADD COLUMN cancel_reason VARCHAR(300)",
+        "ALTER TABLE `order` ADD COLUMN refunded_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN refund_amount DOUBLE",
+        "ALTER TABLE `order` ADD COLUMN refund_reason VARCHAR(300)",
+        "ALTER TABLE `order` ADD COLUMN stock_restocked TINYINT(1) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN inspection_at DATETIME DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN in_progress_at DATETIME DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN late_notice_at DATETIME DEFAULT NULL",

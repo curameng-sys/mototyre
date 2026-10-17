@@ -3,9 +3,9 @@
 Shared by app.py (customer site) and admin_app.py (admin/staff site) so a status
 change reads the same no matter which app wrote it.
 
-Ship-to-address orders walk these tracking steps:
+Ship-to-address (Lalamove) orders walk these tracking steps:
 
-    pending -> confirmed -> processing -> shipped (on the way) -> delivered
+    confirmed -> in_progress -> done_packaging -> shipping -> completed   (or cancelled / refunded)
 
 and the customer is notified at every one of them. Every message ends with the
 exact date and time of the update, because the notification panel only shows a
@@ -21,6 +21,8 @@ SHOP_NAME = 'MotoTyres North Caloocan'
 # Per-status label for the timestamp line, so the stamp reads naturally.
 _STAMP_LABELS = {
     'shipped':   'Shipped on',
+    'shipping':  'Shipped on',
+    'refunded':  'Refunded on',
     'delivered': 'Delivered on',
     'completed': 'Completed on',
     'cancelled': 'Cancelled on',
@@ -61,9 +63,34 @@ def with_stamp(message, status='update', when=None, is_ship=True):
 
 
 def _ship_messages(ref, ship_address):
+    """Ship to Address (Lalamove): confirmed -> in_progress -> done_packaging -> shipping -> completed,
+    plus cancelled and refunded. The older keys stay so orders placed before this flow still read correctly."""
     dest    = shipping_destination(ship_address)
     to_dest = f' to {dest}' if dest else ''
     return {
+        'confirmed': (
+            'Order Confirmed ✅',
+            f'Your order {ref} is confirmed and the items are held for you. Nothing is charged yet. '
+            f'Once it is packed, we\'ll send you the shipping options.'),
+        'in_progress': (
+            'We\'re Packing Your Order 📦',
+            f'Your order {ref} is being packed now.'),
+        'done_packaging': (
+            'Your Order Is Packed 📦',
+            f'Your order {ref} is packed. We\'ll check Lalamove and send you your shipping options next.'),
+        'shipping': (
+            'Your Order Is On The Way! 🚚',
+            f'Your order {ref} has been booked with Lalamove and is on its way{to_dest}.'),
+        'completed': (
+            'Order Completed! 🎉',
+            f'Your order {ref} is complete. Thank you for shopping with MotoTyres!'),
+        'cancelled': (
+            'Order Cancelled ❌',
+            f'Your order {ref} has been cancelled. You were not charged.'),
+        'refunded': (
+            'Order Refunded 💸',
+            f'Your order {ref} was cancelled and your payment was refunded to your GCash.'),
+        # orders placed before the Lalamove flow
         'pending': (
             'Order Placed 📝',
             f'Your order {ref} has been placed and is waiting for confirmation. '
@@ -72,9 +99,6 @@ def _ship_messages(ref, ship_address):
             'Awaiting Payment 💳',
             f'Your order {ref} is waiting for payment. We will start preparing it '
             f'for delivery{to_dest} as soon as your payment clears.'),
-        'confirmed': (
-            'Order Confirmed! ✅',
-            f'Your order {ref} is confirmed. We are getting it ready to ship{to_dest}.'),
         'processing': (
             'Order Being Packed 📦',
             f'Your order {ref} is being packed and prepared for hand-over to the courier.'),
@@ -86,12 +110,6 @@ def _ship_messages(ref, ship_address):
             'Order Delivered! 🎉',
             f'Your order {ref} has been delivered{to_dest}. Please check the items and '
             f'confirm receipt on your dashboard.'),
-        'completed': (
-            'Order Completed! 🎉',
-            f'Your order {ref} is complete. Thank you for shopping with MotoTyres!'),
-        'cancelled': (
-            'Order Cancelled ❌',
-            f'Your order {ref} has been cancelled and will no longer be shipped.'),
     }
 
 

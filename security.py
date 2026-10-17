@@ -11,7 +11,8 @@ from flask import abort
 # ─── WHITELISTS ──────────────────────────────────────────────────────────────
 
 ALLOWED_BOOKING_STATUSES = {'pending', 'confirmed', 'inspection', 'in_progress', 'inprogress', 'completed', 'cancelled', 'awaiting_payment', 'ready_for_pickup'}
-ALLOWED_ORDER_STATUSES   = {'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'}
+ALLOWED_ORDER_STATUSES   = {'pending', 'awaiting_payment', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled',
+                            'in_progress', 'done_packaging', 'shipping', 'refunded'}
 ALLOWED_OTP_PURPOSES     = {'login', 'verify', 'reset'}
 
 ALLOWED_RETURN_KINDS      = {'product', 'service'}

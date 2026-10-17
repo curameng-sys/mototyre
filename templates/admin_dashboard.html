@@ -246,6 +246,26 @@
     .badge-cancelled       { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
     .badge-processing      { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
     .badge-shipped         { background: #ecfeff; color: #155e75; border: 1px solid #a5f3fc; }
+    /* Ship to Address (Lalamove) statuses */
+    .badge-s-confirmed      { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-s-in_progress    { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
+    .badge-s-done_packaging { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+    .badge-s-shipping       { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-s-completed      { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-s-refunded       { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge-s-cancelled      { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
+    .ship-line { display:block; font-size:0.66rem; line-height:1.4; color:var(--muted); margin-top:0.2rem; white-space:normal; }
+    .ship-line.ok   { color:#15803d; font-weight:600; }
+    .ship-line.warn { color:#92400e; font-weight:600; }
+    .ship-line.bad  { color:#b91c1c; font-weight:600; }
+    .ship-upd { display:flex; flex-direction:column; gap:0.35rem; align-items:flex-start; }
+    .ship-upd select { padding: 0.25rem 0.45rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.72rem; background: #fff; color: var(--text); outline: none; font-family: inherit; max-width:100%; }
+    .ship-save { padding: 0.25rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: #f3f4f6; color: var(--text); font-size: 0.7rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .ship-save:disabled { opacity: 0.45; cursor: not-allowed; }
+    .ship-save:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
+    .ship-send { display:inline-flex; align-items:center; gap:0.35rem; padding:0.35rem 0.7rem; border-radius:7px; border:1px solid var(--red); background:var(--red); color:#fff; font-size:0.72rem; font-weight:700; cursor:pointer; font-family:inherit; }
+    .ship-send:disabled { background:#e5e7eb; border-color:#d1d5db; color:#6b7280; cursor:not-allowed; }
+    .ship-link { font-size:0.68rem; font-weight:700; color:var(--blue); cursor:pointer; text-decoration:underline; }
     .badge-delivered       { background: #f0fdf4; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-admin           { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
     .badge-staff           { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
@@ -1409,7 +1429,10 @@
           <option value="">All statuses</option>
           <option>pending</option>
           <option>confirmed</option>
+          <option>in progress</option>
+          <option>done packaging</option>
           <option>processing</option>
+          <option>shipping</option>
           <option>shipped</option>
           <option>ready for pickup</option>
           <option>delivered</option>
@@ -1423,15 +1446,15 @@
       <div class="card">
         {% if all_orders %}
         <div style="overflow-x:auto;">
-          <table class="table" id="orders-table" style="table-layout:fixed;width:100%;">
+          <table class="table" id="orders-table" style="table-layout:fixed;width:100%;min-width:1280px;">
             <colgroup>
               <col style="width:100px;">
               <col style="width:130px;">
               <col style="width:auto;">
-              <col style="width:115px;">
-              <col style="width:105px;">
+              <col style="width:200px;">
               <col style="width:100px;">
-              <col style="width:175px;">
+              <col style="width:200px;">
+              <col style="width:215px;">
               <col style="width:100px;">
             </colgroup>
            <thead><tr>
@@ -1448,7 +1471,11 @@
               {% for o in all_orders %}
               {% set o_display_name = o.contact_name if o.is_instore else o.customer.fullname %}
               {% set o_display_ref = ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) %}
-              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}">
+              {% set sh = (not o.is_instore) and o.delivery_method == 'ship' and o.status in ['confirmed','in_progress','done_packaging','shipping','completed','cancelled','refunded'] %}
+              {% set sp = (o|ship_prices) if sh else {} %}
+              {% set sh_grand = (o.total_amount or 0) + (o.shipping_fee or 0) %}
+              {% set sh_sent = sh and o.shipping_options_sent_at %}
+              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if o.paid_at else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}"{% endif %}>
                 <td style="white-space:nowrap;">
                   <a href="#" onclick="viewOrder({{ o.id }}, '{{ o_display_name|e }}', '{{ '' if o.is_instore else o.customer.email }}', '{{ '' if o.is_instore else o.customer.phone }}', '{{ o.customer.motorcycle_model or '' if not o.is_instore }}', '{{ o.customer.motorcycle_plate or '' if not o.is_instore }}', {{ o.total_amount }}, '{{ o.status }}', '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y — %I:%M %p') }}', {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
@@ -1457,7 +1484,22 @@
                 </td>
                 <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">{{ o_display_name }}</td>
                 <td style="overflow:hidden;">
-                  {% if o.items %}
+                  {% if o.items and sh %}
+                    {% for item in o.items %}
+                    <div style="{% if not loop.first %}margin-top:0.35rem;{% endif %}">
+                      <span style="font-size:0.78rem;color:#374151;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.product.name }}{% if item.quantity > 1 %} ×{{ item.quantity }}{% endif %}</span>
+                      {% if o.status in ['confirmed','in_progress','done_packaging','shipping'] %}
+                        <span class="ship-line">{{ item.quantity }} held for this order · {{ item.product.stock }} left in stock</span>
+                      {% elif o.status == 'completed' %}
+                        <span class="ship-line">Sold · {{ item.product.stock }} left in stock</span>
+                      {% elif o.stock_restocked is sameas true %}
+                        <span class="ship-line ok">Back in stock · {{ item.product.stock }} in stock now</span>
+                      {% elif o.stock_restocked is sameas false %}
+                        <span class="ship-line bad">Not put back in stock</span>
+                      {% endif %}
+                    </div>
+                    {% endfor %}
+                  {% elif o.items %}
                     <span style="font-size:0.78rem;color:#374151;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                       {% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}
                     </span>
@@ -1466,7 +1508,35 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% if o.refund_status_label == 'Refunded' %}
+                  {% if sh %}
+                    {% set sh_labels = {'confirmed':'Confirmed','in_progress':'In Progress','done_packaging':'Done Packaging','shipping':'Shipping','completed':'Completed','cancelled':'Cancelled','refunded':'Refunded'} %}
+                    <span class="badge badge-s-{{ o.status }}">{{ sh_labels[o.status] }}</span>
+                    {% if o.status in ['confirmed','in_progress'] or (o.status == 'done_packaging' and not sh_sent) %}
+                      <span class="ship-line warn">GCash on hold · paid after shipping is chosen</span>
+                    {% elif o.status == 'done_packaging' and not o.paid_at %}
+                      <span class="ship-line warn">GCash on hold · due {{ o.shipping_deadline_at|when }}</span>
+                      <span class="ship-line {{ 'bad' if (o.shipping_deadline_at|hours_left) <= 2 else 'warn' }}">Cancels by itself in {{ o.shipping_deadline_at|time_left }}</span>
+                      {% if o.shipping_reminder_at %}<span class="ship-line">Reminder sent {{ o.shipping_reminder_at|when }}</span>{% endif %}
+                    {% endif %}
+                    {% if o.paid_at and o.status in ['done_packaging','shipping','completed'] %}
+                      <span class="ship-line ok">Paid ₱{{ '{:,.2f}'.format(sh_grand) }} · GCash</span>
+                    {% endif %}
+                    {% if o.status == 'shipping' %}
+                      <span class="ship-line">{{ 'Driver' if o.rider_type == 'driver' else 'Rider' }}: {{ o.rider_name }} · {{ o.rider_plate }}</span>
+                      {% if o.received_at %}<span class="ship-line ok">Customer received it · {{ o.received_at|when }}</span>{% endif %}
+                    {% elif o.status == 'completed' %}
+                      {% if o.completed_by_shop %}
+                        <span class="ship-line">Completed by the shop · Lalamove: {{ o.completion_proof }}</span>
+                      {% else %}
+                        <span class="ship-line ok">Customer confirmed it arrived</span>
+                      {% endif %}
+                    {% elif o.status == 'refunded' %}
+                      <span class="ship-line bad">₱{{ '{:,.2f}'.format(o.refund_amount or sh_grand) }} back to GCash via PayMongo · {{ o.refunded_at|when }}</span>
+                      {% if o.refund_reason %}<span class="ship-line">Reason: {{ o.refund_reason }}</span>{% endif %}
+                    {% elif o.status == 'cancelled' %}
+                      <span class="ship-line">Not charged · {% if o.cancelled_by == 'auto' %}cancelled automatically, no payment in 24 hours{% elif o.cancelled_by == 'customer' %}cancelled by the customer{% else %}cancelled by the shop{% endif %}</span>
+                    {% endif %}
+                  {% elif o.refund_status_label == 'Refunded' %}
                     <span class="badge" style="background:#fee2e2;color:#7f1d1d;border:1px solid #fecaca;">Refunded</span>
                   {% elif o.refund_status_label == 'Item Received' %}
                     <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Item Received</span>
@@ -1482,16 +1552,90 @@
                 <td>
                   {% if o.delivery_method == 'ship' %}
                     <span class="badge" style="background:rgba(6,182,212,0.15);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);">Ship</span>
+                    {% if sh %}
+                      {% if o.shipping_option and (o.paid_at or o.status == 'refunded') %}
+                        <span class="ship-line" style="color:#374151;font-weight:700;">{{ o.shipping_option|title }} · ₱{{ '{:,.2f}'.format(o.shipping_fee or 0) }}</span>
+                        <span class="ship-line">Lalamove {{ o.shipping_vehicle }} · customer's choice</span>
+                        {% if o.lalamove_fare %}
+                          {% set sh_diff = (o.shipping_fee or 0) - o.lalamove_fare %}
+                          {% if sh_diff >= 0 %}
+                            <span class="ship-line ok">Lalamove charged ₱{{ '{:,.2f}'.format(o.lalamove_fare) }} · shop keeps ₱{{ '{:,.2f}'.format(sh_diff) }}</span>
+                          {% else %}
+                            <span class="ship-line bad">Lalamove charged ₱{{ '{:,.2f}'.format(o.lalamove_fare) }} · shop covers ₱{{ '{:,.2f}'.format(-sh_diff) }}</span>
+                          {% endif %}
+                        {% endif %}
+                      {% elif sh_sent and o.status == 'done_packaging' %}
+                        <span class="ship-line" style="color:#374151;font-weight:700;">Lalamove {{ o.shipping_vehicle }} · {{ o.shipping_reason }}</span>
+                        <span class="ship-line">Priority ₱{{ '{:,.2f}'.format(sp.get('priority') or 0) }} · Regular ₱{{ '{:,.2f}'.format(sp.get('regular') or 0) }} · Pooling {% if sp.get('pooling') %}₱{{ '{:,.2f}'.format(sp.get('pooling')) }}{% else %}n/a{% endif %}</span>
+                        <span class="ship-line">Sent {{ o.shipping_options_sent_at|when }} · waiting for the customer</span>
+                      {% elif o.status in ['confirmed','in_progress','done_packaging'] %}
+                        <span class="ship-line warn">Shipping fee to be calculated</span>
+                      {% endif %}
+                    {% endif %}
                   {% else %}
                     <span class="badge" style="background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;">Pickup</span>
                   {% endif %}
                 </td>
                 <td>
-                {% set o_final = o.is_instore or o.refund_status_label == 'Refunded' or o.status in ['completed', 'cancelled'] %}
+                {% set o_final = o.is_instore or o.refund_status_label == 'Refunded' or o.status in ['completed', 'cancelled'] or (sh and o.status == 'refunded') %}
                 {% if o.is_instore %}
                   <span style="font-size:0.7rem;color:var(--muted);">Paid at the counter</span>
                 {% elif o_final %}
                   <span style="font-size:0.7rem;color:var(--muted);">No more updates</span>
+                {% elif sh %}
+                {% set sh_order = ['confirmed','in_progress','done_packaging','shipping','completed'] %}
+                {% set sh_idx = sh_order.index(o.status) %}
+                <div class="ship-upd">
+                  <select data-current="{{ o.status }}" onchange="shipSelectChanged(this)">
+                    <option value="confirmed"      {% if o.status=='confirmed' %}selected{% endif %} {% if sh_idx > 0 %}disabled{% endif %}>Confirmed</option>
+                    <option value="in_progress"    {% if o.status=='in_progress' %}selected{% endif %} {% if sh_idx > 1 %}disabled{% endif %}>In Progress</option>
+                    <option value="done_packaging" {% if o.status=='done_packaging' %}selected{% endif %} {% if sh_idx > 2 or sh_idx < 1 %}disabled{% endif %}>Done Packaging</option>
+                    {% if o.paid_at and o.status == 'done_packaging' %}
+                    <option value="shipping">Shipping</option>
+                    {% elif o.status == 'shipping' %}
+                    <option value="shipping" selected disabled>Shipping</option>
+                    {% else %}
+                    <option value="shipping" disabled>Shipping (after payment)</option>
+                    {% endif %}
+                    {% if o.status == 'shipping' %}
+                    <option value="completed">Completed</option>
+                    {% else %}
+                    <option value="completed" disabled>Completed (after shipping)</option>
+                    {% endif %}
+                    {% if o.status == 'shipping' %}
+                    <option value="cancelled" disabled>Cancelled (already shipping)</option>
+                    {% else %}
+                    <option value="cancelled">{{ 'Cancelled (refund)' if o.paid_at else 'Cancelled' }}</option>
+                    {% endif %}
+                  </select>
+                  <button type="button" class="ship-save" disabled onclick="shipSave(this)">Save</button>
+                  {% if o.status == 'confirmed' %}
+                    <span class="ship-line">Set to In Progress when you start packing.</span>
+                  {% elif o.status == 'in_progress' %}
+                    <span class="ship-line">Set to Done Packaging when it's packed.</span>
+                  {% elif o.status == 'done_packaging' and not sh_sent %}
+                    <span class="ship-line">Send the shipping options next.</span>
+                  {% elif o.status == 'done_packaging' and not o.paid_at %}
+                    <span class="ship-line">Shipping unlocks once the customer pays. No payment in 24 hours and it cancels by itself.</span>
+                  {% elif o.status == 'done_packaging' %}
+                    <span class="ship-line">Book a Lalamove {{ o.shipping_vehicle }}, then choose Shipping. Need to cancel? Choose Cancelled (refund).</span>
+                  {% elif o.status == 'shipping' and not o.received_at %}
+                    <span class="ship-line">If Lalamove shows Delivered, you can set Completed.</span>
+                  {% elif o.status == 'shipping' %}
+                    <span class="ship-line ok">The customer received it. Set to Completed.</span>
+                  {% endif %}
+                  {% if o.status in ['confirmed','in_progress'] %}
+                    <button type="button" class="ship-send" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Send shipping options</button>
+                    <span class="ship-line warn">Unlocks when the order is Done Packaging</span>
+                  {% elif o.status == 'done_packaging' and not sh_sent %}
+                    <button type="button" class="ship-send" onclick="shipOpenOptions(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Send shipping options</button>
+                  {% elif o.status == 'done_packaging' and not o.paid_at %}
+                    <a class="ship-link" onclick="shipOpenOptions(this)">Edit options</a>
+                  {% elif o.status == 'shipping' and not o.received_at %}
+                    <a class="ship-link" onclick="shipRemind(this)">Remind customer to confirm</a>
+                    {% if o.received_reminder_at %}<span class="ship-line">Reminder sent {{ o.received_reminder_at|when }}</span>{% endif %}
+                  {% endif %}
+                </div>
                 {% else %}
                 <form method="POST" action="{{ url_for('update_order_status', oid=o.id) }}" class="status-form">
                   <select name="status" data-current="{{ o.status }}" onchange="this.form.querySelector('button[type=submit]').disabled = (this.value === this.dataset.current)">
@@ -1528,11 +1672,11 @@
               <td style="white-space:nowrap;text-align:left;vertical-align:middle;">
                 {% set age = (now - o.created_at).days %}
                 {% set min_days = 30 if o.status == 'completed' else 7 %}
-                {% if o.status in ['completed', 'cancelled'] and age >= min_days %}
+                {% if o.status in ['completed', 'cancelled', 'refunded'] and age >= min_days %}
                   <form method="POST" action="{{ url_for('archive_order', oid=o.id) }}" data-confirm-title="Archive order?" data-confirm="ORD-{{ '%03d'|format(o.id) }} will be moved to the archive." data-confirm-label="Yes, Archive">
                     <button type="submit" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:inherit;font-weight:700;cursor:pointer;">Archive</button>
                   </form>
-                {% elif o.status not in ['completed', 'cancelled'] %}
+                {% elif o.status not in ['completed', 'cancelled', 'refunded'] %}
                   <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">Not eligible</span>
                 {% else %}
                   <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">{{ min_days - age }}d left</span>
@@ -2639,6 +2783,80 @@
 </div>
 
 <!-- ORDER DETAIL MODAL -->
+<!-- Ship to Address: shop-side steps -->
+<div class="modal-overlay" id="modal-ship-options">
+  <div class="modal-box" style="width:460px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;margin-bottom:0.25rem;" id="so-title">Send shipping options</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">The customer has 24 hours to choose one and pay items + shipping with GCash. Prices are for shipping only.</div>
+    <input type="hidden" id="so-oid">
+    <div class="form-group"><label>Lalamove vehicle</label>
+      <select id="so-vehicle"><option value="">Choose a vehicle</option><option>Motorcycle</option><option>Sedan</option><option>MPV / SUV</option><option>Van</option></select></div>
+    <div class="form-group"><label>Reason for that vehicle</label>
+      <select id="so-reason"><option value="">Choose a reason</option><option>Fits on a motorcycle</option><option>Too big for a motorcycle</option><option>Too heavy for a motorcycle</option><option>Many tyres in one order</option></select></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;">
+      <div class="form-group"><label>Priority ₱</label><input type="text" inputmode="decimal" id="so-priority" placeholder="0.00"></div>
+      <div class="form-group"><label>Regular ₱</label><input type="text" inputmode="decimal" id="so-regular" placeholder="0.00"></div>
+      <div class="form-group"><label>Pooling ₱</label><input type="text" inputmode="decimal" id="so-pooling" placeholder="optional"></div>
+    </div>
+    <div id="so-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-options')">Close</button>
+      <button type="button" class="btn-primary-custom" id="so-go" onclick="shipSubmitOptions()">Send to customer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-ship-start">
+  <div class="modal-box" style="width:460px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;margin-bottom:0.25rem;">Start shipping</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;" id="ss-sub">Book the Lalamove vehicle, then type the details here. The customer gets a Track on Lalamove link.</div>
+    <input type="hidden" id="ss-oid">
+    <div class="form-group"><label>Who is delivering</label>
+      <select id="ss-type" onchange="document.getElementById('ss-who').textContent = this.value === 'driver' ? 'Driver' : 'Rider'"><option value="rider">Rider (motorcycle)</option><option value="driver">Driver (car / van)</option></select></div>
+    <div class="form-group"><label><span id="ss-who">Rider</span> name</label><input type="text" id="ss-name" maxlength="100"></div>
+    <div class="form-group"><label>Phone number</label><input type="text" id="ss-phone" maxlength="20"></div>
+    <div class="form-group"><label>Plate number</label><input type="text" id="ss-plate" maxlength="30"></div>
+    <div class="form-group"><label>Lalamove tracking link</label><input type="text" id="ss-link" placeholder="https://" maxlength="500"></div>
+    <div class="form-group"><label>What Lalamove charged ₱ (optional)</label><input type="text" inputmode="decimal" id="ss-fare" placeholder="0.00"></div>
+    <div id="ss-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-start')">Close</button>
+      <button type="button" class="btn-primary-custom" id="ss-go" onclick="shipSubmitStart()">Set to Shipping</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-ship-complete">
+  <div class="modal-box" style="width:440px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;margin-bottom:0.25rem;">Complete order</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;" id="sc-sub"></div>
+    <input type="hidden" id="sc-oid">
+    <div class="form-group" id="sc-proof-wrap"><label>Proof from Lalamove</label>
+      <textarea id="sc-proof" rows="3" maxlength="500" placeholder="Delivered, signed by Juan, 2:40 PM"></textarea></div>
+    <div id="sc-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-complete')">Close</button>
+      <button type="button" class="btn-primary-custom" id="sc-go" onclick="shipSubmitComplete()">Set to Completed</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-ship-cancel">
+  <div class="modal-box" style="width:460px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;margin-bottom:0.25rem;" id="sx-title">Cancel order</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;" id="sx-sub"></div>
+    <input type="hidden" id="sx-oid"><input type="hidden" id="sx-paid">
+    <div class="form-group"><label>Reason</label><textarea id="sx-reason" rows="3" maxlength="300" placeholder="Why is the order being cancelled?"></textarea></div>
+    <div class="form-group"><label>The items</label>
+      <select id="sx-restock"><option value="1">Put back in stock</option><option value="0">Do not put back in stock (damaged / unsellable)</option></select></div>
+    <div id="sx-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-cancel')">Keep order</button>
+      <button type="button" class="btn-primary-custom" id="sx-go" onclick="shipSubmitCancel()">Cancel order</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-order-detail">
   <div class="modal-box" style="width:540px;">
 
@@ -6799,7 +7017,8 @@
     const rows   = [...document.querySelectorAll('#orders-table tbody tr')];
     let shown = 0;
     rows.forEach(row => {
-      const statusText = (row.cells[3] ? row.cells[3].textContent : '').toLowerCase().replace(/\s+/g, '');
+      const sBadge = row.cells[3] ? row.cells[3].querySelector('.badge') : null;
+      const statusText = (sBadge ? sBadge.textContent : (row.cells[3] ? row.cells[3].textContent : '')).toLowerCase().replace(/\s+/g, '');
       const ok = (!q || row.textContent.toLowerCase().includes(q))
               && (!type || row.dataset.type === type)
               && (!status || statusText.includes(status));
@@ -7462,6 +7681,112 @@ fetchAdminNotifications();
 })();
 
 // ── Toast notification ──────────────────────────────────────────────────────
+// ── Ship to Address (Lalamove) steps ───────────────────────────────────────
+function shipRow(el) { return el.closest('tr'); }
+function shipErr(id, msg) { const e = document.getElementById(id); e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
+async function shipPost(oid, step, body) {
+  try {
+    const res = await fetch('/order/' + oid + '/ship/' + step, {
+      method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+      body: JSON.stringify(body || {})
+    });
+    const data = await res.json().catch(() => ({}));
+    return {ok: res.ok && data.success, data: data};
+  } catch (e) { return {ok: false, data: {error: 'Could not reach the server. Please try again.'}}; }
+}
+function shipReload(msg) { showToast(msg, 'success'); setTimeout(() => { window.location.hash = 'orders'; window.location.reload(); }, 700); }
+
+function shipSelectChanged(sel) {
+  sel.parentElement.querySelector('.ship-save').disabled = (sel.value === sel.dataset.current);
+}
+async function shipSave(btn) {
+  const row = shipRow(btn), oid = row.dataset.oid, sel = btn.parentElement.querySelector('select');
+  const v = sel.value, cur = row.dataset.status;
+  if (v === cur) return;
+  if (v === 'in_progress' || v === 'done_packaging') {
+    btn.disabled = true;
+    const r = await shipPost(oid, 'status', {status: v});
+    if (r.ok) shipReload('Order updated.'); else { showToast(r.data.error || 'Could not update.', 'error'); btn.disabled = false; }
+  } else if (v === 'shipping') {
+    shipErr('ss-err', ''); document.getElementById('ss-oid').value = oid;
+    ['ss-name','ss-phone','ss-plate','ss-link','ss-fare'].forEach(i => document.getElementById(i).value = '');
+    const car = (row.dataset.vehicle || '').toLowerCase() !== 'motorcycle' && row.dataset.vehicle;
+    document.getElementById('ss-type').value = car ? 'driver' : 'rider';
+    document.getElementById('ss-who').textContent = car ? 'Driver' : 'Rider';
+    openModal('modal-ship-start');
+  } else if (v === 'completed') {
+    const got = row.dataset.received === '1';
+    shipErr('sc-err', ''); document.getElementById('sc-oid').value = oid; document.getElementById('sc-proof').value = '';
+    document.getElementById('sc-proof-wrap').style.display = got ? 'none' : '';
+    document.getElementById('sc-sub').textContent = got ? 'The customer confirmed they received it.'
+      : 'The customer has not pressed "I received my order". Check Lalamove, then type the proof of delivery.';
+    openModal('modal-ship-complete');
+  } else if (v === 'cancelled') {
+    const paid = row.dataset.paid === '1';
+    shipErr('sx-err', ''); document.getElementById('sx-oid').value = oid; document.getElementById('sx-paid').value = paid ? '1' : '';
+    document.getElementById('sx-reason').value = ''; document.getElementById('sx-restock').value = '1';
+    document.getElementById('sx-title').textContent = paid ? 'Cancel and refund' : 'Cancel order';
+    document.getElementById('sx-sub').textContent = paid
+      ? 'The full ₱' + Number(row.dataset.grand).toLocaleString('en-PH', {minimumFractionDigits: 2}) + ' goes back to the customer\'s GCash through PayMongo and the order becomes Refunded.'
+      : 'The customer was not charged. The order becomes Cancelled.';
+    document.getElementById('sx-go').textContent = paid ? 'Cancel and refund' : 'Cancel order';
+    openModal('modal-ship-cancel');
+  }
+}
+function shipOpenOptions(el) {
+  const row = shipRow(el), oid = row.dataset.oid;
+  let pr = {}; try { pr = JSON.parse(row.dataset.prices || '{}'); } catch (e) {}
+  shipErr('so-err', ''); document.getElementById('so-oid').value = oid;
+  document.getElementById('so-title').textContent = row.dataset.sent === '1' ? 'Edit shipping options' : 'Send shipping options';
+  document.getElementById('so-vehicle').value = row.dataset.vehicle || '';
+  document.getElementById('so-reason').value = row.dataset.reason || '';
+  ['priority','regular','pooling'].forEach(k => document.getElementById('so-' + k).value = pr[k] || '');
+  openModal('modal-ship-options');
+}
+async function shipSubmitOptions() {
+  const btn = document.getElementById('so-go'); btn.disabled = true;
+  const r = await shipPost(document.getElementById('so-oid').value, 'options', {
+    vehicle: document.getElementById('so-vehicle').value, reason: document.getElementById('so-reason').value,
+    priority: document.getElementById('so-priority').value, regular: document.getElementById('so-regular').value,
+    pooling: document.getElementById('so-pooling').value
+  });
+  btn.disabled = false;
+  if (r.ok) { closeModal('modal-ship-options'); shipReload(r.data.first ? 'Shipping options sent to the customer.' : 'Shipping options updated.'); }
+  else shipErr('so-err', r.data.error || 'Could not send the options.');
+}
+async function shipSubmitStart() {
+  const btn = document.getElementById('ss-go'); btn.disabled = true;
+  const r = await shipPost(document.getElementById('ss-oid').value, 'start', {
+    rider_type: document.getElementById('ss-type').value, name: document.getElementById('ss-name').value,
+    phone: document.getElementById('ss-phone').value, plate: document.getElementById('ss-plate').value,
+    link: document.getElementById('ss-link').value, fare: document.getElementById('ss-fare').value
+  });
+  btn.disabled = false;
+  if (r.ok) { closeModal('modal-ship-start'); shipReload('Order is now Shipping.'); }
+  else shipErr('ss-err', r.data.error || 'Could not start shipping.');
+}
+async function shipSubmitComplete() {
+  const btn = document.getElementById('sc-go'); btn.disabled = true;
+  const r = await shipPost(document.getElementById('sc-oid').value, 'complete', {proof: document.getElementById('sc-proof').value});
+  btn.disabled = false;
+  if (r.ok) { closeModal('modal-ship-complete'); shipReload('Order completed.'); }
+  else shipErr('sc-err', r.data.error || 'Could not complete the order.');
+}
+async function shipSubmitCancel() {
+  const btn = document.getElementById('sx-go'); btn.disabled = true;
+  const paid = document.getElementById('sx-paid').value === '1';
+  const reason = document.getElementById('sx-reason').value.trim();
+  if (paid && !reason) { shipErr('sx-err', 'Type the reason for the refund.'); btn.disabled = false; return; }
+  const r = await shipPost(document.getElementById('sx-oid').value, 'cancel', {reason: reason, restock: document.getElementById('sx-restock').value === '1'});
+  btn.disabled = false;
+  if (r.ok) { closeModal('modal-ship-cancel'); shipReload(paid ? 'Refunded to the customer\'s GCash.' : 'Order cancelled.'); }
+  else shipErr('sx-err', r.data.error || 'Could not cancel the order.');
+}
+async function shipRemind(el) {
+  const r = await shipPost(shipRow(el).dataset.oid, 'remind', {});
+  if (r.ok) shipReload('Reminder sent to the customer.'); else showToast(r.data.error || 'Could not send the reminder.', 'error');
+}
+
 function showToast(msg, type) {
   const t = document.createElement('div');
   t.className = 'admin-toast admin-toast-' + (type || 'success');
