@@ -323,6 +323,12 @@
     .inv-card .ic-bar > div { height:100%; background:#fff; border-radius:99px; }
     .inv-out { background:#dc2626; } .inv-low { background:#f59e0b; } .inv-ok { background:#15803d; } .inv-all { background:#2563eb; }
     .inv-grid { display:grid; grid-template-columns:1.6fr 1fr; gap:1rem; margin-bottom:1rem; align-items:start; }
+    /* the category list is shown 10 at a time, with Previous / Next, so the page never stretches */
+    .inv-pager { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; margin-top:0.9rem; padding-top:0.8rem; border-top:1px solid var(--border); font-size:0.76rem; color:var(--muted); }
+    .inv-pager .pg-btns { display:flex; gap:0.4rem; align-items:center; }
+    .inv-pager button { font-family:inherit; font-size:0.72rem; font-weight:600; background:#fff; border:1px solid var(--border); border-radius:6px; padding:0.3rem 0.7rem; cursor:pointer; color:var(--text); }
+    .inv-pager button:disabled { opacity:0.4; cursor:not-allowed; }
+    @media (max-width: 900px) { .inv-grid { grid-template-columns: 1fr; } }
     .inv-legend { display:flex; gap:1rem; font-size:0.68rem; color:var(--muted); margin-bottom:0.75rem; }
     .inv-legend i { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:0.3rem; }
     .inv-cat-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.55rem; font-size:0.74rem; }
@@ -776,6 +782,14 @@
                 {% endfor %}
               </tbody>
             </table>
+            <div class="inv-pager" id="inv-cat-pager">
+              <span id="inv-cat-pager-info"></span>
+              <span class="pg-btns">
+                <button type="button" id="inv-cat-prev" onclick="invCatGo(-1)">‹ Previous</button>
+                <span id="inv-cat-pager-page"></span>
+                <button type="button" id="inv-cat-next" onclick="invCatGo(1)">Next ›</button>
+              </span>
+            </div>
           </div>
         </div>
         <div class="card">
@@ -6591,6 +6605,28 @@
     const input = document.getElementById('edit-product-stock');
     if (input) { input.focus(); input.select(); }
   }
+
+  // Category list: 10 per page, the chart and the table share the same page.
+  let invCatPage = 0;
+  const INV_CAT_PAGE_SIZE = 10;
+  function invCatGo(d) { invCatPage += d; renderInvCatPage(); }
+  function renderInvCatPage() {
+    const rows = Array.from(document.querySelectorAll('#inv-cat-table tbody tr'));
+    const bars = Array.from(document.querySelectorAll('#inv-cat-chart .inv-cat-row'));
+    const total = rows.length || bars.length;
+    const pages = Math.max(1, Math.ceil(total / INV_CAT_PAGE_SIZE));
+    invCatPage = Math.min(Math.max(0, invCatPage), pages - 1);
+    const from = invCatPage * INV_CAT_PAGE_SIZE, to = from + INV_CAT_PAGE_SIZE;
+    rows.forEach((r, i) => { r.style.display = (i >= from && i < to) ? '' : 'none'; });
+    bars.forEach((r, i) => { r.style.display = (i >= from && i < to) ? '' : 'none'; });
+    document.getElementById('inv-cat-pager-info').textContent = total ? `${from + 1}–${Math.min(to, total)} of ${total} categories` : 'No categories';
+    document.getElementById('inv-cat-pager-page').textContent = `Page ${invCatPage + 1} of ${pages}`;
+    document.getElementById('inv-cat-prev').disabled = invCatPage === 0;
+    document.getElementById('inv-cat-next').disabled = invCatPage >= pages - 1;
+    document.getElementById('inv-cat-pager').style.display = pages > 1 ? 'flex' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', renderInvCatPage);
+  if (document.readyState !== 'loading') renderInvCatPage();
 
   function toggleInvCatView() {
     const table = document.getElementById('inv-cat-table');
