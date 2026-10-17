@@ -5424,7 +5424,7 @@ async function doCancelBooking(id) {
       if (live && live.status === 'confirmed') live.status = 'inspection';
       renderUpcomingBookings();
       const slot = document.querySelector(`tr.booking-row[data-booking-id="${id}"] .mb-cancel-slot`);
-      if (slot) slot.innerHTML = '<span style="font-size:0.7rem;color:var(--fg-3);">Can't cancel · inspection started</span>';
+      if (slot) slot.innerHTML = `<span style="font-size:0.7rem;color:var(--fg-3);">Can't cancel · inspection started</span>`;
       const badge = document.querySelector(`tr.booking-row[data-booking-id="${id}"] [data-mb-status]`);
       if (badge) { badge.className = 'badge badge-inspection'; badge.textContent = 'Inspection & Estimation'; }
       showCartToast(`${ref} can't be cancelled anymore. The shop already started the inspection.`);
