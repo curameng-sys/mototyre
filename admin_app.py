@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response
+from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -196,6 +196,8 @@ class User(db.Model, UserMixin):
     address          = db.Column(db.String(255))
     motorcycle_model = db.Column(db.String(100))
     profile_pic      = db.Column(db.String(255))
+    profile_pic_blob = db.Column(db.LargeBinary(length=2**24 - 1), nullable=True)  # the picture itself, when no cloud storage is configured — disk files are lost on redeploy
+    profile_pic_mime = db.Column(db.String(40), nullable=True)
     email_verified   = db.Column(db.Boolean, default=False)
     account_status   = db.Column(db.String(20), default='active')   # active | deactivated | banned
     is_flagged       = db.Column(db.Boolean, default=False)
@@ -260,12 +262,16 @@ class Booking(db.Model):
     invoice_change        = db.Column(db.Float, nullable=True)
     invoice_receipt_no    = db.Column(db.String(20), nullable=True)
     invoice_gcash_ref     = db.Column(db.String(50), nullable=True)
+    invoice_received_by   = db.Column(db.String(100), nullable=True)   # staff member who took the cash at the counter
     actual_start_at       = db.Column(db.DateTime, nullable=True)  # when the shop really started the job (may be earlier than the booked time)
     inspection_at    = db.Column(db.DateTime, nullable=True)  # when the booking reached Inspection & Estimation
     in_progress_at   = db.Column(db.DateTime, nullable=True)  # when work started (In Progress)
     late_notice_at   = db.Column(db.DateTime, nullable=True)   # when the customer was last told about running late / back on time
     late_notice_text = db.Column(db.String(120), nullable=True) # e.g. 'New finish 11:30 AM' — shown on the Day Schedule card
     late_notice_emailed = db.Column(db.Boolean, default=False)
+    assign_notice_at    = db.Column(db.DateTime, nullable=True)   # when the customer was last told who their mechanic is
+    assign_notice_kind  = db.Column(db.String(10), nullable=True)  # 'assigned' | 'changed'
+    assign_notice_emailed = db.Column(db.Boolean, default=False)
 
 
 class BlockedSlot(db.Model):
@@ -443,6 +449,9 @@ class JobOrder(db.Model):
     total_amount     = db.Column(db.Float, default=0)
     status           = db.Column(db.String(20), default='pending')  # pending, in_progress, completed, cancelled
     mechanic_name    = db.Column(db.String(100))
+    start_at         = db.Column(db.DateTime, nullable=True)   # when the mechanic started on it (walk-in: when it was created)
+    est_minutes      = db.Column(db.Integer, nullable=True)    # how long the mechanic is tied up — +30m / +1h extend it
+    mechanic_done_at = db.Column(db.DateTime, nullable=True)   # "Mark Done": frees the mechanic right away
     created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     completed_at     = db.Column(db.DateTime, nullable=True)
@@ -539,6 +548,7 @@ class ReturnRequest(db.Model):
     refund_receipt         = db.Column(db.String(500), nullable=True)   # GCash receipt screenshot (URL, or a filename under static/return_evidence/) uploaded when the refund was sent
     cash_ready_at          = db.Column(db.DateTime, nullable=True)      # cash refunds: when the shop told the customer it's ready to claim at the counter
     info_requested_at      = db.Column(db.DateTime, nullable=True)      # when the shop last asked the customer for more ("Shop asked: …" in History)
+    refund_given_by        = db.Column(db.String(100), nullable=True)   # staff member who handed over a cash refund
 
 
 class ReturnRequestItem(db.Model):
@@ -1483,6 +1493,72 @@ def _mechanic_swap_notification(booking, new_name):
     return _notify_customer(booking, title, body, priority=True, collapse_minutes=5)
 
 
+def _mechanic_notice_email(customer_name, booking, mech_name, spec, kind):
+    first = (customer_name or 'there').split(' ')[0]
+    start_min = booking.time.hour * 60 + booking.time.minute
+    end_min = real_end_minutes(start_min, booking.duration_minutes or DEFAULT_DURATION_MIN, booking.overrun_minutes or 0)
+    when = f"{booking.date.strftime('%a, %b %d, %Y')}, {minutes_to_ampm(start_min)} – {minutes_to_ampm(end_min)}"
+    rows = ''.join(
+        f'<tr><td style="padding:9px 0;border-bottom:1px solid #eee;color:#555;font-size:14px;">{k}</td>'
+        f'<td style="padding:9px 0;border-bottom:1px solid #eee;text-align:right;font-weight:bold;font-size:14px;">{v}</td></tr>'
+        for k, v in [('Booking', f'BKG-{booking.id:03d}'), ('Service', booking.service), ('Date & time', when),
+                     ('Mechanic', mech_name), ('Motorcycle', booking.motorcycle_model or '—')])
+    headline = 'Your mechanic has been assigned' if kind == 'assigned' else 'Your mechanic has changed'
+    intro = ('the shop assigned a mechanic to your booking:' if kind == 'assigned'
+             else 'the shop changed the mechanic on your booking:')
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#fff;border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;">
+      <div style="background:#111;padding:16px 22px;font-size:22px;font-weight:900;letter-spacing:1px;color:#fff;">MOTO <span style="color:#d00019;">TYRE</span></div>
+      <div style="padding:22px;">
+        <h2 style="margin:0 0 12px;font-size:20px;">{headline}</h2>
+        <p style="margin:0 0 16px;font-size:14px;">Hi {first}, {intro}</p>
+        <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px;margin-bottom:16px;">
+          <table style="border-collapse:collapse;"><tr>
+            <td style="width:44px;"><div style="width:42px;height:42px;border-radius:50%;background:#15803d;color:#fff;text-align:center;line-height:42px;font-weight:bold;">{_mechanic_initials(mech_name)}</div></td>
+            <td style="padding-left:12px;"><div style="font-size:17px;font-weight:bold;">{mech_name}</div><div style="font-size:13px;color:#166534;">{spec or ''}</div></td>
+          </tr></table>
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">{rows}</table>
+        <p style="font-size:14px;">Your appointment time stays the same. See you at the shop!</p>
+        <p><a href="{BASE_URL}/customer/dashboard?open_booking={booking.id}" style="display:inline-block;padding:11px 20px;background:#d00019;color:#fff;border-radius:6px;text-decoration:none;font-weight:bold;">View My Booking</a></p>
+      </div>
+      <div style="background:#f6f6f6;padding:12px 22px;font-size:12px;color:#888;">MotoTyres North Caloocan · This is an automated email.</div>
+    </div>"""
+
+
+def _send_mechanic_notice(booking, mech_name, spec, kind):
+    """Portal notification + email naming the mechanic, for the first
+    assignment ('assigned') and any later swap ('changed'). Walk-ins have no
+    account. Remembers what went out so the Day Schedule card can show it."""
+    if booking.walkin_customer_id:
+        return False
+    ref = f'BKG-{booking.id:03d}'
+    start_min = booking.time.hour * 60 + booking.time.minute
+    end_min = real_end_minutes(start_min, booking.duration_minutes or DEFAULT_DURATION_MIN, booking.overrun_minutes or 0)
+    when = f"{booking.date.strftime('%a, %b %d, %Y')}, {minutes_to_ampm(start_min)} – {minutes_to_ampm(end_min)}"
+    spec_part = f' ({spec})' if spec else ''
+    if kind == 'assigned':
+        title = f'Your mechanic for {ref} is {mech_name}'
+        body = f'{mech_name}{spec_part} will handle your {booking.service} on {when}. Your appointment time stays the same.'
+        status, subject = 'mechanic_assigned', f'Your mechanic for {ref}: {mech_name}'
+    else:
+        title = f'Your mechanic for {ref} changed to {mech_name}'
+        body = (f'The shop changed your mechanic — {mech_name}{spec_part} will now handle your {booking.service} on {when}. '
+                f'Your appointment time stays the same.')
+        status, subject = 'mechanic_changed', f'Your mechanic for {ref} changed: {mech_name}'
+    send_notification(booking.user_id, title, body, type='booking', status=status, booking_id=booking.id, priority=(kind == 'changed'))
+    customer = User.query.get(booking.user_id)
+    emailed = False
+    if customer and customer.email:
+        _send_gmail(customer.email, subject, _mechanic_notice_email(customer.fullname, booking, mech_name, spec, kind))
+        emailed = True
+    booking.assign_notice_at = ph_now()
+    booking.assign_notice_kind = kind
+    booking.assign_notice_emailed = emailed
+    db.session.commit()
+    return emailed
+
+
 def _mechanic_assigned_notification(booking, new_name):
     """A mechanic was just assigned to a booking that had no preference on
     file — ordinarily silent (see assign_booking_mechanic's docstring), but
@@ -1538,6 +1614,26 @@ def update_booking_status(bid):
             msg = "A quotation is waiting for the customer's answer — work can start once they reply."
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify({'success': False, 'error': msg}), 400
+            flash(msg, 'danger')
+            return redirect(url_for('admin_dashboard'))
+    if is_start and booking.status == 'cancelled':
+        # The customer cancelled while the shop's page still showed Start.
+        msg = 'This booking was cancelled, so it can no longer be started. Refresh to see its latest status.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg}), 409
+        flash(msg, 'danger')
+        return redirect(url_for('admin_dashboard'))
+    if is_start and booking.status == 'confirmed':
+        from sqlalchemy import text as _sql_text
+        claimed = db.session.execute(
+            _sql_text("UPDATE booking SET status = :s WHERE id = :id AND status = 'confirmed'"),
+            {'s': new_status, 'id': booking.id}).rowcount
+        db.session.commit()
+        db.session.refresh(booking)
+        if not claimed:
+            msg = f'This booking is now {booking.status.replace("_", " ")} — it can no longer be started. Refresh to see its latest status.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': msg}), 409
             flash(msg, 'danger')
             return redirect(url_for('admin_dashboard'))
     if is_start and not booking.actual_start_at:
@@ -1741,6 +1837,7 @@ def record_invoice_cash(bid):
     booking.payment_method = 'cash'
     booking.invoice_cash_received = received
     booking.invoice_change = round(received - booking.total_amount, 2)
+    booking.invoice_received_by = current_user.fullname
     booking.invoice_receipt_no = f'OR-{booking.id:06d}'
     db.session.commit()
 
@@ -1874,10 +1971,14 @@ def assign_booking_mechanic(bid):
     changed      = new_name != old_name
     had_promise  = bool(booking.preferred_mechanic_name)
     broke_promise = had_promise and new_name != booking.preferred_mechanic_name
-    if changed and broke_promise:
-        _mechanic_swap_notification(booking, new_name)
+    if changed and new_name and not old_name:
+        _send_mechanic_notice(booking, new_name, new_spec, 'assigned')     # the shop's first pick
+    elif changed and new_name and broke_promise:
+        _mechanic_swap_notification(booking, new_name)                      # a stated preference was not honoured
+        booking.assign_notice_at, booking.assign_notice_kind, booking.assign_notice_emailed = ph_now(), 'changed', True
+        db.session.commit()
     elif changed and new_name:
-        _mechanic_assigned_notification(booking, new_name)
+        _send_mechanic_notice(booking, new_name, new_spec, 'changed')
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'mechanic_name': new_name, 'mechanic_specialization': new_spec})
@@ -1921,14 +2022,34 @@ def _gather_intervals(query):
     return result
 
 
+def _walkin_windows(the_date, exclude_jo_id=None):
+    """Walk-in jobs tying up a named mechanic on this date — still open
+    (pending / in progress) and not marked done — as minute-of-day windows."""
+    day_start = datetime.combine(the_date, datetime.min.time())
+    q = JobOrder.query.filter(
+        JobOrder.mechanic_name.isnot(None), JobOrder.start_at.isnot(None),
+        JobOrder.start_at >= day_start, JobOrder.start_at < day_start + timedelta(days=1),
+        JobOrder.mechanic_done_at.is_(None), JobOrder.status.in_(['pending', 'in_progress']))
+    if exclude_jo_id:
+        q = q.filter(JobOrder.id != exclude_jo_id)
+    out = []
+    for jo in q.all():
+        start = jo.start_at.hour * 60 + jo.start_at.minute
+        out.append({'mechanic': jo.mechanic_name, 'start': start, 'end': start + (jo.est_minutes or 30),
+                    'ref': f'JO-{jo.id:03d}', 'jo_id': jo.id, 'customer': jo.customer_name})
+    return out
+
+
 def _gather_blocked_intervals(booking_date):
     """Admin-blocked start times for one day, as full-hour windows — folded
     into the shop's queue intervals so a blocked slot reads exactly like an
-    already-booked one and an admin action can't be forced through it either."""
+    already-booked one and an admin action can't be forced through it either.
+    Walk-in jobs holding a mechanic count here too, so a slot's free-mechanic
+    number and "Let the Shop Assign" both see them."""
     return [
         (t.hour * 60 + t.minute, t.hour * 60 + t.minute + SLOT_GRANULARITY_MIN)
         for t in (bs.time for bs in BlockedSlot.query.filter_by(date=booking_date).all())
-    ]
+    ] + [(w['start'], w['end']) for w in _walkin_windows(booking_date)]
 
 
 def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, exclude_id=None,
@@ -1968,7 +2089,8 @@ def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, 
         )
         if exclude_id:
             mq = mq.filter(Booking.id != exclude_id)
-        mechanic_intervals = _gather_intervals(mq)
+        mechanic_intervals = _gather_intervals(mq) + [
+            (w['start'], w['end']) for w in _walkin_windows(booking_date) if w['mechanic'] == mechanic_name]
 
     return validate_booking(
         start_minutes, duration_minutes, shop_intervals, daily_count,
@@ -2785,12 +2907,19 @@ def api_day_panel():
             'dropoff_date': b.date.isoformat(),
         })
 
+    walkin_w = _walkin_windows(the_date)
+
     # ── Mechanic timeline ──
     timeline = []
     free_all_day = []
     for m in on_duty:
         m_bookings = [b for b in active if b.assigned_mechanic_name == m.name]
         bars = []
+        for w in walkin_w:
+            if w['mechanic'] == m.name:
+                bars.append({'id': -w['jo_id'], 'start': w['start'], 'end': w['end'], 'customer': f"Walk-in {w['ref']}",
+                             'service': 'Walk-in job', 'is_multiday': False, 'clash': False, 'overrunning': False,
+                             'status': 'walkin'})
         for b in m_bookings:
             start_min = b.time.hour * 60 + b.time.minute
             duration = MULTIDAY_INTAKE_MIN if b.is_multiday else (b.duration_minutes or DEFAULT_DURATION_MIN)
@@ -2857,6 +2986,9 @@ def api_day_panel():
             b_end = real_end_minutes(b_start, b_dur, b.overrun_minutes or 0)
             if b_start <= start < b_end:
                 occupied_mechanics.add(b.assigned_mechanic_name)
+        for w in walkin_w:                       # a walk-in ties up its mechanic for the slot too
+            if w['start'] <= start < w['end']:
+                occupied_mechanics.add(w['mechanic'])
 
         slot_bookings = [b for b in bookings if (b.time.hour * 60 + b.time.minute) == start]
         cards = []
@@ -2912,6 +3044,14 @@ def api_day_panel():
                 'rma_ref': (_return_ref(_day_claims[b.id]) if b.id in _day_claims else None),
                 'customer_service': b.service[len(BACKJOB_PREFIX):] if b.service.startswith(BACKJOB_PREFIX) else b.service,
                 'completed_label': _t_label(b.completed_at),
+                'needs_mechanic': (not b.assigned_mechanic_name and b.status in ('confirmed', 'inspection', 'in_progress', 'inprogress')),
+                'shop_to_assign': (not b.preferred_mechanic_name and not b.assigned_mechanic_name),
+                'is_new': bool(b.created_at and (ph_now() - b.created_at) < timedelta(hours=24) and b.status == 'confirmed'),
+                'assign_notice': ({'kind': b.assign_notice_kind, 'mechanic': b.assigned_mechanic_name,
+                                   'sent_at': _t_label(b.assign_notice_at),
+                                   'first_name': (_booking_customer_name(b) or '').split(' ')[0],
+                                   'email': (b.customer.email if (b.customer and b.assign_notice_emailed) else None)}
+                                  if b.assign_notice_at else None),
                 'late_notice': ({'text': b.late_notice_text,
                                  'sent_at': _t_label(b.late_notice_at),
                                  'first_name': (_booking_customer_name(b) or '').split(' ')[0],
@@ -2925,6 +3065,7 @@ def api_day_panel():
         _dot = _norm_status((_open[0] if _open else active_here[0]).status) if active_here else None
         slots.append({
             'dot_status': _dot,
+            'needs_mechanic': sum(1 for b in active_here if not b.assigned_mechanic_name and b.status != 'completed'),
             'time': hhmm,
             'label': minutes_to_ampm(start),
             'booked_count': len(active_here),
@@ -2948,6 +3089,7 @@ def api_day_panel():
         'unassigned_bars': unassigned_bars,
         'free_all_day': free_all_day,
         'status_counts': status_counts,
+        'needs_mechanic_count': sum(1 for b in active if not b.assigned_mechanic_name and b.status != 'completed'),
         'slots': slots,
     })
 
@@ -3922,6 +4064,7 @@ def cash_refund_given(rid):
 
     rr.status = 'resolved'
     rr.resolved_at = ph_now()
+    rr.refund_given_by = current_user.fullname
     db.session.commit()
 
     ref = _return_ref(rr)
@@ -4365,7 +4508,7 @@ def delete_service(sid):
 def admin_api_services():
     try:
         svcs = Service.query.filter_by(is_active=True).order_by(Service.name).all()
-        return jsonify([{'id': s.id, 'name': s.name, 'price': s.price} for s in svcs])
+        return jsonify([{'id': s.id, 'name': s.name, 'price': s.price, 'duration_minutes': s.duration_minutes or 30} for s in svcs])
     except Exception:
         return jsonify([])
 
@@ -4954,25 +5097,51 @@ def change_admin_password():
 @login_required
 @require_admin_or_staff
 def upload_profile_pic():
+    """Saves the cropped photo the Account Settings cropper sends. Cloud storage
+    when it's configured; otherwise the image itself goes in the database, so a
+    redeploy (which wipes files on disk) can never lose it. Always answers JSON
+    with a plain-language error the page shows as-is."""
     file = request.files.get('profile_pic')
     if not file or file.filename == '':
-        flash('No file selected.', 'danger')
-    elif allowed_file(file.filename):
+        return jsonify({'success': False, 'error': 'Choose a photo first.'}), 400
+    if not (file.mimetype or '').startswith('image/'):
+        return jsonify({'success': False, 'error': 'That file is not an image. Use a JPG, PNG or GIF.'}), 400
+    data = file.read()
+    if len(data) > 5 * 1024 * 1024:
+        return jsonify({'success': False, 'error': 'That photo is over 5MB. Choose a smaller one.'}), 400
+    if not data:
+        return jsonify({'success': False, 'error': 'The photo was empty. Try choosing it again.'}), 400
+    try:
+        file.stream.seek(0)
         cloud_url = upload_image(file, 'profile_pics')
         if cloud_url:
             current_user.profile_pic = cloud_url
+            current_user.profile_pic_blob = None
+            current_user.profile_pic_mime = None
         else:
-            ext      = file.filename.rsplit('.', 1)[1].lower()
-            filename = f"{current_user.id}_{uuid.uuid4().hex}.{ext}"
-            folder   = os.path.join(admin_app.root_path, 'static', 'profile_pics')
-            os.makedirs(folder, exist_ok=True)
-            file.save(os.path.join(folder, filename))
-            current_user.profile_pic = filename
+            current_user.profile_pic_blob = data
+            current_user.profile_pic_mime = (file.mimetype or 'image/jpeg')[:40]
+            current_user.profile_pic = url_for('profile_pic_blob', uid=current_user.id,
+                                               v=int(datetime.utcnow().timestamp()), _external=True)
         db.session.commit()
-        flash('Profile picture updated!', 'success')
-    else:
-        flash('Invalid file type.', 'danger')
-    return redirect(url_for('admin_dashboard'))
+    except Exception as e:
+        db.session.rollback()
+        print('[profile pic] save failed:', e)
+        return jsonify({'success': False, 'error': 'We could not save your picture. Please try again in a moment.'}), 500
+    return jsonify({'success': True, 'url': current_user.profile_pic})
+
+
+@admin_app.route('/profile-pic/<int:uid>')
+@login_required
+def profile_pic_blob(uid):
+    """Serves a picture stored in the database (see upload_profile_pic)."""
+    user = User.query.get_or_404(uid)
+    if not user.profile_pic_blob:
+        abort(404)
+    resp = make_response(user.profile_pic_blob)
+    resp.headers['Content-Type'] = user.profile_pic_mime or 'image/jpeg'
+    resp.headers['Cache-Control'] = 'private, max-age=86400'   # the URL carries a version, so a new photo is a new URL
+    return resp
 
 
 @admin_app.route('/import-products', methods=['POST'])
@@ -5395,8 +5564,51 @@ def job_orders():
     orders = q.order_by(JobOrder.created_at.desc()).all()
     mechanics = Mechanic.query.order_by(Mechanic.name).all()
     new_jo = JobOrder.query.get(new_id) if new_id else None
+
+    now = ph_now()
+    # Per walk-in job: who it ties up, until when, and whether they're still held.
+    jo_busy = {}
+    for jo in orders:
+        if not (jo.mechanic_name and jo.start_at):
+            continue
+        start = jo.start_at.hour * 60 + jo.start_at.minute
+        est = jo.est_minutes or 30
+        jo_busy[jo.id] = {
+            'active': bool(jo.status in ('pending', 'in_progress') and not jo.mechanic_done_at and jo.start_at.date() == now.date()),
+            'started': minutes_to_ampm(start), 'until': minutes_to_ampm(start + est), 'est': format_duration(est),
+            'first': jo.mechanic_name.split(' ')[0],
+            'freed_at': jo.mechanic_done_at.strftime('%I:%M %p').lstrip('0') if jo.mechanic_done_at else None,
+        }
+
+    # "Right now" slot summary: the next few 30-minute slots that have a walk-in in them.
+    _, _, on_duty = get_on_duty_mechanics(now.date())
+    windows = _walkin_windows(now.date())
+    today_bookings = Booking.query.filter(Booking.date == now.date(), Booking.assigned_mechanic_name.isnot(None),
+                                          Booking.status.notin_(['cancelled', 'completed'])).all()
+    today_slots = []
+    slot_start = (now.hour * 60 + now.minute) // 30 * 30
+    for s0 in range(slot_start, slot_start + 6 * 30, 30):
+        s1 = s0 + 30
+        rows, busy_names = [], set()
+        for w in windows:
+            if mechanic_overlaps(s0, s1, w['start'], w['end']):
+                rows.append({'name': w['mechanic'], 'range': f"{minutes_to_ampm(w['start'])} – {minutes_to_ampm(w['end'])}",
+                             'kind': 'Walk-in', 'ref': w['ref']})
+                busy_names.add(w['mechanic'])
+        if not rows:
+            continue
+        for b in today_bookings:
+            b_start = b.time.hour * 60 + b.time.minute
+            b_end = real_end_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN, b.overrun_minutes or 0)
+            if mechanic_overlaps(s0, s1, b_start, b_end):
+                rows.append({'name': b.assigned_mechanic_name, 'range': f'{minutes_to_ampm(b_start)} – {minutes_to_ampm(b_end)}',
+                             'kind': 'Online', 'ref': f'BKG-{b.id:03d}'})
+                busy_names.add(b.assigned_mechanic_name)
+        today_slots.append({'label': minutes_to_ampm(s0), 'free': max(len(on_duty) - len(busy_names), 0),
+                            'total': len(on_duty), 'rows': rows})
     return render_template('job_orders.html', job_orders=orders, mechanics=mechanics,
-                           status_filter=status_filter, new_jo=new_jo)
+                           status_filter=status_filter, new_jo=new_jo, jo_busy=jo_busy,
+                           today_slots=today_slots, today_label=now.strftime('%A, %B %d, %Y'))
 
 
 @admin_app.route('/job-order/<int:jid>/status', methods=['POST'])
@@ -6128,6 +6340,82 @@ def walkin_customer_history(cid):
     })
 
 
+def _walkin_estimate(services, findings):
+    """Minutes a walk-in job will take: each service's catalog time × quantity
+    (30 for a custom one), plus the time the mechanic gave each inspection finding."""
+    names = [s.get('name') for s in services if s.get('name')]
+    by_name = {s.name: s for s in Service.query.filter(Service.name.in_(names)).all()} if names else {}
+    total = 0
+    for s in services:
+        svc = by_name.get(s.get('name'))
+        total += ((svc.duration_minutes if (svc and svc.duration_minutes) else 30) * max(1, int(s.get('qty', 1) or 1)))
+    for f in findings:
+        try:
+            total += max(0, int(f.get('minutes') or 0))
+        except (TypeError, ValueError):
+            pass
+    return total
+
+
+@admin_app.route('/walk-in/mechanic-status')
+@login_required
+@require_admin_or_staff
+def walkin_mechanic_status():
+    """For the job the admin is building: which mechanic is already on another
+    walk-in during [now, now + minutes] (greyed out), and which have an online
+    booking in that window (a warning, but allowed)."""
+    minutes = max(1, request.args.get('minutes', type=int) or 30)
+    now = ph_now()
+    start_min = now.hour * 60 + now.minute
+    end_min = start_min + minutes
+    busy = {}
+    for w in _walkin_windows(now.date()):
+        if mechanic_overlaps(start_min, end_min, w['start'], w['end']):
+            busy[w['mechanic']] = {'ref': w['ref'], 'until': minutes_to_ampm(w['end'])}
+    online = {}
+    for b in Booking.query.filter(Booking.date == now.date(), Booking.assigned_mechanic_name.isnot(None),
+                                  Booking.status.notin_(['cancelled', 'completed'])).all():
+        b_start = b.time.hour * 60 + b.time.minute
+        b_end = real_end_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN, b.overrun_minutes or 0)
+        if mechanic_overlaps(start_min, end_min, b_start, b_end):
+            online.setdefault(b.assigned_mechanic_name, []).append({
+                'ref': f'BKG-{b.id:03d}', 'customer': _booking_customer_name(b),
+                'time': f'{minutes_to_ampm(b_start)} – {minutes_to_ampm(b_end)}'})
+    return jsonify({'from': minutes_to_ampm(start_min), 'to': minutes_to_ampm(end_min),
+                    'mechanics': {m.name: {'id': m.id, 'walkin': busy.get(m.name), 'online': online.get(m.name, [])}
+                                  for m in Mechanic.query.all()}})
+
+
+@admin_app.route('/job-order/<int:jid>/extend', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def extend_job_order_time(jid):
+    """+30m / +1h: the mechanic is tied up longer, so online booking sees them busy longer."""
+    jo = JobOrder.query.get_or_404(jid)
+    minutes = (request.get_json(silent=True) or {}).get('minutes')
+    if minutes not in (30, 60):
+        return jsonify({'success': False, 'error': 'Unknown extension.'}), 400
+    if not jo.mechanic_name or jo.mechanic_done_at or jo.status not in ('pending', 'in_progress'):
+        return jsonify({'success': False, 'error': 'This job is not holding a mechanic.'}), 400
+    jo.est_minutes = (jo.est_minutes or 30) + minutes
+    db.session.commit()
+    until = (jo.start_at.hour * 60 + jo.start_at.minute + jo.est_minutes) if jo.start_at else None
+    return jsonify({'success': True, 'until': minutes_to_ampm(until) if until is not None else None})
+
+
+@admin_app.route('/job-order/<int:jid>/mechanic-done', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def job_order_mechanic_done(jid):
+    """Mark Done: the mechanic is free for online booking right now."""
+    jo = JobOrder.query.get_or_404(jid)
+    if not jo.mechanic_name:
+        return jsonify({'success': False, 'error': 'No mechanic is assigned to this job.'}), 400
+    jo.mechanic_done_at = ph_now()
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @admin_app.route('/walk-in/create-job-order', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -6174,8 +6462,22 @@ def walkin_create_job_order():
 
     total = sum(i['unit_price'] * i['quantity'] for i in items)
 
+    # How long the mechanic is tied up: service times + inspection times, starting
+    # now. A job with only products and a mechanic still holds them for 30 minutes.
+    now = ph_now()
+    est_minutes = _walkin_estimate(services, findings)
+    if not est_minutes and (cart or items):
+        est_minutes = 30
+    if mechanic_name:
+        start_min = now.hour * 60 + now.minute
+        for w in _walkin_windows(now.date()):
+            if w['mechanic'] == mechanic_name and mechanic_overlaps(start_min, start_min + est_minutes, w['start'], w['end']):
+                return jsonify({'success': False, 'error': f"{mechanic_name} is on {w['ref']} until {minutes_to_ampm(w['end'])}. Pick someone else."}), 409
+
     try:
         jo = JobOrder(
+            start_at         = now,
+            est_minutes      = est_minutes or None,
             customer_name    = customer_name,
             customer_phone   = customer_phone,
             motorcycle_model = moto_model,
@@ -7080,6 +7382,11 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN invoice_receipt_no VARCHAR(20) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN invoice_gcash_ref VARCHAR(50) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN actual_start_at DATETIME DEFAULT NULL",
+        "ALTER TABLE job_order ADD COLUMN start_at DATETIME DEFAULT NULL",
+        "ALTER TABLE job_order ADD COLUMN est_minutes INT DEFAULT NULL",
+        "ALTER TABLE job_order ADD COLUMN mechanic_done_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `user` ADD COLUMN profile_pic_blob MEDIUMBLOB DEFAULT NULL",
+        "ALTER TABLE `user` ADD COLUMN profile_pic_mime VARCHAR(40) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN billing_seen_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN payment_ref VARCHAR(80) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN inspection_at DATETIME DEFAULT NULL",
@@ -7087,12 +7394,17 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN late_notice_at DATETIME DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN late_notice_text VARCHAR(120) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN late_notice_emailed TINYINT(1) DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN assign_notice_at DATETIME DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN assign_notice_kind VARCHAR(10) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN assign_notice_emailed TINYINT(1) DEFAULT 0",
         "ALTER TABLE return_request ADD COLUMN refund_method VARCHAR(10) DEFAULT NULL",
         "ALTER TABLE return_request ADD COLUMN gcash_number VARCHAR(20) DEFAULT NULL",
         "ALTER TABLE return_request ADD COLUMN gcash_account_name VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE return_request ADD COLUMN refund_receipt VARCHAR(500) DEFAULT NULL",
         "ALTER TABLE return_request ADD COLUMN cash_ready_at DATETIME DEFAULT NULL",
         "ALTER TABLE return_request ADD COLUMN info_requested_at DATETIME DEFAULT NULL",
+        "ALTER TABLE return_request ADD COLUMN refund_given_by VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN invoice_received_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE quotation ADD COLUMN decided_at DATETIME DEFAULT NULL",
         "ALTER TABLE quotation ADD COLUMN not_covered TINYINT(1) DEFAULT 0",
         "ALTER TABLE quotation ADD COLUMN not_covered_reason TEXT DEFAULT NULL",

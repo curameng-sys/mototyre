@@ -398,6 +398,11 @@
     .modal-body { padding: 0 1.5rem 1rem; overflow-y: auto; flex: 1; }
     .modal-foot { padding: 0.75rem 1.5rem 1.25rem; display: flex; gap: 0.5rem; flex-shrink: 0; }
 
+    .dur-chip { display:inline-block; margin-left:.45rem; font-size:.62rem; font-weight:700; background:#dbeafe; color:#1d4ed8; border-radius:5px; padding:.05rem .38rem; vertical-align:middle; }
+    .est-box { margin-top:.6rem; padding:.55rem .75rem; background:#fff; border:1px solid var(--border); border-radius:8px; font-size:.78rem; color:#111827; }
+    .mech-note { margin-top:.5rem; padding:.55rem .7rem; border-radius:8px; font-size:.74rem; line-height:1.45; }
+    .mech-note.info { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; }
+    .mech-note.warn { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
     .r-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: #374151; margin-bottom: 0.4rem; }
     .r-row.bold { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: #111827; }
     .r-divider { border: none; border-top: 1px dashed var(--border); margin: 0.75rem 0; }
@@ -580,6 +585,7 @@
            data-price="{{ p.price }}"
            data-stock="{{ p.stock }}"
            data-cat="{{ p.category }}"
+           data-barcode="{{ p.barcode or '' }}"
            onclick="addProduct(this)">
         <div style="flex:1; min-width:0;">
           <div style="font-family:'Syne',sans-serif; font-size:0.82rem; font-weight:700; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
@@ -626,6 +632,10 @@
         <textarea class="svc-inp" id="finding-desc" placeholder="e.g. Steering bearings are worn and loose" style="width:100%;resize:vertical;min-height:56px;margin-bottom:0.6rem;font-family:'DM Sans',sans-serif;"></textarea>
         <div class="custom-svc-row">
           <input class="svc-inp" id="finding-price" type="number" placeholder="Price" style="max-width:120px;">
+          <select class="svc-inp" id="finding-minutes" style="max-width:110px;" title="How long the inspection takes">
+            <option value="15">15m</option><option value="30" selected>30m</option><option value="45">45m</option>
+            <option value="60">1 hr</option><option value="90">1 hr 30m</option><option value="120">2 hr</option>
+          </select>
           <button class="btn-add-svc" onclick="addFinding()">+ Add to Job Order</button>
         </div>
       </div>
@@ -687,7 +697,7 @@
         <div class="field-row">
           <div class="field-wrap">
             <label class="field-label">Assign Mechanic</label>
-            <select class="field-select" id="mechanic-select">
+            <select class="field-select" id="mechanic-select" onchange="updateMechanicNote(); updateShopTime()">
               <option value="">— No Mechanic Assigned —</option>
               {% for m in mechanics %}
               <option value="{{ m.id }}" data-status="{{ m.status }}">
@@ -695,6 +705,7 @@
               </option>
               {% endfor %}
             </select>
+            <div id="mech-note" style="display:none;"></div>
           </div>
         </div>
       </div>
@@ -706,6 +717,7 @@
           Items
           <span class="cart-count" id="cart-count">0</span>
         </div>
+        <div id="est-time" class="est-box" style="display:none;"></div>
         <div id="cart-items">
           <div class="cart-empty" id="cart-empty">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
@@ -765,18 +777,20 @@
         <div class="r-row"><span>Mechanic</span><span id="confirm-mechanic">Not assigned</span></div>
         <div class="r-row"><span>Status</span><span id="confirm-status">—</span></div>
         <div class="r-row"><span>Items</span><span id="confirm-items">0</span></div>
+        <div class="r-row"><span>Estimated shop time</span><span id="confirm-est">—</span></div>
       </div>
-      <div id="confirm-services-box" style="display:none;background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.2);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
-        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Services</div>
-        <div id="confirm-services-list" style="font-size:0.8rem;color:#d1d5db;"></div>
+      <div id="confirm-busy-note" class="mech-note info" style="display:none;margin:0 0 .75rem;"></div>
+      <div id="confirm-services-box" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
+        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Services</div>
+        <div id="confirm-services-list" style="font-size:0.84rem;color:#111827;"></div>
       </div>
-      <div id="confirm-products-box" style="display:none;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.2);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
-        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> Products</div>
-        <div id="confirm-products-list" style="font-size:0.8rem;color:#d1d5db;"></div>
+      <div id="confirm-products-box" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
+        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#d00019;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> Products</div>
+        <div id="confirm-products-list" style="font-size:0.84rem;color:#111827;"></div>
       </div>
-      <div id="confirm-findings-box" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
-        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspection Findings</div>
-        <div id="confirm-findings-list" style="font-size:0.8rem;color:#d1d5db;"></div>
+      <div id="confirm-findings-box" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
+        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspection Findings</div>
+        <div id="confirm-findings-list" style="font-size:0.84rem;color:#111827;"></div>
       </div>
       <div id="confirm-note" style="font-size:0.75rem;color:var(--muted);text-align:center;background:rgba(255,255,255,0.02);border-radius:8px;padding:0.5rem;"></div>
     </div>
@@ -848,12 +862,105 @@ if (VIEW_QUOTATION) {
 
 // ── SERVICES ──────────────────────────────────────────────────────────────────
 
+let _svcDur = {};          // service name -> minutes
+let _mechStatus = null;    // last /walk-in/mechanic-status answer
+let _mechTimer = null;
+function fmtMin(m) {
+  m = Math.round(m);
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60), r = m % 60;
+  return r ? `${h} hr ${r}m` : `${h} hr`;
+}
+const clock12 = d => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+// A part number often rides in the product name (or is the barcode): readable name on top, code underneath.
+function splitPartName(p) {
+  let name = (p.name || '').trim(), part = (p.barcode || '').trim();
+  if (part && name.toUpperCase().includes(part.toUpperCase())) {
+    name = name.replace(new RegExp(part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '').replace(/^[\s,\-–—:]+|[\s,\-–—:]+$/g, '').replace(/\s{2,}/g, ' ');
+  } else if (!part) {
+    const m = name.match(/(^|[\s,(\-])([A-Z0-9][A-Z0-9\-\/]{7,})(?=$|[\s,)\-])/i);
+    if (m && (m[2].match(/\d/g) || []).length >= 5) {
+      part = m[2];
+      name = name.replace(m[2], '').replace(/^[\s,\-–—:]+|[\s,\-–—:]+$/g, '').replace(/\s{2,}/g, ' ');
+    }
+  }
+  return { name: name || p.name, part };
+}
+
+// How long the job holds the mechanic: service times + inspection times. A job
+// with only products still blocks an assigned mechanic for 30 minutes.
+function cartMinutes() {
+  let t = 0;
+  cart.forEach(c => {
+    if (c.type === 'service') t += (_svcDur[c.name] || 30) * c.qty;
+    else if (c.type === 'finding') t += (c.minutes || 0);
+  });
+  if (!t && cart.length && document.getElementById('mechanic-select').value) t = 30;
+  return t;
+}
+
+function updateShopTime() {
+  const box = document.getElementById('est-time');
+  const mins = cartMinutes();
+  if (!mins) { box.style.display = 'none'; } else {
+    const start = new Date(), end = new Date(start.getTime() + mins * 60000);
+    box.style.display = 'block';
+    box.innerHTML = `Estimated shop time: <strong>${fmtMin(mins)}</strong> · ${clock12(start)} – ${clock12(end)}`;
+  }
+  clearTimeout(_mechTimer);
+  _mechTimer = setTimeout(refreshMechanicStatus, 250);
+}
+
+// Who's free for that window: other walk-ins grey a mechanic out; an online booking only warns.
+async function refreshMechanicStatus() {
+  const mins = cartMinutes() || 30;
+  try {
+    const res = await fetch(`/walk-in/mechanic-status?minutes=${mins}`);
+    _mechStatus = await res.json();
+  } catch (e) { _mechStatus = null; }
+  const sel = document.getElementById('mechanic-select');
+  Array.from(sel.options).forEach(opt => {
+    if (!opt.value) return;
+    if (!opt.dataset.label) opt.dataset.label = opt.textContent.trim().replace(/\s+/g, ' ');
+    const name = opt.dataset.label.split('—')[0].trim();
+    const st = _mechStatus && _mechStatus.mechanics[name];
+    opt.disabled = !!(st && st.walkin);
+    opt.textContent = opt.dataset.label + (st && st.walkin ? ` (on ${st.walkin.ref} until ${st.walkin.until})` : '');
+  });
+  const picked = sel.options[sel.selectedIndex];
+  if (picked && picked.disabled) { sel.value = ''; toast('That mechanic is on another walk-in for this time — pick someone else.', true); }
+  updateMechanicNote();
+}
+
+function mechanicNoteHTML() {
+  const sel = document.getElementById('mechanic-select');
+  if (!sel.value) return { html: '', warn: false };
+  const name = sel.options[sel.selectedIndex].text.split('—')[0].trim();
+  const first = name.split(' ')[0];
+  const mins = cartMinutes() || 30;
+  const start = new Date(), end = new Date(start.getTime() + mins * 60000);
+  const st = _mechStatus && _mechStatus.mechanics[name];
+  if (st && st.online && st.online.length) {
+    const b = st.online[0];
+    return { warn: true, html: `<strong>${first} has an online booking during this time:</strong> ${b.ref} · ${b.customer} (${b.time}). You can still assign them.` };
+  }
+  return { warn: false, html: `${first} will show as busy in online booking from ${clock12(start)} – ${clock12(end)}, or until you mark the job done.` };
+}
+function updateMechanicNote() {
+  const note = document.getElementById('mech-note');
+  const n = mechanicNoteHTML();
+  note.style.display = n.html ? 'block' : 'none';
+  note.className = 'mech-note ' + (n.warn ? 'warn' : 'info');
+  note.innerHTML = n.html;
+}
+
 function _loadServices() {
   fetch('/api/services')
     .then(r => r.json())
     .then(data => {
       _svcPrices = {};
-      data.forEach(s => { _svcPrices[s.name] = s.price; });
+      data.forEach(s => { _svcPrices[s.name] = s.price; _svcDur[s.name] = s.duration_minutes || 30; });
       const c = document.getElementById('service-list-container');
       if (!c) return;
       if (!data.length) {
@@ -862,7 +969,7 @@ function _loadServices() {
       }
       c.innerHTML = data.map(s => `
         <div class="service-item" onclick="addService('${s.name.replace(/'/g,"\\'")}', ${s.price}, this)">
-          <div><div class="svc-name">${s.name}</div></div>
+          <div><div class="svc-name">${s.name}<span class="dur-chip">${fmtMin(s.duration_minutes || 30)}</span></div></div>
           <div class="svc-right">
             <span class="svc-price">&#8369;${Math.round(s.price)}</span>
             <div class="svc-add-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
@@ -871,6 +978,7 @@ function _loadServices() {
     });
 }
 _loadServices();
+refreshMechanicStatus();
 
 // ── CLOCK ─────────────────────────────────────────────────────────────────────
 function tick() {
@@ -1017,7 +1125,7 @@ function addProduct(el) {
     if (ex.qty >= max) { toast('Max stock reached', true); return; }
     ex.qty++;
   } else {
-    cart.push({ type: 'product', id, name, price, qty: 1, maxQty: max });
+    cart.push({ type: 'product', id, name, price, qty: 1, maxQty: max, barcode: el.dataset.barcode || '' });
   }
   renderCart(); toast(`${name} added`);
 }
@@ -1050,7 +1158,7 @@ function addFinding() {
   const price = parseFloat(document.getElementById('finding-price').value);
   if (!desc) { toast('Describe what the mechanic found', true); return; }
   if (isNaN(price) || price < 0) { toast('Enter a valid price', true); return; }
-  cart.push({ type: 'finding', id: null, name: desc, price, qty: 1, maxQty: 1 });
+  cart.push({ type: 'finding', id: null, name: desc, price, qty: 1, maxQty: 1, minutes: parseInt(document.getElementById('finding-minutes').value, 10) || 0 });
   document.getElementById('finding-desc').value  = '';
   document.getElementById('finding-price').value = '';
   renderCart(); toast('Finding added');
@@ -1124,8 +1232,10 @@ function renderCart() {
       div.innerHTML = `
         <div class="ci-icon ${item.type}">${ICON_SVG[item.type]}</div>
         <div class="ci-info">
-          <div class="ci-name">${item.name}</div>
-          ${!isFinding ? `<div class="ci-unit">${item.price > 0 ? '₱' + item.price.toFixed(2) + ' each' : 'Free'}</div>` : ''}
+          <div class="ci-name">${item.type === 'product' ? splitPartName(item).name : item.name}</div>
+          ${item.type === 'product' ? `<div class="ci-unit">${splitPartName(item).part ? 'Part no. ' + splitPartName(item).part + ' · ' : ''}${item.price > 0 ? '₱' + item.price.toFixed(2) + ' each' : 'Free'}</div>` : ''}
+          ${item.type === 'service' ? `<div class="ci-unit">Service · ${fmtMin(_svcDur[item.name] || 30)} · ${item.price > 0 ? '₱' + item.price.toFixed(2) + ' each' : 'Free'}</div>` : ''}
+          ${isFinding ? `<div class="ci-unit">Inspection · ${fmtMin(item.minutes || 0)}</div>` : ''}
         </div>
         <div class="ci-controls">
           ${isFinding ? `
@@ -1150,6 +1260,7 @@ function renderCart() {
 }
 
 function updateTotals() {
+  updateShopTime();
   const svcT   = cart.filter(c => c.type === 'service').reduce((s, c) => s + c.price * c.qty, 0);
   const partsT = cart.filter(c => c.type === 'product').reduce((s, c) => s + c.price * c.qty, 0);
   const inspT  = cart.filter(c => c.type === 'finding').reduce((s, c) => s + c.price * c.qty, 0);
@@ -1180,6 +1291,15 @@ function openConfirm() {
   document.getElementById('confirm-mechanic').textContent = mechName;
   document.getElementById('confirm-status').textContent   = 'Pending';
   document.getElementById('confirm-items').textContent    = cart.reduce((s,c)=>s+c.qty,0) + ' item(s)';
+  {
+    const mins = cartMinutes();
+    const t0 = new Date(), t1 = new Date(t0.getTime() + mins * 60000);
+    document.getElementById('confirm-est').textContent = mins ? `${fmtMin(mins)} · ${clock12(t0)} – ${clock12(t1)}` : '—';
+    const n = mechanicNoteHTML(), nb = document.getElementById('confirm-busy-note');
+    nb.style.display = n.html ? 'block' : 'none';
+    nb.className = 'mech-note ' + (n.warn ? 'warn' : 'info');
+    nb.innerHTML = n.html;
+  }
 
   const svcs     = cart.filter(c => c.type === 'service');
   const prods    = cart.filter(c => c.type === 'product');
@@ -1190,9 +1310,39 @@ function openConfirm() {
   svcsBox.style.display     = svcs.length     ? 'block' : 'none';
   prodsBox.style.display    = prods.length    ? 'block' : 'none';
   findingsBox.style.display = findings.length ? 'block' : 'none';
-  if (svcs.length)     document.getElementById('confirm-services-list').innerHTML = svcs.map(s  => `• ${s.name} x${s.qty} — ₱${(s.price*s.qty).toFixed(2)}`).join('<br>');
-  if (prods.length)    document.getElementById('confirm-products-list').innerHTML = prods.map(p => `• ${p.name} x${p.qty} — ₱${(p.price*p.qty).toFixed(2)}`).join('<br>');
-  if (findings.length) document.getElementById('confirm-findings-list').innerHTML = findings.map(f => `• ${f.name} — ₱${f.price.toFixed(2)}`).join('<br>');
+  // A part number often rides along in the product name (or is the barcode) —
+  // show the readable name on top and the long code small underneath.
+  const splitPart = p => {
+    let name = (p.name || '').trim(), part = (p.barcode || '').trim();
+    if (part && name.toUpperCase().includes(part.toUpperCase())) {
+      name = name.replace(new RegExp(part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '').replace(/^[\s,\-–—:]+|[\s,\-–—:]+$/g, '').replace(/\s{2,}/g, ' ');
+    } else if (!part) {
+      const m = name.match(/(^|[\s,(\-])([A-Z0-9][A-Z0-9\-\/]{7,})(?=$|[\s,)\-])/i);
+      if (m && (m[2].match(/\d/g) || []).length >= 5) {
+        part = m[2];
+        name = name.replace(m[2], '').replace(/^[\s,\-–—:]+|[\s,\-–—:]+$/g, '').replace(/\s{2,}/g, ' ');
+      }
+    }
+    return { name: name || p.name, part };
+  };
+  const peso = n => '₱' + Number(n).toFixed(2);
+  const lineRow = (name, qtyText, amount, sub) => `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;padding:0.35rem 0;">
+      <div style="min-width:0;"><div style="font-weight:600;color:#111827;">${name}</div>${sub ? `<div style="font-size:0.7rem;color:#6b7280;margin-top:0.1rem;">${sub}</div>` : ''}</div>
+      <div style="white-space:nowrap;color:#111827;font-weight:600;">${qtyText}${qtyText ? ' · ' : ''}${peso(amount)}</div>
+    </div>`;
+  const subtotalRow = (label, amount) => `
+    <div style="display:flex;justify-content:space-between;margin-top:0.35rem;padding-top:0.45rem;border-top:1px solid rgba(17,24,39,0.12);font-weight:700;color:#111827;">
+      <span>${label}</span><span>${peso(amount)}</span></div>`;
+  if (svcs.length) document.getElementById('confirm-services-list').innerHTML =
+    svcs.map(x => lineRow(x.name, `x${x.qty}`, x.price * x.qty)).join('')
+    + subtotalRow('Services subtotal', svcs.reduce((t, x) => t + x.price * x.qty, 0));
+  if (prods.length) document.getElementById('confirm-products-list').innerHTML =
+    prods.map(x => { const sp = splitPart(x); return lineRow(sp.name, `x${x.qty}`, x.price * x.qty, sp.part ? `Part no. ${sp.part}` : ''); }).join('')
+    + subtotalRow('Products subtotal', prods.reduce((t, x) => t + x.price * x.qty, 0));
+  if (findings.length) document.getElementById('confirm-findings-list').innerHTML =
+    findings.map(x => lineRow(x.name, '', x.price)).join('')
+    + subtotalRow('Findings subtotal', findings.reduce((t, x) => t + x.price, 0));
 
   const noteEl = document.getElementById('confirm-note');
   const okBtn  = document.getElementById('confirm-ok-btn');
@@ -1201,6 +1351,7 @@ function openConfirm() {
   okBtn.innerHTML  = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Create Job Order';
 
   document.getElementById('confirm-modal').classList.add('open');
+  setTimeout(() => { const c = document.querySelector('#confirm-modal .btn-modal-cancel'); if (c) c.focus(); }, 50);   // Cancel is focused first
 }
 
 function closeConfirm() {
@@ -1228,7 +1379,7 @@ async function processTransaction() {
       name: c.name, price: c.price, qty: c.qty
     })),
     findings: cart.filter(c => c.type === 'finding').map(c => ({
-      name: c.name, price: c.price
+      name: c.name, price: c.price, minutes: c.minutes || 0
     }))
   };
 

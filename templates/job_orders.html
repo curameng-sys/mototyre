@@ -220,6 +220,23 @@
   </div>
   {% endif %}
 
+  {% if today_slots %}
+  <div style="margin-bottom:1rem;display:flex;flex-direction:column;gap:.6rem;">
+    <div style="font-size:.78rem;color:var(--muted);">Walk-in jobs today · {{ today_label }}</div>
+    {% for sl in today_slots %}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem;">
+      <div style="font-weight:700;font-size:.9rem;">{{ sl.label }} slot <span style="font-weight:400;font-size:.76rem;color:var(--muted);margin-left:.4rem;">{{ sl.free }} of {{ sl.total }} mechanics free · walk-ins count too</span></div>
+      {% for r in sl.rows %}
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#f9fafb;border-radius:6px;padding:.35rem .6rem;margin-top:.4rem;font-size:.8rem;">
+        <span><strong>{{ r.name }}</strong> · {{ r.range }}</span>
+        <span style="font-size:.68rem;font-weight:700;padding:.1rem .45rem;border-radius:5px;{% if r.kind == 'Walk-in' %}background:#f3e8ff;color:#7e22ce;{% else %}background:#dbeafe;color:#1d4ed8;{% endif %}">{{ r.kind }} {{ r.ref }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <div class="filter-tabs">
     <a href="?status=all"         class="ftab {% if status_filter=='all'         %}active{% endif %}">All</a>
     <a href="?status=pending"     class="ftab {% if status_filter=='pending'     %}active{% endif %}">Pending</a>
@@ -267,6 +284,19 @@
               <option value="{{ m.name }}" {% if jo.mechanic_name == m.name %}selected{% endif %}>{{ m.name }}</option>
               {% endfor %}
             </select>
+            {% set bz = jo_busy.get(jo.id) %}
+            {% if bz %}
+              {% if bz.active %}
+              <div style="font-size:.7rem;color:#7e22ce;margin-top:.35rem;line-height:1.4;">Started {{ bz.started }} · estimated {{ bz.est }} → until <strong>{{ bz.until }}</strong><br>{{ bz.first }} shows as busy in online booking until {{ bz.until }}</div>
+              <div style="display:flex;gap:.3rem;margin-top:.35rem;flex-wrap:wrap;">
+                <button type="button" class="view-btn" onclick="extendJo({{ jo.id }}, 30)">+30m</button>
+                <button type="button" class="view-btn" onclick="extendJo({{ jo.id }}, 60)">+1h</button>
+                <button type="button" class="view-btn" style="font-weight:700;" onclick="markJoDone({{ jo.id }})">Mark Done</button>
+              </div>
+              {% elif bz.freed_at %}
+              <div style="font-size:.7rem;color:#15803d;margin-top:.35rem;">{{ bz.first }} freed at {{ bz.freed_at }}</div>
+              {% endif %}
+            {% endif %}
           </td>
           <td>
             <button class="view-btn" onclick="toggleItems({{ jo.id }})">
@@ -411,6 +441,22 @@
     // Clean URL without reloading
     history.replaceState({}, '', '/job-orders');
   })();
+
+  // Walk-in busy time: +30m / +1h keep the mechanic busy longer; Mark Done frees them now.
+  async function extendJo(jid, minutes) {
+    try {
+      const res = await fetch(`/job-order/${jid}/extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ minutes }) });
+      const data = await res.json();
+      if (data.success) location.reload(); else alert(data.error || 'Could not extend this job.');
+    } catch (e) { alert('Network error — please try again.'); }
+  }
+  async function markJoDone(jid) {
+    try {
+      const res = await fetch(`/job-order/${jid}/mechanic-done`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (data.success) location.reload(); else alert(data.error || 'Could not mark this job done.');
+    } catch (e) { alert('Network error — please try again.'); }
+  }
 </script>
 </body>
 </html>

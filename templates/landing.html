@@ -44,7 +44,8 @@
 
     /* ── NAV ── */
     .nav-bar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(243,244,246,0.75);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-1);padding:0 clamp(20px,4vw,48px);height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-    .nav-logo{font-family:var(--font-display);font-size:26px;letter-spacing:0.06em;color:var(--fg-1);line-height:1;user-select:none}
+    .nav-logo{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:26px;letter-spacing:0.06em;color:var(--fg-1);line-height:1;user-select:none}
+    .nav-logo-img{width:48px;height:48px;border-radius:50%;object-fit:contain;flex-shrink:0;display:block}
     .nav-logo span{color:var(--brand-red)}
     .nav-links{display:flex;gap:4px;flex:1;justify-content:center;overflow:hidden}
     .nav-links a{display:inline-flex;align-items:center;padding:8px 13px;border-radius:10px;font-family:var(--font-label);font-weight:700;font-size:12px;letter-spacing:0.05em;color:var(--fg-2);white-space:nowrap;transition:all 120ms var(--ease);border:1px solid transparent}
@@ -64,7 +65,18 @@
 
     /* ── HERO ── */
     .hero{position:relative;min-height:clamp(560px,78vh,760px);overflow:hidden;background:var(--fg-1)}
-    .hero-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;z-index:0}
+    .hero-slides{position:absolute;inset:0;overflow:hidden;z-index:0}
+    .hero-track{display:flex;height:100%;will-change:transform}
+    .hero-track.slide{transition:transform .8s cubic-bezier(.65,0,.35,1)}
+    .hero-track img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;object-position:center 40%;display:block}
+    .hero-controls{position:absolute;right:clamp(20px,4vw,48px);bottom:clamp(16px,3vw,28px);z-index:4;display:flex;align-items:center;gap:12px;background:rgba(28,24,20,0.55);backdrop-filter:blur(6px);border-radius:999px;padding:8px 12px}
+    .hero-arrow,.hero-pause{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.35);background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
+    .hero-arrow:hover,.hero-pause:hover{background:rgba(255,255,255,0.18)}
+    .hero-bars{display:flex;gap:5px;align-items:center}
+    .hero-bar{width:clamp(18px,3vw,34px);height:12px;padding:0;background:none;border:0;display:block;position:relative}
+    .hero-bar::before{content:'';position:absolute;left:0;right:0;top:4px;height:3px;border-radius:3px;background:rgba(255,255,255,0.35)}
+    .hero-bar i{position:absolute;left:0;top:4px;height:3px;border-radius:3px;background:#fff;width:0}
+    .hero-controls button:focus-visible{outline:2px solid #fff;outline-offset:2px}
     .hero-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,0.93) 0%,rgba(255,255,255,0.65) 30%,rgba(255,255,255,0.3) 50%,rgba(255,255,255,0) 70%);z-index:1}
     .hero-num{position:absolute;font-family:var(--font-display);line-height:1;letter-spacing:-0.02em;color:transparent;pointer-events:none;user-select:none}
     .hero-num-left{font-size:clamp(18rem,32vw,30rem);left:clamp(-2vw,-1vw,0);top:50%;transform:translateY(-50%);-webkit-text-stroke:1px rgba(28,24,20,0.08);z-index:1}
@@ -88,7 +100,7 @@
     .trust-sub{font-family:var(--font-body);font-size:11px;color:var(--fg-3)}
     .hero-badge{position:absolute;z-index:3}
     .hero-badge-top{right:clamp(20px,4vw,48px);top:clamp(28px,6vw,64px);background:var(--bg-panel);border:1px solid var(--line-1);border-radius:14px;padding:14px 18px;box-shadow:var(--shadow-3);min-width:156px;backdrop-filter:blur(8px)}
-    .hero-badge-bottom{right:clamp(20px,4vw,48px);bottom:clamp(28px,6vw,56px);background:var(--fg-1);color:#fff;border-radius:12px;padding:12px 16px;box-shadow:var(--shadow-3)}
+    .hero-badge-bottom{right:clamp(20px,4vw,48px);bottom:clamp(72px,9vw,100px);background:var(--fg-1);color:#fff;border-radius:12px;padding:12px 16px;box-shadow:var(--shadow-3)}
     .badge-label{font-family:var(--font-label);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--fg-3);display:flex;align-items:center;gap:8px;margin-bottom:4px}
     .hero-badge-bottom .badge-label{color:rgba(255,255,255,0.6)}
     .badge-num{font-family:var(--font-display);font-size:36px;letter-spacing:0.02em;color:var(--fg-1);line-height:1}
@@ -321,7 +333,7 @@
 
 <!-- NAV -->
 <nav class="nav-bar">
-  <a class="nav-logo" href="/">MOTO<span>TYRE</span></a>
+  <a class="nav-logo" href="/"><img class="nav-logo-img" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span style="color:var(--fg-1)">MOTO<span>TYRES</span></span></a>
   <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
     <i data-lucide="menu" style="width:22px;height:22px"></i>
   </button>
@@ -340,8 +352,19 @@
 
 <!-- HERO -->
 <section class="hero">
-  <img src="{{ url_for('static', filename='images/shop-hero.jpg') }}" alt="" aria-hidden="true" class="hero-bg-img">
+  <div class="hero-slides" id="heroSlides" role="region" aria-roledescription="carousel" aria-label="MotoTyres shop photos">
+    <div class="hero-track" id="heroTrack">
+      {% for n in range(0, 7) %}<img src="{{ url_for('static', filename='images/hero/hero-' ~ n ~ '.jpg') }}" alt="" {{ 'fetchpriority="high"' if loop.first else 'loading="lazy"' }}>{% endfor %}
+      <img src="{{ url_for('static', filename='images/hero/hero-0.jpg') }}" alt="" aria-hidden="true" loading="lazy">
+    </div>
+  </div>
   <div class="hero-scrim" aria-hidden="true"></div>
+  <div class="hero-controls" id="heroControls" aria-label="Slideshow controls">
+    <button type="button" class="hero-arrow" id="heroPrev" aria-label="Previous photo" onclick="heroGo(-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="hero-bars" id="heroBars"></div>
+    <button type="button" class="hero-arrow" id="heroNext" aria-label="Next photo" onclick="heroGo(1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+    <button type="button" class="hero-pause" id="heroPause" aria-label="Pause slideshow" onclick="heroTogglePause()"></button>
+  </div>
 
   <div class="hero-content-wrap">
     <div class="hero-content">
@@ -929,6 +952,86 @@
     el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
     io.observe(el);
   });
+</script>
+
+<script>
+// Hero slideshow: slides left every 5 seconds, no zoom, loops forever.
+(function () {
+  const track = document.getElementById('heroTrack');
+  if (!track) return;
+  const N = track.children.length - 1;          // the last image is a copy of the first, for a seamless loop
+  const SLIDE_MS = 5000;
+  const bars = document.getElementById('heroBars');
+  const pauseBtn = document.getElementById('heroPause');
+  const ICON_PAUSE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+  const ICON_PLAY = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="7 4 20 12 7 20"/></svg>';
+  let cur = 0, elapsed = 0, last = performance.now(), paused = window.matchMedia('(prefers-reduced-motion: reduce)').matches, busy = false;
+
+  for (let i = 0; i < N; i++) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'hero-bar'; b.setAttribute('aria-label', 'Go to photo ' + (i + 1));
+    b.innerHTML = '<i></i>';
+    b.onclick = () => show(i);
+    bars.appendChild(b);
+  }
+  function paint() {
+    [...bars.children].forEach((b, i) => {
+      b.firstChild.style.width = i < cur ? '100%' : (i === cur ? Math.min(100, elapsed / SLIDE_MS * 100) + '%' : '0%');
+      b.setAttribute('aria-current', i === cur ? 'true' : 'false');
+    });
+  }
+  function setPaused(p) {
+    paused = p; last = performance.now();
+    pauseBtn.innerHTML = p ? ICON_PLAY : ICON_PAUSE;
+    pauseBtn.setAttribute('aria-label', p ? 'Play slideshow' : 'Pause slideshow');
+  }
+  function move(to, wrapAfter) {
+    busy = true;
+    track.classList.add('slide');
+    track.style.transform = 'translateX(-' + (to * 100) + '%)';
+    let finished = false;
+    const done = () => {
+      if (finished) return; finished = true;
+      track.removeEventListener('transitionend', done);
+      if (wrapAfter) { track.classList.remove('slide'); track.style.transform = 'translateX(0)'; }
+      busy = false;
+    };
+    track.addEventListener('transitionend', done);
+    setTimeout(done, 1000);
+  }
+  function show(i) {                              // jump to a specific photo
+    if (busy || i === cur) return;
+    cur = i; elapsed = 0; last = performance.now();
+    move(i, false); paint();
+  }
+  window.heroGo = function (dir) {
+    if (busy) return;
+    elapsed = 0; last = performance.now();
+    if (dir > 0) {
+      if (cur === N - 1) { cur = 0; move(N, true); }   // slide on to the copy of photo 1, then snap back
+      else { cur++; move(cur, false); }
+    } else {
+      if (cur === 0) {                                  // from photo 1 back to the last, still sliding
+        track.classList.remove('slide'); track.style.transform = 'translateX(-' + (N * 100) + '%)';
+        void track.offsetWidth; cur = N - 1; move(cur, false);
+      } else { cur--; move(cur, false); }
+    }
+    paint();
+  };
+  window.heroTogglePause = function () { setPaused(!paused); };
+  function tick(now) {
+    const dt = now - last; last = now;
+    if (!paused && !document.hidden && !busy) {
+      elapsed += dt;
+      if (elapsed >= SLIDE_MS) window.heroGo(1);
+    }
+    paint();
+    requestAnimationFrame(tick);
+  }
+  document.addEventListener('visibilitychange', () => { last = performance.now(); });
+  setPaused(paused); paint();
+  requestAnimationFrame(tick);
+})();
 </script>
 </body>
 </html>
