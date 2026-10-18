@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, timedelta, date, time, timezone
 from sqlalchemy import func, or_, text
 from contextlib import contextmanager
 from reportlab.lib.pagesizes import A4
@@ -607,6 +607,7 @@ class Order(db.Model):
     shipping_deadline_at    = db.Column(db.DateTime, nullable=True)
     shipping_reminder_at    = db.Column(db.DateTime, nullable=True)
     pay_started_at          = db.Column(db.DateTime, nullable=True)
+    pay_sessions            = db.Column(db.Text, nullable=True)   # every PayMongo checkout started for this order: {id: {option, fee}}
     shipping_option         = db.Column(db.String(20), nullable=True)
     shipping_fee            = db.Column(db.Float, nullable=True)
     lalamove_fare           = db.Column(db.Float, nullable=True)
@@ -3889,25 +3890,73 @@ def _paymongo_session_paid(checkout_id):
         attrs = res.json()['data']['attributes']
         for pay in (attrs.get('payments') or []):
             pa = pay.get('attributes', {})
-            if pa.get('status') == 'paid':
+            if pa.get('status') in ('paid', 'succeeded'):
                 return True, pay.get('id')
         pi = attrs.get('payment_intent') or {}
         if (pi.get('attributes') or {}).get('status') == 'succeeded':
+            return True, None
+        if attrs.get('status') in ('paid', 'completed'):
             return True, None
     except Exception as e:
         print(f'[paymongo] could not verify checkout session: {e}')
     return False, None
 
 
-def _mark_ship_order_paid(order, checkout_id):
-    """Called after the customer comes back from PayMongo. Only counts when PayMongo itself says it was paid."""
-    if order.paid_at or order.status != 'done_packaging' or not order.shipping_option:
+def _ship_sessions(order):
+    """Every PayMongo checkout started for this order. Each press of Pay opens a new one, so the customer may have
+    paid an earlier one: {checkout id: {'option', 'fee'}}."""
+    try:
+        d = _json_ship.loads(order.pay_sessions or '{}') or {}
+    except ValueError:
+        d = {}
+    if order.payment_ref and order.payment_ref not in d:
+        d[order.payment_ref] = {'option': order.shipping_option, 'fee': order.shipping_fee}
+    return d
+
+
+def _paymongo_find_payment(order):
+    """Last resort for an order whose checkout we lost track of (started before the app remembered every checkout):
+    a PayMongo payment that was paid after the customer pressed Pay, for exactly items + one of the offered
+    shipping prices, and that no other order has claimed. Returns (option, fee, payment id) or None."""
+    if not order.pay_started_at:
+        return None
+    try:
+        headers = {"Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"}
+        res = requests.get(f"{PAYMONGO_API_URL}/payments", params={'limit': 100}, headers=headers, timeout=20)
+        if res.status_code != 200:
+            return None
+        since = (order.pay_started_at - timedelta(hours=8)).replace(tzinfo=timezone.utc).timestamp() - 120
+        wanted = {int(round(((order.total_amount or 0) + float(fee)) * 100)): (opt, float(fee))
+                  for opt, fee in ship_prices(order).items() if fee}
+        claimed = {r[0] for r in db.session.query(Order.paymongo_payment_id).filter(Order.paymongo_payment_id.isnot(None)).all()}
+        for p in res.json().get('data', []):
+            a = p.get('attributes', {})
+            if a.get('status') == 'paid' and (a.get('paid_at') or 0) >= since and a.get('amount') in wanted and p['id'] not in claimed:
+                return wanted[a['amount']][0], wanted[a['amount']][1], p['id']
+    except Exception as e:
+        print(f'[paymongo] payment lookup failed: {e}')
+    return None
+
+
+def _mark_ship_order_paid(order, checkout_id=None):
+    """Called after the customer comes back from PayMongo (and every minute in the background). Only counts when
+    PayMongo itself says one of this order's checkouts was paid, and then the price they actually paid is the one kept."""
+    if order.paid_at or order.status != 'done_packaging':
         return bool(order.paid_at)
-    if not checkout_id or checkout_id != order.payment_ref:
-        return False
-    paid, payment_id = _paymongo_session_paid(checkout_id)
+    paid, payment_id, info = False, None, {}
+    for cid, inf in _ship_sessions(order).items():
+        ok, pid = _paymongo_session_paid(cid)
+        if ok:
+            paid, payment_id, info = True, pid, inf
+            order.payment_ref = cid
+            break
     if not paid:
-        return False
+        found = _paymongo_find_payment(order)
+        if not found:
+            return False
+        paid, info, payment_id = True, {'option': found[0], 'fee': found[1]}, found[2]
+    if info.get('option') in SHIP_OPTION_LABELS and info.get('fee'):
+        order.shipping_option, order.shipping_fee = info['option'], float(info['fee'])
     order.paid_at = ph_now()
     order.paymongo_payment_id = payment_id
     db.session.commit()
@@ -3951,6 +4000,9 @@ def choose_shipping_option(oid):
                     {'name': f"Shipping fee ({SHIP_OPTION_LABELS[option]} · Lalamove {order.shipping_vehicle or 'vehicle'})", 'amount': float(fee)}])
     if not result['success']:
         return jsonify({'success': False, 'error': 'Could not start the GCash payment. Please try again.'}), 502
+    sessions = _ship_sessions(order)
+    sessions[result['checkout_id']] = {'option': option, 'fee': float(fee)}
+    order.pay_sessions = _json_ship.dumps(sessions)
     order.shipping_option = option
     order.shipping_fee = float(fee)
     order.payment_ref = result['checkout_id']
@@ -4044,9 +4096,11 @@ def process_ship_deadlines():
                                      Order.paid_at.is_(None), Order.shipping_deadline_at.isnot(None)).all()
         for o in waiting:
             ref = f'ORD-{o.id:03d}'
+            if (o.payment_ref or o.pay_sessions) and _mark_ship_order_paid(o):
+                continue                                           # paid (maybe the customer closed the tab right after paying)
             if now >= o.shipping_deadline_at:
-                if o.payment_ref and o.shipping_option:
-                    if _mark_ship_order_paid(o, o.payment_ref):        # they paid but never came back to the site
+                if o.payment_ref or o.pay_sessions:
+                    if _mark_ship_order_paid(o):        # they paid but never came back to the site
                         continue
                     if o.pay_started_at and now - o.pay_started_at < timedelta(minutes=PAY_GRACE_MINUTES):
                         continue                                       # still paying: wait for that payment to finish first
@@ -4127,6 +4181,7 @@ with app.app_context():
         "ALTER TABLE `order` ADD COLUMN rider_plate VARCHAR(30)",
         "ALTER TABLE `order` ADD COLUMN rider_model VARCHAR(60)",
         "ALTER TABLE `order` ADD COLUMN pay_started_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN pay_sessions TEXT",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
         "ALTER TABLE `order` ADD COLUMN shipping_started_at DATETIME",

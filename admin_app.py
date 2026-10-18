@@ -366,6 +366,7 @@ class Order(db.Model):
     rider_plate             = db.Column(db.String(30), nullable=True)
     rider_model = db.Column(db.String(60), nullable=True)
     pay_started_at = db.Column(db.DateTime, nullable=True)
+    pay_sessions = db.Column(db.Text, nullable=True)
     lalamove_link           = db.Column(db.String(500), nullable=True)
     shipping_started_at     = db.Column(db.DateTime, nullable=True)
     received_at             = db.Column(db.DateTime, nullable=True)
@@ -8061,6 +8062,7 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN rider_plate VARCHAR(30)",
         "ALTER TABLE `order` ADD COLUMN rider_model VARCHAR(60)",
         "ALTER TABLE `order` ADD COLUMN pay_started_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN pay_sessions TEXT",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
         "ALTER TABLE `order` ADD COLUMN shipping_started_at DATETIME",
