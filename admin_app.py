@@ -69,7 +69,9 @@ def _inject_current_year():
     copyright line reads the real year instead of whatever was hardcoded
     when that page was last touched."""
     return {'current_year': datetime.now().year,
-            'SHOP_ADDRESS': os.getenv('SHOP_ADDRESS', 'Saranay Rd, Brgy 171 Bagumbong, Caloocan City, Metro Manila 1421')}
+            'SHOP_ADDRESS': os.getenv('SHOP_ADDRESS', 'Saranay Rd, Brgy 171 Bagumbong, Caloocan City, Metro Manila 1421'),
+            # where the "Open courier app" buttons go; leave it out of .env and the buttons are hidden
+            'COURIER_APP_URL': os.getenv('COURIER_APP_URL', '')}
 
 # Gmail config
 
@@ -348,7 +350,7 @@ class Order(db.Model):
     is_archived     = db.Column(db.Boolean, default=False)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
     delivered_at    = db.Column(db.DateTime, nullable=True)  # when status actually reached delivered/completed — the return window's start
-    # ── Ship to Address (Lalamove) ──
+    # ── Ship to Address (Courier) ──
     paid_at                 = db.Column(db.DateTime, nullable=True)
     shipping_vehicle        = db.Column(db.String(40), nullable=True)
     shipping_reason         = db.Column(db.String(200), nullable=True)
@@ -4635,7 +4637,7 @@ def api_set_capacity():
 
 
 
-# ═══════════════ SHIP TO ADDRESS (Lalamove) — the shop's side of the flow ═══════════════
+# ═══════════════ SHIP TO ADDRESS (Courier) — the shop's side of the flow ═══════════════
 SHIP_OPTION_LABELS = {'priority': 'Priority', 'regular': 'Regular', 'pooling': 'Pooling'}
 SHIP_ACTIVE = ('confirmed', 'in_progress', 'done_packaging', 'shipping')
 SHIP_VEHICLES = ('Motorcycle', 'Sedan', 'Subcompact SUV')
@@ -4799,7 +4801,7 @@ def ship_send_options(oid):
         if v is None:
             price_bad = True; fields.append(key)
     if price_bad:
-        errors.append('Type the Lalamove price for Priority and Regular, from \u20b11 to \u20b12,000. Pooling can be left blank.')
+        errors.append('Type the Courier price for Priority and Regular, from \u20b11 to \u20b12,000. Pooling can be left blank.')
     v, bad = peso('pooling')
     prices['pooling'] = v
     if bad:
@@ -4827,7 +4829,7 @@ def ship_send_options(oid):
 @login_required
 @require_admin_or_staff
 def ship_start_shipping(oid):
-    """After payment: the vehicle is booked in Lalamove, the order goes to Shipping, and the rider/driver details are saved."""
+    """After payment: the courier is booked, the order goes to Shipping, and the rider/driver details are saved."""
     order, err = _ship_order_or_error(oid, ('done_packaging',))
     if err: return err
     if not order.paid_at:
@@ -4839,17 +4841,15 @@ def ship_start_shipping(oid):
     phone = re.sub(r'[\s-]', '', clean_str(d.get('phone', ''), max_len=20))
     model = clean_str(d.get('model', ''), max_len=60)
     plate = clean_str(d.get('plate', ''), max_len=30).upper()
-    link  = clean_str(d.get('link', ''), max_len=500)
+    link  = ''                       # no tracking link: the courier is booked by hand
     missing, bad, fields = [], [], []
     for key, label, val in (('name', f'{who} name', name), ('phone', f'{who} mobile', phone),
                             ('model', 'motorcycle model' if rtype == 'rider' else 'car model', model),
-                            ('plate', 'plate number', plate), ('link', 'Lalamove tracking link', link)):
+                            ('plate', 'plate number', plate)):
         if not val:
             missing.append(label); fields.append(key)
     if phone and not re.fullmatch(r'09\d{9}', phone):
         bad.append('The mobile number must be 09 followed by 9 digits.'); fields.append('phone')
-    if link and not link.lower().startswith('https://'):
-        bad.append('The tracking link must start with https://'); fields.append('link')
     fare = None
     raw_fare = str(d.get('fare', '') if d.get('fare') is not None else '').replace(',', '').strip()
     if raw_fare:
@@ -4857,7 +4857,7 @@ def ship_start_shipping(oid):
             fare = round(float(raw_fare), 2)
             if fare <= 0: raise ValueError
         except ValueError:
-            bad.append('The Lalamove fare is not a valid amount.'); fields.append('fare')
+            bad.append('The Courier fare is not a valid amount.'); fields.append('fare')
     errors = []
     if missing:
         errors.append('Please add the ' + (', '.join(missing[:-1]) + ' and ' + missing[-1] if len(missing) > 1 else missing[0]) + '.')
@@ -4871,7 +4871,7 @@ def ship_start_shipping(oid):
     order.shipping_started_at = ph_now()
     db.session.commit()
     ref = f'ORD-{order.id:03d}'
-    _t, _m, _s = ship_notice('on_the_way', ref, rider_type=rtype, name=name, model=model, plate=plate, vehicle=order.shipping_vehicle or '')
+    _t, _m, _s = ship_notice('on_the_way', ref, rider_type=rtype, name=name, model=model, plate=plate, vehicle=order.shipping_vehicle or '', link=link)
     _cust = User.query.get(order.user_id)
     mail = ship_on_the_way_email(_cust.fullname if _cust else '', ref, dict(
         rider_type=rtype, name=name, phone=phone, model=model, plate=plate, vehicle=order.shipping_vehicle or '',
@@ -4884,7 +4884,7 @@ def ship_start_shipping(oid):
 @login_required
 @require_admin_or_staff
 def ship_complete(oid):
-    """Completed once the customer confirmed it arrived, or by the shop after checking Lalamove (with the proof saved)."""
+    """Completed once the customer confirmed it arrived, or by the shop after checking Courier (with the proof saved)."""
     order, err = _ship_order_or_error(oid, ('shipping',))
     if err: return err
     d = request.get_json(silent=True) or {}
@@ -4892,9 +4892,9 @@ def ship_complete(oid):
     if not order.received_at:
         errors, fields = [], []
         if not d.get('delivered'):
-            errors.append('Tick the box once Lalamove shows the order as Delivered.'); fields.append('delivered')
+            errors.append('Tick the box once the courier shows the order as Delivered.'); fields.append('delivered')
         if not proof:
-            errors.append('Write what Lalamove shows, like the time it was delivered.'); fields.append('proof')
+            errors.append('Write what the courier shows, like the time it was delivered.'); fields.append('proof')
         if errors:
             return jsonify({'success': False, 'error': errors[0], 'errors': errors, 'fields': fields}), 400
     order.status = 'completed'
@@ -4983,7 +4983,7 @@ def update_order_status(oid):
         return redirect(url_for('admin_dashboard'))
 
     if not _is_pickup:
-        msg = 'Ship to Address orders move through the Lalamove steps: use In Progress, Done Packaging, Send shipping options, Shipping and Completed.'
+        msg = 'Ship to Address orders move through the courier steps: use In Progress, Done Packaging, Send shipping options, Shipping and Completed.'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'error': msg}), 400
         flash(msg, 'danger')
@@ -6494,7 +6494,7 @@ def payments():
         _when = (o.paid_at if _ship and o.paid_at else None) or o.delivered_at or o.created_at
         _items = [{'name': (i.product.name if i.product else 'Unknown'), 'qty': i.quantity, 'price': i.unit_price} for i in o.items]
         if _ship and o.shipping_fee:
-            _items.append({'name': f"Shipping fee ({(o.shipping_option or '').title()} \u00b7 Lalamove {o.shipping_vehicle or ''})", 'qty': 1, 'price': o.shipping_fee})
+            _items.append({'name': f"Shipping fee ({(o.shipping_option or '').title()} \u00b7 Courier {o.shipping_vehicle or ''})", 'qty': 1, 'price': o.shipping_fee})
         _recent.append({'tag': 'SALE' if o.is_instore else 'ORD', 'kind': 'ord', 'id': o.id, 'ref': _ref, 'customer': _name,
                         'amount': _amt, 'method': (o.payment_method or 'cash').lower(), 'paid_at': _when,
                         'ord': {'ref': _ref, 'customer': _name, 'phone': '' if o.is_instore else (o.customer.phone or ''),
@@ -7591,7 +7591,7 @@ def generate_report():
     top_products_sold    = _rpt_detail['top_products']
 
     def order_counts_as_revenue(o):
-        if o.delivery_method == 'ship':      # Lalamove orders count once paid, never on hold, cancelled or refunded
+        if o.delivery_method == 'ship':      # Courier orders count once paid, never on hold, cancelled or refunded
             return bool(o.paid_at) and o.status in ('done_packaging', 'shipping', 'completed')
         return (o.status not in ('cancelled', 'awaiting_payment')
                 and not (o.payment_method == 'cash' and o.delivery_method == 'pickup' and o.status != 'completed'))

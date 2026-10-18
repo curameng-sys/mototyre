@@ -3,7 +3,7 @@
 Shared by app.py (customer site) and admin_app.py (admin/staff site) so a status
 change reads the same no matter which app wrote it.
 
-Ship-to-address (Lalamove) orders walk these tracking steps:
+Ship-to-address (Courier) orders walk these tracking steps:
 
     confirmed -> in_progress -> done_packaging -> shipping -> completed   (or cancelled / refunded)
 
@@ -63,7 +63,7 @@ def with_stamp(message, status='update', when=None, is_ship=True):
 
 
 def _ship_messages(ref, ship_address):
-    """Ship to Address (Lalamove): confirmed -> in_progress -> done_packaging -> shipping -> completed,
+    """Ship to Address (Courier): confirmed -> in_progress -> done_packaging -> shipping -> completed,
     plus cancelled and refunded. The older keys stay so orders placed before this flow still read correctly."""
     dest    = shipping_destination(ship_address)
     to_dest = f' to {dest}' if dest else ''
@@ -73,13 +73,13 @@ def _ship_messages(ref, ship_address):
         'done_packaging': ship_notice('packed', ref)[:2],
         'shipping': (
             'Order On The Way 🚚',
-            f'Your order {ref} has been booked with Lalamove and is on its way{to_dest}.'),
+            f'Your order {ref} has been booked with the courier and is on its way{to_dest}.'),
         'completed': ship_notice('completed', ref)[:2],
         'cancelled': ship_notice('cancelled', ref, by='shop')[:2],
         'refunded': (
             'Order Refunded 💸',
             f'Your order {ref} was cancelled and your payment was refunded to your GCash.'),
-        # orders placed before the Lalamove flow
+        # orders placed before the Courier flow
         'pending': (
             'Order Placed 📝',
             f'Your order {ref} has been placed and is waiting for confirmation. '
@@ -145,7 +145,7 @@ def order_status_message(status, order_id, delivery_method='pickup', ship_addres
     return title, with_stamp(body, status, when, is_ship)
 
 
-# ═══════════════ Ship to Address (Lalamove): the exact customer notifications ═══════════════
+# ═══════════════ Ship to Address (Courier): the exact customer notifications ═══════════════
 # One place for every title/message so the bell, the notification window and the email never disagree.
 # The notification window itself shows "Updated: [date and time]", so these messages don't repeat it.
 
@@ -171,31 +171,32 @@ def ship_notice(kind, ref, **c):
                 f"Your order {ref} is being packed. We'll send your shipping options once it's done.", 'in_progress')
     if kind == 'packed':
         return ('Order Packed ✅',
-                f"{ref} is packed. We're checking Lalamove now and will send your shipping options shortly.", 'done_packaging')
+                f"{ref} is packed. We're checking courier prices now and will send your shipping options shortly.", 'done_packaging')
     if kind in ('options', 'options_updated'):
         title = 'Choose Your Shipping 🚚' if kind == 'options' else 'Shipping Options Updated 🚚'
         return (title,
-                f'{ref} is packed and goes by Lalamove {c.get("vehicle", "")}. {_prices_line(c.get("prices"))}. '
+                f'{ref} is packed and goes by Courier {c.get("vehicle", "")}. {_prices_line(c.get("prices"))}. '
                 f'Choose one and pay by {c.get("deadline", "")}.', 'done_packaging')
     if kind == 'two_hours':
         return ('2 Hours Left to Pay ⏰',
                 f'Choose your shipping and pay for {ref} by {c.get("deadline", "")}. If not, your order will be cancelled automatically.', 'done_packaging')
     if kind == 'paid':
         return ('Payment Received 💳',
-                f"We got your {_peso(c.get('total', 0))} GCash payment for {ref}. We're booking your {c.get('option', '')} Lalamove {c.get('vehicle', '')} now.", 'paid')
+                f"We got your {_peso(c.get('total', 0))} GCash payment for {ref}. We're booking your {c.get('option', '')} Courier {c.get('vehicle', '')} now.", 'paid')
     if kind == 'on_the_way':
         who = 'Driver' if c.get('rider_type') == 'driver' else 'Rider'
         model = c.get('model') or ''
         det = f'{model}, plate {c.get("plate", "")}' if model else f'plate {c.get("plate", "")}'
+        track = ' Open your order to track the delivery.' if c.get('link', True) else ''
         return ('Order On The Way 🚚',
-                f'{who} {c.get("name", "")} ({det}) is bringing {ref} by Lalamove {c.get("vehicle", "")}. Open your order to track it on Lalamove.', 'shipping')
+                f'{who} {c.get("name", "")} ({det}) is bringing {ref} by Courier {c.get("vehicle", "")}.{track}', 'shipping')
     if kind == 'received_check':
         return ('Did You Get Your Order? 📦',
                 f"If {ref} has arrived, open My Orders and press I received my order. If it hasn't, please contact the shop.", 'shipping')
     if kind == 'completed':
         if c.get('by_shop'):
             return ('Order Completed 🎉',
-                    f"We marked {ref} as completed because Lalamove shows it was delivered ({c.get('proof', '')}). "
+                    f"We marked {ref} as completed because the courier shows it was delivered ({c.get('proof', '')}). "
                     f"Didn't get it? Contact the shop right away.", 'completed')
         return ('Order Completed 🎉', f'{ref} is completed. Thank you for shopping with MotoTyres!', 'completed')
     if kind == 'cancelled':
@@ -217,13 +218,8 @@ def ship_notice(kind, ref, **c):
 
 
 def _lala_logo(base_url):
-    """The official Lalamove logo (static/images/lalamove-logo.png) on the left of an email button.
-    Mail apps need an absolute address, so without BASE_URL a small orange mark stands in."""
-    if base_url:
-        return (f'<img src="{base_url.rstrip("/")}/static/images/lalamove-logo.png" width="20" height="20" alt="" '
-                f'style="vertical-align:middle;margin-right:8px;border:0;">')
-    return ('<span style="display:inline-block;background:#fff;color:#f16622;border-radius:50%;width:20px;height:20px;'
-            'line-height:20px;text-align:center;margin-right:8px;font-weight:900;">L</span>')
+    """A small truck mark on the left of an email button."""
+    return '<span style="margin-right:8px;">&#128666;</span>'
 
 
 def ship_email_extra(kind, **c):
@@ -239,22 +235,22 @@ def ship_email_extra(kind, **c):
         who = 'Driver' if c.get('rider_type') == 'driver' else 'Rider'
         car = 'Car model' if c.get('rider_type') == 'driver' else 'Motorcycle model'
         rows = [(who, c.get('name')), ('Mobile', c.get('phone')), (car, c.get('model')), ('Plate number', c.get('plate')),
-                ('Delivery', f"Lalamove {c.get('vehicle', '')} · {c.get('option', '')} shipping")]
+                ('Delivery', f"Courier {c.get('vehicle', '')} · {c.get('option', '')} shipping")]
         tr = ''.join(f'<tr><td style="padding:5px 8px;color:#6b7280;">{k}</td><td style="padding:5px 8px;text-align:right;"><strong>{v}</strong></td></tr>'
                      for k, v in rows)
         return (f'<table style="width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 12px;border:1px solid #eee;">{tr}</table>'
-                f'<p style="margin:0 0 12px;"><a href="{c.get("link", "")}" target="_blank" style="display:inline-block;background:#f16622;color:#fff;text-decoration:none;'
-                f'font-weight:700;padding:10px 18px;border-radius:8px;">{_lala_logo(c.get("base_url"))}Track on Lalamove</a></p>'
+                f'<p style="margin:0 0 12px;"><a href="{c.get("link", "")}" target="_blank" style="display:inline-block;background:#d00019;color:#fff;text-decoration:none;'
+                f'font-weight:700;padding:10px 18px;border-radius:8px;">{_lala_logo(c.get("base_url"))}Track delivery</a></p>'
                 f'<p style="margin:0;color:#6b7280;font-size:13px;">Shipping is already paid. Nothing to pay the {who.lower()}.</p>')
     if kind not in ('options', 'options_updated'):
         return ''
     prices = c.get('prices') or {}
     vehicle, reason = c.get('vehicle', ''), c.get('reason') or ''
     if reason:
-        why = (f'<p style="margin:0 0 10px;">Your order goes by Lalamove <strong>{vehicle}</strong>. Reason: {reason}. '
+        why = (f'<p style="margin:0 0 10px;">Your order goes by Courier <strong>{vehicle}</strong>. Reason: {reason}. '
                f'A {vehicle} costs more than a motorcycle, so the shipping fee is higher.</p>')
     else:
-        why = f'<p style="margin:0 0 10px;">Your order goes by Lalamove <strong>{vehicle}</strong>.</p>'
+        why = f'<p style="margin:0 0 10px;">Your order goes by Courier <strong>{vehicle}</strong>.</p>'
     rows = [('Priority', prices.get('priority'), 'Highest fee · fastest, goes straight to you'),
             ('Regular', prices.get('regular'), 'Standard delivery')]
     if prices.get('pooling'):
@@ -286,7 +282,7 @@ def _first_name(full):
 
 
 def ship_on_the_way_email(customer_name, ref, c):
-    """('Your order ORD-036 is on the way', html) - the rider card, the paid note, the Track on Lalamove button."""
+    """('Your order ORD-036 is on the way', html) - the rider card, the paid note, the Track delivery button."""
     from html import escape
     rider = c.get('rider_type') == 'driver'
     who = 'Driver' if rider else 'Rider'
@@ -297,11 +293,11 @@ def ship_on_the_way_email(customer_name, ref, c):
     opt = f' ({c["option"]})' if c.get('option') else ''
     html = (f'<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#111827;">'
             f'<p>Hi {escape(_first_name(customer_name))},</p>'
-            f'<p>Your order is on the way with Lalamove {escape(c.get("vehicle", ""))}{escape(opt)}.</p>'
+            f'<p>Your order is on the way with Courier {escape(c.get("vehicle", ""))}{escape(opt)}.</p>'
             f'<table style="width:100%;border-collapse:collapse;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;margin:8px 0 14px;">{tr}</table>'
             f"<p>Shipping is already paid, so there's nothing to pay the {who.lower()}.</p>"
-            f'<p style="margin:0 0 14px;"><a href="{c.get("link", "")}" target="_blank" style="display:inline-block;background:#f16622;color:#fff;'
-            f'text-decoration:none;font-weight:700;padding:11px 18px;border-radius:8px;">{_lala_logo(c.get("base_url"))}Track on Lalamove &#8599;</a></p>'
+            + (f'<p style="margin:0 0 14px;"><a href="{c.get("link", "")}" target="_blank" style="display:inline-block;background:#d00019;color:#fff;'
+               f'text-decoration:none;font-weight:700;padding:11px 18px;border-radius:8px;">{_lala_logo(c.get("base_url"))}Track delivery &#8599;</a></p>' if c.get('link') else '') +
             f'<p>Once your order arrives, open My Orders and press <strong>I received my order</strong>.</p>'
             f'<p style="color:#6b7280;font-size:12px;">- MotoTyres North Caloocan</p></div>')
     return f'Your order {ref} is on the way', html

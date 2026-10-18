@@ -246,7 +246,7 @@
     .badge-cancelled       { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
     .badge-processing      { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
     .badge-shipped         { background: #ecfeff; color: #155e75; border: 1px solid #a5f3fc; }
-    /* Ship to Address (Lalamove) statuses */
+    /* Ship to Address (Courier) statuses */
     .badge-s-confirmed      { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
     .badge-s-in_progress    { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
     .badge-s-done_packaging { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
@@ -269,8 +269,8 @@
     .so-addr { border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.75rem; background:#fff; margin-bottom:0.55rem; }
     .so-addr .so-addr-h { display:flex; justify-content:space-between; align-items:center; gap:0.5rem; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin-bottom:0.25rem; }
     .so-copy { padding:0.15rem 0.6rem; border:1px solid var(--border); background:#f3f4f6; border-radius:6px; font-size:0.68rem; font-weight:700; cursor:pointer; font-family:inherit; color:var(--text); }
-    .so-lala { display:inline-flex; align-items:center; gap:0.5rem; padding:0.45rem 0.9rem; border-radius:8px; background:#fff; color:#f16622; border:1.5px solid #f16622; font-weight:700; font-size:0.8rem; text-decoration:none; }
-    .so-lala.fill { background:#f16622; color:#fff; }
+    .so-lala { display:inline-flex; align-items:center; gap:0.5rem; padding:0.45rem 0.9rem; border-radius:8px; background:#fff; color:#d00019; border:1.5px solid #d00019; font-weight:700; font-size:0.8rem; text-decoration:none; }
+    .so-lala.fill { background:#d00019; color:#fff; }
     .lala-logo { width:20px; height:20px; object-fit:contain; flex-shrink:0; }
     .lbl-sub { text-transform:none; font-weight:400; letter-spacing:0; color:var(--muted); }
     .so-ab { width:26px; height:26px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; flex-shrink:0; }
@@ -1552,7 +1552,7 @@
                       {% if o.received_at %}<span class="ship-line ok">Customer received it · {{ o.received_at|when }}</span>{% endif %}
                     {% elif o.status == 'completed' %}
                       {% if o.completed_by_shop %}
-                        <span class="ship-line">Completed by the shop · Lalamove: {{ o.completion_proof }}</span>
+                        <span class="ship-line">Completed by the shop · Courier: {{ o.completion_proof }}</span>
                       {% else %}
                         <span class="ship-line ok">Customer confirmed it arrived</span>
                       {% endif %}
@@ -1581,17 +1581,17 @@
                     {% if sh %}
                       {% if o.shipping_option and (o.paid_at or o.status == 'refunded') %}
                         <span class="ship-line" style="color:#374151;font-weight:700;">{{ o.shipping_option|title }} · ₱{{ '{:,.2f}'.format(o.shipping_fee or 0) }}</span>
-                        <span class="ship-line">Lalamove {{ o.shipping_vehicle }} · customer's choice</span>
+                        <span class="ship-line">Courier {{ o.shipping_vehicle }} · customer's choice</span>
                         {% if o.lalamove_fare %}
                           {% set sh_diff = (o.shipping_fee or 0) - o.lalamove_fare %}
                           {% if sh_diff >= 0 %}
-                            <span class="ship-line ok">Lalamove charged ₱{{ '{:,.2f}'.format(o.lalamove_fare) }} · shop keeps ₱{{ '{:,.2f}'.format(sh_diff) }}</span>
+                            <span class="ship-line ok">Courier charged ₱{{ '{:,.2f}'.format(o.lalamove_fare) }} · shop keeps ₱{{ '{:,.2f}'.format(sh_diff) }}</span>
                           {% else %}
-                            <span class="ship-line bad">Lalamove charged ₱{{ '{:,.2f}'.format(o.lalamove_fare) }} · shop covers ₱{{ '{:,.2f}'.format(-sh_diff) }}</span>
+                            <span class="ship-line bad">Courier charged ₱{{ '{:,.2f}'.format(o.lalamove_fare) }} · shop covers ₱{{ '{:,.2f}'.format(-sh_diff) }}</span>
                           {% endif %}
                         {% endif %}
                       {% elif sh_sent and o.status == 'done_packaging' %}
-                        <span class="ship-line" style="color:#374151;font-weight:700;">Lalamove {{ o.shipping_vehicle }} · {{ o.shipping_reason }}</span>
+                        <span class="ship-line" style="color:#374151;font-weight:700;">Courier {{ o.shipping_vehicle }} · {{ o.shipping_reason }}</span>
                         <span class="ship-line">Priority ₱{{ '{:,.2f}'.format(sp.get('priority') or 0) }} · Regular ₱{{ '{:,.2f}'.format(sp.get('regular') or 0) }} · Pooling {% if sp.get('pooling') %}₱{{ '{:,.2f}'.format(sp.get('pooling')) }}{% else %}n/a{% endif %}</span>
                         <span class="ship-line">Sent {{ o.shipping_options_sent_at|when }} · waiting for the customer</span>
                       {% elif o.status in ['confirmed','in_progress','done_packaging'] %}
@@ -1655,9 +1655,9 @@
                   {% elif o.status == 'done_packaging' and not o.paid_at %}
                     <span class="ship-line">Shipping unlocks once the customer pays. No payment in 24 hours and it cancels by itself.</span>
                   {% elif o.status == 'done_packaging' %}
-                    <span class="ship-line">Book a Lalamove {{ o.shipping_vehicle }}, then choose Shipping. Need to cancel? Choose Cancelled (refund).</span>
+                    <span class="ship-line">Book a Courier {{ o.shipping_vehicle }}, then choose Shipping. Need to cancel? Choose Cancelled (refund).</span>
                   {% elif o.status == 'shipping' and not o.received_at %}
-                    <span class="ship-line">If Lalamove shows Delivered, you can set Completed.</span>
+                    <span class="ship-line">If the courier shows Delivered, you can set Completed.</span>
                   {% elif o.status == 'shipping' %}
                     <span class="ship-line ok">The customer received it. Set to Completed.</span>
                   {% endif %}
@@ -2818,9 +2818,6 @@
       <div class="form-group"><label>Item ordered</label><input type="text" id="so-item" readonly style="background:#f3f4f6;font-weight:600;"></div>
       <div class="form-group"><label>Quantity</label><input type="text" id="so-qty" readonly style="background:#f3f4f6;font-weight:600;"></div>
     </div>
-    <a class="so-lala" href="https://www.lalamove.com/en-ph/personal" target="_blank" rel="noopener" style="margin-bottom:1rem;">
-      <img class="lala-logo" src="/static/images/lalamove-logo.png" alt="" width="20" height="20" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%2712%27 r=%2712%27 fill=%27%23f16622%27/%3E%3Cpath d=%27M8 5h3v11h5v3H8z%27 fill=%27%23fff%27/%3E%3C/svg%3E'">
-      Open Lalamove &#8599;</a>
     <div class="form-group"><label>Vehicle <span class="lbl-sub">(based on the item and quantity)</span></label>
       <select id="so-vehicle" onchange="shipVehicleChanged()">
         <option value="">Choose a vehicle</option>
@@ -2835,7 +2832,7 @@
       <input type="text" id="so-reason-custom" maxlength="120" placeholder="Type the reason (up to 120 characters)" style="display:none;margin-top:0.4rem;" oninput="shipPreview()"></div>
     <div id="so-preview" style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.8rem;color:#374151;margin-bottom:1rem;display:none;"></div>
 
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">Check the prices in Lalamove</div>
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">Check the prices in the courier app</div>
     <div class="so-addr" style="display:flex;gap:0.7rem;align-items:flex-start;"><span class="so-ab" style="background:#111827;">A</span>
       <div style="flex:1;min-width:0;"><div class="so-addr-h" style="margin-bottom:0.15rem;"><span>Pickup · the shop</span></div>
       <div id="so-addr-a" style="font-size:0.84rem;color:var(--text);white-space:pre-line;">MotoTyres North Caloocan, {{ SHOP_ADDRESS }}</div></div>
@@ -2845,20 +2842,20 @@
       <div id="so-addr-b" style="font-size:0.84rem;color:var(--text);white-space:pre-line;"></div></div>
       <button type="button" class="so-copy" onclick="shipCopy('so-addr-b', this)">Copy</button></div>
     <ol style="font-size:0.8rem;color:#374151;padding-left:1.2rem;margin:0.7rem 0 1rem;line-height:1.6;">
-      <li>Open Lalamove (button above) and choose <strong id="so-step-vehicle">the vehicle you picked</strong>.</li>
+      <li>Open your courier app and choose <strong id="so-step-vehicle">the vehicle you picked</strong>.</li>
       <li>Set A as the pickup and B as the drop-off.</li>
-      <li>Type the prices Lalamove shows below. Don't book yet. Book only after the customer pays.</li>
+      <li>Type the prices Courier shows below. Don't book yet. Book only after the customer pays.</li>
     </ol>
 
     <div class="so-price"><div><b>Priority</b><small>Highest fee · fastest, goes straight to the customer</small></div>
       <div class="so-money"><span>₱</span><input type="text" inputmode="numeric" id="so-priority" oninput="shipPriceInput(this)"></div></div>
     <div class="so-price"><div><b>Regular</b><small>Standard delivery</small></div>
       <div class="so-money"><span>₱</span><input type="text" inputmode="numeric" id="so-regular" oninput="shipPriceInput(this)"></div></div>
-    <div class="so-price"><div><b>Pooling <span class="lbl-sub">(optional)</span></b><small>Lowest fee · may take longer, can carry other orders. Leave blank if Lalamove doesn't show it.</small></div>
+    <div class="so-price"><div><b>Pooling <span class="lbl-sub">(optional)</span></b><small>Lowest fee · may take longer, can carry other orders. Leave blank if the courier doesn't show it.</small></div>
       <div class="so-money"><span>₱</span><input type="text" inputmode="numeric" id="so-pooling" oninput="shipPriceInput(this)"></div></div>
 
     <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.7rem 0.85rem;font-size:0.76rem;color:#713f12;margin:0.9rem 0 1rem;line-height:1.55;">
-      <strong>If Lalamove's price changes:</strong> the customer pays the price you send here, and it won't change after they pay. If Lalamove charges more or less when you book, the shop covers or keeps the difference. If the price changes a lot before the customer pays, press <strong>Edit options</strong> to send the new prices.</div>
+      <strong>If the courier's price changes:</strong> the customer pays the price you send here, and it won't change after they pay. If the courier charges more or less when you book, the shop covers or keeps the difference. If the price changes a lot before the customer pays, press <strong>Edit options</strong> to send the new prices.</div>
     <div id="so-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
     <div style="display:flex;gap:0.6rem;">
       <button type="button" class="btn-secondary-custom" style="flex:1;" onclick="closeModal('modal-ship-options')">Cancel</button>
@@ -2871,16 +2868,12 @@
   <div class="modal-box" style="width:480px;">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="ss-title">Rider details</div>
     <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 0.8rem;line-height:1.5;" id="ss-sub"></div>
-    <a class="so-lala" href="https://www.lalamove.com/en-ph/personal" target="_blank" rel="noopener" style="margin-bottom:1rem;">
-      <img class="lala-logo" src="/static/images/lalamove-logo.png" alt="" width="20" height="20" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23f16622'/%3E%3Cpath d='M8 5h3v11h5v3H8z' fill='%23fff'/%3E%3C/svg%3E'">
-      Open Lalamove &#8599;</a>
     <input type="hidden" id="ss-oid"><input type="hidden" id="ss-fee"><input type="hidden" id="ss-car">
     <div class="form-group"><label><span class="ss-who">Rider</span> name</label><input type="text" id="ss-name" maxlength="100" oninput="this.classList.remove('so-err-field')"></div>
     <div class="form-group"><label><span class="ss-who">Rider</span> mobile</label><input type="text" inputmode="numeric" id="ss-phone" maxlength="11" placeholder="09XXXXXXXXX" oninput="this.value=this.value.replace(/[^0-9]/g,'');this.classList.remove('so-err-field')"></div>
     <div class="form-group"><label id="ss-model-label">Motorcycle model</label><input type="text" id="ss-model" maxlength="60" oninput="this.classList.remove('so-err-field')"></div>
     <div class="form-group"><label>Plate number</label><input type="text" id="ss-plate" maxlength="30" style="text-transform:uppercase;" placeholder="ABC 1234" oninput="this.value=this.value.toUpperCase();this.classList.remove('so-err-field')"></div>
-    <div class="form-group"><label>Lalamove tracking link</label><input type="text" id="ss-link" placeholder="https://" maxlength="500" oninput="this.classList.remove('so-err-field')"></div>
-    <div class="form-group"><label>Fare Lalamove charged (optional)</label><input type="text" inputmode="decimal" id="ss-fare" placeholder="0.00" oninput="this.value=this.value.replace(/[^0-9.]/g,'');this.classList.remove('so-err-field');shipFareNote()"></div>
+    <div class="form-group"><label>Fare Courier charged (optional)</label><input type="text" inputmode="decimal" id="ss-fare" placeholder="0.00" oninput="this.value=this.value.replace(/[^0-9.]/g,'');this.classList.remove('so-err-field');shipFareNote()"></div>
     <div style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.78rem;color:#374151;margin-bottom:1rem;line-height:1.6;">
       <div id="ss-feebox"></div><div id="ss-farebox" style="font-weight:700;"></div></div>
     <div id="ss-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
@@ -2897,20 +2890,17 @@
     <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 0.8rem;line-height:1.5;" id="sc-sub"></div>
     <input type="hidden" id="sc-oid">
     <ol style="font-size:0.78rem;color:#374151;padding-left:1.2rem;margin:0 0 0.9rem;line-height:1.55;">
-      <li>Open this order in your Lalamove app, or open the tracking link below.</li>
+      <li>Check this order's booking with the courier.</li>
       <li>Check that it says Delivered, and look at the proof of delivery, like the photo or the name of who received it.</li>
-      <li>Tick the box and write what Lalamove shows. It's saved with the order as proof.</li>
+      <li>Tick the box and write what Courier shows. It's saved with the order as proof.</li>
     </ol>
-    <a class="so-lala fill" id="sc-link" href="#" target="_blank" rel="noopener" style="margin-bottom:1rem;">
-      <img class="lala-logo" src="/static/images/lalamove-logo.png" alt="" width="20" height="20" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23f16622'/%3E%3Cpath d='M8 5h3v11h5v3H8z' fill='%23fff'/%3E%3C/svg%3E'">
-      Open tracking link &#8599;</a>
     <label id="sc-check-wrap" style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.82rem;font-weight:600;color:var(--text);margin-bottom:0.9rem;cursor:pointer;border:1px solid transparent;border-radius:6px;padding:0.2rem;">
       <input type="checkbox" id="sc-delivered" style="margin-top:3px;" onchange="document.getElementById('sc-check-wrap').classList.remove('so-err-field')">
-      <span>Lalamove shows this order as Delivered</span></label>
-    <div class="form-group"><label>What Lalamove shows (saved as proof)</label>
+      <span>The courier shows this order as Delivered</span></label>
+    <div class="form-group"><label>What the courier shows (saved as proof)</label>
       <textarea id="sc-proof" rows="3" maxlength="500" placeholder="Delivered 2:41 PM, photo of the receiver" oninput="this.classList.remove('so-err-field')"></textarea></div>
     <div style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.76rem;color:#374151;margin-bottom:1rem;line-height:1.5;">
-      The customer gets a notification and an email saying their order was completed because Lalamove shows it was delivered. If they didn't get it, they can contact the shop.</div>
+      The customer gets a notification and an email saying their order was completed because the courier shows it was delivered. If they didn't get it, they can contact the shop.</div>
     <div id="sc-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
     <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
       <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-complete')">Go back</button>
@@ -2929,7 +2919,7 @@
         <option value="">Choose a reason</option>
         <option>The item got damaged while packing</option>
         <option>The item is out of stock</option>
-        <option>Lalamove can't deliver to this address</option>
+        <option>The courier can't deliver to this address</option>
         <option>The customer asked to cancel</option>
         <option value="__other">Other</option>
       </select>
@@ -2944,7 +2934,7 @@
       <input type="checkbox" id="sx-restock" checked style="margin-top:3px;"><span>Put the item back in stock</span></label>
     <div id="sx-restock-note" style="display:none;font-size:0.72rem;color:#92400e;margin:0 0 0.8rem 1.4rem;">Unticked because the item is damaged or not in the shop. Tick it if it can still be sold.</div>
     <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.6rem 0.8rem;font-size:0.74rem;color:#713f12;margin:0.8rem 0 1rem;line-height:1.5;">
-      If you already booked Lalamove for this order, cancel that booking in the Lalamove app too.</div>
+      If you already booked Courier for this order, cancel that booking in the courier app too.</div>
     <div id="sx-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
     <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
       <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-cancel')">Keep order</button>
@@ -7894,7 +7884,7 @@ fetchAdminNotifications();
 })();
 
 // ── Toast notification ──────────────────────────────────────────────────────
-// ── Ship to Address (Lalamove) steps ───────────────────────────────────────
+// ── Ship to Address (Courier) steps ───────────────────────────────────────
 (function popupBehaviour() {
   document.querySelectorAll('#modal-ship-options, #modal-ship-start, #modal-ship-complete, #modal-ship-cancel').forEach(m => {
     const box = m.querySelector('.modal-box'); if (!box || box.querySelector('.pop-x')) return;
@@ -7958,12 +7948,12 @@ async function shipSave(btn) {
     const who = car ? 'Driver' : 'Rider', fee = Number(row.dataset.fee || 0);
     shipErr('ss-err', ''); document.getElementById('ss-oid').value = oid; document.getElementById('ss-fee').value = fee; document.getElementById('ss-car').value = car ? '1' : '';
     document.querySelectorAll('#modal-ship-start .so-err-field').forEach(x => x.classList.remove('so-err-field'));
-    ['ss-name','ss-phone','ss-model','ss-plate','ss-link','ss-fare'].forEach(i => document.getElementById(i).value = '');
+    ['ss-name','ss-phone','ss-model','ss-plate','ss-fare'].forEach(i => document.getElementById(i).value = '');
     document.getElementById('ss-title').textContent = who + ' details';
     document.querySelectorAll('#modal-ship-start .ss-who').forEach(e => e.textContent = who);
     document.getElementById('ss-model-label').textContent = car ? 'Car model' : 'Motorcycle model';
     document.getElementById('ss-model').placeholder = car ? 'Toyota Vios / Toyota Rush' : 'Honda Click 125i';
-    document.getElementById('ss-sub').textContent = row.dataset.ref + ' · ' + row.dataset.customer + ' · ' + (row.dataset.option || '') + ' shipping, customer paid ₱' + fee.toLocaleString('en-PH', {minimumFractionDigits: 2}) + '. Book a Lalamove ' + row.dataset.vehicle + ' first, then copy the details here.';
+    document.getElementById('ss-sub').textContent = row.dataset.ref + ' · ' + row.dataset.customer + ' · ' + (row.dataset.option || '') + ' shipping, customer paid ₱' + fee.toLocaleString('en-PH', {minimumFractionDigits: 2}) + '. Book a Courier ' + row.dataset.vehicle + ' first, then copy the details here.';
     document.getElementById('ss-feebox').textContent = 'Shipping fee the customer paid: ₱' + fee.toLocaleString('en-PH', {minimumFractionDigits: 2});
     shipFareNote();
     openModal('modal-ship-start');
@@ -7977,9 +7967,7 @@ async function shipSave(btn) {
     shipErr('sc-err', ''); document.getElementById('sc-oid').value = oid;
     document.getElementById('sc-proof').value = ''; document.getElementById('sc-delivered').checked = false;
     document.querySelectorAll('#modal-ship-complete .so-err-field').forEach(x => x.classList.remove('so-err-field'));
-    document.getElementById('sc-sub').textContent = row.dataset.ref + ' · ' + row.dataset.customer + " hasn't pressed I received my order yet. Check Lalamove before you complete it.";
-    const lk = document.getElementById('sc-link'), has = !!row.dataset.link;
-    lk.href = has ? row.dataset.link : '#'; lk.style.display = has ? 'inline-flex' : 'none';
+    document.getElementById('sc-sub').textContent = row.dataset.ref + ' · ' + row.dataset.customer + " hasn't pressed I received my order yet. Check the courier's tracking before you complete it.";
     openModal('modal-ship-complete');
   } else if (v === 'cancelled') {
     const paid = row.dataset.paid === '1', money = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits: 2});
@@ -8032,9 +8020,9 @@ function shipPreview() {
   const esc = t => String(t).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
   if (!v) { box.style.display = 'none'; return; }
   box.style.display = 'block';
-  if (v === 'Motorcycle') { box.innerHTML = 'The customer will see: “Your order goes by <strong>Lalamove Motorcycle</strong>.”'; return; }
+  if (v === 'Motorcycle') { box.innerHTML = 'The customer will see: “Your order goes by <strong>Courier Motorcycle</strong>.”'; return; }
   const why = esc(shipReasonText() || '[reason]');
-  box.innerHTML = 'The customer will see: “Your order goes by <strong>Lalamove ' + esc(v) + '</strong>. Reason: ' + why + '. A ' + esc(v) + ' costs more than a motorcycle, so the shipping fee is higher.”';
+  box.innerHTML = 'The customer will see: “Your order goes by <strong>Courier ' + esc(v) + '</strong>. Reason: ' + why + '. A ' + esc(v) + ' costs more than a motorcycle, so the shipping fee is higher.”';
 }
 function shipPriceInput(el) { el.value = el.value.replace(/[^0-9]/g, ''); el.classList.remove('so-err-field'); }
 function shipCopy(id, btn) {
@@ -8091,15 +8079,15 @@ function shipFareNote() {
   const fare = parseFloat(raw), m = n => '₱' + Math.abs(n).toLocaleString('en-PH', {minimumFractionDigits: 2});
   if (!raw || isNaN(fare) || fare <= 0) { box.textContent = ''; return; }
   const diff = Math.round((fee - fare) * 100) / 100;
-  if (diff === 0) { box.style.color = '#15803d'; box.textContent = 'Lalamove charged ' + m(fare) + ' · Exact match'; }
-  else if (diff > 0) { box.style.color = '#15803d'; box.textContent = 'Lalamove charged ' + m(fare) + ' · Shop keeps ' + m(diff); }
-  else { box.style.color = '#b91c1c'; box.textContent = 'Lalamove charged ' + m(fare) + ' · Shop covers ' + m(diff); }
+  if (diff === 0) { box.style.color = '#15803d'; box.textContent = 'Courier charged ' + m(fare) + ' · Exact match'; }
+  else if (diff > 0) { box.style.color = '#15803d'; box.textContent = 'Courier charged ' + m(fare) + ' · Shop keeps ' + m(diff); }
+  else { box.style.color = '#b91c1c'; box.textContent = 'Courier charged ' + m(fare) + ' · Shop covers ' + m(diff); }
 }
 async function shipSubmitStart() {
   const btn = document.getElementById('ss-go');
   const car = document.getElementById('ss-car').value === '1', who = (car ? 'driver' : 'rider');
-  const f = {name: 'ss-name', phone: 'ss-phone', model: 'ss-model', plate: 'ss-plate', link: 'ss-link'};
-  const labels = {name: who + ' name', phone: who + ' mobile', model: car ? 'car model' : 'motorcycle model', plate: 'plate number', link: 'Lalamove tracking link'};
+  const f = {name: 'ss-name', phone: 'ss-phone', model: 'ss-model', plate: 'ss-plate'};
+  const labels = {name: who + ' name', phone: who + ' mobile', model: car ? 'car model' : 'motorcycle model', plate: 'plate number'};
   document.querySelectorAll('#modal-ship-start .so-err-field').forEach(x => x.classList.remove('so-err-field'));
   const missing = Object.keys(f).filter(k => !document.getElementById(f[k]).value.trim());
   if (missing.length) {
@@ -8112,7 +8100,7 @@ async function shipSubmitStart() {
   const r = await shipPost(document.getElementById('ss-oid').value, 'start', {
     name: document.getElementById('ss-name').value, phone: document.getElementById('ss-phone').value,
     model: document.getElementById('ss-model').value, plate: document.getElementById('ss-plate').value,
-    link: document.getElementById('ss-link').value, fare: document.getElementById('ss-fare').value
+    fare: document.getElementById('ss-fare').value
   });
   btn.disabled = false;
   if (r.ok) { closeModal('modal-ship-start'); shipReload('Order is now Shipping.'); return; }
@@ -8126,8 +8114,8 @@ async function shipSubmitComplete() {
   document.querySelectorAll('#modal-ship-complete .so-err-field').forEach(x => x.classList.remove('so-err-field'));
   const delivered = document.getElementById('sc-delivered').checked, proof = document.getElementById('sc-proof').value.trim();
   const errs = [];
-  if (!delivered) { errs.push('Tick the box once Lalamove shows the order as Delivered.'); document.getElementById('sc-check-wrap').classList.add('so-err-field'); }
-  if (!proof) { errs.push('Write what Lalamove shows, like the time it was delivered.'); document.getElementById('sc-proof').classList.add('so-err-field'); }
+  if (!delivered) { errs.push('Tick the box once the courier shows the order as Delivered.'); document.getElementById('sc-check-wrap').classList.add('so-err-field'); }
+  if (!proof) { errs.push('Write what the courier shows, like the time it was delivered.'); document.getElementById('sc-proof').classList.add('so-err-field'); }
   if (errs.length) { const e = document.getElementById('sc-err'); e.innerHTML = errs.map(m => '<div>' + m + '</div>').join(''); e.style.display = 'block'; return; }
   shipErr('sc-err', '');
   btn.disabled = true;

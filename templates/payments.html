@@ -564,7 +564,7 @@
           </td>
           <td class="date-cell">{% set o_paid = (o.paid_at if o.delivery_method == 'ship' and o.paid_at else None) or o.delivered_at or o.created_at %}{{ o_paid.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o_paid.strftime('%I:%M %p') }}</span></td>
           <td>
-            <button class="btn-receipt" onclick="printOrdReceipt('{{ o_ref }}', '{{ o_name|e }}', '{{ o_phone }}', {{ o_total }}, '{{ o.payment_method }}', '{{ o_paid.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}{% if o.delivery_method == 'ship' and o.shipping_fee %},{'name':'Shipping fee ({{ (o.shipping_option or '')|title }} · Lalamove {{ o.shipping_vehicle or '' }})','qty':1,'price':{{ o.shipping_fee }}}{% endif %}], '{{ o.delivery_method }}', {{ 'true' if o.is_instore else 'false' }})">
+            <button class="btn-receipt" onclick="printOrdReceipt('{{ o_ref }}', '{{ o_name|e }}', '{{ o_phone }}', {{ o_total }}, '{{ o.payment_method }}', '{{ o_paid.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}{% if o.delivery_method == 'ship' and o.shipping_fee %},{'name':'Shipping fee ({{ (o.shipping_option or '')|title }} · Courier {{ o.shipping_vehicle or '' }})','qty':1,'price':{{ o.shipping_fee }}}{% endif %}], '{{ o.delivery_method }}', {{ 'true' if o.is_instore else 'false' }})">
               {{ rcpt_icon }} Receipt
             </button>
           </td>

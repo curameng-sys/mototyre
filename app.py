@@ -229,7 +229,7 @@ def send_order_receipt_email(order, override_email=None):
             _subj, _html = ship_receipt_email(
                 user.fullname, f"ORD-{order.id:03d}",
                 [((i.product.name if i.product else 'Product'), i.quantity, i.unit_price * i.quantity) for i in order.items],
-                f"Shipping fee ({SHIP_OPTION_LABELS.get(order.shipping_option, order.shipping_option)} · Lalamove {order.shipping_vehicle or ''})",
+                f"Shipping fee ({SHIP_OPTION_LABELS.get(order.shipping_option, order.shipping_option)} · Courier {order.shipping_vehicle or ''})",
                 order.shipping_fee, (order.total_amount or 0) + (order.shipping_fee or 0))
             _send_gmail(recipient_email, _subj, _html)
             order.receipt_sent = True
@@ -245,7 +245,7 @@ def send_order_receipt_email(order, override_email=None):
         order_date = order.created_at.strftime("%B %d, %Y at %I:%M %p") if order.created_at else "—"
         order_num  = f"ORD-{order.id:03d}"
         if order.delivery_method == 'ship' and order.paid_at and order.shipping_fee:
-            ship_label = f"Shipping fee ({SHIP_OPTION_LABELS.get(order.shipping_option, order.shipping_option)} · Lalamove {order.shipping_vehicle or ''})"
+            ship_label = f"Shipping fee ({SHIP_OPTION_LABELS.get(order.shipping_option, order.shipping_option)} · Courier {order.shipping_vehicle or ''})"
             ship_value = f"&#8369;{order.shipping_fee:,.2f}"
             grand_total = (order.total_amount or 0) + (order.shipping_fee or 0)
         else:
@@ -598,7 +598,7 @@ class Order(db.Model):
     is_archived     = db.Column(db.Boolean, default=False)
     receipt_sent    = db.Column(db.Boolean, default=False)
     delivered_at    = db.Column(db.DateTime, nullable=True)  # when status actually reached delivered/completed — the return window's start
-    # ── Ship to Address (Lalamove) ──
+    # ── Ship to Address (Courier) ──
     paid_at                 = db.Column(db.DateTime, nullable=True)
     shipping_vehicle        = db.Column(db.String(40), nullable=True)
     shipping_reason         = db.Column(db.String(200), nullable=True)
@@ -2089,7 +2089,7 @@ def build_transactions(user):
         if o.payment_method not in ('cash', 'gcash') or not o.items:
             continue
         ship_flow = o.delivery_method == 'ship'
-        if ship_flow and not o.paid_at:        # Lalamove orders only count once the GCash payment really went through
+        if ship_flow and not o.paid_at:        # Courier orders only count once the GCash payment really went through
             # ...but the customer still sees them: "On hold" while waiting, "No charge" once cancelled.
             names = ', '.join((i.product.name if i.product else 'Product') for i in o.items)
             if o.status in ('confirmed', 'in_progress', 'done_packaging'):
@@ -2434,7 +2434,7 @@ def book_multiple_services():
     })
 
 
-MAX_ONLINE_QTY = 10      # one Lalamove delivery: up to 10 of each item online
+MAX_ONLINE_QTY = 10      # one courier delivery: up to 10 of each item online
 
 
 def _check_online_qty(product, qty):
@@ -2443,7 +2443,7 @@ def _check_online_qty(product, qty):
         return 'Type how many you want. You need at least 1 to check out.'
     if qty > MAX_ONLINE_QTY:
         return (f'{qty} is a bulk order. You can order up to {MAX_ONLINE_QTY} of this item online, so your order fits one '
-                f'Lalamove delivery. For {MAX_ONLINE_QTY + 1} or more, please contact the shop or visit MotoTyres North '
+                f'courier delivery. For {MAX_ONLINE_QTY + 1} or more, please contact the shop or visit MotoTyres North '
                 f'Caloocan so we can arrange it.')
     if qty > (product.stock or 0):
         return f'Only {product.stock or 0} left in stock of {product.name}. Please lower the amount.'
@@ -3681,7 +3681,7 @@ def payment_success():
             order = Order.query.get(int(order_id))
             if order and order.delivery_method == 'ship' and order.status == 'done_packaging':
                 if _mark_ship_order_paid(order, checkout_id):
-                    flash("GCash payment successful. Thank you! We'll book your Lalamove delivery next.", 'success')
+                    flash("GCash payment successful. Thank you! We'll book your courier delivery next.", 'success')
                 else:
                     flash('We could not confirm your payment yet. If you paid, it will show up in a moment.', 'warning')
             elif order and order.status == 'awaiting_payment':
@@ -3848,7 +3848,7 @@ def api_services():
 
 
 
-# ═══════════════ SHIP TO ADDRESS (Lalamove) — the customer's side of the flow ═══════════════
+# ═══════════════ SHIP TO ADDRESS (Courier) — the customer's side of the flow ═══════════════
 import json as _json_ship
 
 SHIP_OPTION_LABELS = {'priority': 'Priority', 'regular': 'Regular', 'pooling': 'Pooling'}
@@ -3969,7 +3969,7 @@ def _mark_ship_order_paid(order, checkout_id=None):
         _who = (User.query.get(order.user_id).fullname if User.query.get(order.user_id) else 'The customer')
         send_notification(admin.id, f'{ref} paid · ₱{total:,.2f}',
             f'{_who} chose {label} shipping (₱{(order.shipping_fee or 0):,.2f}) and paid ₱{total:,.2f} with GCash via PayMongo. '
-            f'Book a Lalamove {order.shipping_vehicle or "vehicle"}, then set the order to Shipping.',
+            f'Book a Courier {order.shipping_vehicle or "vehicle"}, then set the order to Shipping.',
             type='order', status='paid', order_id=order.id)
     send_order_receipt_email(order)
     return True
@@ -3997,7 +3997,7 @@ def choose_shipping_option(oid):
     desc = f"MotoTyres Order #{order.id:03d}: {items_desc} + {SHIP_OPTION_LABELS[option]} shipping"
     result = create_gcash_payment(amount=amount, description=desc[:100], order_id=order.id, origin=request.host_url,
         line_items=[{'name': f"Subtotal ({items_desc})"[:100], 'amount': float(order.total_amount or 0)},
-                    {'name': f"Shipping fee ({SHIP_OPTION_LABELS[option]} · Lalamove {order.shipping_vehicle or 'vehicle'})", 'amount': float(fee)}])
+                    {'name': f"Shipping fee ({SHIP_OPTION_LABELS[option]} · Courier {order.shipping_vehicle or 'vehicle'})", 'amount': float(fee)}])
     if not result['success']:
         return jsonify({'success': False, 'error': 'Could not start the GCash payment. Please try again.'}), 502
     sessions = _ship_sessions(order)
@@ -4013,7 +4013,7 @@ def choose_shipping_option(oid):
 
 SHIP_STATUS_LABELS = {'confirmed': 'Confirmed', 'in_progress': 'In Progress', 'done_packaging': 'Done Packaging',
                       'shipping': 'Shipping', 'completed': 'Completed', 'refunded': 'Refunded', 'cancelled': 'Cancelled'}
-# orders placed before the Lalamove flow keep working: their old statuses read as the nearest new one
+# orders placed before the Courier flow keep working: their old statuses read as the nearest new one
 _LEGACY_SHIP = {'pending': 'confirmed', 'awaiting_payment': 'confirmed', 'processing': 'in_progress',
                 'shipped': 'shipping', 'delivered': 'completed'}
 
