@@ -922,6 +922,17 @@ def check_day_before_reminders():
             print(f'[DAY-BEFORE REMINDER] Sent for booking #{b.id} to user {b.user_id}')
 
 
+def _line_name(i):
+    """'Replace bearing' or 'Engine oil ×2' - the quantity is part of the line."""
+    n = int(i.quantity or 1)
+    return f'{i.name} ×{n}' if n > 1 else i.name
+
+
+def _line_amount(i):
+    """What one invoice line adds up to: price x quantity."""
+    return round(float(i.unit_price or 0) * int(i.quantity or 1), 2)
+
+
 def _quotation_breakdown(items):
     """Splits a quotation into the three things a customer actually decides
     over: the service they already booked (locked=True, always charged),
@@ -1402,7 +1413,7 @@ def customer_dashboard():
                 'original': _qbd['booked'] if _is_backjob else _qbd['decline_total'],
                 'extra': _qbd['extra'], 'total': q.total_amount,
                 'booked': _qbd['booked'], 'materials': _qbd['materials'],
-                'items': [{'name': i.name, 'price': i.unit_price, 'locked': i.locked, 'item_type': i.item_type} for i in q.items],
+                'items': [{'name': i.name, 'price': i.unit_price, 'quantity': i.quantity or 1, 'locked': i.locked, 'item_type': i.item_type} for i in q.items],
             }
     default_delivery_eligible = bool(current_user.default_delivery_city and
         is_in_delivery_zone(current_user.default_delivery_city, current_user.default_delivery_barangay))
@@ -3455,7 +3466,7 @@ def get_notifications():
             # On decline, the booked service and any materials already used
             # still bill — only the extra inspection findings drop off.
             relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
-            items = [{'name': i.name, 'price': i.unit_price} for i in relevant]
+            items = [{'name': _line_name(i), 'price': _line_amount(i)} for i in relevant]
             decision = q.status
         else:
             items = [{'name': b.service, 'price': b.total_amount}]
@@ -3738,7 +3749,7 @@ def payment_success():
                     _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
                     if _q:
                         _rel = _q.items if _q.status == 'approved' else [i for i in _q.items if i.locked or i.item_type == 'product']
-                        _items = [(i.name, i.unit_price) for i in _rel]
+                        _items = [(_line_name(i), _line_amount(i)) for i in _rel]
                     else:
                         _items = [(booking.service, booking.total_amount)]
                     _subj, _html = booking_receipt_email(user.fullname, f'INV-{booking.id:03d}', ref, booking.service, _items,

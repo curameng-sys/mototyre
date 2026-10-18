@@ -303,14 +303,14 @@
         {% for b in pending_bookings %}
         {% set svc_price = namespace(val=0) %}
         {% for s in all_services if s.name == b.service %}{% set svc_price.val = s.price %}{% endfor %}
-        {% set row_amount = b.total_amount if (b.is_invoice_flow and b.total_amount) else svc_price.val %}
-        {% set b_items %}[{"name":{{ b.service|tojson }},"qty":1,"price":{{ svc_price.val }}}]{% endset %}
+        {% set row_amount = b.total_amount if (b.is_invoice_flow and b.total_amount) else (b.bill_total if b.bill_total is not none else svc_price.val) %}
+        {% set b_items %}{% if b.bill_lines %}[{% for nm, amt in b.bill_lines %}{"name":{{ nm|tojson }},"qty":1,"price":{{ amt }}}{% if not loop.last %},{% endif %}{% endfor %}]{% else %}[{"name":{{ b.service|tojson }},"qty":1,"price":{{ svc_price.val }}}]{% endif %}{% endset %}
         {% set cust_name = b.contact_name if b.walkin_customer_id else (b.contact_name or b.customer.fullname) %}
         <tr class="pending-row" data-type="booking" data-bid="{{ b.id }}" data-method="{{ b.invoice_payment_method or '' }}" data-amount="{{ row_amount }}" data-s="{{ cust_name|lower }} bkg-{{ '%03d'|format(b.id) }} inv-{{ '%03d'|format(b.id) }}">
           <td><span class="ref ref-bkg">BKG-{{ '%03d'|format(b.id) }}</span></td>
           <td>
             <div class="name">{{ cust_name }}</div>
-            <div class="sub">{{ b.service }}{% if b.is_invoice_flow and b.extra_item_count %} + {{ b.extra_item_count }} extra item{{ 's' if b.extra_item_count != 1 else '' }}{% endif %}</div>
+            <div class="sub">{{ b.service }}{% if b.extra_item_count %} + {{ b.extra_item_count }} extra item{{ 's' if b.extra_item_count != 1 else '' }}{% endif %}</div>
           </td>
           <td><span class="amount">₱{{ '{:,.2f}'.format(row_amount) }}</span></td>
           <td>
@@ -347,7 +347,7 @@
               data-ref="BKG-{{ '%03d'|format(b.id) }}"
               data-customer="{{ cust_name|e }}"
               data-mechanic=""
-              data-amount="{{ svc_price.val }}"
+              data-amount="{{ row_amount }}"
               data-items='{{ b_items }}'
               onclick="openBillingModal(this)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Collect

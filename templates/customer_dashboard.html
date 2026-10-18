@@ -1871,7 +1871,6 @@
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:#6b21a8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.65rem;">Inspection Findings</div>
       <div id="bd-quotation-items" style="margin-bottom:0.65rem;"></div>
       <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-2);margin-bottom:0.2rem;"><span id="bd-quotation-original-label">Original service</span><span id="bd-quotation-original"></span></div>
-      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-2);margin-bottom:0.5rem;"><span>Extra work</span><span id="bd-quotation-extra"></span></div>
       <div style="display:flex;justify-content:space-between;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--fg-1);padding-top:0.5rem;border-top:1px solid #e9d5ff;margin-bottom:0.75rem;"><span>Estimated Total</span><span id="bd-quotation-total" style="color:var(--brand-red);"></span></div>
       <div id="bd-quotation-actions" style="display:flex;gap:0.5rem;">
         <button type="button" onclick="decideQuotation('decline')" style="flex:1;padding:0.6rem;background:#fff;border:1px solid var(--line-2);border-radius:8px;color:var(--fg-2);font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Decline</button>
@@ -5530,11 +5529,10 @@ function openBookingDetails(bookingId) {
     quotWrap.dataset.quotationId = q.id;
     const extraItems = q.items.filter(it => !it.locked);
     document.getElementById('bd-quotation-items').innerHTML = extraItems.length
-      ? extraItems.map(it => `<div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-1);margin-bottom:0.3rem;"><span>${it.name}</span><span>₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`).join('')
+      ? extraItems.map(it => { const n = it.quantity || 1; return `<div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-1);margin-bottom:0.3rem;"><span>${it.name}${n > 1 ? ' ×' + n : ''}</span><span>₱${Number(it.price * n).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`; }).join('')
       : '<div style="font-size:0.8rem;color:var(--fg-3);">No extra work found.</div>';
     document.getElementById('bd-quotation-original-label').textContent = (q.materials || 0) > 0 ? 'Service + materials' : 'Original service';
     document.getElementById('bd-quotation-original').textContent = `₱${Number(q.original).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    document.getElementById('bd-quotation-extra').textContent    = `₱${Number(q.extra).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('bd-quotation-total').textContent    = `₱${Number(q.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     const actions = document.getElementById('bd-quotation-actions');
     const decided = document.getElementById('bd-quotation-decided');

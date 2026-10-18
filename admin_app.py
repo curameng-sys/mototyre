@@ -670,6 +670,30 @@ def _notify_order_customer(order, title, body, status=None, extra_html='', email
     return True
 
 
+def _line_name(i):
+    """'Replace bearing' or 'Engine oil ×2' - the quantity is part of the line."""
+    n = int(i.quantity or 1)
+    return f'{i.name} ×{n}' if n > 1 else i.name
+
+
+def _line_amount(i):
+    """What one invoice line adds up to: price x quantity."""
+    return round(float(i.unit_price or 0) * int(i.quantity or 1), 2)
+
+
+def booking_bill(booking):
+    """What a booking in progress really costs when the customer is billed: the booked service plus the extra work they
+    approved (or, if they declined, the service plus the materials already used). None when there is no quotation, and
+    then the plain service price applies. Returns (total, [(name, amount)...], number of extra items)."""
+    q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
+    if not q or not q.items:
+        return None
+    rel = q.items if q.status == 'approved' else [i for i in q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))]
+    lines = [(_line_name(i), _line_amount(i)) for i in rel]
+    extra = len([i for i in rel if not i.locked]) if q.status == 'approved' else 0
+    return round(sum(a for _, a in lines), 2), lines, extra
+
+
 def booking_service_price(service_str):
     """Sum the catalog price for every service in a booking's (possibly combined,
     comma-separated) service string — a plain name lookup misses combo bookings."""
@@ -2016,8 +2040,8 @@ def complete_booking_invoice(bid):
             relevant = (q.items if q.status == 'approved'
                         else [i for i in q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))])
             items_rows = ''.join(
-                f'<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;">{i.name}</td>'
-                f'<td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">₱{i.unit_price:,.2f}</td></tr>'
+                f'<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;">{_line_name(i)}</td>'
+                f'<td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">₱{_line_amount(i):,.2f}</td></tr>'
                 for i in relevant
             )
         else:
@@ -2093,7 +2117,7 @@ def record_invoice_cash(bid):
         _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
         if _q:
             _rel = _q.items if _q.status == 'approved' else [i for i in _q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))]
-            _items = [(i.name, i.unit_price) for i in _rel]
+            _items = [(_line_name(i), _line_amount(i)) for i in _rel]
         else:
             _items = [(booking.service, booking.total_amount)]
         _subj, _html = booking_receipt_email(customer.fullname, f'INV-{booking.id:03d}', ref, booking.service, _items,
@@ -2117,7 +2141,7 @@ def api_booking_invoice_data(bid):
         # On decline, the booked service and any materials already used
         # still bill — only the extra inspection findings drop off.
         relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
-        items = [{'name': i.name, 'price': i.unit_price} for i in relevant]
+        items = [{'name': _line_name(i), 'price': _line_amount(i)} for i in relevant]
         # inspected_by is the mechanic as of when the quotation was sent;
         # fall back to the booking's current assignment for older quotations
         # that predate that field, or any other case it ended up blank —
@@ -6418,6 +6442,8 @@ def payments():
         ).all()
         for b in pending_bookings:
             b.is_invoice_flow = False
+            _bill = booking_bill(b)                     # service + the extra work the customer approved
+            b.bill_total, b.bill_lines, b.extra_item_count = (_bill[0], _bill[1], _bill[2]) if _bill else (None, None, 0)
 
         # Completed-but-unpaid invoices from the Inspection & Estimation flow
         # — the customer may or may not have picked a method yet.
