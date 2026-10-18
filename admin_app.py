@@ -1914,13 +1914,34 @@ def _deduct_quotation_parts(q, booking):
     return used
 
 
+def _record_in_person_decision(q, booking, decision):
+    """The customer's answer to an Inspection & Estimation quotation, given at the counter and recorded by staff. It does
+    exactly what the customer's own answer does, plus it remembers who recorded it and tells the customer."""
+    q.status = 'approved' if decision == 'approve' else 'declined'
+    q.decided_at = ph_now()
+    q.decided_in_person = True
+    q.decided_by_staff = current_user.fullname
+    if booking.status == 'inspection':
+        booking.status = 'in_progress'
+        booking.in_progress_at = ph_now()
+    db.session.commit()
+    ref = f'BKG-{booking.id:03d}'
+    verb = 'approved' if decision == 'approve' else 'declined'
+    extra = f' (₱{(q.total_amount or 0):,.2f})' if decision == 'approve' else ''
+    _notify_customer(booking, f'Quotation {verb} at the shop — {booking.service} ({ref})',
+        f'{current_user.fullname} recorded that you {verb} the quotation for {booking.service}{extra} at the shop. '
+        + ('We started work on your booking and the approved extra work.' if decision == 'approve'
+           else 'We started work on your booking. Extra work was not included.')
+        + ' If this is not right, please tell the staff right away.',
+        status='in_progress')
+    return verb
+
+
 @admin_app.route('/quotation/<int:qid>/decide-in-person', methods=['POST'])
 @login_required
 @require_admin_or_staff
 def quotation_decide_in_person(qid):
-    """The customer is standing at the counter, so staff records their answer to an Inspection & Estimation quotation
-    instead of waiting for them to tap it on their phone. It does exactly what the customer's own answer does, plus it
-    remembers who recorded it and tells the customer, so nothing is ever decided on their behalf unseen."""
+    """The customer is standing at the counter, so staff records their answer instead of waiting for their phone."""
     q = Quotation.query.get_or_404(qid)
     booking = Booking.query.get(q.booking_id) if q.booking_id else None
     if not booking:
@@ -1930,26 +1951,7 @@ def quotation_decide_in_person(qid):
     decision = clean_str((request.get_json(silent=True) or request.form).get('decision', ''), max_len=10)
     if decision not in ('approve', 'decline'):
         return jsonify({'success': False, 'error': 'Invalid decision.'}), 400
-
-    q.status = 'approved' if decision == 'approve' else 'declined'
-    q.decided_at = ph_now()
-    q.decided_in_person = True
-    q.decided_by_staff = current_user.fullname
-    if booking.status == 'inspection':
-        booking.status = 'in_progress'
-        booking.in_progress_at = ph_now()
-    db.session.commit()
-
-    ref = f'BKG-{booking.id:03d}'
-    verb = 'approved' if decision == 'approve' else 'declined'
-    total = q.total_amount or 0
-    extra = f' (₱{total:,.2f})' if decision == 'approve' else ''
-    _notify_customer(booking, f'Quotation {verb} at the shop — {booking.service} ({ref})',
-        f'{current_user.fullname} recorded that you {verb} the quotation for {booking.service}{extra} at the shop. '
-        + ('We started work on your booking and the approved extra work.' if decision == 'approve'
-           else 'We started work on your booking. Extra work was not included.')
-        + ' If this is not right, please tell the staff right away.',
-        status='in_progress')
+    verb = _record_in_person_decision(q, booking, decision)
     return jsonify({'success': True, 'new_status': q.status,
                     'toast': f'Booking {booking.id}: quotation {verb} in person · work started'})
 
@@ -6109,6 +6111,12 @@ def save_quotation():
             product_id   = int(i['product_id']) if (i.get('item_type') == 'product' and i.get('product_id')) else None,
         ))
     db.session.commit()
+
+    in_person = clean_str(str(data.get('in_person') or ''), max_len=10)
+    if booking and in_person in ('approve', 'decline'):
+        verb = _record_in_person_decision(q, booking, in_person)
+        return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}', 'inspected_by': inspected_by,
+                        'customer_first_name': (q.customer_name or '').split(' ')[0] or None, 'in_person': verb})
 
     if booking:
         ref = f'BKG-{booking.id:03d}'

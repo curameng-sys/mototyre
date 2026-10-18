@@ -1165,11 +1165,7 @@
                     {% else %}
                       {% if b.status == 'in_progress' and not b.walkin_customer_id %}
                         {% set _bill = booking_bill(b) %}
-                        <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.04em;color:var(--muted);text-transform:uppercase;margin-bottom:0.25rem;">Work done? How is it paid?</div>
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-start;">
-                          <a href="{{ url_for('payments') }}" style="background:#f5f3ff;border:1px solid #ddd6fe;color:#5b21b6;padding:0.28rem 0.6rem;border-radius:6px;font-size:0.68rem;font-weight:700;text-decoration:none;white-space:nowrap;">At the shop · Collect payment</a>
-                          <button type="button" onclick="openCompleteInvoiceModal({{ b.id }}, 'BKG-{{ '%03d'|format(b.id) }}', {{ (b.customer.fullname if b.customer else 'The customer')|tojson }}, {{ _bill[0] if _bill else (booking_service_price(b.service)) }}, true)" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.28rem 0.6rem;border-radius:6px;font-size:0.68rem;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">Away · Send online invoice</button>
-                        </div>
+                        <button type="button" onclick="openFinishChoice({{ b.id }}, 'BKG-{{ '%03d'|format(b.id) }}', {{ (b.customer.fullname if b.customer else 'The customer')|tojson }}, {{ _bill[0] if _bill else (booking_service_price(b.service)) }})" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.3rem 0.7rem;border-radius:6px;font-size:0.72rem;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">Complete booking</button>
                       {% elif b.status == 'in_progress' %}
                         <div style="font-size:0.7rem;color:#d97706;font-weight:600;">Collect via Billing</div>
                       {% elif b.status == 'inspection' %}
@@ -2950,6 +2946,25 @@
     <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
       <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-cancel')">Keep order</button>
       <button type="button" class="btn-primary-custom" id="sx-go" onclick="shipSubmitCancel()">Cancel and refund</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-ship-finish">
+  <div class="modal-box" style="max-width:430px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Complete booking</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;" id="fc-sub"></div>
+    <div style="font-size:0.78rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">Where is the customer?</div>
+    <button type="button" onclick="finishAtShop()" style="width:100%;text-align:left;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:0.75rem 0.9rem;margin-bottom:0.55rem;cursor:pointer;font-family:inherit;">
+      <div style="font-weight:700;color:#5b21b6;font-size:0.88rem;">At the shop</div>
+      <div style="font-size:0.74rem;color:#6b7280;margin-top:0.15rem;">They pay the cashier now. You collect Cash or GCash in the Billing Center.</div>
+    </button>
+    <button type="button" onclick="finishAway()" style="width:100%;text-align:left;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:0.75rem 0.9rem;cursor:pointer;font-family:inherit;">
+      <div style="font-weight:700;color:#b91c1c;font-size:0.88rem;">Away</div>
+      <div style="font-size:0.74rem;color:#6b7280;margin-top:0.15rem;">Send an online invoice. They choose Cash or GCash on the website.</div>
+    </button>
+    <div style="display:flex;justify-content:flex-end;margin-top:1rem;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-finish')">Cancel</button>
     </div>
   </div>
 </div>
@@ -5228,8 +5243,9 @@
   let _pendingCompleteInvoice = null;
   async function openCompleteInvoiceModal(bookingId, ref, customerName, total, reloadAfter) {
     _pendingCompleteInvoice = { bookingId, ref, reloadAfter: !!reloadAfter };
-    const mech = await mechanicNameFor(bookingId), ml = document.getElementById('modal-ci-mech');
-    ml.textContent = mech ? `${mech} will be freed up.` : ''; ml.style.display = mech ? 'block' : 'none';
+    const ml = document.getElementById('modal-ci-mech');
+    ml.textContent = ''; ml.style.display = 'none';
+    mechanicNameFor(bookingId).then(mech => { if (mech) { ml.textContent = `${mech} will be freed up.`; ml.style.display = 'block'; } });
     document.getElementById('modal-ci-text').innerHTML =
       `Mark ${ref} as completed? Only do this once the mechanic is finished. ${customerName} will get an invoice for ₱${Number(Number(total)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.`;
     document.getElementById('modal-complete-invoice').style.display = 'flex';
@@ -6843,6 +6859,23 @@
       if (!quiet) alert('Network error. Please try again.');
       return { success: false, error: 'Network error. Please try again.' };
     }
+  }
+  // Complete booking: one button, one question
+  let _finish = null;
+  function openFinishChoice(bookingId, ref, customer, total) {
+    _finish = { bookingId, ref, customer, total };
+    document.getElementById('fc-sub').textContent = `${ref} · ${customer} · ₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    openModal('modal-ship-finish');
+  }
+  function finishAtShop() {
+    if (!_finish) return;
+    window.location.href = `/payments?tab=pending&collect=${_finish.bookingId}`;
+  }
+  function finishAway() {
+    if (!_finish) return;
+    closeModal('modal-ship-finish');
+    _pendingCompleteInvoice = { bookingId: _finish.bookingId, ref: _finish.ref, reloadAfter: true };
+    confirmCompleteInvoice();
   }
   // The customer is at the counter: staff records their answer to the quotation (it is logged and the customer is told).
   async function decideInPerson(qid, decision, customer, total) {

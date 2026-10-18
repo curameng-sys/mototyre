@@ -1263,6 +1263,14 @@ function printReceipt() {
   }, POLL_MS);
 })();
 
+/* ── "At the shop · Collect payment" from Manage Bookings opens that booking's window ── */
+(function openRequestedCollect() {
+  const id = new URLSearchParams(window.location.search).get('collect');
+  if (!id) return;
+  const btn = document.querySelector(`.btn-collect-bkg[data-id="${id}"]`);
+  if (btn) { const row = btn.closest('tr'); if (row) row.scrollIntoView({ block: 'center' }); openBillingModal(btn); }
+})();
+
 /* ── HIGHLIGHT + AUTO-OPEN RECEIPT AFTER RECORDING CASH ── */
 (function() {
   const params = new URLSearchParams(window.location.search);

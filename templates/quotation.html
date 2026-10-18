@@ -416,6 +416,20 @@
         <label class="field-label">Notes</label>
         <textarea class="notes-inp" id="notes" placeholder="Additional notes or remarks..."></textarea>
       </div>
+      {% if booking %}
+      <div id="atshop-box" style="margin-bottom:0.7rem;padding:0.7rem 0.8rem;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;">
+        <label style="display:flex;gap:0.5rem;align-items:center;font-size:0.82rem;font-weight:700;color:#5b21b6;cursor:pointer;">
+          <input type="checkbox" id="atshop-check" onchange="onAtShopToggle()" style="width:16px;height:16px;"> The customer is at the shop
+        </label>
+        <div id="atshop-choice" style="display:none;margin-top:0.55rem;font-size:0.8rem;color:#374151;">
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:0.35rem;">
+            <label style="display:flex;gap:0.35rem;align-items:center;cursor:pointer;"><input type="radio" name="atshop" value="approve"> They approved</label>
+            <label style="display:flex;gap:0.35rem;align-items:center;cursor:pointer;"><input type="radio" name="atshop" value="decline"> They declined</label>
+          </div>
+          <div style="font-size:0.72rem;color:#6b7280;line-height:1.45;">No online message is sent. Work starts now, and the customer gets a notice that you recorded their answer at the shop.</div>
+        </div>
+      </div>
+      {% endif %}
       <button class="btn-save" id="save-btn" onclick="saveQuotation()" disabled>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> {% if booking %}Save &amp; Send Quotation{% else %}Save Quotation{% endif %}
       </button>
@@ -727,11 +741,16 @@
       if (notCovered.photos.length === 0) { toast("Add at least one photo showing why it isn't covered.", 'error'); return; }
     }
 
+    const atShop = HAS_BOOKING && document.getElementById('atshop-check') && document.getElementById('atshop-check').checked;
+    const atShopAnswer = atShop ? (document.querySelector('input[name="atshop"]:checked') || {}).value : null;
+    if (atShop && !atShopAnswer) { toast('Choose whether the customer approved or declined.', 'error'); return; }
+
     const btn = document.getElementById('save-btn');
     const savingLabel = HAS_BOOKING ? 'Sending...' : 'Saving...';
     btn.disabled = true; btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .7s linear infinite;vertical-align:middle;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> ${savingLabel}`;
 
     const payload = {
+      in_person:        atShopAnswer,
       customer_name:    name,
       customer_phone:   document.getElementById('cust-phone').value.trim(),
       motorcycle_model: document.getElementById('moto-model').value.trim(),
@@ -758,21 +777,32 @@
         if (HAS_BOOKING) {
           const firstName = (data.customer_first_name || name.split(' ')[0] || '').trim();
           const inspBy    = data.inspected_by || document.getElementById('inspected-by').value.trim();
-          document.getElementById('modal-sub').textContent = inspBy
-            ? `Quotation sent to ${firstName} · inspected by ${inspBy}`
-            : `Quotation sent to ${firstName}`;
+          document.getElementById('modal-sub').textContent = data.in_person
+            ? `Recorded at the shop: ${firstName} ${data.in_person}. Work has started.`
+            : (inspBy ? `Quotation sent to ${firstName} · inspected by ${inspBy}` : `Quotation sent to ${firstName}`);
         }
         document.getElementById('success-modal').classList.add('open');
         if (!HAS_BOOKING) items = [];
         syncStock();
       } else {
         toast(data.error || 'Failed to save quotation.', 'error');
-        btn.disabled = false; btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> ${HAS_BOOKING ? 'Save &amp; Send Quotation' : 'Save Quotation'}`;
+        btn.disabled = false; btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> ${saveLabel()}`;
       }
     } catch(e) {
       toast('Network error. Please try again.', 'error');
-      btn.disabled = false; btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> ${HAS_BOOKING ? 'Save &amp; Send Quotation' : 'Save Quotation'}`;
+      btn.disabled = false; btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> ${saveLabel()}`;
     }
+  }
+
+  function saveLabel() {
+    const c = document.getElementById('atshop-check');
+    return HAS_BOOKING ? ((c && c.checked) ? 'Save &amp; Start Work' : 'Save &amp; Send Quotation') : 'Save Quotation';
+  }
+  function onAtShopToggle() {
+    const on = document.getElementById('atshop-check').checked;
+    document.getElementById('atshop-choice').style.display = on ? 'block' : 'none';
+    const btn = document.getElementById('save-btn');
+    if (btn && !btn.disabled) btn.lastChild.textContent = ' ' + (on ? 'Save & Start Work' : 'Save & Send Quotation');
   }
 
   function newQuotation() {
