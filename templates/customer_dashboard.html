@@ -1047,7 +1047,7 @@
                   </div>
                 </td>
                 <td data-ov-date="{{ b.id }}">{{ b.date.strftime('%b %d') }}</td>
-                <td><span class="badge badge-{{ b.status }}">{{ 'Inspection & Estimation' if b.status == 'inspection' else b.status|replace('_', ' ')|title }}</span></td>
+                <td>{% if b.pay_wait %}<span class="badge badge-pending">Awaiting payment</span>{% else %}<span class="badge badge-{{ b.status }}">{{ 'Inspection & Estimation' if b.status == 'inspection' else b.status|replace('_', ' ')|title }}</span>{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -1413,7 +1413,7 @@
               </div>
             </td>
             <td>
-              <span class="badge badge-{{ b.status }}" data-mb-status>{{ 'Inspection & Estimation' if b.status == 'inspection' else b.status|replace('_', ' ')|title }}</span>
+              {% if b.pay_wait %}<span class="badge badge-pending" data-mb-status>Awaiting payment</span>{% else %}<span class="badge badge-{{ b.status }}" data-mb-status>{{ 'Inspection & Estimation' if b.status == 'inspection' else b.status|replace('_', ' ')|title }}</span>{% endif %}
               <div class="mb-cancel-slot" style="margin-top:0.4rem;">
                 {% if b.status == 'confirmed' %}
                 <button type="button" onclick="event.stopPropagation(); openCancelFor({{ b.id }})" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.66rem;padding:0.25em 0.7em;border-radius:99px;background:#fff;border:1px solid #fecaca;color:#b91c1c;cursor:pointer;">Cancel booking</button>

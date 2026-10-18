@@ -1375,7 +1375,10 @@ def customer_dashboard():
         for rr in ReturnRequest.query.filter(ReturnRequest.redo_booking_id.isnot(None)).all()
     }
     _bookings_by_id = {b.id: b for b in bookings}
+    _invoice_sent_ids = {r[0] for r in db.session.query(Notification.booking_id).filter(
+        Notification.user_id == current_user.id, Notification.type == 'invoice', Notification.booking_id.isnot(None)).all()}
     for b in bookings:
+        b.pay_wait = bool(b.status == 'completed' and not b.invoice_paid and b.id in _invoice_sent_ids)   # invoice sent, not paid yet
         origin_rr = _redo_origin_by_booking.get(b.id)
         if origin_rr:
             original = _bookings_by_id.get(origin_rr.booking_id) or \

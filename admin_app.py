@@ -694,6 +694,17 @@ def booking_bill(booking):
     return round(sum(a for _, a in lines), 2), lines, extra
 
 
+def awaiting_payment_ids():
+    """Bookings whose invoice was sent but not paid yet. They are not 'complete' until the customer has paid
+    (Cash recorded by the cashier, or GCash confirmed by PayMongo)."""
+    sent = {r[0] for r in db.session.query(Notification.booking_id).filter(Notification.type == 'invoice', Notification.booking_id.isnot(None)).all()}
+    if not sent:
+        return set()
+    rows = Booking.query.filter(Booking.id.in_(sent), Booking.status == 'completed', Booking.invoice_paid == False,
+                                Booking.is_archived == False).all()
+    return {b.id for b in rows}
+
+
 def booking_service_price(service_str):
     """Sum the catalog price for every service in a booking's (possibly combined,
     comma-separated) service string — a plain name lookup misses combo bookings."""
@@ -1343,6 +1354,9 @@ def admin_dashboard():
     # fold it into 'in_progress' so every view of this count reads one number.
     if 'inprogress' in _booking_status_counts:
         _booking_status_counts['in_progress'] = _booking_status_counts.get('in_progress', 0) + _booking_status_counts.pop('inprogress')
+    _awaiting_pay = awaiting_payment_ids()           # invoice sent, customer hasn't paid: still counts as In Progress, not Completed
+    _booking_status_counts['in_progress'] = _booking_status_counts.get('in_progress', 0) + len(_awaiting_pay)
+    _booking_status_counts['completed'] = max(0, _booking_status_counts.get('completed', 0) - len(_awaiting_pay))
 
     # Same three "nothing collected yet" queries the Billing page itself uses
     # for its Pending tab — kept in lockstep so the sidebar count and the
@@ -1412,7 +1426,7 @@ def admin_dashboard():
         all_feedback=Feedback.query.order_by(Feedback.is_read.asc(), Feedback.created_at.desc()).all(),
         order_ship_json=order_ship_json,
         now=ph_now(),
-        mech_status=mechanic_status_map(), mech_labels=MECH_LABELS,
+        mech_status=mechanic_status_map(), mech_labels=MECH_LABELS, awaiting_pay=_awaiting_pay,
         today=ph_now().date(),
         customer_origin=BASE_URL,
     )

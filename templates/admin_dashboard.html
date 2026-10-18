@@ -1027,11 +1027,12 @@
                   {% endif %}
                 {% endfor %}
                 {% set b = group_bookings[0] %}
-                {% set is_done      = group_bookings | selectattr('status','equalto','completed') | list | length == group_bookings | length %}
+                {% set b_wait       = group_bookings[0].id in awaiting_pay %}
+                {% set is_done      = (group_bookings | selectattr('status','equalto','completed') | list | length == group_bookings | length) and not b_wait %}
                 {% set is_cancelled = group_bookings | selectattr('status','equalto','cancelled') | list | length == group_bookings | length %}
                 {% set service_names = group_bookings | map(attribute='service') | list %}
-                {% set all_statuses = group_bookings | map(attribute='status') | list %}
-                {% set display_status = b.status %}
+                {% set all_statuses = (['in_progress'] * group_bookings|length) if b_wait else (group_bookings | map(attribute='status') | list) %}
+                {% set display_status = 'in_progress' if b_wait else b.status %}
                 {% set service_dates = [] %}
                 {% set service_times = [] %}
                 {% for gb in group_bookings %}
@@ -1132,6 +1133,13 @@
                              style="font-size:0.72rem;font-weight:700;color:var(--red);text-decoration:none;" onclick="event.stopPropagation()">Create quotation →</a>
                         </div>
                       {% endif %}
+                    {% elif b_wait %}
+                      <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Awaiting payment</span>
+                      <div style="margin-top:0.3rem;font-size:0.7rem;color:var(--muted);">
+                        {% if b.invoice_payment_method == 'cash' %}Customer chose Cash · pay at the counter
+                        {% elif b.invoice_payment_method == 'gcash' %}Customer chose GCash · waiting for PayMongo
+                        {% else %}Invoice sent · the customer picks Cash or GCash{% endif %}
+                      </div>
                     {% elif all_same_status %}
                       <span class="badge badge-{{ b.status|replace('_','') }}">{{ b.status|replace('_',' ')|title }}</span>
                       {% if is_booking_overdue(b, now) %}
@@ -1142,7 +1150,11 @@
                     {% endif %}
                   </td>
                   <td>
-                    {% if b.status != 'completed' %}
+                    {% if b_wait %}
+                      {% if b.invoice_payment_method == 'cash' %}<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;">Cash · at counter</span>
+                      {% elif b.invoice_payment_method == 'gcash' %}<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">GCash · paying</span>
+                      {% else %}<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;">Unpaid</span>{% endif %}
+                    {% elif b.status != 'completed' %}
                       {# The customer only picks cash or GCash on the post-completion invoice —
                          nothing has been charged yet while the service is still being worked on. #}
                       <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;">Unpaid</span>
@@ -1153,7 +1165,9 @@
                     {% endif %}
                   </td>
                   <td onclick="event.stopPropagation()">
-                    {% if is_done %}
+                    {% if b_wait %}
+                      <span style="display:inline-flex;align-items:center;font-size:0.68rem;font-weight:600;color:#92400e;background:#fffbeb;border:1px solid #fde68a;padding:0.25rem 0.6rem;border-radius:6px;">Waiting for payment</span>
+                    {% elif is_done %}
                       <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;padding:0.25rem 0.6rem;border-radius:6px;">Done</span>
                     {% elif is_cancelled %}
                       <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:0.25rem 0.6rem;border-radius:6px;">Cancelled</span>
@@ -1207,7 +1221,9 @@
                   <td onclick="event.stopPropagation()">
                     {% set age = (today - b.date).days %}
                     {% set min_days = 30 if b.status == 'completed' else 7 %}
-                    {% if b.status in ['completed', 'cancelled'] and age >= min_days %}
+                    {% if b_wait %}
+                      <span style="color:var(--muted);font-size:0.65rem;display:block;text-align:left;">Not eligible</span>
+                    {% elif b.status in ['completed', 'cancelled'] and age >= min_days %}
                       <form method="POST" action="{{ url_for('archive_booking', bid=b.id) }}" data-confirm-title="Archive booking?" data-confirm="Booking #{{ b.id }} will be moved to the archive." data-confirm-label="Yes, Archive">
                         <button type="submit" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;font-family:inherit;font-weight:700;cursor:pointer;">Archive</button>
                       </form>
