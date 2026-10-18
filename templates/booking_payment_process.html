@@ -136,7 +136,7 @@
     </div>
     <div class="service-band">
       <div class="service-name">{{ booking.service }}</div>
-      <div class="service-price">₱{{ '%.2f'|format(service_price) if service_price else '—' }}</div>
+      <div class="service-price">₱{{ (service_price)|money if service_price else '—' }}</div>
     </div>
   </div>
 
@@ -242,7 +242,7 @@ async function submitPayment() {
       const methodLabel = payMethod === 'gcash' ? 'GCash' : 'Cash';
       document.getElementById('r-ref').textContent    = 'BKG-' + String(data.booking_id).padStart(3, '0');
       document.getElementById('r-method').textContent = methodLabel;
-      document.getElementById('r-amount').textContent = '₱' + parseFloat(data.amount).toFixed(2);
+      document.getElementById('r-amount').textContent = '₱' + Number(parseFloat(data.amount)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
       if (refNo) {
         document.getElementById('r-refno').textContent = refNo;
         document.getElementById('r-ref-row').style.display = '';

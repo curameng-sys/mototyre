@@ -214,7 +214,7 @@
       {% endif %}
     </div>
     <div style="text-align:right;flex-shrink:0;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#86efac;">₱{{ '%.2f'|format(new_jo.total_amount) }}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#86efac;">₱{{ (new_jo.total_amount)|money }}</div>
       <div style="font-size:.7rem;color:var(--muted);">{{ new_jo.items|length }} item(s)</div>
     </div>
   </div>
@@ -303,7 +303,7 @@
               {{ jo.items|length }} item(s) <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
           </td>
-          <td><span class="amount">₱{{ '%.2f'|format(jo.total_amount) }}</span></td>
+          <td><span class="amount">₱{{ (jo.total_amount)|money }}</span></td>
           <td>
             {% if jo.status in ['completed','cancelled'] %}
               <span class="badge badge-{{ jo.status }}">
@@ -351,7 +351,7 @@
                 </div>
                 <span class="item-name">{{ item.name }}</span>
                 <span class="item-qty">x{{ item.quantity }}</span>
-                <span class="item-price">₱{{ '%.2f'|format(item.unit_price * item.quantity) }}</span>
+                <span class="item-price">₱{{ (item.unit_price * item.quantity)|money }}</span>
               </div>
               {% endfor %}
             </div>

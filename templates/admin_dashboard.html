@@ -265,6 +265,26 @@
     .ship-save:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
     .ship-send { display:inline-flex; align-items:center; gap:0.35rem; padding:0.35rem 0.7rem; border-radius:7px; border:1px solid var(--red); background:var(--red); color:#fff; font-size:0.72rem; font-weight:700; cursor:pointer; font-family:inherit; }
     .ship-send:disabled { background:#e5e7eb; border-color:#d1d5db; color:#6b7280; cursor:not-allowed; }
+    .so-err-field { border-color:#dc2626 !important; box-shadow:0 0 0 3px rgba(220,38,38,0.08) !important; }
+    .so-addr { border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.75rem; background:#fff; margin-bottom:0.55rem; }
+    .so-addr .so-addr-h { display:flex; justify-content:space-between; align-items:center; gap:0.5rem; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin-bottom:0.25rem; }
+    .so-copy { padding:0.15rem 0.6rem; border:1px solid var(--border); background:#f3f4f6; border-radius:6px; font-size:0.68rem; font-weight:700; cursor:pointer; font-family:inherit; color:var(--text); }
+    .so-lala { display:inline-flex; align-items:center; gap:0.5rem; padding:0.45rem 0.9rem; border-radius:8px; background:#fff; color:#f16622; border:1.5px solid #f16622; font-weight:700; font-size:0.8rem; text-decoration:none; }
+    .so-lala.fill { background:#f16622; color:#fff; }
+    .lala-logo { width:20px; height:20px; object-fit:contain; flex-shrink:0; }
+    .lbl-sub { text-transform:none; font-weight:400; letter-spacing:0; color:var(--muted); }
+    .so-ab { width:26px; height:26px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; flex-shrink:0; }
+    .so-price { display:flex; justify-content:space-between; align-items:center; gap:0.8rem; border:1px solid var(--border); border-radius:10px; padding:0.7rem 0.85rem; margin-bottom:0.55rem; }
+    .so-price b { display:block; font-size:0.9rem; color:var(--text); }
+    .so-price small { display:block; font-size:0.72rem; color:var(--muted); line-height:1.35; margin-top:0.1rem; }
+    .so-money { position:relative; width:130px; flex-shrink:0; }
+    .so-money > span { position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; }
+    .so-money input { width:100%; padding:0.55rem 0.75rem 0.55rem 1.8rem; text-align:right; font-weight:700; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:0.9rem; outline:none; }
+    .mpill-lg { display:inline-flex; align-items:center; gap:0.25rem; border-radius:999px; padding:0.25rem 0.8rem; font-size:0.76rem; font-weight:600; }
+    .att-pill.att-off { background:#E5E7EB; color:#4b5563; }
+    .mpill { display:inline-block; border-radius:999px; padding:0.1rem 0.5rem; font-size:0.62rem; font-weight:700; vertical-align:middle; white-space:nowrap; }
+    .mpill.available { background:#F0FDF4; color:#15803D; } .mpill.reserved { background:#F5F3FF; color:#6D28D9; }
+    .mpill.busy { background:#FEFCE8; color:#B45309; }     .mpill.off_duty { background:#F3F4F6; color:#4b5563; }
     .ship-link { font-size:0.68rem; font-weight:700; color:var(--blue); cursor:pointer; text-decoration:underline; }
     .badge-delivered       { background: #f0fdf4; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-admin           { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
@@ -288,10 +308,9 @@
     .bk-tab-count { background: rgba(0,0,0,0.08) !important; color: inherit !important; font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 99px; font-weight: 700; }
     .bk-tab.active .bk-tab-count { background: rgba(255,255,255,0.2) !important; color: #fff !important; }
 
-    tr.booking-done      { opacity: 0.5; }
+    /* Completed bookings look like normal rows (dark text, nothing crossed out); only Cancelled ones are faded */
     tr.booking-cancelled { opacity: 0.4; }
-    tr.booking-done .bk-name, tr.booking-cancelled .bk-name { color: var(--muted) !important; }
-    td.bk-svc-done { text-decoration: line-through; color: var(--muted) !important; }
+    tr.booking-cancelled .bk-name { color: var(--muted) !important; }
 
     /* ═══════════════════════════════════════
        TOAST
@@ -1063,12 +1082,18 @@
                       <div style="font-size:0.7rem;color:var(--muted);">{{ b.motorcycle_model }}</div>
                     {% endif %}
                   </td>
-                  <td class="{% if is_done %}bk-svc-done{% endif %}">
+                  <td>
                     {{ b.service }}
                     {% if group_bookings|length > 1 %}
                       <span style="font-size:0.68rem;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;padding:0.15rem 0.5rem;border-radius:4px;margin-left:0.4rem;vertical-align:middle;font-weight:600;">+{{ group_bookings|length - 1 }} more</span>
                     {% endif %}
-                    <div style="font-size:0.7rem;color:var(--muted);">₱{{ '%.2f'|format(booking_service_price(b.service)) }}</div>
+                    <div style="font-size:0.7rem;color:var(--muted);">₱{{ (booking_service_price(b.service))|money }}</div>
+                    {% if b.assigned_mechanic_name %}
+                      {% set _ms = mech_status.get(b.assigned_mechanic_name, 'available') %}
+                      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.15rem;">Mechanic: {{ b.assigned_mechanic_name }} <span class="mpill {{ _ms }}" data-mech-pill="{{ b.assigned_mechanic_name }}">{{ mech_labels[_ms] }}</span></div>
+                    {% else %}
+                      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.15rem;">Mechanic: not assigned yet</div>
+                    {% endif %}
                   </td>
                   <td>
                     {% if all_same_slot %}
@@ -1475,14 +1500,15 @@
               {% set sp = (o|ship_prices) if sh else {} %}
               {% set sh_grand = (o.total_amount or 0) + (o.shipping_fee or 0) %}
               {% set sh_sent = sh and o.shipping_options_sent_at %}
-              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if o.paid_at else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}"{% endif %}>
+              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if o.paid_at else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ o.paid_at|when if o.paid_at else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
                 <td style="white-space:nowrap;">
                   <a href="#" onclick="viewOrder({{ o.id }}, '{{ o_display_name|e }}', '{{ '' if o.is_instore else o.customer.email }}', '{{ '' if o.is_instore else o.customer.phone }}', '{{ o.customer.motorcycle_model or '' if not o.is_instore }}', '{{ o.customer.motorcycle_plate or '' if not o.is_instore }}', {{ o.total_amount }}, '{{ o.status }}', '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y — %I:%M %p') }}', {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
                     {{ o_display_ref }}
                   </a>
+                  {% if sh and o.status == 'confirmed' %}<div><span style="display:inline-block;background:#dc2626;color:#fff;font-size:0.55rem;font-weight:700;letter-spacing:0.04em;padding:0.05rem 0.4rem;border-radius:4px;">NEW</span></div>{% endif %}
                 </td>
-                <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">{{ o_display_name }}</td>
+                <td style="overflow:hidden;text-overflow:ellipsis;max-width:130px;"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ o_display_name }}</div>{% if not o.is_instore and o.customer and o.customer.phone %}<div style="font-size:0.66rem;color:var(--muted);">({{ o.customer.phone }})</div>{% endif %}</td>
                 <td style="overflow:hidden;">
                   {% if o.items and sh %}
                     {% for item in o.items %}
@@ -1609,6 +1635,17 @@
                     {% endif %}
                   </select>
                   <button type="button" class="ship-save" disabled onclick="shipSave(this)">Save</button>
+                  {% if o.status in ['confirmed','in_progress'] %}
+                    <button type="button" class="ship-send" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Send shipping options</button>
+                    <span class="ship-line warn">Unlocks when the order is Done Packaging</span>
+                  {% elif o.status == 'done_packaging' and not sh_sent %}
+                    <button type="button" class="ship-send" onclick="shipOpenOptions(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Send shipping options</button>
+                  {% elif o.status == 'done_packaging' and not o.paid_at %}
+                    <a class="ship-link" onclick="shipOpenOptions(this)">Edit options</a>
+                  {% elif o.status == 'shipping' and not o.received_at %}
+                    <a class="ship-link" onclick="shipRemind(this)">Remind customer to confirm</a>
+                    {% if o.received_reminder_at %}<span class="ship-line">Reminder sent {{ o.received_reminder_at|when }}</span>{% endif %}
+                  {% endif %}
                   {% if o.status == 'confirmed' %}
                     <span class="ship-line">Set to In Progress when you start packing.</span>
                   {% elif o.status == 'in_progress' %}
@@ -1623,17 +1660,6 @@
                     <span class="ship-line">If Lalamove shows Delivered, you can set Completed.</span>
                   {% elif o.status == 'shipping' %}
                     <span class="ship-line ok">The customer received it. Set to Completed.</span>
-                  {% endif %}
-                  {% if o.status in ['confirmed','in_progress'] %}
-                    <button type="button" class="ship-send" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Send shipping options</button>
-                    <span class="ship-line warn">Unlocks when the order is Done Packaging</span>
-                  {% elif o.status == 'done_packaging' and not sh_sent %}
-                    <button type="button" class="ship-send" onclick="shipOpenOptions(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Send shipping options</button>
-                  {% elif o.status == 'done_packaging' and not o.paid_at %}
-                    <a class="ship-link" onclick="shipOpenOptions(this)">Edit options</a>
-                  {% elif o.status == 'shipping' and not o.received_at %}
-                    <a class="ship-link" onclick="shipRemind(this)">Remind customer to confirm</a>
-                    {% if o.received_reminder_at %}<span class="ship-line">Reminder sent {{ o.received_reminder_at|when }}</span>{% endif %}
                   {% endif %}
                 </div>
                 {% else %}
@@ -1742,7 +1768,7 @@
                 <td>{{ loop.index }}</td>
                 <td style="font-weight:600;color:var(--text);">{{ p.name }}</td>
                 <td>{{ p.category }}</td>
-                <td>₱{{ '%.2f'|format(p.price) }}</td>
+                <td>₱{{ (p.price)|money }}</td>
                 <td>
                   {% if p.stock <= 0 %}<span class="stock-label stock-label-out">Out of stock</span>
                   {% elif p.stock < 5 %}<span class="stock-label stock-label-low">{{ p.stock }} left</span>
@@ -1848,27 +1874,26 @@
   </div>
 
   <div id="mech-view-roster">
-  <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
-    <div style="flex:1;min-width:140px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem;text-align:center;">
-      <div id="mech-stat-total" style="font-size:1.9rem;font-weight:700;color:var(--text);">0</div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">Total</div>
-    </div>
-    <div style="flex:1;min-width:140px;background:#F0FDF4;border:1px solid #bbf7d0;border-radius:10px;padding:1.1rem;text-align:center;">
-      <div id="mech-stat-available" style="font-size:1.9rem;font-weight:700;color:#15803D;">0</div>
-      <div style="font-size:0.78rem;color:#15803D;margin-top:0.2rem;">Available</div>
-    </div>
-    <div style="flex:1;min-width:140px;background:#FEFCE8;border:1px solid #fde68a;border-radius:10px;padding:1.1rem;text-align:center;">
-      <div id="mech-stat-busy" style="font-size:1.9rem;font-weight:700;color:#B45309;">0</div>
-      <div style="font-size:0.78rem;color:#B45309;margin-top:0.2rem;">Busy</div>
-    </div>
+  <div style="display:flex;gap:0.5rem;margin-bottom:0.7rem;flex-wrap:wrap;">
+    <span class="mpill-lg" style="background:#F0FDF4;color:#15803D;border:1px solid #bbf7d0;">✓ Available · <b id="mech-stat-available">0</b></span>
+    <span class="mpill-lg" style="background:#F5F3FF;color:#6D28D9;border:1px solid #ddd6fe;">Reserved · <b id="mech-stat-reserved">0</b></span>
+    <span class="mpill-lg" style="background:#FEFCE8;color:#B45309;border:1px solid #fde68a;">Busy · <b id="mech-stat-busy">0</b></span>
+    <span class="mpill-lg" style="background:#F3F4F6;color:#4b5563;border:1px solid #d1d5db;">Off Duty · <b id="mech-stat-offduty">0</b></span>
+  </div>
+  <div style="font-size:0.76rem;color:#374151;line-height:1.6;margin-bottom:1rem;max-width:980px;">
+    <strong>Reserved:</strong> has a Confirmed booking that hasn't been started yet (automatic).
+    <strong>Busy:</strong> the admin pressed Start, so the booking is in Inspection &amp; Estimation or In Progress (automatic), or a walk-in job entered manually.
+    <strong>Off Duty:</strong> can't be booked or assigned.
+    <strong>Available:</strong> free.
+    A real booking always wins over what's set manually in Edit.
   </div>
 
   <div class="card">
     <div style="overflow-x:auto;">
       <table class="table">
         <thead><tr>
-          <th>Name</th><th>Phone</th><th>Specialization</th><th>Active Jobs</th>
-          <th>Assigned Customer</th><th>Assigned Service</th><th>Status</th><th>Actions</th>
+          <th>Mechanic</th><th>Contact</th><th>Specialty</th><th>Jobs Today</th>
+          <th>Customer / Booking</th><th>Service</th><th>Status</th><th>Actions</th>
         </tr></thead>
         <tbody id="mechanics-roster-list"><tr><td colspan="8"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
       </table>
@@ -1979,8 +2004,8 @@
       <div class="stats-grid">
         <div class="stat-card red">
           <div class="stat-icon" style="font-size:20px;font-weight:700;line-height:1;">₱</div>
-          <div class="stat-value" id="rpt-net-revenue">₱{{ '%.2f'|format(rpt.net_revenue) }}</div><div class="stat-label">Net Revenue</div>
-          <div id="rpt-revenue-sub" style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem;">Gross ₱{{ '%.2f'|format(rpt.gross_total) }}{% if rpt.refund_total > 0 %} · <strong style="color:var(--red);">−₱{{ '%.2f'|format(rpt.refund_total) }}</strong> refunded{% else %} · no refunds{% endif %}</div>
+          <div class="stat-value" id="rpt-net-revenue">₱{{ (rpt.net_revenue)|money }}</div><div class="stat-label">Net Revenue</div>
+          <div id="rpt-revenue-sub" style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem;">Gross ₱{{ (rpt.gross_total)|money }}{% if rpt.refund_total > 0 %} · <strong style="color:var(--red);">−₱{{ (rpt.refund_total)|money }}</strong> refunded{% else %} · no refunds{% endif %}</div>
         </div>
         <div class="stat-card blue">
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
@@ -2370,7 +2395,7 @@
           <tr>
             <td style="font-weight:700;color:var(--blue);">{{ ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) }}</td>
             <td>{{ o.contact_name if o.is_instore else o.customer.fullname }}</td>
-            <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
+            <td>₱{{ (o.total_amount)|money }}</td>
             <td><span class="badge badge-{{ o.status|replace('_','') }}">{{ o.status|replace('_',' ')|title }}</span></td>
             <td>{{ o.created_at.strftime('%b %d, %Y') }}</td>
             <td>
@@ -2785,74 +2810,145 @@
 <!-- ORDER DETAIL MODAL -->
 <!-- Ship to Address: shop-side steps -->
 <div class="modal-overlay" id="modal-ship-options">
-  <div class="modal-box" style="width:460px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;margin-bottom:0.25rem;" id="so-title">Send shipping options</div>
-    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">The customer has 24 hours to choose one and pay items + shipping with GCash. Prices are for shipping only.</div>
+  <div class="modal-box" style="width:540px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--text);letter-spacing:0.04em;line-height:1;">Shipping options</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;" id="so-sub"></div>
     <input type="hidden" id="so-oid">
-    <div class="form-group"><label>Lalamove vehicle</label>
-      <select id="so-vehicle"><option value="">Choose a vehicle</option><option>Motorcycle</option><option>Sedan</option><option>MPV / SUV</option><option>Van</option></select></div>
-    <div class="form-group"><label>Reason for that vehicle</label>
-      <select id="so-reason"><option value="">Choose a reason</option><option>Fits on a motorcycle</option><option>Too big for a motorcycle</option><option>Too heavy for a motorcycle</option><option>Many tyres in one order</option></select></div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;">
-      <div class="form-group"><label>Priority ₱</label><input type="text" inputmode="decimal" id="so-priority" placeholder="0.00"></div>
-      <div class="form-group"><label>Regular ₱</label><input type="text" inputmode="decimal" id="so-regular" placeholder="0.00"></div>
-      <div class="form-group"><label>Pooling ₱</label><input type="text" inputmode="decimal" id="so-pooling" placeholder="optional"></div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:0.6rem;">
+      <div class="form-group"><label>Item ordered</label><input type="text" id="so-item" readonly style="background:#f3f4f6;font-weight:600;"></div>
+      <div class="form-group"><label>Quantity</label><input type="text" id="so-qty" readonly style="background:#f3f4f6;font-weight:600;"></div>
     </div>
+    <a class="so-lala" href="https://www.lalamove.com/en-ph/personal" target="_blank" rel="noopener" style="margin-bottom:1rem;">
+      <img class="lala-logo" src="/static/images/lalamove-logo.png" alt="" width="20" height="20" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%2712%27 r=%2712%27 fill=%27%23f16622%27/%3E%3Cpath d=%27M8 5h3v11h5v3H8z%27 fill=%27%23fff%27/%3E%3C/svg%3E'">
+      Open Lalamove &#8599;</a>
+    <div class="form-group"><label>Vehicle <span class="lbl-sub">(based on the item and quantity)</span></label>
+      <select id="so-vehicle" onchange="shipVehicleChanged()">
+        <option value="">Choose a vehicle</option>
+        <option value="Motorcycle">Motorcycle · up to 50 × 40 × 50 cm, 20 kg</option>
+        <option value="Sedan">Sedan · up to 100 × 60 × 70 cm, 200 kg</option>
+        <option value="Subcompact SUV">Subcompact SUV · up to 150 × 120 × 100 cm, 300 kg</option>
+      </select></div>
+    <div class="form-group"><label>Reason <span class="lbl-sub">(the customer will see this)</span></label>
+      <select id="so-reason" onchange="shipReasonChanged()" disabled>
+        <option value="">Choose a vehicle first</option>
+      </select>
+      <input type="text" id="so-reason-custom" maxlength="120" placeholder="Type the reason (up to 120 characters)" style="display:none;margin-top:0.4rem;" oninput="shipPreview()"></div>
+    <div id="so-preview" style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.8rem;color:#374151;margin-bottom:1rem;display:none;"></div>
+
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">Check the prices in Lalamove</div>
+    <div class="so-addr" style="display:flex;gap:0.7rem;align-items:flex-start;"><span class="so-ab" style="background:#111827;">A</span>
+      <div style="flex:1;min-width:0;"><div class="so-addr-h" style="margin-bottom:0.15rem;"><span>Pickup · the shop</span></div>
+      <div id="so-addr-a" style="font-size:0.84rem;color:var(--text);white-space:pre-line;">MotoTyres North Caloocan, {{ SHOP_ADDRESS }}</div></div>
+      <button type="button" class="so-copy" onclick="shipCopy('so-addr-a', this)">Copy</button></div>
+    <div class="so-addr" style="display:flex;gap:0.7rem;align-items:flex-start;"><span class="so-ab" style="background:#dc2626;">B</span>
+      <div style="flex:1;min-width:0;"><div class="so-addr-h" style="margin-bottom:0.15rem;"><span>Drop-off · the customer</span></div>
+      <div id="so-addr-b" style="font-size:0.84rem;color:var(--text);white-space:pre-line;"></div></div>
+      <button type="button" class="so-copy" onclick="shipCopy('so-addr-b', this)">Copy</button></div>
+    <ol style="font-size:0.8rem;color:#374151;padding-left:1.2rem;margin:0.7rem 0 1rem;line-height:1.6;">
+      <li>Open Lalamove (button above) and choose <strong id="so-step-vehicle">the vehicle you picked</strong>.</li>
+      <li>Set A as the pickup and B as the drop-off.</li>
+      <li>Type the prices Lalamove shows below. Don't book yet. Book only after the customer pays.</li>
+    </ol>
+
+    <div class="so-price"><div><b>Priority</b><small>Highest fee · fastest, goes straight to the customer</small></div>
+      <div class="so-money"><span>₱</span><input type="text" inputmode="numeric" id="so-priority" oninput="shipPriceInput(this)"></div></div>
+    <div class="so-price"><div><b>Regular</b><small>Standard delivery</small></div>
+      <div class="so-money"><span>₱</span><input type="text" inputmode="numeric" id="so-regular" oninput="shipPriceInput(this)"></div></div>
+    <div class="so-price"><div><b>Pooling <span class="lbl-sub">(optional)</span></b><small>Lowest fee · may take longer, can carry other orders. Leave blank if Lalamove doesn't show it.</small></div>
+      <div class="so-money"><span>₱</span><input type="text" inputmode="numeric" id="so-pooling" oninput="shipPriceInput(this)"></div></div>
+
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.7rem 0.85rem;font-size:0.76rem;color:#713f12;margin:0.9rem 0 1rem;line-height:1.55;">
+      <strong>If Lalamove's price changes:</strong> the customer pays the price you send here, and it won't change after they pay. If Lalamove charges more or less when you book, the shop covers or keeps the difference. If the price changes a lot before the customer pays, press <strong>Edit options</strong> to send the new prices.</div>
     <div id="so-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
-    <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
-      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-options')">Close</button>
-      <button type="button" class="btn-primary-custom" id="so-go" onclick="shipSubmitOptions()">Send to customer</button>
+    <div style="display:flex;gap:0.6rem;">
+      <button type="button" class="btn-secondary-custom" style="flex:1;" onclick="closeModal('modal-ship-options')">Cancel</button>
+      <button type="button" class="btn-primary-custom" style="flex:1.4;" id="so-go" onclick="shipSubmitOptions()">Send to customer</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-ship-start">
-  <div class="modal-box" style="width:460px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;margin-bottom:0.25rem;">Start shipping</div>
-    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;" id="ss-sub">Book the Lalamove vehicle, then type the details here. The customer gets a Track on Lalamove link.</div>
-    <input type="hidden" id="ss-oid">
-    <div class="form-group"><label>Who is delivering</label>
-      <select id="ss-type" onchange="document.getElementById('ss-who').textContent = this.value === 'driver' ? 'Driver' : 'Rider'"><option value="rider">Rider (motorcycle)</option><option value="driver">Driver (car / van)</option></select></div>
-    <div class="form-group"><label><span id="ss-who">Rider</span> name</label><input type="text" id="ss-name" maxlength="100"></div>
-    <div class="form-group"><label>Phone number</label><input type="text" id="ss-phone" maxlength="20"></div>
-    <div class="form-group"><label>Plate number</label><input type="text" id="ss-plate" maxlength="30"></div>
-    <div class="form-group"><label>Lalamove tracking link</label><input type="text" id="ss-link" placeholder="https://" maxlength="500"></div>
-    <div class="form-group"><label>What Lalamove charged ₱ (optional)</label><input type="text" inputmode="decimal" id="ss-fare" placeholder="0.00"></div>
+  <div class="modal-box" style="width:480px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="ss-title">Rider details</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 0.8rem;line-height:1.5;" id="ss-sub"></div>
+    <a class="so-lala" href="https://www.lalamove.com/en-ph/personal" target="_blank" rel="noopener" style="margin-bottom:1rem;">
+      <img class="lala-logo" src="/static/images/lalamove-logo.png" alt="" width="20" height="20" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23f16622'/%3E%3Cpath d='M8 5h3v11h5v3H8z' fill='%23fff'/%3E%3C/svg%3E'">
+      Open Lalamove &#8599;</a>
+    <input type="hidden" id="ss-oid"><input type="hidden" id="ss-fee"><input type="hidden" id="ss-car">
+    <div class="form-group"><label><span class="ss-who">Rider</span> name</label><input type="text" id="ss-name" maxlength="100" oninput="this.classList.remove('so-err-field')"></div>
+    <div class="form-group"><label><span class="ss-who">Rider</span> mobile</label><input type="text" inputmode="numeric" id="ss-phone" maxlength="11" placeholder="09XXXXXXXXX" oninput="this.value=this.value.replace(/[^0-9]/g,'');this.classList.remove('so-err-field')"></div>
+    <div class="form-group"><label id="ss-model-label">Motorcycle model</label><input type="text" id="ss-model" maxlength="60" oninput="this.classList.remove('so-err-field')"></div>
+    <div class="form-group"><label>Plate number</label><input type="text" id="ss-plate" maxlength="30" style="text-transform:uppercase;" placeholder="ABC 1234" oninput="this.value=this.value.toUpperCase();this.classList.remove('so-err-field')"></div>
+    <div class="form-group"><label>Lalamove tracking link</label><input type="text" id="ss-link" placeholder="https://" maxlength="500" oninput="this.classList.remove('so-err-field')"></div>
+    <div class="form-group"><label>Fare Lalamove charged (optional)</label><input type="text" inputmode="decimal" id="ss-fare" placeholder="0.00" oninput="this.value=this.value.replace(/[^0-9.]/g,'');this.classList.remove('so-err-field');shipFareNote()"></div>
+    <div style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.78rem;color:#374151;margin-bottom:1rem;line-height:1.6;">
+      <div id="ss-feebox"></div><div id="ss-farebox" style="font-weight:700;"></div></div>
     <div id="ss-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
     <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
-      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-start')">Close</button>
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-start')">Go back</button>
       <button type="button" class="btn-primary-custom" id="ss-go" onclick="shipSubmitStart()">Set to Shipping</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-ship-complete">
-  <div class="modal-box" style="width:440px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;margin-bottom:0.25rem;">Complete order</div>
-    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;" id="sc-sub"></div>
+  <div class="modal-box" style="width:480px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Mark as completed?</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 0.8rem;line-height:1.5;" id="sc-sub"></div>
     <input type="hidden" id="sc-oid">
-    <div class="form-group" id="sc-proof-wrap"><label>Proof from Lalamove</label>
-      <textarea id="sc-proof" rows="3" maxlength="500" placeholder="Delivered, signed by Juan, 2:40 PM"></textarea></div>
+    <ol style="font-size:0.78rem;color:#374151;padding-left:1.2rem;margin:0 0 0.9rem;line-height:1.55;">
+      <li>Open this order in your Lalamove app, or open the tracking link below.</li>
+      <li>Check that it says Delivered, and look at the proof of delivery, like the photo or the name of who received it.</li>
+      <li>Tick the box and write what Lalamove shows. It's saved with the order as proof.</li>
+    </ol>
+    <a class="so-lala fill" id="sc-link" href="#" target="_blank" rel="noopener" style="margin-bottom:1rem;">
+      <img class="lala-logo" src="/static/images/lalamove-logo.png" alt="" width="20" height="20" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23f16622'/%3E%3Cpath d='M8 5h3v11h5v3H8z' fill='%23fff'/%3E%3C/svg%3E'">
+      Open tracking link &#8599;</a>
+    <label id="sc-check-wrap" style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.82rem;font-weight:600;color:var(--text);margin-bottom:0.9rem;cursor:pointer;border:1px solid transparent;border-radius:6px;padding:0.2rem;">
+      <input type="checkbox" id="sc-delivered" style="margin-top:3px;" onchange="document.getElementById('sc-check-wrap').classList.remove('so-err-field')">
+      <span>Lalamove shows this order as Delivered</span></label>
+    <div class="form-group"><label>What Lalamove shows (saved as proof)</label>
+      <textarea id="sc-proof" rows="3" maxlength="500" placeholder="Delivered 2:41 PM, photo of the receiver" oninput="this.classList.remove('so-err-field')"></textarea></div>
+    <div style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.76rem;color:#374151;margin-bottom:1rem;line-height:1.5;">
+      The customer gets a notification and an email saying their order was completed because Lalamove shows it was delivered. If they didn't get it, they can contact the shop.</div>
     <div id="sc-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
     <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
-      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-complete')">Close</button>
-      <button type="button" class="btn-primary-custom" id="sc-go" onclick="shipSubmitComplete()">Set to Completed</button>
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-complete')">Go back</button>
+      <button type="button" class="btn-primary-custom" id="sc-go" onclick="shipSubmitComplete()">Mark as completed</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-ship-cancel">
-  <div class="modal-box" style="width:460px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--red);letter-spacing:0.04em;margin-bottom:0.25rem;" id="sx-title">Cancel order</div>
-    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;" id="sx-sub"></div>
-    <input type="hidden" id="sx-oid"><input type="hidden" id="sx-paid">
-    <div class="form-group"><label>Reason</label><textarea id="sx-reason" rows="3" maxlength="300" placeholder="Why is the order being cancelled?"></textarea></div>
-    <div class="form-group"><label>The items</label>
-      <select id="sx-restock"><option value="1">Put back in stock</option><option value="0">Do not put back in stock (damaged / unsellable)</option></select></div>
+  <div class="modal-box" style="width:500px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Cancel and refund</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;line-height:1.5;" id="sx-sub"></div>
+    <input type="hidden" id="sx-oid"><input type="hidden" id="sx-total">
+    <div class="form-group"><label>Reason (the customer will see this)</label>
+      <select id="sx-reason" onchange="shipRefundReasonChanged()">
+        <option value="">Choose a reason</option>
+        <option>The item got damaged while packing</option>
+        <option>The item is out of stock</option>
+        <option>Lalamove can't deliver to this address</option>
+        <option>The customer asked to cancel</option>
+        <option value="__other">Other</option>
+      </select>
+      <input type="text" id="sx-reason-custom" maxlength="120" placeholder="Type the reason" style="display:none;margin-top:0.4rem;" oninput="this.classList.remove('so-err-field')"></div>
+    <div style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.85rem;font-size:0.8rem;color:#374151;margin-bottom:0.9rem;line-height:1.7;">
+      <div style="display:flex;justify-content:space-between;"><span>Items</span><span id="sx-items"></span></div>
+      <div style="display:flex;justify-content:space-between;"><span>Shipping fee</span><span id="sx-ship"></span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:0.3rem;padding-top:0.3rem;"><span>Back to their GCash</span><span id="sx-back"></span></div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;">Sent through PayMongo. It may take a few days to show in their GCash.</div>
+    </div>
+    <label style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.82rem;font-weight:600;color:var(--text);cursor:pointer;margin-bottom:0.2rem;">
+      <input type="checkbox" id="sx-restock" checked style="margin-top:3px;"><span>Put the item back in stock</span></label>
+    <div id="sx-restock-note" style="display:none;font-size:0.72rem;color:#92400e;margin:0 0 0.8rem 1.4rem;">Unticked because the item is damaged or not in the shop. Tick it if it can still be sold.</div>
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.6rem 0.8rem;font-size:0.74rem;color:#713f12;margin:0.8rem 0 1rem;line-height:1.5;">
+      If you already booked Lalamove for this order, cancel that booking in the Lalamove app too.</div>
     <div id="sx-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
     <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
       <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-cancel')">Keep order</button>
-      <button type="button" class="btn-primary-custom" id="sx-go" onclick="shipSubmitCancel()">Cancel order</button>
+      <button type="button" class="btn-primary-custom" id="sx-go" onclick="shipSubmitCancel()">Cancel and refund</button>
     </div>
   </div>
 </div>
@@ -2953,11 +3049,12 @@
       </div>
       <div class="form-group">
         <label>Status</label>
-        <select id="am-status">
+        <select id="am-status" onchange="mechStatusHint('am')">
           <option value="available">Available</option>
           <option value="busy">Busy</option>
           <option value="off_duty">Off Duty</option>
         </select>
+        <div id="am-status-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;line-height:1.45;"></div>
       </div>
 
       <div style="margin-bottom:0.9rem;padding:0.7rem 0.8rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
@@ -3023,11 +3120,9 @@
       </div>
       <div class="form-group">
         <label>Status</label>
-        <select id="em-status">
-          <option value="available">Available</option>
-          <option value="busy">Busy</option>
-          <option value="off_duty">Off Duty</option>
-        </select>
+        <select id="em-status" onchange="mechStatusHint('em')"></select>
+        <div id="em-status-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;line-height:1.45;"></div>
+        <div id="em-status-warn" style="display:none;margin-top:0.5rem;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.55rem 0.75rem;font-size:0.76rem;color:#713f12;line-height:1.5;"></div>
       </div>
 
       <div style="margin-bottom:0.9rem;padding:0.7rem 0.8rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
@@ -3108,7 +3203,8 @@
 
 <!-- GENERIC CONFIRMATION MODAL (replaces every browser confirm()) -->
 <div class="modal-overlay" id="modal-confirm" style="z-index:1200;" onclick="if(event.target===this) resolveConfirm(false)">
-  <div class="modal-box" style="max-width:400px;text-align:center;">
+  <div class="modal-box" style="max-width:400px;text-align:center;position:relative;">
+    <button type="button" aria-label="Close" onclick="resolveConfirm(false)" style="position:absolute;top:0.7rem;right:0.8rem;background:none;border:none;font-size:1.1rem;color:#9ca3af;cursor:pointer;line-height:1;padding:0.25rem;">✕</button>
     <div id="mc-icon" style="width:46px;height:46px;border-radius:50%;background:#f3f4f6;color:var(--text);display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     </div>
@@ -3216,7 +3312,8 @@
   <div class="modal-box" style="max-width:400px;text-align:center;">
     <div style="width:46px;height:46px;border-radius:50%;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;margin:0 auto 0.9rem;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
     <h5 style="margin-bottom:0.4rem;">Mark this booking completed?</h5>
-    <p id="dc-note" style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:1rem;"></p>
+    <p id="dc-note" style="color:var(--muted);font-size:0.84rem;line-height:1.5;margin-bottom:0.5rem;"></p>
+    <p id="dc-freed" style="display:none;color:var(--muted);font-size:0.84rem;margin-bottom:1rem;"></p>
     <div style="background:#f5f5f4;border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.9rem;font-size:0.82rem;text-align:left;margin-bottom:1.2rem;">
       <div style="display:flex;justify-content:space-between;gap:0.6rem;"><span style="color:var(--muted);">Customer</span><strong id="dc-customer"></strong></div>
       <div style="display:flex;justify-content:space-between;gap:0.6rem;margin-top:0.25rem;"><span style="color:var(--muted);">Service</span><strong id="dc-service" style="text-align:right;"></strong></div>
@@ -3253,6 +3350,7 @@
       <button type="button" class="dx-chip" onclick="dxPickReason('The shop is closed on this day.')">Shop closed</button>
       <button type="button" class="dx-chip" onclick="dxPickReason('The parts needed for your service are not available.')">Parts not available</button>
     </div>
+    <div id="dx-freed" style="display:none;font-size:0.8rem;color:var(--muted);margin-bottom:0.6rem;"></div>
     <textarea id="dx-reason" maxlength="300" oninput="dxUpdate()" placeholder="e.g. The mechanic assigned to your booking is unavailable on this day." style="width:100%;min-height:76px;padding:0.5rem 0.65rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.82rem;resize:vertical;"></textarea>
     <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);margin-top:0.25rem;"><span>Pick a reason or type your own.</span><span id="dx-count">0 / 300</span></div>
     <div id="dx-error" style="display:none;margin-top:0.4rem;font-size:0.76rem;color:#b91c1c;"></div>
@@ -3328,7 +3426,13 @@
     <p style="color:var(--muted);font-size:0.875rem;margin-bottom:0.4rem;">You are about to start the inspection for:</p>
     <p id="modal-ss-customer" style="color:var(--text);font-weight:700;font-size:1rem;margin-bottom:0.25rem;"></p>
     <p id="modal-ss-service" style="color:#d97706;font-size:0.875rem;margin-bottom:1.5rem;"></p>
-    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;">This will mark the booking as <strong style="color:#d97706;">Inspection &amp; Estimation</strong>. Continue?</p>
+    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.9rem;">This will mark the booking as <strong style="color:#d97706;">Inspection &amp; Estimation</strong>. Continue?</p>
+    <div id="ss-mech-note" style="display:none;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.55rem 0.75rem;font-size:0.76rem;color:#713f12;line-height:1.5;margin-bottom:0.9rem;text-align:left;"></div>
+    <div id="ss-mech-pick" style="display:none;text-align:left;margin-bottom:0.9rem;">
+      <label style="display:block;font-size:0.72rem;font-weight:600;color:var(--muted);margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.06em;">Mechanic for this job</label>
+      <select id="ss-mech-select" onchange="this.classList.remove('so-err-field');document.getElementById('ss-mech-err').style.display='none'" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.85rem;"></select>
+    </div>
+    <div id="ss-mech-err" style="display:none;color:#b91c1c;font-size:0.78rem;font-weight:600;margin-bottom:0.9rem;text-align:left;"></div>
     <div class="modal-actions" style="justify-content:center;">
       <button class="btn-cancel" onclick="document.getElementById('modal-start-service').style.display='none'">Cancel</button>
       <button id="modal-ss-confirm" onclick="confirmStartService()" style="padding:0.6rem 1.5rem;background:rgba(234,179,8,0.85);color:#000;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">▶ Yes, Start</button>
@@ -3344,7 +3448,8 @@
     <p style="color:var(--muted);font-size:0.875rem;margin-bottom:0.4rem;">You are about to cancel the booking of:</p>
     <p id="modal-cb-customer" style="color:var(--text);font-weight:700;font-size:1rem;margin-bottom:0.25rem;"></p>
     <p id="modal-cb-service" style="color:var(--red);font-size:0.875rem;margin-bottom:1.5rem;"></p>
-    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;">This action <strong style="color:var(--red);">cannot be undone</strong>. The customer will be notified.</p>
+    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.5rem;">This action <strong style="color:var(--red);">cannot be undone</strong>. The customer will be notified.</p>
+    <p id="modal-cb-mech" style="display:none;color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;"></p>
     <div class="modal-actions" style="justify-content:center;">
       <button class="btn-cancel" onclick="document.getElementById('modal-cancel-booking').style.display='none'">Go Back</button>
       <button onclick="confirmCancelBooking()" style="padding:0.6rem 1.5rem;background:rgba(208,0,25,0.85);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">Yes, Cancel</button>
@@ -3357,7 +3462,8 @@
   <div class="modal-box" style="max-width:420px;text-align:center;">
     <div style="margin-bottom:0.75rem;color:var(--red);"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
     <h5 style="margin-bottom:0.25rem;">Mark as Completed?</h5>
-    <p id="modal-ci-text" style="color:var(--muted);font-size:0.875rem;margin-bottom:1.5rem;"></p>
+    <p id="modal-ci-text" style="color:var(--muted);font-size:0.875rem;margin-bottom:0.5rem;"></p>
+    <p id="modal-ci-mech" style="display:none;color:var(--muted);font-size:0.875rem;margin-bottom:1.5rem;"></p>
     <div class="modal-actions" style="justify-content:center;">
       <button class="btn-cancel" onclick="document.getElementById('modal-complete-invoice').style.display='none'">Go back</button>
       <button onclick="confirmCompleteInvoice()" style="padding:0.6rem 1.5rem;background:rgba(208,0,25,0.85);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">Yes, complete &amp; send invoice</button>
@@ -3459,6 +3565,10 @@
       document.getElementById('mc-cancel').textContent = o.cancelLabel || 'Cancel';
       setTimeout(() => { const c = document.getElementById('mc-cancel'); if (c) c.focus(); }, 40);   // the safe choice is focused first
       const icon = document.getElementById('mc-icon');
+      if (!icon.dataset.def) icon.dataset.def = icon.innerHTML;
+      icon.innerHTML = o.icon === 'x'
+        ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+        : icon.dataset.def;
       icon.style.background = o.danger ? '#fef2f2' : '#f3f4f6';
       icon.style.color = o.danger ? '#dc2626' : 'var(--text)';
       openModal('modal-confirm');
@@ -3616,9 +3726,11 @@
 
   function renderMechanicsRoster() {
     const tbody = document.getElementById('mechanics-roster-list');
-    document.getElementById('mech-stat-total').textContent = _mechanicsRoster.length;
-    document.getElementById('mech-stat-available').textContent = _mechanicsRoster.filter(m => m.effective_status === 'available').length;
-    document.getElementById('mech-stat-busy').textContent = _mechanicsRoster.filter(m => m.effective_status === 'busy').length;
+    const cnt = st => _mechanicsRoster.filter(m => m.effective_status === st).length;
+    document.getElementById('mech-stat-available').textContent = cnt('available');
+    document.getElementById('mech-stat-reserved').textContent = cnt('reserved');
+    document.getElementById('mech-stat-busy').textContent = cnt('busy');
+    document.getElementById('mech-stat-offduty').textContent = cnt('off_duty');
 
     if (!_mechanicsRoster.length) {
       tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></div><p>No mechanics yet. Add one!</p></div></td></tr>';
@@ -3640,8 +3752,9 @@
       return `<div style="color:var(--text);font-weight:600;">${a.customer || '<span style="color:var(--muted);font-weight:400;">—</span>'}</div><div style="font-size:0.68rem;color:#b45309;font-style:italic;">entered manually</div>`;
     }
     const when = a.is_today ? a.start_label : `${a.date_label}, ${a.start_label}`;
-    const more = m.more_count > 0 ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">+${m.more_count} more booked</div>` : '';
-    return `<div style="color:var(--text);font-weight:600;">${a.customer} / #${a.ref}</div><div style="font-size:0.72rem;color:var(--muted);">${when}</div>${more}`;
+    const more = m.more_count > 0 ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">+${m.more_count} more</div>` : '';
+    const line = a.state === 'started' ? `${a.status_label} · started` : `Confirmed · not started · ${when}`;
+    return `<div style="color:var(--text);font-weight:600;">${a.customer} / #${a.ref}</div><div style="font-size:0.72rem;color:${a.state === 'started' ? '#B45309' : 'var(--muted)'};">${line}</div>${more}`;
   }
 
   function mechanicAssignedServiceHTML(m) {
@@ -3654,6 +3767,7 @@
 
   const MECH_STATUS_PILLS = {
     available: { label: 'Available', bg: '#F0FDF4', color: '#15803D' },
+    reserved:  { label: 'Reserved',  bg: '#F5F3FF', color: '#6D28D9' },
     busy:      { label: 'Busy',      bg: '#FEFCE8', color: '#B45309' },
     off_duty:  { label: 'Off Duty',  bg: '#F3F4F6', color: '#4b5563' },
   };
@@ -3666,11 +3780,12 @@
   }
 
   function mechanicRowHTML(m) {
+    const off = m.effective_status === 'off_duty';
     return `
-      <tr>
+      <tr${off ? ' style="opacity:0.6;"' : ''}>
         <td>
           <div style="font-weight:600;color:var(--text);">${m.name}</div>
-          ${m.attendance ? `<div style="margin-top:0.2rem;"><span class="att-pill att-${m.attendance.status}">${m.attendance.status_label}</span>${m.attendance.time_in ? `<span style="font-size:0.68rem;color:var(--muted);margin-left:0.4rem;">in ${m.attendance.time_in}${m.attendance.time_out ? ' · out ' + m.attendance.time_out : ''}</span>` : ''}</div>` : ''}
+          ${off ? '<div style="margin-top:0.2rem;"><span class="att-pill att-off">Off today</span></div>' : m.attendance ? `<div style="margin-top:0.2rem;"><span class="att-pill att-${m.attendance.status}">${m.attendance.status_label}</span>${m.attendance.time_in ? `<span style="font-size:0.68rem;color:var(--muted);margin-left:0.4rem;">in ${m.attendance.time_in}${m.attendance.time_out ? ' · out ' + m.attendance.time_out : ''}</span>` : ''}</div>` : ''}
           ${m.note ? `<div style="font-size:0.72rem;color:var(--muted);">${m.note}</div>` : ''}
         </td>
         <td>${m.phone || '<span style="color:var(--muted);">—</span>'}</td>
@@ -3680,7 +3795,7 @@
         <td>${mechanicAssignedServiceHTML(m)}</td>
         <td>${mechanicStatusHTML(m)}</td>
         <td style="white-space:nowrap;">
-          <button type="button" class="btn-action-edit" onclick="openAssignPicker(${m.id})">Assign</button>
+          <button type="button" class="btn-action-edit" ${off ? 'disabled title="Off Duty mechanics can\'t be assigned" style="opacity:0.45;cursor:not-allowed;"' : ''} onclick="openAssignPicker(${m.id})">Assign</button>
           <button type="button" class="btn-action-edit" onclick='openEditMechanic(${JSON.stringify(m).replace(/'/g, "&#39;")})'>Edit</button>
           <button type="button" class="btn-action-delete" onclick="deleteMechanicJS(${m.id}, '${m.name.replace(/'/g, "\\'")}', ${m.active_jobs_count})">Delete</button>
         </td>
@@ -3696,12 +3811,38 @@
     Array.from(selectEl.options).forEach(o => { o.selected = values.has(o.value); });
   }
 
+  // The small gray line under Status (Add and Edit), and the yellow warning when a mechanic with waiting bookings goes Off Duty.
+  let _editLock = null;
+  function mechStatusHint(prefix) {
+    const v = document.getElementById(prefix + '-status').value, hint = document.getElementById(prefix + '-status-hint');
+    const lock = prefix === 'em' ? _editLock : null;
+    const warn = document.getElementById('em-status-warn');
+    if (warn) warn.style.display = 'none';
+    if (lock && lock.kind === 'started') {
+      hint.textContent = `Set by booking ${lock.ref} (${lock.status_label}). It changes on its own when the booking is completed or cancelled.`;
+    } else if (lock && lock.kind === 'reserved' && v !== 'off_duty') {
+      hint.textContent = `Set by booking ${lock.refs[0]}, which hasn't started yet. It turns Busy when you press Start in Manage Bookings.`;
+    } else if (v === 'off_duty') {
+      hint.textContent = "Customers can't book them and they can't be assigned while Off Duty.";
+      if (lock && lock.kind === 'reserved' && warn) {
+        const n = lock.waiting.length, list = lock.waiting.map(w => `${w.ref} ${w.service}, ${w.when}`).join('; ');
+        warn.textContent = `This mechanic has ${n} booking${n === 1 ? '' : 's'} waiting: ${list}. ` + (n === 1 ? 'It' : 'They') + ` will go back to "not assigned yet", and you'll choose another mechanic when you press Start.`;
+        warn.style.display = 'block';
+      }
+    } else if (v === 'busy') {
+      hint.textContent = "Busy (entered manually): for a walk-in job that isn't in Bookings. Add the customer and service below.";
+    } else {
+      hint.textContent = 'Reserved and Busy are set automatically once this mechanic has a booking.';
+    }
+  }
+
   function openAddMechanicModal() {
     document.getElementById('am-name').value = '';
     document.getElementById('am-phone').value = '';
     document.getElementById('am-specialization').value = '';
     document.getElementById('am-note').value = '';
     document.getElementById('am-status').value = 'available';
+    mechStatusHint('am');
     document.getElementById('am-manual-customer').value = '';
     setMultiSelectValues(document.getElementById('am-manual-service'), '');
     document.getElementById('am-error').style.display = 'none';
@@ -3753,7 +3894,23 @@
     document.getElementById('em-phone').value = m.phone || '';
     document.getElementById('em-specialization').value = m.specialization;
     document.getElementById('em-note').value = m.note || '';
-    document.getElementById('em-status').value = m.status;
+    _editLock = m.lock || null;
+    const sel = document.getElementById('em-status');
+    if (_editLock && _editLock.kind === 'started') {
+      sel.innerHTML = `<option value="busy">Busy · booking ${_editLock.ref} started</option>`;
+      sel.value = 'busy'; sel.disabled = true;
+    } else if (_editLock && _editLock.kind === 'reserved') {
+      const more = _editLock.refs.length > 1 ? ` +${_editLock.refs.length - 1} more` : '';
+      sel.innerHTML = `<option value="reserved">Reserved · booking ${_editLock.refs[0]}${more}</option>
+        <option value="available" disabled>Available (has a booking)</option>
+        <option value="busy" disabled>Busy (has a booking)</option>
+        <option value="off_duty">Off Duty</option>`;
+      sel.value = 'reserved'; sel.disabled = false;
+    } else {
+      sel.innerHTML = `<option value="available">Available</option><option value="busy">Busy</option><option value="off_duty">Off Duty</option>`;
+      sel.value = m.status === 'busy' || m.status === 'off_duty' ? m.status : 'available'; sel.disabled = false;
+    }
+    mechStatusHint('em');
     document.getElementById('em-manual-customer').value = m.manual_customer || '';
     setMultiSelectValues(document.getElementById('em-manual-service'), m.manual_service || '');
     document.getElementById('em-error').style.display = 'none';
@@ -3777,7 +3934,7 @@
       manual_customer: document.getElementById('em-manual-customer').value.trim(),
       manual_service: selectedMultiValues(document.getElementById('em-manual-service')).join(','),
       note: document.getElementById('em-note').value.trim(),
-      status: document.getElementById('em-status').value,
+      status: (() => { const v = document.getElementById('em-status').value; return v === 'reserved' ? 'available' : v; })(),
     };
     try {
       const res = await fetch(`/mechanic/${id}/edit`, {
@@ -3787,7 +3944,7 @@
       const data = await res.json();
       if (data.success) {
         closeModal('modal-edit-mechanic');
-        showToast('Mechanic updated.', 'success');
+        showToast(data.toast || 'Mechanic updated.', 'success');
         refreshMechanicDependents();
       } else {
         errEl.textContent = data.error || 'Could not save these changes.';
@@ -4711,6 +4868,8 @@
     document.getElementById('dc-mechanic').textContent = c.mechanic || '—';
     const extraRow = document.getElementById('dc-extra-row');
     extraRow.style.display = approved > 0 ? 'flex' : 'none';
+    const dcm = document.getElementById('dc-freed');
+    if (dcm) { dcm.textContent = c.mechanic ? `${c.mechanic} will be freed up.` : ''; dcm.style.display = c.mechanic ? 'block' : 'none'; }
     document.getElementById('dc-extra').textContent = peso(approved);
     const priceRow = document.getElementById('dc-price-row');
     priceRow.style.display = c.is_backjob ? 'flex' : 'none';
@@ -4726,7 +4885,7 @@
       const res = await fetch(`/booking/${_dsCompleteId}/complete-invoice`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await res.json();
       closeModal('modal-ds-complete');
-      if (data.success) { showToast('Completed — customer notified.', 'success'); loadDaySchedule(); }
+      if (data.success) { showToast(data.toast || 'Completed — customer notified.', 'success'); loadDaySchedule(); }
       else showToast(data.error || 'Could not complete this booking.', 'error');
     } catch (e) { closeModal('modal-ds-complete'); showToast('Network error — please try again.', 'error'); }
     finally { btn.disabled = false; }
@@ -4747,6 +4906,8 @@
     document.getElementById('dx-service').textContent = c.services;
     document.getElementById('dx-reason').value = '';
     document.getElementById('dx-error').style.display = 'none';
+    const dxm = document.getElementById('dx-freed');
+    dxm.textContent = c.mechanic ? `${c.mechanic} will be freed up.` : ''; dxm.style.display = c.mechanic ? 'block' : 'none';
     dxUpdate();
     openModal('modal-ds-cancel');
     setTimeout(() => document.getElementById('dx-keep-btn').focus(), 50);   // "Keep Booking" is focused first
@@ -4775,7 +4936,7 @@
     try {
       const res = await fetch(`/booking/${_dsCancelId}/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notify: true, reason }) });
       const data = await res.json();
-      if (data.success) { closeModal('modal-ds-cancel'); showToast(data.message || 'Cancelled.', 'success'); loadDaySchedule(); }
+      if (data.success) { closeModal('modal-ds-cancel'); showToast(data.toast || data.message || 'Cancelled.', 'success'); applyMechanicStatuses(data.mechanic_statuses); loadDaySchedule(); }
       else { errEl.textContent = data.error || 'Could not cancel.'; errEl.style.display = 'block'; }
     } catch (e) { errEl.textContent = 'Network error — please try again.'; errEl.style.display = 'block'; }
     finally { btn.disabled = false; }
@@ -4955,23 +5116,23 @@
       const workRows = locked.map(it => `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.5rem 0;border-bottom:1px solid var(--border);">
           <div><div style="font-size:0.82rem;color:var(--text);">${it.name}</div><div style="font-size:0.68rem;color:var(--muted);">Booked service</div></div>
-          <div style="font-weight:700;font-size:0.82rem;">₱${it.price.toFixed(2)}</div>
+          <div style="font-weight:700;font-size:0.82rem;">₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
         </div>`).join('') + extra.map(it => `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.5rem 0;border-bottom:1px solid var(--border);${!approved ? 'color:#9ca3af;text-decoration:line-through;' : ''}">
           <div><div style="font-size:0.82rem;">${it.name}</div><div style="font-size:0.68rem;${approved ? 'color:var(--muted);' : 'color:#9ca3af;text-decoration:none;'}">${approved ? 'Approved' : 'Declined — skip this'}</div></div>
-          <div style="font-weight:700;font-size:0.82rem;">₱${it.price.toFixed(2)}</div>
+          <div style="font-weight:700;font-size:0.82rem;">₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
         </div>`).join('');
 
       const bannerHTML = qd.completed
         ? `<div style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.85rem;font-size:0.82rem;color:var(--text);margin-bottom:0.85rem;">
-             <strong>Completed.</strong> Invoice for <strong>₱${qd.total.toFixed(2)}</strong> was sent to ${qd.customer_name.split(' ')[0]}. Waiting for payment.
+             <strong>Completed.</strong> Invoice for <strong>₱${Number(qd.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong> was sent to ${qd.customer_name.split(' ')[0]}. Waiting for payment.
            </div>`
         : approved
         ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.7rem 0.85rem;font-size:0.82rem;color:#166534;margin-bottom:0.85rem;">
-             <strong>Customer approved the quotation.</strong> Do the booked service and all extra work. Total: ₱${qd.total.toFixed(2)}.
+             <strong>Customer approved the quotation.</strong> Do the booked service and all extra work. Total: ₱${Number(qd.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.
            </div>`
         : `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.7rem 0.85rem;font-size:0.82rem;color:#7f1d1d;margin-bottom:0.85rem;">
-             <strong style="color:#991b1b;">Customer declined the extra work.</strong> Do only ${qd.service}. Total: ₱${qd.total.toFixed(2)}.
+             <strong style="color:#991b1b;">Customer declined the extra work.</strong> Do only ${qd.service}. Total: ₱${Number(qd.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.
            </div>`;
 
       expandedHTML = `
@@ -4986,7 +5147,7 @@
             <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.3rem;">Work for the Mechanic</div>
             <div style="margin-bottom:0.5rem;">${workRows}</div>
             <div style="display:flex;justify-content:space-between;font-weight:700;font-size:0.9rem;padding-top:0.4rem;">
-              <span>Total to invoice</span><span>₱${qd.total.toFixed(2)}</span>
+              <span>Total to invoice</span><span>₱${Number(qd.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
             ${!qd.completed ? `
             <div style="text-align:right;margin-top:0.85rem;">
@@ -5064,10 +5225,12 @@
   }
 
   let _pendingCompleteInvoice = null;
-  function openCompleteInvoiceModal(bookingId, ref, customerName, total) {
+  async function openCompleteInvoiceModal(bookingId, ref, customerName, total) {
     _pendingCompleteInvoice = { bookingId, ref };
+    const mech = await mechanicNameFor(bookingId), ml = document.getElementById('modal-ci-mech');
+    ml.textContent = mech ? `${mech} will be freed up.` : ''; ml.style.display = mech ? 'block' : 'none';
     document.getElementById('modal-ci-text').innerHTML =
-      `Mark ${ref} as completed? Only do this once the mechanic is finished. ${customerName} will get an invoice for ₱${Number(total).toFixed(2)}.`;
+      `Mark ${ref} as completed? Only do this once the mechanic is finished. ${customerName} will get an invoice for ₱${Number(Number(total)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.`;
     document.getElementById('modal-complete-invoice').style.display = 'flex';
   }
 
@@ -5080,7 +5243,7 @@
       const data = await res.json();
       if (data.success) {
         await loadOutbox();
-        showToast(`${data.ref} completed. Invoice sent to ${data.customer_first_name}.`, 'success');
+        showToast(data.toast || `${data.ref} completed. Invoice sent to ${data.customer_first_name}.`, 'success');
       } else {
         showToast(data.error || 'Could not complete this booking.', 'error');
       }
@@ -6554,10 +6717,12 @@
   }
 
   let _cancelBookingFormId = null;
-  function openCancelBookingModal(bookingId, customer, service) {
+  async function openCancelBookingModal(bookingId, customer, service) {
     _cancelBookingFormId = 'cancel-booking-form-' + bookingId;
     document.getElementById('modal-cb-customer').textContent = customer;
     document.getElementById('modal-cb-service').textContent  = service;
+    const mech = await mechanicNameFor(bookingId), line = document.getElementById('modal-cb-mech');
+    line.textContent = mech ? `${mech} will be freed up.` : ''; line.style.display = mech ? 'block' : 'none';
     document.getElementById('modal-cancel-booking').style.display = 'flex';
   }
   function confirmCancelBooking() {
@@ -6567,17 +6732,43 @@
     }
   }
 
-  let _startServiceFormId = null;
-  function openStartServiceModal(bookingId, customer, service) {
+  let _startServiceFormId = null, _startServiceInfo = null;
+  async function openStartServiceModal(bookingId, customer, service) {
     _startServiceFormId = 'start-service-form-' + bookingId;
     document.getElementById('modal-ss-customer').textContent = customer;
     document.getElementById('modal-ss-service').textContent  = service;
+    const note = document.getElementById('ss-mech-note'), pick = document.getElementById('ss-mech-pick'), err = document.getElementById('ss-mech-err');
+    note.style.display = pick.style.display = err.style.display = 'none';
+    _startServiceInfo = null;
+    try {
+      const info = await (await fetch(`/api/booking/${bookingId}/start-info`)).json();
+      _startServiceInfo = info;
+      if (info.note) { note.textContent = info.note; note.style.display = 'block'; }
+      if (info.need_pick) {
+        const sel = document.getElementById('ss-mech-select');
+        sel.classList.remove('so-err-field');
+        sel.innerHTML = '<option value="">Choose a mechanic</option>' + info.options.map(o =>
+          `<option value="${o.name.replace(/"/g, '&quot;')}" ${o.disabled || o.name === info.mechanic ? 'disabled' : ''}>${o.name} · ${o.specialization} · ${o.label}</option>`).join('');
+        pick.style.display = 'block';
+      }
+    } catch (e) { /* the server checks again when Start is pressed */ }
     document.getElementById('modal-start-service').style.display = 'flex';
   }
-  function confirmStartService() {
-    if (_startServiceFormId) {
+  async function confirmStartService() {
+    if (!_startServiceFormId) return;
+    const err = document.getElementById('ss-mech-err'), sel = document.getElementById('ss-mech-select');
+    const needPick = !!(_startServiceInfo && _startServiceInfo.need_pick);
+    if (needPick && !sel.value) {
+      sel.classList.add('so-err-field');
+      err.textContent = 'Choose the mechanic who will do this job.'; err.style.display = 'block';
+      return;
+    }
+    const extra = needPick ? { mechanic_name: sel.value } : {};
+    const res = await submitBookingStatusForm(_startServiceFormId, extra, true);
+    if (res && !res.success) {                // stay open and say why (e.g. that mechanic just got busy)
+      err.textContent = res.error || 'Could not start this booking.'; err.style.display = 'block';
+    } else {
       document.getElementById('modal-start-service').style.display = 'none';
-      submitBookingStatusForm(_startServiceFormId);
     }
   }
 
@@ -6616,30 +6807,52 @@
   }
   function confirmEarlyStart() {
     document.getElementById('modal-early-start').style.display = 'none';
-    if (_startServiceFormId) submitBookingStatusForm(_startServiceFormId);
+    if (_startServiceFormId) openStartServiceModal(_startServiceFormId.replace('start-service-form-', ''),
+      document.getElementById('modal-es-customer').textContent, document.getElementById('modal-es-service').textContent);
   }
 
   // Same endpoint as the modal-less flows below, but as AJAX (X-Requested-With)
   // so a stray flash message never gets queued into the session and leaking
   // onto whatever admin page is opened next.
-  async function submitBookingStatusForm(formId) {
+  async function submitBookingStatusForm(formId, extra, quiet) {
     const form = document.getElementById(formId);
     if (!form) return;
     try {
+      const body = new FormData(form);
+      Object.entries(extra || {}).forEach(([k, v]) => body.set(k, v));
       const res = await fetch(form.action, {
         method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: new FormData(form),
+        body: body,
       });
       const data = await res.json();
       if (data.success) {
+        try { sessionStorage.setItem('mt_toast', data.toast || ''); } catch (e) {}
         location.reload();
-      } else {
+      } else if (!quiet) {
         alert(data.error || 'Could not update the booking status.');
       }
+      return data;
     } catch (e) {
-      alert('Network error. Please try again.');
+      if (!quiet) alert('Network error. Please try again.');
+      return { success: false, error: 'Network error. Please try again.' };
     }
+  }
+  // the short message after an action survives the page reload
+  window.addEventListener('load', () => {
+    try { const t = sessionStorage.getItem('mt_toast'); if (t) { sessionStorage.removeItem('mt_toast'); showToast(t, 'success'); } } catch (e) {}
+  });
+  // keep every "Mechanic: Name [Status]" label in step with the server's answer
+  function applyMechanicStatuses(map) {
+    const L = { available: 'Available', reserved: 'Reserved', busy: 'Busy', off_duty: 'Off Duty' };
+    document.querySelectorAll('[data-mech-pill]').forEach(el => {
+      const st = (map || {})[el.dataset.mechPill]; if (!st) return;
+      el.className = 'mpill ' + st; el.textContent = L[st];
+    });
+  }
+  // the pop-ups below say who gets freed up
+  async function mechanicNameFor(bid) {
+    try { return (await (await fetch(`/api/booking/${bid}/start-info`)).json()).mechanic || ''; } catch (e) { return ''; }
   }
 
   function openModal(id) {
@@ -7404,7 +7617,7 @@
     document.getElementById('od-moto-model').textContent = motoModel || '—';
     document.getElementById('od-moto-plate').textContent = motoPlate || '';
     document.getElementById('od-date').textContent = dateStr;
-    document.getElementById('od-total').textContent = '₱' + total.toFixed(2);
+    document.getElementById('od-total').textContent = '₱' + Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
     const statusColors = {
       pending: 'badge-pending', confirmed: 'badge-confirmed', processing: 'badge-processing',
@@ -7682,6 +7895,39 @@ fetchAdminNotifications();
 
 // ── Toast notification ──────────────────────────────────────────────────────
 // ── Ship to Address (Lalamove) steps ───────────────────────────────────────
+(function popupBehaviour() {
+  document.querySelectorAll('#modal-ship-options, #modal-ship-start, #modal-ship-complete, #modal-ship-cancel').forEach(m => {
+    const box = m.querySelector('.modal-box'); if (!box || box.querySelector('.pop-x')) return;
+    box.style.position = 'relative';
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'pop-x'; x.setAttribute('aria-label', 'Close'); x.textContent = '✕';
+    x.style.cssText = 'position:absolute;top:0.7rem;right:0.8rem;background:none;border:none;font-size:1.1rem;color:#9ca3af;cursor:pointer;line-height:1;padding:0.25rem;';
+    x.onclick = () => closeModal(m.id);
+    box.insertBefore(x, box.firstChild);
+  });
+  document.addEventListener('click', e => {
+    const t = e.target;
+    if (t.classList && t.classList.contains('modal-overlay') && t.classList.contains('open') && /^modal-ship-/.test(t.id)) closeModal(t.id);
+  });
+  document.addEventListener('keydown', e => {
+    const open = Array.from(document.querySelectorAll('.modal-overlay.open'));
+    if (!open.length) return;
+    const top = open[open.length - 1];
+    if (e.key === 'Escape') {
+      if (top.id === 'modal-confirm') return;
+      if (/^modal-ship-/.test(top.id)) { e.preventDefault(); closeModal(top.id); }
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const f = Array.from(top.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+      .filter(el => !el.disabled && el.offsetParent !== null);
+    if (!f.length) { e.preventDefault(); return; }
+    const first = f[0], last = f[f.length - 1];
+    if (!top.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+})();
 function shipRow(el) { return el.closest('tr'); }
 function shipErr(id, msg) { const e = document.getElementById(id); e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
 async function shipPost(oid, step, body) {
@@ -7708,79 +7954,211 @@ async function shipSave(btn) {
     const r = await shipPost(oid, 'status', {status: v});
     if (r.ok) shipReload('Order updated.'); else { showToast(r.data.error || 'Could not update.', 'error'); btn.disabled = false; }
   } else if (v === 'shipping') {
-    shipErr('ss-err', ''); document.getElementById('ss-oid').value = oid;
-    ['ss-name','ss-phone','ss-plate','ss-link','ss-fare'].forEach(i => document.getElementById(i).value = '');
-    const car = (row.dataset.vehicle || '').toLowerCase() !== 'motorcycle' && row.dataset.vehicle;
-    document.getElementById('ss-type').value = car ? 'driver' : 'rider';
-    document.getElementById('ss-who').textContent = car ? 'Driver' : 'Rider';
+    const car = (row.dataset.vehicle || '') !== 'Motorcycle';
+    const who = car ? 'Driver' : 'Rider', fee = Number(row.dataset.fee || 0);
+    shipErr('ss-err', ''); document.getElementById('ss-oid').value = oid; document.getElementById('ss-fee').value = fee; document.getElementById('ss-car').value = car ? '1' : '';
+    document.querySelectorAll('#modal-ship-start .so-err-field').forEach(x => x.classList.remove('so-err-field'));
+    ['ss-name','ss-phone','ss-model','ss-plate','ss-link','ss-fare'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('ss-title').textContent = who + ' details';
+    document.querySelectorAll('#modal-ship-start .ss-who').forEach(e => e.textContent = who);
+    document.getElementById('ss-model-label').textContent = car ? 'Car model' : 'Motorcycle model';
+    document.getElementById('ss-model').placeholder = car ? 'Toyota Vios / Toyota Rush' : 'Honda Click 125i';
+    document.getElementById('ss-sub').textContent = row.dataset.ref + ' · ' + row.dataset.customer + ' · ' + (row.dataset.option || '') + ' shipping, customer paid ₱' + fee.toLocaleString('en-PH', {minimumFractionDigits: 2}) + '. Book a Lalamove ' + row.dataset.vehicle + ' first, then copy the details here.';
+    document.getElementById('ss-feebox').textContent = 'Shipping fee the customer paid: ₱' + fee.toLocaleString('en-PH', {minimumFractionDigits: 2});
+    shipFareNote();
     openModal('modal-ship-start');
   } else if (v === 'completed') {
-    const got = row.dataset.received === '1';
-    shipErr('sc-err', ''); document.getElementById('sc-oid').value = oid; document.getElementById('sc-proof').value = '';
-    document.getElementById('sc-proof-wrap').style.display = got ? 'none' : '';
-    document.getElementById('sc-sub').textContent = got ? 'The customer confirmed they received it.'
-      : 'The customer has not pressed "I received my order". Check Lalamove, then type the proof of delivery.';
+    if (row.dataset.received === '1') {
+      btn.disabled = true;
+      const r = await shipPost(oid, 'complete', {});
+      if (r.ok) shipReload('Order completed. The customer was notified.'); else { showToast(r.data.error || 'Could not complete the order.', 'error'); btn.disabled = false; }
+      return;
+    }
+    shipErr('sc-err', ''); document.getElementById('sc-oid').value = oid;
+    document.getElementById('sc-proof').value = ''; document.getElementById('sc-delivered').checked = false;
+    document.querySelectorAll('#modal-ship-complete .so-err-field').forEach(x => x.classList.remove('so-err-field'));
+    document.getElementById('sc-sub').textContent = row.dataset.ref + ' · ' + row.dataset.customer + " hasn't pressed I received my order yet. Check Lalamove before you complete it.";
+    const lk = document.getElementById('sc-link'), has = !!row.dataset.link;
+    lk.href = has ? row.dataset.link : '#'; lk.style.display = has ? 'inline-flex' : 'none';
     openModal('modal-ship-complete');
   } else if (v === 'cancelled') {
-    const paid = row.dataset.paid === '1';
-    shipErr('sx-err', ''); document.getElementById('sx-oid').value = oid; document.getElementById('sx-paid').value = paid ? '1' : '';
-    document.getElementById('sx-reason').value = ''; document.getElementById('sx-restock').value = '1';
-    document.getElementById('sx-title').textContent = paid ? 'Cancel and refund' : 'Cancel order';
-    document.getElementById('sx-sub').textContent = paid
-      ? 'The full ₱' + Number(row.dataset.grand).toLocaleString('en-PH', {minimumFractionDigits: 2}) + ' goes back to the customer\'s GCash through PayMongo and the order becomes Refunded.'
-      : 'The customer was not charged. The order becomes Cancelled.';
-    document.getElementById('sx-go').textContent = paid ? 'Cancel and refund' : 'Cancel order';
-    openModal('modal-ship-cancel');
+    const paid = row.dataset.paid === '1', money = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits: 2});
+    if (!paid) {
+      const yes = await askConfirm({ title: 'Cancel this order?', icon: 'x', danger: true, cancelLabel: 'Go back', confirmLabel: 'Yes, cancel order',
+        message: row.dataset.customer + " hasn't paid yet, so there's nothing to refund. The item goes back to stock, and they'll be notified." });
+      if (!yes) return;
+      const r = await shipPost(oid, 'cancel', {restock: true, reason: 'The shop cancelled the order'});
+      if (r.ok) shipReload('Order cancelled. The customer was notified.'); else showToast(r.data.error || 'Could not cancel the order.', 'error');
+    } else {
+      const items = Number(row.dataset.items), fee = Number(row.dataset.fee), total = Number(row.dataset.grand);
+      shipErr('sx-err', ''); document.getElementById('sx-oid').value = oid; document.getElementById('sx-total').value = total;
+      document.querySelectorAll('#modal-ship-cancel .so-err-field').forEach(x => x.classList.remove('so-err-field'));
+      document.getElementById('sx-reason').value = ''; document.getElementById('sx-reason-custom').value = ''; document.getElementById('sx-reason-custom').style.display = 'none';
+      document.getElementById('sx-restock').checked = true; document.getElementById('sx-restock-note').style.display = 'none';
+      document.getElementById('sx-sub').textContent = row.dataset.ref + ' · ' + row.dataset.customer + ' · paid ' + money(total) + ' with GCash on ' + (row.dataset.paidat || '');
+      document.getElementById('sx-items').textContent = money(items); document.getElementById('sx-ship').textContent = money(fee); document.getElementById('sx-back').textContent = money(total);
+      const go = document.getElementById('sx-go'); go.disabled = false; go.textContent = 'Cancel and refund ' + money(total);
+      openModal('modal-ship-cancel');
+    }
   }
 }
+const SHIP_REASONS = ['The item is too big for a motorcycle', 'The order is too heavy for a motorcycle', 'There are too many items for a motorcycle'];
+function shipVehicleChanged() {
+  const v = document.getElementById('so-vehicle').value, r = document.getElementById('so-reason');
+  const custom = document.getElementById('so-reason-custom');
+  custom.style.display = 'none'; custom.value = '';
+  if (!v) { r.innerHTML = '<option value="">Choose a vehicle first</option>'; r.disabled = true; }
+  else if (v === 'Motorcycle') { r.innerHTML = '<option value="">Not needed for Motorcycle</option>'; r.disabled = true; }
+  else {
+    r.innerHTML = '<option value="">Choose a reason</option>' + SHIP_REASONS.map(t => '<option>' + t + '</option>').join('') + '<option value="__other">Other (type the reason)</option>';
+    r.disabled = false;
+  }
+  r.classList.remove('so-err-field');
+  document.getElementById('so-step-vehicle').textContent = v || 'the vehicle you picked';
+  shipPreview();
+}
+function shipReasonChanged() {
+  const r = document.getElementById('so-reason'), custom = document.getElementById('so-reason-custom');
+  custom.style.display = r.value === '__other' ? '' : 'none';
+  if (r.value === '__other') custom.focus();
+  shipPreview();
+}
+function shipReasonText() {
+  const r = document.getElementById('so-reason');
+  return r.value === '__other' ? document.getElementById('so-reason-custom').value.trim() : r.value;
+}
+function shipPreview() {
+  const v = document.getElementById('so-vehicle').value, box = document.getElementById('so-preview');
+  const esc = t => String(t).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+  if (!v) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  if (v === 'Motorcycle') { box.innerHTML = 'The customer will see: “Your order goes by <strong>Lalamove Motorcycle</strong>.”'; return; }
+  const why = esc(shipReasonText() || '[reason]');
+  box.innerHTML = 'The customer will see: “Your order goes by <strong>Lalamove ' + esc(v) + '</strong>. Reason: ' + why + '. A ' + esc(v) + ' costs more than a motorcycle, so the shipping fee is higher.”';
+}
+function shipPriceInput(el) { el.value = el.value.replace(/[^0-9]/g, ''); el.classList.remove('so-err-field'); }
+function shipCopy(id, btn) {
+  const text = document.getElementById(id).textContent.trim();
+  const done = () => { const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => btn.textContent = t, 1400); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+  else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); }
+}
 function shipOpenOptions(el) {
-  const row = shipRow(el), oid = row.dataset.oid;
+  const row = shipRow(el), oid = row.dataset.oid, editing = row.dataset.sent === '1';
   let pr = {}; try { pr = JSON.parse(row.dataset.prices || '{}'); } catch (e) {}
-  shipErr('so-err', ''); document.getElementById('so-oid').value = oid;
-  document.getElementById('so-title').textContent = row.dataset.sent === '1' ? 'Edit shipping options' : 'Send shipping options';
-  document.getElementById('so-vehicle').value = row.dataset.vehicle || '';
-  document.getElementById('so-reason').value = row.dataset.reason || '';
-  ['priority','regular','pooling'].forEach(k => document.getElementById('so-' + k).value = pr[k] || '');
+  shipErr('so-err', '');
+  document.querySelectorAll('#modal-ship-options .so-err-field').forEach(x => x.classList.remove('so-err-field'));
+  document.getElementById('so-oid').value = oid;
+  document.getElementById('so-sub').textContent = row.dataset.ref + ' · ' + row.dataset.customer;
+  document.getElementById('so-item').value = row.dataset.item || '';
+  document.getElementById('so-qty').value = row.dataset.qty || '';
+  const name = row.dataset.shipname || row.dataset.customer, mobile = row.dataset.shipmobile || '';
+  const pretty = mobile.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3');
+  document.getElementById('so-addr-b').textContent = [row.dataset.shipaddr, name + (pretty ? ', ' + pretty : '')].filter(Boolean).join(' · ');
+  document.getElementById('so-vehicle').value = editing ? (row.dataset.vehicle || '') : '';
+  shipVehicleChanged();
+  if (editing && row.dataset.vehicle && row.dataset.vehicle !== 'Motorcycle' && row.dataset.reason) {
+    const r = document.getElementById('so-reason');
+    if (SHIP_REASONS.includes(row.dataset.reason)) r.value = row.dataset.reason;
+    else { r.value = '__other'; document.getElementById('so-reason-custom').value = row.dataset.reason; }
+    shipReasonChanged();
+  }
+  ['priority','regular','pooling'].forEach(k => document.getElementById('so-' + k).value = editing && pr[k] ? pr[k] : '');
+  document.getElementById('so-go').textContent = editing ? 'Update and resend' : 'Send to customer';
   openModal('modal-ship-options');
 }
 async function shipSubmitOptions() {
   const btn = document.getElementById('so-go'); btn.disabled = true;
+  document.querySelectorAll('#modal-ship-options .so-err-field').forEach(x => x.classList.remove('so-err-field'));
+  const isOther = document.getElementById('so-reason').value === '__other';
   const r = await shipPost(document.getElementById('so-oid').value, 'options', {
-    vehicle: document.getElementById('so-vehicle').value, reason: document.getElementById('so-reason').value,
+    vehicle: document.getElementById('so-vehicle').value, reason: shipReasonText(), reason_custom: isOther,
     priority: document.getElementById('so-priority').value, regular: document.getElementById('so-regular').value,
     pooling: document.getElementById('so-pooling').value
   });
   btn.disabled = false;
-  if (r.ok) { closeModal('modal-ship-options'); shipReload(r.data.first ? 'Shipping options sent to the customer.' : 'Shipping options updated.'); }
-  else shipErr('so-err', r.data.error || 'Could not send the options.');
+  if (r.ok) { closeModal('modal-ship-options'); shipReload(r.data.first ? 'Shipping options sent to the customer.' : 'Shipping options updated and resent.'); return; }
+  const fields = r.data.fields || [];
+  fields.forEach(f => {
+    const el = f === 'reason' ? (isOther ? document.getElementById('so-reason-custom') : document.getElementById('so-reason')) : document.getElementById('so-' + f);
+    if (el) el.classList.add('so-err-field');
+  });
+  const msgs = r.data.errors || (r.data.error ? [r.data.error] : ['Could not send the options.']);
+  const e = document.getElementById('so-err'); e.innerHTML = msgs.map(m => '<div>' + m.replace(/</g, '&lt;') + '</div>').join(''); e.style.display = 'block';
+}
+function shipFareNote() {
+  const fee = Number(document.getElementById('ss-fee').value || 0), raw = document.getElementById('ss-fare').value, box = document.getElementById('ss-farebox');
+  const fare = parseFloat(raw), m = n => '₱' + Math.abs(n).toLocaleString('en-PH', {minimumFractionDigits: 2});
+  if (!raw || isNaN(fare) || fare <= 0) { box.textContent = ''; return; }
+  const diff = Math.round((fee - fare) * 100) / 100;
+  if (diff === 0) { box.style.color = '#15803d'; box.textContent = 'Lalamove charged ' + m(fare) + ' · Exact match'; }
+  else if (diff > 0) { box.style.color = '#15803d'; box.textContent = 'Lalamove charged ' + m(fare) + ' · Shop keeps ' + m(diff); }
+  else { box.style.color = '#b91c1c'; box.textContent = 'Lalamove charged ' + m(fare) + ' · Shop covers ' + m(diff); }
 }
 async function shipSubmitStart() {
-  const btn = document.getElementById('ss-go'); btn.disabled = true;
+  const btn = document.getElementById('ss-go');
+  const car = document.getElementById('ss-car').value === '1', who = (car ? 'driver' : 'rider');
+  const f = {name: 'ss-name', phone: 'ss-phone', model: 'ss-model', plate: 'ss-plate', link: 'ss-link'};
+  const labels = {name: who + ' name', phone: who + ' mobile', model: car ? 'car model' : 'motorcycle model', plate: 'plate number', link: 'Lalamove tracking link'};
+  document.querySelectorAll('#modal-ship-start .so-err-field').forEach(x => x.classList.remove('so-err-field'));
+  const missing = Object.keys(f).filter(k => !document.getElementById(f[k]).value.trim());
+  if (missing.length) {
+    missing.forEach(k => document.getElementById(f[k]).classList.add('so-err-field'));
+    const names = missing.map(k => labels[k]);
+    shipErr('ss-err', 'Please add the ' + (names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : names[0]) + '.');
+    return;
+  }
+  btn.disabled = true;
   const r = await shipPost(document.getElementById('ss-oid').value, 'start', {
-    rider_type: document.getElementById('ss-type').value, name: document.getElementById('ss-name').value,
-    phone: document.getElementById('ss-phone').value, plate: document.getElementById('ss-plate').value,
+    name: document.getElementById('ss-name').value, phone: document.getElementById('ss-phone').value,
+    model: document.getElementById('ss-model').value, plate: document.getElementById('ss-plate').value,
     link: document.getElementById('ss-link').value, fare: document.getElementById('ss-fare').value
   });
   btn.disabled = false;
-  if (r.ok) { closeModal('modal-ship-start'); shipReload('Order is now Shipping.'); }
-  else shipErr('ss-err', r.data.error || 'Could not start shipping.');
+  if (r.ok) { closeModal('modal-ship-start'); shipReload('Order is now Shipping.'); return; }
+  (r.data.fields || []).forEach(k => { const el = document.getElementById(f[k] || 'ss-' + k); if (el) el.classList.add('so-err-field'); });
+  const e = document.getElementById('ss-err');
+  e.innerHTML = (r.data.errors || [r.data.error || 'Could not start shipping.']).map(m => '<div>' + m.replace(/</g, '&lt;') + '</div>').join('');
+  e.style.display = 'block';
 }
 async function shipSubmitComplete() {
-  const btn = document.getElementById('sc-go'); btn.disabled = true;
-  const r = await shipPost(document.getElementById('sc-oid').value, 'complete', {proof: document.getElementById('sc-proof').value});
+  const btn = document.getElementById('sc-go');
+  document.querySelectorAll('#modal-ship-complete .so-err-field').forEach(x => x.classList.remove('so-err-field'));
+  const delivered = document.getElementById('sc-delivered').checked, proof = document.getElementById('sc-proof').value.trim();
+  const errs = [];
+  if (!delivered) { errs.push('Tick the box once Lalamove shows the order as Delivered.'); document.getElementById('sc-check-wrap').classList.add('so-err-field'); }
+  if (!proof) { errs.push('Write what Lalamove shows, like the time it was delivered.'); document.getElementById('sc-proof').classList.add('so-err-field'); }
+  if (errs.length) { const e = document.getElementById('sc-err'); e.innerHTML = errs.map(m => '<div>' + m + '</div>').join(''); e.style.display = 'block'; return; }
+  shipErr('sc-err', '');
+  btn.disabled = true;
+  const r = await shipPost(document.getElementById('sc-oid').value, 'complete', {proof: proof, delivered: delivered});
   btn.disabled = false;
-  if (r.ok) { closeModal('modal-ship-complete'); shipReload('Order completed.'); }
+  if (r.ok) { closeModal('modal-ship-complete'); shipReload('Order completed. The customer was notified.'); }
   else shipErr('sc-err', r.data.error || 'Could not complete the order.');
 }
+function shipRefundReasonChanged() {
+  const r = document.getElementById('sx-reason'), custom = document.getElementById('sx-reason-custom');
+  r.classList.remove('so-err-field');
+  custom.style.display = r.value === '__other' ? '' : 'none';
+  const unsellable = /damaged|out of stock/i.test(r.value);
+  document.getElementById('sx-restock').checked = !unsellable;
+  document.getElementById('sx-restock-note').style.display = unsellable ? 'block' : 'none';
+}
 async function shipSubmitCancel() {
-  const btn = document.getElementById('sx-go'); btn.disabled = true;
-  const paid = document.getElementById('sx-paid').value === '1';
-  const reason = document.getElementById('sx-reason').value.trim();
-  if (paid && !reason) { shipErr('sx-err', 'Type the reason for the refund.'); btn.disabled = false; return; }
-  const r = await shipPost(document.getElementById('sx-oid').value, 'cancel', {reason: reason, restock: document.getElementById('sx-restock').value === '1'});
-  btn.disabled = false;
-  if (r.ok) { closeModal('modal-ship-cancel'); shipReload(paid ? 'Refunded to the customer\'s GCash.' : 'Order cancelled.'); }
-  else shipErr('sx-err', r.data.error || 'Could not cancel the order.');
+  const btn = document.getElementById('sx-go'), sel = document.getElementById('sx-reason');
+  const other = sel.value === '__other';
+  const reason = other ? document.getElementById('sx-reason-custom').value.trim() : sel.value;
+  document.querySelectorAll('#modal-ship-cancel .so-err-field').forEach(x => x.classList.remove('so-err-field'));
+  if (!reason) {
+    (other ? document.getElementById('sx-reason-custom') : sel).classList.add('so-err-field');
+    shipErr('sx-err', other ? 'Type the reason. The customer will see it.' : 'Choose a reason. The customer will see it.');
+    return;
+  }
+  shipErr('sx-err', '');
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'Refunding through PayMongo…';
+  const r = await shipPost(document.getElementById('sx-oid').value, 'cancel', {reason: reason, restock: document.getElementById('sx-restock').checked});
+  if (r.ok) { closeModal('modal-ship-cancel'); shipReload('Refunded to the customer\'s GCash.'); }
+  else { btn.disabled = false; btn.textContent = label; shipErr('sx-err', r.data.error || 'Could not refund this order.'); }
 }
 async function shipRemind(el) {
   const r = await shipPost(shipRow(el).dataset.oid, 'remind', {});
@@ -7882,7 +8260,6 @@ document.addEventListener('submit', function(e) {
       if (newStatus === 'completed') {
         row.classList.add('booking-done'); row.classList.remove('booking-cancelled');
         form.closest('td').innerHTML = '<span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;padding:0.25rem 0.6rem;border-radius:6px;">✔ Done</span>';
-        const tds = [...row.querySelectorAll('td')]; if (tds[2]) tds[2].classList.add('bk-svc-done');
       } else if (newStatus === 'cancelled') {
         row.classList.add('booking-cancelled'); row.classList.remove('booking-done');
         form.closest('td').innerHTML = '<span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:0.25rem 0.6rem;border-radius:6px;">Cancelled</span>';

@@ -849,14 +849,14 @@ if (VIEW_QUOTATION) {
   const labelFor = t => t === 'finding' ? 'Inspection finding' : t === 'product' ? 'Part' : 'Service';
   document.getElementById('view-quot-title').textContent = VIEW_QUOTATION.ref;
   const itemsHtml = VIEW_QUOTATION.items.map(i => `
-    <div class="r-item"><span>${i.name} <span style="color:#9ca3af;">(${labelFor(i.item_type)})</span></span><span>₱${i.unit_price.toFixed(2)}</span></div>
+    <div class="r-item"><span>${i.name} <span style="color:#9ca3af;">(${labelFor(i.item_type)})</span></span><span>₱${Number(i.unit_price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
   `).join('');
   document.getElementById('view-quot-body').innerHTML = `
     ${VIEW_QUOTATION.inspected_by ? `<div class="r-row"><span>Inspected by</span><span>${VIEW_QUOTATION.inspected_by}</span></div><hr class="r-divider">` : ''}
     <div class="r-section-label">Items (read-only)</div>
     ${itemsHtml}
     <hr class="r-divider">
-    <div class="r-row bold"><span>Total</span><span>₱${VIEW_QUOTATION.total.toFixed(2)}</span></div>`;
+    <div class="r-row bold"><span>Total</span><span>₱${Number(VIEW_QUOTATION.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`;
   document.getElementById('view-quot-modal').classList.add('open');
 }
 
@@ -1103,7 +1103,7 @@ async function showHistory() {
               </div>
             </div>
             <div class="h-right">
-              <div class="h-amount">${h.amount > 0 ? '₱' + parseFloat(h.amount).toFixed(2) : '—'}</div>
+              <div class="h-amount">${h.amount > 0 ? '₱' + Number(parseFloat(h.amount)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—'}</div>
               <div class="h-date">${h.date}</div>
             </div>
           </div>`;
@@ -1233,13 +1233,13 @@ function renderCart() {
         <div class="ci-icon ${item.type}">${ICON_SVG[item.type]}</div>
         <div class="ci-info">
           <div class="ci-name">${item.type === 'product' ? splitPartName(item).name : item.name}</div>
-          ${item.type === 'product' ? `<div class="ci-unit">${splitPartName(item).part ? 'Part no. ' + splitPartName(item).part + ' · ' : ''}${item.price > 0 ? '₱' + item.price.toFixed(2) + ' each' : 'Free'}</div>` : ''}
-          ${item.type === 'service' ? `<div class="ci-unit">Service · ${fmtMin(_svcDur[item.name] || 30)} · ${item.price > 0 ? '₱' + item.price.toFixed(2) + ' each' : 'Free'}</div>` : ''}
+          ${item.type === 'product' ? `<div class="ci-unit">${splitPartName(item).part ? 'Part no. ' + splitPartName(item).part + ' · ' : ''}${item.price > 0 ? '₱' + Number(item.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' each' : 'Free'}</div>` : ''}
+          ${item.type === 'service' ? `<div class="ci-unit">Service · ${fmtMin(_svcDur[item.name] || 30)} · ${item.price > 0 ? '₱' + Number(item.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' each' : 'Free'}</div>` : ''}
           ${isFinding ? `<div class="ci-unit">Inspection · ${fmtMin(item.minutes || 0)}</div>` : ''}
         </div>
         <div class="ci-controls">
           ${isFinding ? `
-            <span class="svc-price" style="font-size:0.85rem;">₱${item.price.toFixed(2)}</span>
+            <span class="svc-price" style="font-size:0.85rem;">₱${Number(item.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             <button class="btn-del" onclick="removeItem(${item.idx})"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
           ` : `
             <button class="qty-btn" onclick="changeQty(${item.idx},-1)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -1264,10 +1264,10 @@ function updateTotals() {
   const svcT   = cart.filter(c => c.type === 'service').reduce((s, c) => s + c.price * c.qty, 0);
   const partsT = cart.filter(c => c.type === 'product').reduce((s, c) => s + c.price * c.qty, 0);
   const inspT  = cart.filter(c => c.type === 'finding').reduce((s, c) => s + c.price * c.qty, 0);
-  document.getElementById('svc-total').textContent   = `₱${svcT.toFixed(2)}`;
-  document.getElementById('parts-total').textContent = `₱${partsT.toFixed(2)}`;
-  document.getElementById('insp-total').textContent  = `₱${inspT.toFixed(2)}`;
-  document.getElementById('grand-total').textContent = `₱${(svcT + partsT + inspT).toFixed(2)}`;
+  document.getElementById('svc-total').textContent   = `₱${Number(svcT).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  document.getElementById('parts-total').textContent = `₱${Number(partsT).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  document.getElementById('insp-total').textContent  = `₱${Number(inspT).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  document.getElementById('grand-total').textContent = `₱${Number((svcT + partsT + inspT)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 }
 
 // ── CONFIRM MODAL ─────────────────────────────────────────────────────────────
@@ -1284,7 +1284,7 @@ function openConfirm() {
   const motoPlate = document.getElementById('cust-moto-plate').value.trim();
 
   document.getElementById('confirm-title').textContent    = 'Create Job Order';
-  document.getElementById('confirm-total').textContent    = `₱${total.toFixed(2)}`;
+  document.getElementById('confirm-total').textContent    = `₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   document.getElementById('confirm-customer').textContent = name;
   document.getElementById('confirm-phone').textContent    = phone || '—';
   document.getElementById('confirm-moto').textContent     = [motoModel, motoPlate].filter(Boolean).join(' · ') || '—';
@@ -1325,7 +1325,7 @@ function openConfirm() {
     }
     return { name: name || p.name, part };
   };
-  const peso = n => '₱' + Number(n).toFixed(2);
+  const peso = n => '₱' + Number(Number(n)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const lineRow = (name, qtyText, amount, sub) => `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;padding:0.35rem 0;">
       <div style="min-width:0;"><div style="font-weight:600;color:#111827;">${name}</div>${sub ? `<div style="font-size:0.7rem;color:#6b7280;margin-top:0.1rem;">${sub}</div>` : ''}</div>

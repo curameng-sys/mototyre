@@ -172,12 +172,12 @@
           </div>
           <span class="item-name">{{ item.name }}</span>
           <span class="item-qty">x{{ item.quantity }}</span>
-          <span class="item-price">₱{{ '%.2f'|format(item.unit_price * item.quantity) }}</span>
+          <span class="item-price">₱{{ (item.unit_price * item.quantity)|money }}</span>
         </div>
         {% endfor %}
         <div class="total-row">
           <span class="total-label">Total Amount Due</span>
-          <span class="total-amount">₱{{ '%.2f'|format(jo.total_amount) }}</span>
+          <span class="total-amount">₱{{ (jo.total_amount)|money }}</span>
         </div>
       </div>
     </div>
@@ -206,7 +206,7 @@
     </div>
 
     <button class="btn-pay" id="btn-pay" onclick="submitPayment()">
-      <i class="fas fa-check-circle"></i> Confirm Payment — ₱{{ '%.2f'|format(jo.total_amount) }}
+      <i class="fas fa-check-circle"></i> Confirm Payment — ₱{{ (jo.total_amount)|money }}
     </button>
   </div>
 </div>
@@ -235,10 +235,10 @@
   <div class="pr-item">
     <span class="pr-item-name">{{ item.name }}</span>
     <span class="pr-item-qty">x{{ item.quantity }}</span>
-    <span>₱{{ '%.2f'|format(item.unit_price * item.quantity) }}</span>
+    <span>₱{{ (item.unit_price * item.quantity)|money }}</span>
   </div>
   {% endfor %}
-  <div class="pr-total"><span>TOTAL</span><span>₱{{ '%.2f'|format(jo.total_amount) }}</span></div>
+  <div class="pr-total"><span>TOTAL</span><span>₱{{ (jo.total_amount)|money }}</span></div>
   <hr class="pr-divider">
   <div class="pr-footer">This serves as your official receipt.<br>Thank you for trusting MotoTyres!</div>
   <div class="pr-thank">★ See you next time! ★</div>
@@ -311,7 +311,7 @@ async function submitPayment() {
       // Populate modal
       document.getElementById('r-ref').textContent    = data.ref;
       document.getElementById('r-method').textContent = methodLabel;
-      document.getElementById('r-amount').textContent = '₱' + parseFloat(data.amount).toFixed(2);
+      document.getElementById('r-amount').textContent = '₱' + Number(parseFloat(data.amount)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
       if (refNo) {
         document.getElementById('r-refno').textContent = refNo;
         document.getElementById('r-ref-row').style.display = '';
@@ -330,12 +330,12 @@ async function submitPayment() {
     } else {
       alert(data.error || 'Payment failed. Please try again.');
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment — ₱{{ '%.2f'|format(jo.total_amount) }}';
+      btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment — ₱{{ (jo.total_amount)|money }}';
     }
   } catch(e) {
     alert('Network error. Please try again.');
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment — ₱{{ '%.2f'|format(jo.total_amount) }}';
+    btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment — ₱{{ (jo.total_amount)|money }}';
   }
 }
 </script>

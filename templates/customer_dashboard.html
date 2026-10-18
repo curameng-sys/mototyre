@@ -70,6 +70,22 @@
     .nav-links a.active { color: var(--brand-red); background: var(--brand-red-soft); border-color: var(--brand-red-border); }
 
     .nav-right { display: flex; align-items: center; gap: 0.75rem; }
+    .nav-cart { position:relative; display:inline-flex; align-items:center; gap:0.4rem; height:38px; padding:0 0.95rem; border-radius:99px;
+      background:var(--brand-red-soft); border:1.5px solid var(--brand-red-border); color:var(--brand-red); cursor:pointer;
+      font-family:'Syne',sans-serif; font-weight:700; font-size:0.8rem; transition:all 0.15s; box-shadow:0 2px 8px rgba(208,0,25,0.15); }
+    .nav-cart:hover { background:rgba(208,0,25,0.18); }
+    .nav-cart .cnt, .quick-count { display:none; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 4px; border-radius:99px;
+      background:var(--brand-red); color:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:0.62rem; line-height:1; }
+    .quick-count { position:absolute; top:8px; right:10px; }
+    /* the menu goes on its own row under the logo when it can't fit beside it, so nothing is cut off */
+    @media (min-width: 769px) and (max-width: 1420px) {
+      .top-nav { flex-wrap: wrap; height: auto; padding: 0.55rem 1.25rem 0.4rem; row-gap: 0.35rem; }
+      .nav-logo { order: 1; }
+      .nav-right { order: 2; margin-left: auto; }
+      .nav-links { order: 3; flex: 0 0 100%; padding: 0; gap: 0.25rem; justify-content: space-between; flex-wrap: wrap; }
+      .nav-links a { padding: 0.45rem 0.8rem; font-size: 0.85rem; }
+    }
+    @media (max-width: 768px) { .nav-cart .nav-cart-txt { display: none; } .nav-cart { padding: 0 0.7rem; } }
     .nav-avatar {
       width: 40px; height: 40px; border-radius: 50%;
       background: var(--brand-red); display: flex; align-items: center; justify-content: center;
@@ -172,7 +188,7 @@
     .section-link:hover { color: var(--brand-red); opacity: 0.8; }
 
     /* ── QUICK ACTIONS ── */
-    .quick-actions { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-bottom: 2rem; }
     .quick-card {
       background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px;
       padding: 1.5rem; cursor: pointer; text-decoration: none;
@@ -252,6 +268,14 @@
     @keyframes ovpBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
     @media (prefers-reduced-motion: reduce) { .ovp-dot { animation: none; } }
     /* Ship to Address (Lalamove) statuses */
+    .ord-view { margin-top:0.4rem; padding:0.2rem 0.8rem; border-radius:7px; border:1px solid var(--line-2); background:var(--bg-subtle); color:var(--fg-2); font-family:'Syne',sans-serif; font-weight:700; font-size:0.68rem; cursor:pointer; }
+    .ord-view.pay { background:var(--brand-red); border-color:var(--brand-red); color:#fff; }
+    .ship-opt { border:1.5px solid var(--line-2); border-radius:12px; padding:0.7rem 0.8rem; background:#fff; cursor:pointer; display:flex; gap:0.7rem; align-items:center; }
+    .ship-opt.sel { border-color:var(--brand-red); background:#fff5f5; }
+    .ship-opt.off { opacity:0.55; cursor:not-allowed; border-style:dashed; }
+    .ship-opt .tile { width:34px; height:34px; border-radius:9px; background:#dbeafe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .ship-opt .dot { width:20px; height:20px; border-radius:50%; border:2px solid var(--line-2); flex-shrink:0; }
+    .ship-opt.sel .dot { border-color:var(--brand-red); background:radial-gradient(circle, var(--brand-red) 42%, #fff 46%); }
     .badge-s-confirmed      { background: #dbeafe; color: #1e3a8a; border: 1px solid #3b82f6; }
     .badge-s-in_progress    { background: #ede9fe; color: #4c1d95; border: 1px solid #8b5cf6; }
     .badge-s-done_packaging { background: #ccfbf1; color: #115e59; border: 1px solid #14b8a6; }
@@ -438,6 +462,11 @@
     .mech-picker-item { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.5rem 0.7rem; border: 1.5px solid var(--line-2); border-radius: 8px; cursor: pointer; background: var(--bg-page); transition: all 0.15s; }
     .mech-picker-item:hover:not(.disabled) { border-color: var(--brand-red-border); }
     .mech-picker-item .mp-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; color: var(--fg-1); }
+    .mech-picker-item .mp-pill { display:inline-block; margin-left:0.4rem; padding:0.05rem 0.45rem; border-radius:99px; font-size:0.6rem; font-weight:700; vertical-align:middle; }
+    .mech-picker-item .mp-pill.available { background:#dcfce7; color:#15803d; } .mech-picker-item .mp-pill.reserved { background:#ede9fe; color:#6d28d9; }
+    .mech-picker-item .mp-pill.busy { background:#fef9c3; color:#a16207; }      .mech-picker-item .mp-pill.off_duty { background:#e5e7eb; color:#4b5563; }
+    .mech-picker-item .mp-match { display:inline-block; margin-top:0.15rem; font-size:0.62rem; font-weight:700; color:#15803d; background:#dcfce7; border-radius:99px; padding:0.05rem 0.5rem; align-self:flex-start; }
+    .mech-picker-item.disabled { opacity:0.5; cursor:not-allowed; }
     .mech-picker-item .mp-note { font-size: 0.7rem; color: var(--fg-3); }
     .mech-picker-item.selected { background: rgba(208,0,25,0.1); border-color: var(--brand-red); }
     .mech-picker-item.selected .mp-name { color: var(--brand-red); }
@@ -717,6 +746,17 @@
     /* ── Transactions ── */
     .tx-eyebrow { display:flex; align-items:center; gap:0.5rem; font-family:'Syne',sans-serif; font-weight:700; font-size:0.62rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--brand-red); }
     .tx-eyebrow::before { content:''; width:18px; height:2px; background:var(--brand-red); }
+    .tx-table { width:100%; border-collapse:collapse; font-size:0.84rem; }
+    .tx-table th { text-align:left; font-family:'Syne',sans-serif; font-weight:700; font-size:0.62rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-3); padding:0.6rem 0.9rem; background:var(--bg-subtle); white-space:nowrap; }
+    .tx-table td { padding:0.75rem 0.9rem; border-top:1px solid var(--line-1); vertical-align:top; }
+    .tx-table tr.clk { cursor:pointer; } .tx-table tr.clk:hover td { background:var(--bg-subtle); }
+    .tx-table .amt { text-align:right; white-space:nowrap; font-family:'Syne',sans-serif; font-weight:800; }
+    .tx-st { display:inline-block; font-family:'Syne',sans-serif; font-weight:700; font-size:0.64rem; padding:0.2em 0.7em; border-radius:99px; white-space:nowrap; }
+    .tx-st.paid { background:#dcfce7; color:#15803d; } .tx-st.refunded { background:#ede9fe; color:#6d28d9; }
+    .tx-st.hold { background:#fef9c3; color:#854d0e; } .tx-st.nocharge { background:#f3f4f6; color:#4b5563; }
+    .tx-sub { font-size:0.7rem; color:var(--fg-3); margin-top:0.1rem; }
+    .tx-back { display:inline-flex; align-items:center; gap:0.35rem; padding:0.5rem 0.95rem; border:1px solid var(--line-2); border-radius:8px; background:var(--bg-page); color:var(--fg-1); font-family:'Syne',sans-serif; font-weight:700; font-size:0.8rem; cursor:pointer; }
+    .cart-limit { font-size:0.68rem; color:#a16207; margin-top:0.2rem; }
     .tx-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0.75rem; margin:1.25rem 0; }
     .tx-stat { background:var(--bg-page); border:1px solid var(--line-2); border-radius:12px; padding:0.85rem 1rem; min-width:0; }
     .tx-stat-lbl { font-family:'Syne',sans-serif; font-weight:700; font-size:0.6rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-3); display:flex; align-items:center; gap:0.4rem; }
@@ -834,6 +874,10 @@
   </div>
 
   <div class="nav-right">
+  <button type="button" class="nav-cart" onclick="openCart()" title="Cart" aria-label="Cart">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+    <span class="nav-cart-txt">Cart</span><span class="cnt" id="nav-cart-count"></span>
+  </button>
   <div style="position:relative;cursor:pointer;" onclick="toggleNotifications()" title="Notifications">
     <div style="width:40px;height:40px;border-radius:50%;background:var(--brand-red-soft);border:1.5px solid var(--brand-red-border);display:flex;align-items:center;justify-content:center;color:var(--brand-red);transition:all 0.15s;box-shadow:0 2px 8px rgba(208,0,25,0.15);" onmouseover="this.style.background='rgba(208,0,25,0.18)';this.style.boxShadow='0 4px 14px rgba(208,0,25,0.28)'" onmouseout="this.style.background='var(--brand-red-soft)';this.style.boxShadow='0 2px 8px rgba(208,0,25,0.15)'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
     <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:var(--brand-red);color:#fff;font-size:0.6rem;font-family:'Syne',sans-serif;font-weight:700;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-subtle);" id="notif-badge">0</span>
@@ -961,14 +1005,15 @@
         <div><div class="quick-label">My Orders</div><div class="quick-sub">Track your parts orders</div></div>
         <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
-      <a class="quick-card purple" href="#" onclick="showSection('returns', null)">
-        <div class="quick-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-        <div><div class="quick-label">Returns &amp; Warranty</div><div class="quick-sub">Request a return or back job</div></div>
+      <a class="quick-card purple" href="#" onclick="openCart(); return false;">
+        <div class="quick-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
+        <div><div class="quick-label">Cart</div><div class="quick-sub" id="qc-cart-sub">Your cart is empty</div></div>
+        <span class="quick-count" id="qc-cart-count"></span>
         <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
       <a class="quick-card teal" href="#" onclick="showSection('transactions', null)">
         <div class="quick-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l3-2 2.5 2L12 20l2.5 2L17 20l3 2V2l-3 2-2.5-2L12 4 9.5 2 7 4z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="14" y2="13"/></svg></div>
-        <div><div class="quick-label">Transactions</div><div class="quick-sub">Your cash and GCash receipts</div></div>
+        <div><div class="quick-label">Transactions</div><div class="quick-sub">Your payments and refunds</div></div>
         <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
     </div>
@@ -1035,7 +1080,7 @@
                     </div>
                   </div>
                 </td>
-                <td>₱{{ '%.2f'|format(o.total_amount) }}</td>
+                <td>₱{{ (o.total_amount)|money }}</td>
                 <td>
               {{ o|order_badge }}
             </td>
@@ -1263,6 +1308,7 @@
           <!-- Action buttons -->
           <div id="queue-missing" role="alert" style="display:none;margin-bottom:0.6rem;padding:0.55rem 0.8rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.8rem;color:#b91c1c;line-height:1.4;"></div>
           <div class="appt-btn-row">
+            <div style="font-size:0.76rem;color:var(--fg-3);line-height:1.5;margin-bottom:0.6rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.6rem 0.8rem;">When you choose a mechanic, they're reserved for you right away, so no one else can book them at the same time. They become busy once the shop starts your service.</div>
             <button type="button" class="btn-submit" id="btn-add-queue" onclick="addToBookingQueue()"
               style="background:rgba(29,78,216,0.88);flex-direction:column;gap:0.15rem;padding-top:0.6rem;padding-bottom:0.6rem;">
               <span style="display:flex;align-items:center;gap:0.4rem;">
@@ -1447,7 +1493,7 @@
         {% endif %}
         <div class="product-name">{{ p.name }}</div>
         <div class="product-cat">{{ p.category }}</div>
-        <div class="product-price">₱{{ '%.2f'|format(p.price) }}</div>
+        <div class="product-price">₱{{ (p.price)|money }}</div>
         <div class="product-stock">{{ p.stock }} in stock</div>
         {% if p.description %}<div style="font-size:0.78rem;color:var(--fg-3);margin-bottom:0.5rem;">{{ p.description }}</div>{% endif %}
         <div style="font-size:0.72rem;color:var(--fg-3);margin-top:auto;padding-top:0.5rem;font-family:'Syne',sans-serif;font-weight:600;letter-spacing:0.04em;">View Details</div>
@@ -1508,7 +1554,7 @@
               {% endif %}
             </td>
             <td>
-              <div style="display:flex;align-items:center;gap:0.4rem;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;"><span style="color:var(--fg-3);display:flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span>₱{{ '%.2f'|format(o.total_amount) }}</div>
+              <div style="display:flex;align-items:center;gap:0.4rem;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;"><span style="color:var(--fg-3);display:flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span>₱{{ (o.total_amount)|money }}</div>
               {% if o.payment_method == 'gcash' %}
               <span style="display:inline-flex;align-items:center;gap:0.3rem;margin-top:0.25rem;font-family:'Syne',sans-serif;font-weight:700;font-size:0.62rem;padding:0.15em 0.6em;border-radius:6px;background:#dbeafe;color:#1d4ed8;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>GCash</span>
               {% else %}
@@ -1521,6 +1567,7 @@
             </td>
             <td>
               {{ o|order_badge }}
+              <div><button type="button" class="ord-view" data-ordview="{{ o.id }}" onclick="event.stopPropagation(); openOrderDetails({{ o.id }})">View</button></div>
             </td>
             <td>
               {% if o.open_claim %}
@@ -1556,11 +1603,9 @@
     <div>
       <div class="tx-eyebrow">Customer Portal</div>
       <div class="section-title" style="margin-top:0.3rem;">MY <span>TRANSACTIONS</span></div>
-      <div class="section-sub">Every payment you've made for bookings and orders — cash at the counter or GCash — with a receipt for each.</div>
+      <div class="section-sub">Every payment and refund for your parts orders and service bookings.</div>
     </div>
-    <select id="tx-month" aria-label="Month and year" onchange="renderTransactions()" style="padding:0.5rem 0.8rem;border:1px solid var(--line-2);border-radius:8px;background:var(--bg-page);color:var(--fg-1);font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;">
-      <option value="">All time</option>
-    </select>
+    <button type="button" class="tx-back" onclick="showSection('overview', null)">‹ Back to Home</button>
   </div>
 
   <div class="tx-stats" id="tx-stats"></div>
@@ -1569,16 +1614,10 @@
     <div class="tx-toolbar">
       <div class="tx-pills" id="tx-type-pills">
         <button type="button" class="tx-pill on" data-v="all" onclick="setTxFilter('type','all')">All</button>
-        <button type="button" class="tx-pill" data-v="booking" onclick="setTxFilter('type','booking')">Bookings</button>
-        <button type="button" class="tx-pill" data-v="order" onclick="setTxFilter('type','order')">Orders</button>
+        <button type="button" class="tx-pill" data-v="order" onclick="setTxFilter('type','order')">Parts orders</button>
+        <button type="button" class="tx-pill" data-v="booking" onclick="setTxFilter('type','booking')">Service bookings</button>
         <button type="button" class="tx-pill" data-v="refund" onclick="setTxFilter('type','refund')">Refunds</button>
       </div>
-      <div class="tx-pills method" id="tx-method-pills">
-        <button type="button" class="tx-pill on" data-v="all" onclick="setTxFilter('method','all')">All methods</button>
-        <button type="button" class="tx-pill" data-v="cash" onclick="setTxFilter('method','cash')">Cash</button>
-        <button type="button" class="tx-pill" data-v="gcash" onclick="setTxFilter('method','gcash')">GCash</button>
-      </div>
-      <input type="search" id="tx-search" class="tx-search" placeholder="Search receipt no., booking or order no., or item…" oninput="renderTransactions()" autocomplete="off">
     </div>
     <div id="tx-list"><div class="tx-empty">Loading your transactions…</div></div>
   </div>
@@ -1983,7 +2022,8 @@
 
 <!-- ═══ ORDER RECEIVED CONFIRM ═══ -->
 <div class="modal-overlay" id="modal-order-received-confirm" onclick="if (event.target === this) closeOrderReceivedConfirm()">
-  <div class="modal-box" style="width:380px;max-width:92vw;padding:1.75rem 1.5rem;text-align:center;">
+  <div class="modal-box" style="width:380px;max-width:92vw;padding:1.75rem 1.5rem;text-align:center;position:relative;">
+    <button type="button" aria-label="Close" onclick="closeOrderReceivedConfirm()" style="position:absolute;top:0.7rem;right:0.8rem;background:none;border:none;font-size:1.1rem;color:#9ca3af;cursor:pointer;line-height:1;padding:0.25rem;">✕</button>
     <div style="width:52px;height:52px;border-radius:50%;margin:0 auto 1rem;background:#dcfce7;display:flex;align-items:center;justify-content:center;">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
     </div>
@@ -2039,6 +2079,21 @@
 </div>
 
 <!-- ═══ ORDER DETAILS MODAL ═══ -->
+<div class="modal-overlay" id="modal-ship-cancel-confirm" onclick="if (event.target === this) closeModal('modal-ship-cancel-confirm')">
+  <div class="modal-box" style="width:380px;max-width:92vw;padding:1.75rem 1.5rem;text-align:center;position:relative;">
+    <button type="button" aria-label="Close" onclick="closeModal('modal-ship-cancel-confirm')" style="position:absolute;top:0.7rem;right:0.8rem;background:none;border:none;font-size:1.1rem;color:#9ca3af;cursor:pointer;line-height:1;padding:0.25rem;">✕</button>
+    <div style="width:52px;height:52px;border-radius:50%;margin:0 auto 1rem;background:#fee2e2;display:flex;align-items:center;justify-content:center;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <h5 style="margin:0 0 0.4rem;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--fg-1);">Cancel this order?</h5>
+    <div style="font-size:0.82rem;color:var(--fg-3);line-height:1.5;margin-bottom:1.25rem;">Nothing has been charged yet, so there's nothing to refund. The shop will be told right away.</div>
+    <div style="display:flex;gap:0.6rem;">
+      <button type="button" onclick="closeModal('modal-ship-cancel-confirm')" style="flex:1;padding:0.75rem;background:#fff;border:1px solid var(--line-2);border-radius:10px;color:var(--fg-2);font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Keep my order</button>
+      <button type="button" id="scc-go" onclick="submitShipCancel()" style="flex:1;padding:0.75rem;border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;background:#dc2626;">Yes, cancel order</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-order-details">
   <div class="modal-box" style="width:520px;max-width:95vw;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
@@ -2294,6 +2349,7 @@
     </div>
     <div id="nd-status" style="margin-bottom:0.7rem;"></div>
     <div id="nd-message" style="font-size:0.88rem;color:var(--fg-2);line-height:1.65;white-space:pre-line;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.85rem 1rem;"></div>
+    <div id="nd-updated" style="display:none;font-size:0.74rem;color:var(--fg-3);margin-top:0.55rem;"></div>
     <div class="modal-actions">
       <button type="button" class="btn-cancel-modal" onclick="closeNotifDetailModal()">Close</button>
       <button type="button" id="nd-goto-btn" onclick="notifDetailGoTo()" style="display:none;padding:0.6rem 1.1rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;"></button>
@@ -2303,17 +2359,18 @@
 
 
 <!-- ═══ CART MODAL ═══ -->
-<div class="modal-overlay" id="modal-order">
+<div class="modal-overlay" id="modal-order" onclick="if (event.target === this && document.getElementById('step-cart').style.display !== 'none') closeModal('modal-order')">
   <div class="modal-box" style="width:520px;max-width:95vw;">
 
     <!-- STEP 1: CART -->
     <div id="step-cart">
-      <h5>Order Summary</h5>
+      <h5 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.04em;">MY CART</h5>
       <div id="cart-items-list" style="max-height:300px;overflow-y:auto;margin-bottom:0.75rem;"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-top:1px solid var(--line-1);">
         <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:var(--fg-2);">TOTAL</span>
         <span id="cart-total" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--fg-1);"></span>
       </div>
+      <div id="cart-total-note" style="font-size:0.72rem;color:var(--fg-3);text-align:right;margin:-0.35rem 0 0.75rem;"></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel</button>
         <button type="button" id="btn-cart-next" class="btn-submit" style="width:auto;" onclick="goToStep('step-shipping')">Proceed to Shipping ›</button>
@@ -2740,15 +2797,32 @@
 
   function cartLimit(item) { return Math.max(0, Math.min(MAX_ONLINE_QTY, item.stock)); }
 
-  function updateCartBadge() {
-    const badge = document.getElementById('cart-badge');
-    const total = cart.reduce((s, i) => s + (i.qty || 0), 0);
-    badge.textContent = total;
-    badge.style.display = total > 0 ? 'flex' : 'none';
+  // The cart survives a page reload (kept in this browser only).
+  const CART_KEY = 'mt_cart_{{ current_user.id }}';
+  function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {} }
+  function loadCart() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+      if (Array.isArray(saved)) cart = saved.filter(i => i && i.id && i.qty >= 1).map(i => ({ id: +i.id, name: String(i.name), price: +i.price, stock: +i.stock, qty: +i.qty, category: i.category || '' }));
+    } catch (e) { cart = []; }
   }
 
+  function updateCartBadge() {
+    const total = cart.reduce((s, i) => s + (i.qty || 0), 0);
+    const badge = document.getElementById('cart-badge');
+    if (badge) { badge.textContent = total; badge.style.display = total > 0 ? 'flex' : 'none'; }
+    ['nav-cart-count', 'qc-cart-count'].forEach(id => {      // the menu button and the Quick Actions card
+      const el = document.getElementById(id);
+      if (el) { el.textContent = total; el.style.display = total > 0 ? 'inline-flex' : 'none'; }
+    });
+    const sub = document.getElementById('qc-cart-sub');
+    if (sub) sub.textContent = total > 0 ? `${total} item${total === 1 ? '' : 's'} ready to check out` : 'Your cart is empty';
+    saveCart();
+  }
+
+  loadCart(); updateCartBadge();
+
   function openCart() {
-    if (cart.length === 0) { showCartToast('Your cart is empty'); return; }
     deliveryMethod = 'pickup';
     selectDelivery('pickup');
     ['ship-name','ship-mobile','ship-street','ship-zip'].forEach(id => {
@@ -2798,12 +2872,17 @@
       if (box) box.innerHTML = cartIssueHTML(item);
       if (input) input.style.borderColor = cartQtyIssue(item) ? '#dc2626' : 'var(--line-2)';
       const price = document.getElementById('cart-line-' + item.id);
-      if (price) price.textContent = '₱' + ((item.qty || 0) * item.price).toFixed(2);
+      if (price) price.textContent = '₱' + Number(((item.qty || 0) * item.price)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      const lim = document.getElementById('cart-limit-' + item.id);
+      if (lim) lim.textContent = (item.qty >= 1 && item.qty >= cartLimit(item) && !cartQtyIssue(item))
+        ? (item.stock < MAX_ONLINE_QTY ? `Only ${item.stock} left in stock` : `Up to ${MAX_ONLINE_QTY} per item online`) : '';
       const plus = document.getElementById('cart-plus-' + item.id), minus = document.getElementById('cart-minus-' + item.id);
       if (plus) plus.disabled = !(item.qty < cartLimit(item));
       if (minus) minus.disabled = !(item.qty > 1);
     });
-    document.getElementById('cart-total').textContent = '₱' + getCartTotal().toFixed(2);
+    document.getElementById('cart-total').textContent = '₱' + Number(getCartTotal()).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const _n = cart.reduce((n, i) => n + (i.qty || 0), 0);
+    document.getElementById('cart-total-note').textContent = `${_n} item${_n === 1 ? '' : 's'} · shipping is added at checkout if delivered`;
     const next = document.getElementById('btn-cart-next');
     if (next) { next.disabled = cartHasIssues(); next.style.opacity = next.disabled ? '0.45' : '1'; next.style.cursor = next.disabled ? 'not-allowed' : 'pointer'; }
     updateCartBadge();
@@ -2811,9 +2890,16 @@
 
   function renderCartStep() {
     const list = document.getElementById('cart-items-list');
+    const next = document.getElementById('btn-cart-next');
     if (!cart.length) {
-      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--fg-3);">Your cart is empty</div>';
+      list.innerHTML = `<div style="text-align:center;padding:2rem 1rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.95rem;">Your cart is empty</div>
+        <div style="font-size:0.82rem;color:var(--fg-3);margin:0.3rem 0 1rem;">Browse the Parts Catalog and add the parts you need.</div>
+        <button type="button" class="btn-submit" style="width:auto;" onclick="closeModal('modal-order'); showSection('shop', null)">Browse Parts Catalog</button></div>`;
       document.getElementById('cart-total').textContent = '₱0.00';
+      document.getElementById('cart-total-note').textContent = '';
+      if (next) { next.disabled = true; next.style.opacity = '0.45'; next.style.cursor = 'not-allowed'; }
+      updateCartBadge();
       return;
     }
     list.innerHTML = cart.map(item => `
@@ -2821,18 +2907,18 @@
         <div style="display:flex;align-items:center;gap:0.6rem;">
           <div style="flex:1;min-width:0;">
             <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
-            <div style="font-size:0.72rem;color:var(--fg-3);">${item.category} · ₱${item.price.toFixed(2)} each</div>
+            <div style="font-size:0.72rem;color:var(--fg-3);">${item.category} · ₱${Number(item.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} each</div>
           </div>
           <div style="flex-shrink:0;text-align:center;">
             <div style="display:flex;align-items:center;gap:0.35rem;">
-              <button type="button" id="cart-minus-${item.id}" onclick="updateCartItemQty(${item.id},-1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.9rem;">−</button>
-              <input type="text" inputmode="numeric" id="cart-qty-${item.id}" value="${item.qty}" oninput="onCartQtyInput(${item.id}, this)" aria-label="Quantity" style="width:46px;text-align:center;background:var(--bg-page);border:1px solid var(--line-2);border-radius:6px;padding:0.25rem;color:var(--fg-1);font-size:0.88rem;">
-              <button type="button" id="cart-plus-${item.id}" onclick="updateCartItemQty(${item.id},1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.9rem;">+</button>
+              <button type="button" id="cart-minus-${item.id}" onclick="updateCartItemQty(${item.id},-1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.95rem;line-height:1;">−</button>
+              <input type="text" inputmode="numeric" id="cart-qty-${item.id}" value="${item.qty}" oninput="onCartQtyInput(${item.id}, this)" aria-label="Quantity" style="width:46px;text-align:center;background:var(--bg-page);border:1px solid var(--line-2);border-radius:6px;padding:0.25rem 0;font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">
+              <button type="button" id="cart-plus-${item.id}" onclick="updateCartItemQty(${item.id},1)" style="width:24px;height:24px;border-radius:5px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);cursor:pointer;font-size:0.95rem;line-height:1;">+</button>
             </div>
-            <div style="font-size:0.66rem;color:var(--fg-3);margin-top:0.2rem;">Up to ${MAX_ONLINE_QTY} per item online</div>
+            <div id="cart-limit-${item.id}" class="cart-limit"></div>
           </div>
-          <div id="cart-line-${item.id}" style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--brand-red);min-width:58px;text-align:right;flex-shrink:0;">₱${(item.price*item.qty).toFixed(2)}</div>
-          <button type="button" onclick="removeFromCart(${item.id})" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-size:1rem;padding:0 0.2rem;flex-shrink:0;" title="Remove">✕</button>
+          <div id="cart-line-${item.id}" style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--brand-red);min-width:58px;text-align:right;flex-shrink:0;"></div>
+          <button type="button" onclick="removeFromCart(${item.id})" aria-label="Remove ${item.name.replace(/"/g, '')}" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-size:1rem;padding:0 0.2rem;flex-shrink:0;" title="Remove">✕</button>
         </div>
         <div id="cart-issue-${item.id}"></div>
       </div>`).join('');
@@ -2869,10 +2955,11 @@
   }
 
   function removeFromCart(id) {
+    const gone = cart.find(i => i.id === id);
     cart = cart.filter(i => i.id !== id);
     updateCartBadge();
     renderCartStep();
-    if (!cart.length) closeModal('modal-order');
+    if (gone) showCartToast(`Removed ${gone.name} from your cart`);
   }
 
   function getCartTotal() {
@@ -3087,7 +3174,7 @@ function onShipBarangayChange() {
 }
 
 function updateCartTotal() {
-  document.getElementById('cart-total').textContent = '₱' + getCartTotal().toFixed(2);
+  document.getElementById('cart-total').textContent = '₱' + Number(getCartTotal()).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
 let _shipForcedGcash = false;
@@ -3131,10 +3218,10 @@ function goToShipping() {
   document.getElementById('pay-items-list').innerHTML = cart.map(i =>
     `<div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
       <span style="color:var(--fg-1);">${i.name} ×${i.qty}</span>
-      <span style="color:var(--fg-1);">₱${(i.price*i.qty).toFixed(2)}</span>
+      <span style="color:var(--fg-1);">₱${Number((i.price*i.qty)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
     </div>`
   ).join('');
-  document.getElementById('pay-total').textContent = ship ? `₱${total.toFixed(2)} + shipping` : '₱' + total.toFixed(2);
+  document.getElementById('pay-total').textContent = ship ? `₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} + shipping` : '₱' + Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (!ship) {
     document.getElementById('pay-delivery-method').innerHTML = '<span style="color:#86efac;">Shop Pickup (FREE)</span>';
     document.getElementById('pay-shipping-row').style.display = 'none';
@@ -3150,11 +3237,11 @@ function goToConfirm() {
   document.getElementById('conf-items-list').innerHTML = cart.map(i =>
     `<div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;">
       <span style="color:var(--fg-1);">${i.name} ×${i.qty}</span>
-      <span style="color:var(--fg-1);">₱${(i.price*i.qty).toFixed(2)}</span>
+      <span style="color:var(--fg-1);">₱${Number((i.price*i.qty)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
     </div>`
   ).join('');
   const ship = deliveryMethod === 'ship';
-  document.getElementById('conf-total').textContent = ship ? `₱${total.toFixed(2)} + shipping` : '₱' + total.toFixed(2);
+  document.getElementById('conf-total').textContent = ship ? `₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} + shipping` : '₱' + Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   document.getElementById('conf-nothing-charged').style.display = ship ? 'block' : 'none';
   document.getElementById('conf-payment-hold').style.display = ship ? 'block' : 'none';
   document.getElementById('confirm-pay-label').textContent = ship ? 'Place Order' : 'Confirm and Pay';
@@ -4012,6 +4099,9 @@ async function submitAllBookings() {
       resetPolicyBox();
       const bits = [];
       if (created.length) bits.push(`${created.length} booking${created.length === 1 ? '' : 's'} confirmed · we emailed your confirmation`);
+      const _names = [...new Set(created.map(it => it.booking.mechanic_name).filter(Boolean))];
+      if (created.some(it => !it.booking.mechanic_name)) bits.push('The shop will assign an available mechanic and let you know.');
+      if (_names.length) bits.push(`${_names.join(' and ')} ${_names.length > 1 ? 'are' : 'is'} reserved for you. They'll be marked busy once the shop starts your service.`);
       if (merged.length) bits.push(merged.length === 1 ? 'services added to your existing booking' : `services added to ${merged.length} existing bookings`);
       showCartToast(bits.join(' · '));
     }
@@ -4524,7 +4614,7 @@ function updateConfirmButtonText() {
     const m = mechanicsRoster.find(x => String(x.id) === String(selectedMechanicId));
     if (m) mechName = m.name;
   } else {
-    const free = mechanicsRoster.find(m => !m.busy);
+    const free = mechanicsRoster.find(m => !m.busy && !m.off_duty);
     if (free) mechName = free.name;
   }
 
@@ -4615,7 +4705,10 @@ const NOTIF_COLOR_MAP = {
   closed:      { bg: '#f3f4f6',                color: '#4b5563' },
   cancelled:   { bg: 'rgba(220,38,38,0.15)',   color: '#fca5a5' },
   inprogress:  { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
-  in_progress: { bg: 'rgba(234,179,8,0.2)',    color: '#fde047' },
+  in_progress: { bg: 'rgba(124,58,237,0.2)',   color: '#c4b5fd' },
+  done_packaging: { bg: 'rgba(13,148,136,0.18)', color: '#5eead4' },
+  shipping:    { bg: 'rgba(14,165,233,0.18)',  color: '#7dd3fc' },
+  paid:        { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
   default:     { bg: 'rgba(0,0,0,0.05)', color: '#484340' },
 };
 
@@ -4736,7 +4829,7 @@ function renderNotifications() {
           ${buildQuotationTotalsHTML(q)}
           <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
             <button type="button" onclick="decideQuotation('decline', ${q.id})" style="flex:1;padding:0.55rem;background:#fff;border:1px solid var(--brand-red);border-radius:8px;color:var(--brand-red);font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Decline</button>
-            <button type="button" onclick="decideQuotation('approve', ${q.id})" style="flex:1;padding:0.55rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Approve ₱${q.total.toFixed(2)}</button>
+            <button type="button" onclick="decideQuotation('approve', ${q.id})" style="flex:1;padding:0.55rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Approve ₱${Number(q.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</button>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.55rem;">
             <a href="javascript:void(0)" onclick="openQuotationModal(${q.id})" style="font-size:0.74rem;font-weight:700;color:var(--brand-red);text-decoration:none;">View full quotation</a>
@@ -4793,9 +4886,9 @@ function renderNotifications() {
 
       let bottomHTML;
       if (inv.status === 'paid') {
-        bottomHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;color:#166534;margin-top:0.5rem;">✓ Paid ₱${inv.total.toFixed(2)} by ${inv.payment_method === 'gcash' ? 'GCash' : 'cash'}.</div>`;
+        bottomHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;color:#166534;margin-top:0.5rem;">✓ Paid ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} by ${inv.payment_method === 'gcash' ? 'GCash' : 'cash'}.</div>`;
       } else if (inv.status === 'cash_pending') {
-        bottomHTML = `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;color:#92400e;margin-top:0.5rem;"><strong>Pay ₱${inv.total.toFixed(2)} at the shop counter.</strong> We'll mark this invoice paid once the cashier receives your cash.</div>`;
+        bottomHTML = `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;color:#92400e;margin-top:0.5rem;"><strong>Pay ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} at the shop counter.</strong> We'll mark this invoice paid once the cashier receives your cash.</div>`;
       } else {
         bottomHTML = invoicePaymentPickerHTML(inv, inv.booking_id);
       }
@@ -4813,7 +4906,7 @@ function renderNotifications() {
         <div>${buildInvoiceItemsHTML(inv.items)}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;">
           <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--fg-2);">${inv.status === 'paid' ? 'Amount Paid' : 'Amount to Pay'}</span>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--brand-red);">₱${inv.total.toFixed(2)}</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--brand-red);">₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
         </div>
         ${bottomHTML}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.55rem;">
@@ -4911,6 +5004,9 @@ async function openNotifDetail(n) {
   document.getElementById('nd-title').textContent = n.title;
   document.getElementById('nd-time').textContent = time;
   document.getElementById('nd-message').textContent = n.message;
+  const updEl = document.getElementById('nd-updated');
+  if (n.order_id) { updEl.textContent = 'Updated: ' + time.replace(/, (\d{1,2}:\d{2})/, ' at $1'); updEl.style.display = 'block'; }
+  else { updEl.style.display = 'none'; }
 
   const statusEl = document.getElementById('nd-status');
   statusEl.innerHTML = n.status
@@ -4925,6 +5021,10 @@ async function openNotifDetail(n) {
   } else if (n.return_request_id) {
     _notifDetailTarget = { returnRequestId: n.return_request_id };
     gotoBtn.textContent = 'View Request';
+    gotoBtn.style.display = 'inline-block';
+  } else if (n.order_id && typeof ordersData !== 'undefined' && ordersData[n.order_id]) {
+    _notifDetailTarget = { orderId: n.order_id };
+    gotoBtn.textContent = 'View order';
     gotoBtn.style.display = 'inline-block';
   } else {
     _notifDetailTarget = null;
@@ -4964,7 +5064,10 @@ function notifDetailGoTo() {
   notifOpen = false;
   const panel = document.getElementById('notif-panel');
   if (panel) panel.style.display = 'none';
-  if (_notifDetailTarget.bookingId) {
+  if (_notifDetailTarget.orderId) {
+    showSection('orders', null);
+    setTimeout(() => openOrderDetails(_notifDetailTarget.orderId), 150);
+  } else if (_notifDetailTarget.bookingId) {
     showSection('bookings', null);
     setTimeout(() => openBookingDetails(_notifDetailTarget.bookingId), 150);
   } else if (_notifDetailTarget.returnRequestId) {
@@ -5396,12 +5499,12 @@ function openBookingDetails(bookingId) {
     quotWrap.dataset.quotationId = q.id;
     const extraItems = q.items.filter(it => !it.locked);
     document.getElementById('bd-quotation-items').innerHTML = extraItems.length
-      ? extraItems.map(it => `<div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-1);margin-bottom:0.3rem;"><span>${it.name}</span><span>₱${it.price.toFixed(2)}</span></div>`).join('')
+      ? extraItems.map(it => `<div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-1);margin-bottom:0.3rem;"><span>${it.name}</span><span>₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`).join('')
       : '<div style="font-size:0.8rem;color:var(--fg-3);">No extra work found.</div>';
     document.getElementById('bd-quotation-original-label').textContent = (q.materials || 0) > 0 ? 'Service + materials' : 'Original service';
-    document.getElementById('bd-quotation-original').textContent = `₱${q.original.toFixed(2)}`;
-    document.getElementById('bd-quotation-extra').textContent    = `₱${q.extra.toFixed(2)}`;
-    document.getElementById('bd-quotation-total').textContent    = `₱${q.total.toFixed(2)}`;
+    document.getElementById('bd-quotation-original').textContent = `₱${Number(q.original).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('bd-quotation-extra').textContent    = `₱${Number(q.extra).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('bd-quotation-total').textContent    = `₱${Number(q.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     const actions = document.getElementById('bd-quotation-actions');
     const decided = document.getElementById('bd-quotation-decided');
     const pendingBox = document.getElementById('bd-quotation-pending-box');
@@ -5634,7 +5737,7 @@ function openOrderDetails(orderId) {
     : order.status.replace('_', ' ');
   if (!isPickupOrder) {
     const sb = shipBadge(order.status);
-    document.getElementById('od-status-badge').innerHTML = `<span class="${sb.cls}" style="font-size:0.72rem;padding:0.4em 0.9em;">${sb.label}</span>`;
+    document.getElementById('od-status-badge').innerHTML = `<span class="${sb.cls}" style="font-size:0.72rem;padding:0.4em 0.9em;">${sb.label}</span> <span style="font-family:'Syne',sans-serif;font-size:0.66rem;font-weight:700;padding:0.35em 0.7em;border-radius:8px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;margin-left:0.3rem;">Ship</span>`;
   } else
   document.getElementById('od-status-badge').innerHTML = `
     <span style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.4em 0.9em;border-radius:8px;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
@@ -5651,27 +5754,37 @@ function openOrderDetails(orderId) {
         <div style="font-size:0.75rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.04em;">${item.category}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--brand-red);">₱${item.subtotal.toFixed(2)}</div>
-        <div style="font-size:0.72rem;color:var(--fg-3);">₱${item.unit_price.toFixed(2)} × ${item.quantity}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--brand-red);">₱${Number(item.subtotal).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+        <div style="font-size:0.72rem;color:var(--fg-3);">₱${Number(item.unit_price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} × ${item.quantity}</div>
       </div>
     </div>
   `).join('');
 
   // Summary — a shop-pickup order has nothing to arrange shipping for, so
   // that line (and the subtotal/total distinction it implies) doesn't apply.
-  document.getElementById('od-subtotal').textContent = '₱' + order.total.toFixed(2);
-  const fee = (!isPickupOrder && sh.fee) ? Number(sh.fee) : null;
-  document.getElementById('od-total').textContent = isPickupOrder ? '₱' + order.total.toFixed(2)
-    : (fee ? '₱' + (order.total + fee).toFixed(2) : `₱${order.total.toFixed(2)} + shipping`);
+  document.getElementById('od-subtotal').textContent = '₱' + Number(order.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const _picked = (!isPickupOrder && !sh.paid && order.status === 'done_packaging') ? _shipChoice[order.id] : null;
+  const fee = (!isPickupOrder && sh.paid && sh.fee) ? Number(sh.fee)
+    : (_picked && sh.prices && sh.prices[_picked] ? Number(sh.prices[_picked]) : null);
+  document.getElementById('od-total').textContent = isPickupOrder ? '₱' + Number(order.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})
+    : (fee ? '₱' + Number((order.total + fee)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : `₱${Number(order.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} + shipping`);
   document.getElementById('od-shipping-row').style.display = isPickupOrder ? 'none' : 'flex';
-  document.getElementById('od-shipping-val').textContent = fee ? `₱${fee.toFixed(2)} · ${SHIP_OPTION_NAMES[sh.option] || ''}` : 'To be calculated';
+  document.getElementById('od-shipping-val').textContent = fee ? `₱${Number(fee).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} · ${SHIP_OPTION_NAMES[sh.paid ? sh.option : _picked] || ''}` : ((!isPickupOrder && order.status === 'done_packaging' && !sh.paid && sh.options_sent) ? 'Choose an option above' : 'To be calculated');
   document.getElementById('od-shipping-val').style.color = fee ? 'var(--fg-1)' : '#a16207';
   
   // Payment method
   const paymentLabels = { cash: 'Cash', gcash: 'GCash', cod: 'Cash on Delivery' };
-  document.getElementById('od-payment').textContent = (paymentLabels[order.payment_method] || 'Cash')
-    + (!isPickupOrder && !sh.paid && !['cancelled', 'refunded'].includes(order.status) ? ' · on hold' : '')
-    + (!isPickupOrder && sh.paid && order.status !== 'refunded' ? ' · paid' : '');
+  const payEl = document.getElementById('od-payment');
+  if (isPickupOrder) {
+    payEl.textContent = paymentLabels[order.payment_method] || 'Cash';
+  } else {
+    let sub;
+    if (order.status === 'refunded') sub = `<div style="font-size:0.7rem;color:#b91c1c;">Refunded ${sh.refunded_at || ''}</div>`;
+    else if (order.status === 'cancelled') sub = `<div style="font-size:0.7rem;color:var(--fg-3);">Not charged</div>`;
+    else if (sh.paid) sub = `<div style="font-size:0.7rem;color:#15803d;">Paid ${sh.paid_at || ''}</div>`;
+    else sub = `<div style="font-size:0.7rem;color:#a16207;">On hold until you choose shipping</div>`;
+    payEl.innerHTML = `<div style="text-align:right;">GCash${sub}</div>`;
+  }
 
   // Status timeline
   const timeline = document.getElementById('od-timeline');
@@ -5697,7 +5810,24 @@ function openOrderDetails(orderId) {
   // since "picked up" has no further step worth tracking.
   const isCompleted = order.status === 'completed' && isPickup;
 
-  if (isCancelled) {
+  if (!isPickup && !isCancelled) {
+    const SH6 = ['Confirmed', 'In Progress', 'Done Packaging', 'Choose shipping & pay', 'Shipping', 'Completed'];
+    const doneN = { confirmed: 1, in_progress: 2, done_packaging: sh.paid ? 4 : 3, shipping: 5, completed: 6 }[order.status] || 1;
+    const waiting = order.status === 'done_packaging' && !sh.paid && sh.options_sent;
+    timeline.innerHTML = `
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Order Progress</div>
+      <div style="display:flex;justify-content:space-between;position:relative;">
+        <div style="position:absolute;top:14px;left:5%;right:5%;height:2px;background:var(--line-2);z-index:0;"></div>
+        <div style="position:absolute;top:14px;left:5%;height:2px;background:var(--green);z-index:1;width:${Math.max(0, (doneN - 1) / 5) * 90}%;transition:width 0.3s;"></div>
+        ${SH6.map((lbl, i) => {
+          const done = i < doneN, active = i === doneN - 1, wait = waiting && i === 3;
+          return `<div style="display:flex;flex-direction:column;align-items:center;z-index:2;flex:1;min-width:0;">
+            <div style="width:28px;height:28px;border-radius:50%;background:${done ? 'var(--green)' : '#fff'};border:2px solid ${done ? 'var(--green)' : (wait ? '#eab308' : 'var(--line-2)')};display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:${done ? '#fff' : 'var(--fg-2)'};${active ? 'box-shadow:0 0 0 4px rgba(21,128,61,0.2);' : (wait ? 'box-shadow:0 0 0 4px rgba(234,179,8,0.25);' : '')}">${done ? '✓' : ''}</div>
+            <div style="font-size:0.62rem;line-height:1.25;color:${done ? '#14532d' : (wait ? '#a16207' : 'var(--fg-2)')};margin-top:0.5rem;font-family:'Syne',sans-serif;font-weight:${active || wait ? '700' : '600'};text-align:center;padding:0 2px;">${lbl}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } else if (isCancelled) {
     timeline.innerHTML = `
       <div style="text-align:center;padding:1rem;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);border-radius:10px;">
         <div style="font-family:'Syne',sans-serif;font-weight:700;color:#b91c1c;font-size:0.85rem;">${order.status === 'refunded' ? 'Order Refunded' : 'Order Cancelled'}</div>
@@ -5738,13 +5868,12 @@ function openOrderDetails(orderId) {
     _confirmOrderIsPickup = false;
     receivedWrap.style.display = 'block';
     receivedWrap.innerHTML = `
-      <button id="od-confirm-received-btn" onclick="openOrderReceivedConfirm()" style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.12);border:1px solid rgba(21,128,61,0.3);border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;">
+      <button id="od-confirm-received-btn" onclick="openOrderReceivedConfirm()" style="width:100%;padding:0.8rem;background:#dcfce7;border:1px solid #86efac;border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;cursor:pointer;">
         ${packageIconSvg}I received my order
       </button>`;
   } else if (!isPickupOrder && order.status === 'shipping') {
     _confirmOrderId = null;
-    receivedWrap.style.display = 'block';
-    receivedWrap.innerHTML = `<div style="width:100%;padding:0.75rem;background:rgba(21,128,61,0.12);border:1px solid rgba(21,128,61,0.3);border-radius:10px;color:#14532d;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;text-align:center;">${packageIconSvg}You confirmed you received it · ${sh.received_at}</div>`;
+    receivedWrap.style.display = 'none';
   } else if (order.status === 'shipped' && !isCashPickup) {
     _confirmOrderId = order.id;
     _confirmOrderIsPickup = isPickup;
@@ -5789,48 +5918,126 @@ let _confirmOrderIsPickup = false;
 const SHIP_OPTION_NAMES = { priority: 'Priority', regular: 'Regular', pooling: 'Pooling' };
 const SHIP_OPTION_NOTES = { priority: 'Fastest · a rider just for your order', regular: 'Standard delivery', pooling: 'Cheapest · shares a vehicle with other orders' };
 
-// The Ship to Address part of the order window: choose and pay, paid, on its way, refunded or cancelled.
+// What the customer picked (kept in the browser only; nothing is saved until they pay).
+const _shipChoice = {};
+const SHIP_LALA_LOGO = `<img src="/static/images/lalamove-logo.png" alt="" width="20" height="20" style="width:20px;height:20px;object-fit:contain;flex-shrink:0;" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23f16622'/%3E%3Cpath d='M8 5h3v11h5v3H8z' fill='%23fff'/%3E%3C/svg%3E'">`;
+const SHIP_TRUCK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>';
+
+const SHIP_ICONS = {
+  priority: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  bike: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h3l1.5 5.5M5.5 17.5L9 9h4l2 8.5"/></svg>',
+  car: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l2-6h14l2 6v5h-3a2 2 0 0 1-4 0H10a2 2 0 0 1-4 0H3z"/><line x1="3" y1="13" x2="21" y2="13"/></svg>',
+  people: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+};
+function shipTimeLeft(sh) {
+  const ms = sh.deadline_iso ? Math.max(0, Date.parse(sh.deadline_iso) - Date.now()) : 0;
+  const h = Math.floor(ms / 3600e3), m = Math.floor(ms % 3600e3 / 60e3);
+  const hp = h === 1 ? '1 hr' : `${h} hrs`, mp = m === 1 ? '1 min' : `${m} mins`;
+  return { ms, text: h ? (m ? `${hp} ${mp}` : hp) : (m ? mp : 'less than a minute'), urgent: ms <= 2 * 3600e3 };
+}
+function shipVehicleMessage(sh) {
+  return sh.vehicle === 'Motorcycle' || !sh.reason
+    ? `Your order goes by Lalamove ${sh.vehicle}.`
+    : `Your order goes by Lalamove ${sh.vehicle}. Reason: ${sh.reason}. A ${sh.vehicle} costs more than a motorcycle, so the shipping fee is higher.`;
+}
+function shipPick(oid, k) { _shipChoice[oid] = k; openOrderDetails(oid); }
+
+// The Ship to Address stage box of the order window, one per stage.
 function renderShipSection(order) {
   const box = document.getElementById('od-ship-section');
   if (order.delivery_method !== 'ship') { box.style.display = 'none'; box.innerHTML = ''; return; }
   const sh = order.ship || {};
   const peso = n => '₱' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const head = t => `<div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:var(--fg-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">${t}</div>`;
-  const panel = (bg, border, inner) => `<div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:0.9rem 1rem;font-size:0.82rem;line-height:1.55;">${inner}</div>`;
+  const rd = sh.vehicle === 'Motorcycle' ? 'rider' : 'driver', Rd = rd === 'rider' ? 'Rider' : 'Driver';
+  const wrap = (bg, border, inner, dashed) => `<div style="background:${bg};border:1.5px ${dashed ? 'dashed' : 'solid'} ${border};border-radius:10px;padding:0.9rem 1rem;font-size:0.82rem;line-height:1.55;">${inner}</div>`;
+  const h = (t, c) => `<div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;color:${c};margin-bottom:0.3rem;">${t}</div>`;
   let html = '';
-  if (order.status === 'done_packaging' && !sh.paid && sh.options_sent) {
-    const left = sh.deadline_iso ? Math.max(0, Date.parse(sh.deadline_iso) - Date.now()) : 0;
-    const hrs = Math.floor(left / 3600e3), mins = Math.floor(left % 3600e3 / 60e3);
-    const cards = ['priority', 'regular', 'pooling'].map(k => {
+  if (['confirmed', 'in_progress', 'done_packaging'].includes(order.status) && !sh.paid && !sh.options_sent) {
+    const line = { confirmed: 'Your items are held for you and the shop will start packing soon.',
+      in_progress: 'The shop is packing your order now.',
+      done_packaging: 'Your order is packed. The shop is checking Lalamove prices for you.' }[order.status];
+    html = wrap('#fefce8', '#eab308', h('Shipping fee to be calculated', '#713f12')
+      + `<div style="color:#713f12;">${line}<br>You'll get the shipping options here and by email. Nothing has been charged yet.</div>`, true);
+  } else if (order.status === 'done_packaging' && !sh.paid && sh.options_sent) {
+    const t = shipTimeLeft(sh), picked = _shipChoice[order.id];
+    const desc = { priority: `Fastest. The ${rd} goes straight to you.`, regular: 'Standard delivery.',
+      pooling: `Lowest fee. May take longer, the ${rd} can carry other orders.` };
+    const icon = { priority: SHIP_ICONS.priority, regular: rd === 'rider' ? SHIP_ICONS.bike : SHIP_ICONS.car, pooling: SHIP_ICONS.people };
+    const opts = ['priority', 'regular', 'pooling'].map(k => {
       const price = sh.prices ? sh.prices[k] : null;
-      if (!price) return `<div style="border:1.5px dashed var(--line-2);border-radius:10px;padding:0.7rem 0.8rem;opacity:0.55;"><div style="font-family:'Syne',sans-serif;font-weight:700;">${SHIP_OPTION_NAMES[k]}</div><div style="font-size:0.74rem;color:var(--fg-3);">Not available for this order</div></div>`;
-      return `<div style="border:1.5px solid var(--line-2);border-radius:10px;padding:0.7rem 0.8rem;display:flex;align-items:center;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;background:#fff;">
-        <div style="min-width:0;"><div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">${SHIP_OPTION_NAMES[k]} · ${peso(price)}</div>
-          <div style="font-size:0.74rem;color:var(--fg-3);">${SHIP_OPTION_NOTES[k]}</div>
-          <div style="font-size:0.74rem;color:var(--fg-2);margin-top:0.15rem;">Items ${peso(order.total)} + shipping ${peso(price)} = <strong>${peso(order.total + price)}</strong></div></div>
-        <button type="button" onclick="chooseShipping(${order.id}, '${k}', this)" style="padding:0.5rem 0.9rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.76rem;cursor:pointer;">Choose &amp; pay with GCash</button>
-      </div>`;
+      if (!price) return `<div class="ship-opt off"><span class="tile">${icon[k]}</span><div style="flex:1;"><div style="font-family:'Syne',sans-serif;font-weight:700;">${SHIP_OPTION_NAMES[k]}</div><div style="font-size:0.74rem;color:var(--fg-3);">Not available right now</div></div><span class="dot"></span></div>`;
+      return `<div class="ship-opt ${picked === k ? 'sel' : ''}" onclick="shipPick(${order.id}, '${k}')"><span class="tile">${icon[k]}</span>
+        <div style="flex:1;min-width:0;"><div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">${SHIP_OPTION_NAMES[k]}</div>
+        <div style="font-size:0.74rem;color:var(--fg-3);">${desc[k]}</div></div>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--fg-1);">${peso(price)}</span><span class="dot"></span></div>`;
     }).join('');
-    html = head('Choose your shipping option')
-      + panel('#fefce8', '#eab308', `<div style="color:#713f12;"><strong>Lalamove ${sh.vehicle}</strong> · ${sh.reason}<br>You have until <strong>${sh.deadline}</strong> (${hrs}h ${mins}m left) to choose and pay with GCash. If not, the order cancels by itself and the items go back to stock.</div>`)
-      + `<div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.6rem;">${cards}</div>`;
+    const total = picked && sh.prices[picked] ? order.total + Number(sh.prices[picked]) : null;
+    const vehMsg = sh.vehicle === 'Motorcycle' || !sh.reason
+      ? `Your order goes by <strong>Lalamove ${sh.vehicle}</strong>.`
+      : `Your order goes by <strong>Lalamove ${sh.vehicle}</strong>. Reason: ${sh.reason}. A ${sh.vehicle} costs more than a motorcycle, so the shipping fee is higher.`;
+    const vIcon = sh.vehicle === 'Motorcycle' ? SHIP_ICONS.bike : SHIP_ICONS.car;
+    html = wrap('#fff', '#93c5fd', h('Choose your shipping', 'var(--fg-1)')
+      + `<div style="color:var(--fg-3);font-size:0.76rem;margin-bottom:0.55rem;">Prices from Lalamove, checked ${sh.options_sent_at}.</div>`
+      + `<div style="display:flex;gap:0.5rem;align-items:center;color:var(--fg-1);background:#fff;border:1px solid var(--line-2);border-radius:9px;padding:0.55rem 0.7rem;margin-bottom:0.5rem;"><span style="display:flex;color:var(--fg-2);">${vIcon}</span><span>${vehMsg}</span></div>`
+      + `<div style="display:flex;gap:0.5rem;align-items:center;padding:0.5rem 0.7rem;border-radius:9px;margin-bottom:0.6rem;${t.urgent ? 'background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;' : 'background:#fefce8;border:1px solid #fde68a;color:#854d0e;'}">${SHIP_ICONS.clock}<span><strong>${t.urgent ? 'Only ' : ''}${t.text} left</strong> to choose and pay · until ${sh.deadline}</span></div>`
+      + `<div style="display:flex;flex-direction:column;gap:0.5rem;">${opts}</div>`
+      + `<div style="font-size:0.74rem;color:var(--fg-3);margin-top:0.65rem;">The price you choose won't change after you pay, even if Lalamove's price changes. If you don't pay by ${sh.deadline}, the order is cancelled automatically and nothing is charged. ${sh.reminder_sent ? 'We sent you a reminder.' : "We'll remind you 2 hours before."}</div>`
+      + `<div style="display:flex;gap:0.5rem;margin-top:0.8rem;flex-wrap:wrap;">
+          <button type="button" onclick="openShipCancelConfirm(${order.id})" style="flex:0 0 auto;padding:0.65rem 1rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:9px;color:var(--fg-1);font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;cursor:pointer;">Cancel order</button>
+          <button type="button" ${picked ? `onclick="chooseShipping(${order.id}, '${picked}', this)"` : 'disabled'} style="flex:1;min-width:180px;padding:0.65rem 1rem;background:${picked ? '#16a34a' : '#86efac'};border:none;border-radius:9px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:${picked ? 'pointer' : 'not-allowed'};">${picked ? `Pay ${peso(total)} with GCash` : 'Choose a shipping option first'}</button>
+        </div>`);
   } else if (order.status === 'done_packaging' && sh.paid) {
-    html = head('Shipping') + panel('#f0fdf4', '#bbf7d0', `<div style="color:#14532d;"><strong>Paid ${peso(sh.grand_total)} · GCash</strong><br>${SHIP_OPTION_NAMES[sh.option]} shipping ${peso(sh.fee)} · Lalamove ${sh.vehicle}. The shop is booking your delivery now.</div>`);
+    html = wrap('#f0fdf4', '#86efac', h(`Paid ${peso(sh.grand_total)} with GCash`, '#14532d')
+      + `<div style="color:#166534;">Thanks! You chose ${SHIP_OPTION_NAMES[sh.option]} shipping. We're booking your Lalamove ${sh.vehicle} now. You'll get the ${rd}'s details here and by email.</div>`
+      + `<div style="color:#15803d;font-size:0.76rem;margin-top:0.55rem;">Need to cancel? Contact the shop before your order ships. If the shop cancels a paid order, the full amount goes back to your GCash.</div>`);
   } else if (order.status === 'shipping') {
-    const who = sh.rider_type === 'driver' ? 'Driver' : 'Rider';
-    html = head('On the way with Lalamove')
-      + panel('#f0f9ff', '#bae6fd', `<div style="color:#0c4a6e;"><strong>${who}: ${sh.rider_name}</strong> · ${sh.rider_phone} · ${sh.rider_plate}<br>${SHIP_OPTION_NAMES[sh.option]} shipping · Paid ${peso(sh.grand_total)} · GCash</div>`)
-      + (sh.lalamove_link ? `<a href="${sh.lalamove_link}" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:0.6rem;padding:0.7rem;background:var(--brand-red);border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;text-decoration:none;">Track on Lalamove</a>` : '');
+    const modelLbl = sh.vehicle === 'Motorcycle' ? 'Motorcycle' : 'Car';
+    const row = (k, v) => `<div style="display:flex;justify-content:space-between;gap:0.6rem;padding:0.3rem 0;border-bottom:1px solid #e0f2fe;"><span style="color:#0369a1;">${k}</span><strong style="color:#0c4a6e;text-align:right;">${v}</strong></div>`;
+    html = wrap('#f0f9ff', '#7dd3fc', h(`On the way with Lalamove ${sh.vehicle} · ${SHIP_OPTION_NAMES[sh.option]}`, '#0c4a6e')
+      + row(Rd, sh.rider_name) + row('Mobile', sh.rider_phone) + row(`${modelLbl} model`, sh.rider_model || '—') + row('Plate number', sh.rider_plate)
+      + (sh.lalamove_link ? `<a href="${sh.lalamove_link}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:0.7rem;padding:0.7rem;background:#f16622;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;text-decoration:none;">${SHIP_LALA_LOGO}Track on Lalamove &#8599;</a>` : '')
+      + `<div style="color:#0369a1;font-size:0.76rem;margin-top:0.6rem;">Shipping is already paid. Nothing to pay the ${rd}.</div>`
+      + (sh.received_at ? `<div style="margin-top:0.6rem;padding:0.6rem 0.75rem;background:#dcfce7;border:1px solid #86efac;border-radius:8px;color:#14532d;font-weight:700;">You confirmed you received it on ${sh.received_at}. The shop will mark your order as Completed.</div>` : ''));
   } else if (order.status === 'refunded') {
-    html = head('Refunded') + panel('#fef2f2', '#fecaca', `<div style="color:#7f1d1d;"><strong>${peso(sh.refund_amount)} back to your GCash via PayMongo</strong>${sh.refunded_at ? ' · ' + sh.refunded_at : ''}<br>Reason: ${sh.refund_reason || '—'}</div>`);
+    html = wrap('#fef2f2', '#fecaca', h(`Refunded ${peso(sh.refund_amount)}`, '#7f1d1d')
+      + `<div style="color:#991b1b;">Reason: ${sh.refund_reason || '—'}<br>It may take a few days to show in your GCash.</div>`);
   } else if (order.status === 'cancelled') {
-    const by = { auto: 'cancelled automatically, no payment in 24 hours', customer: 'cancelled by you', shop: 'cancelled by the shop' }[sh.cancelled_by] || 'cancelled';
-    html = head('Cancelled') + panel('#f3f4f6', '#e5e7eb', `<div style="color:#4b5563;"><strong>Not charged</strong> · ${by}</div>`);
+    const by = { auto: 'cancelled automatically because there was no payment in 24 hours', customer: 'cancelled by you', shop: 'cancelled by the shop' }[sh.cancelled_by] || 'cancelled';
+    html = wrap('#f3f4f6', '#d1d5db', h('Cancelled · not charged', '#374151')
+      + `<div style="color:#4b5563;">This order was ${by}.${sh.cancel_reason && sh.cancelled_by === 'shop' ? ' Reason: ' + sh.cancel_reason + '.' : ''}</div>`);
   } else if (order.status === 'completed' && sh.paid) {
-    html = head('Delivered') + panel('#f0fdf4', '#bbf7d0', `<div style="color:#14532d;"><strong>Paid ${peso(sh.grand_total)} · GCash</strong> · ${SHIP_OPTION_NAMES[sh.option] || ''} shipping ${peso(sh.fee)}</div>`);
+    html = wrap('#f0fdf4', '#bbf7d0', h(`Paid ${peso(sh.grand_total)} with GCash`, '#14532d')
+      + `<div style="color:#166534;">${SHIP_OPTION_NAMES[sh.option] || ''} shipping ${peso(sh.fee)} · delivered. Thank you for shopping with MotoTyres!</div>`);
   }
   box.innerHTML = html;
   box.style.display = html ? 'block' : 'none';
+}
+
+let _shipCancelId = null;
+function openShipCancelConfirm(oid) {
+  _shipCancelId = oid;
+  document.getElementById('scc-go').disabled = false;
+  openModal('modal-ship-cancel-confirm');
+}
+async function submitShipCancel() {
+  const oid = _shipCancelId; if (!oid) return;
+  const btn = document.getElementById('scc-go'); btn.disabled = true;
+  try {
+    const res = await fetch(`/customer/order/${oid}/cancel-ship`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const data = await res.json();
+    if (data.success) {
+      const o = ordersData[oid]; o.status = 'cancelled'; o.ship.status = 'cancelled'; o.ship.cancelled_by = 'customer';
+      delete _shipChoice[oid];
+      closeModal('modal-ship-cancel-confirm');
+      openOrderDetails(oid);
+      if (typeof renderMyOrdersProgress === 'function') renderMyOrdersProgress();
+      showCartToast('Order cancelled. You were not charged.');
+      return;
+    }
+    showCartToast(data.error || 'Could not cancel the order.');
+  } catch (e) { showCartToast('Network error. Please try again.'); }
+  btn.disabled = false;
 }
 
 async function chooseShipping(oid, option, btn) {
@@ -5849,11 +6056,14 @@ function openOrderReceivedConfirm() {
   if (!_confirmOrderId) return;
   const order = ordersData[_confirmOrderId];
   const isPickup = _confirmOrderIsPickup;
-  document.getElementById('orc-title').textContent = isPickup ? 'Picked Up Your Order?' : 'Received Your Order?';
+  const _shipOrder = order.delivery_method === 'ship';
+  document.getElementById('orc-title').textContent = isPickup ? 'Picked Up Your Order?' : (_shipOrder ? 'Received your order?' : 'Received Your Order?');
   document.getElementById('orc-subtitle').textContent = isPickup
     ? "This confirms you picked it up. You can't undo this."
-    : "This confirms your order arrived. You can't undo this.";
-  document.getElementById('orc-summary').textContent = `ORD-${String(_confirmOrderId).padStart(3, '0')} · ₱${order.total.toFixed(2)}`;
+    : (_shipOrder ? 'Only confirm once the item is in your hands. The shop will then mark your order as Completed.'
+                  : "This confirms your order arrived. You can't undo this.");
+  document.getElementById('orc-summary').style.display = _shipOrder ? 'none' : 'inline-block';
+  document.getElementById('orc-summary').textContent = `ORD-${String(_confirmOrderId).padStart(3, '0')} · ₱${Number(order.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   const btn = document.getElementById('orc-confirm-btn');
   btn.textContent = isPickup ? 'Yes, I picked it up' : 'Yes, I received it';
   btn.disabled = false;
@@ -6504,7 +6714,7 @@ function buildQuotationItemsHTML(q) {
         <div style="font-size:0.82rem;font-weight:${bg ? '600' : '400'};color:var(--fg-1);">${it.name}</div>
         <div style="font-size:0.68rem;color:var(--fg-3);margin-top:0.1rem;">${bg ? 'Your booked service' : it.label}</div>
       </div>
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
     </div>`;
   return locked.map(it => row(it, 'var(--bg-subtle)')).join('') + extra.map(it => row(it, null)).join('');
 }
@@ -6517,12 +6727,12 @@ function buildQuotationTotalsHTML(q) {
     <div style="display:flex;gap:0.5rem;margin:0.6rem 0;">
       <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.5rem 0.6rem;text-align:center;">
         <div style="font-size:0.6rem;color:#166534;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">If you approve</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#166534;">₱${q.total.toFixed(2)}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#166534;">₱${Number(q.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
         <div style="font-size:0.58rem;color:#15803d;margin-top:0.1rem;">${approveNote}</div>
       </div>
       <div style="flex:1;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;padding:0.5rem 0.6rem;text-align:center;">
         <div style="font-size:0.6rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">If you decline</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--fg-2);">₱${q.original.toFixed(2)}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--fg-2);">₱${Number(q.original).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
         <div style="font-size:0.58rem;color:var(--fg-3);margin-top:0.1rem;">${declineNote}</div>
       </div>
     </div>`;
@@ -6553,7 +6763,7 @@ function openQuotationModal(qid) {
   document.getElementById('qf-booked-service').innerHTML = locked.map(it => `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;background:var(--bg-subtle);border-radius:8px;padding:0.65rem 0.8rem;">
       <div><div style="font-size:0.85rem;font-weight:600;color:var(--fg-1);">${it.name}</div><div style="font-size:0.7rem;color:var(--fg-3);margin-top:0.1rem;">Already agreed at booking</div></div>
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:var(--fg-1);white-space:nowrap;">₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
     </div>`).join('');
 
   const materialsSection = document.getElementById('qf-materials-section');
@@ -6562,8 +6772,8 @@ function openQuotationModal(qid) {
     document.getElementById('qf-materials-items').innerHTML = materials.map(it => `
       <div style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.6rem 0.8rem;border-bottom:1px solid var(--line-2);">
         <div style="width:28px;height:28px;border-radius:7px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:0.1rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
-        <div style="flex:1;min-width:0;"><div style="font-size:0.82rem;color:var(--fg-1);">${it.name}</div><div style="font-size:0.68rem;color:var(--fg-3);margin-top:0.1rem;">Part · ${it.quantity || 1} × ₱${it.price.toFixed(2)}</div></div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
+        <div style="flex:1;min-width:0;"><div style="font-size:0.82rem;color:var(--fg-1);">${it.name}</div><div style="font-size:0.68rem;color:var(--fg-3);margin-top:0.1rem;">Part · ${it.quantity || 1} × ₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div></div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
       </div>`).join('');
   } else {
     materialsSection.style.display = 'none';
@@ -6575,7 +6785,7 @@ function openQuotationModal(qid) {
     document.getElementById('qf-extra-items').innerHTML = findings.map(it => `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.8rem;border-bottom:1px solid var(--line-2);">
         <div><div style="font-size:0.82rem;color:var(--fg-1);">${it.name}</div><div style="font-size:0.68rem;color:var(--fg-3);margin-top:0.1rem;">${it.label}</div></div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${it.price.toFixed(2)}</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);white-space:nowrap;">₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
       </div>`).join('');
   } else {
     extraSection.style.display = 'none';
@@ -6615,7 +6825,7 @@ function openQuotationModal(qid) {
     document.getElementById('qf-totals').innerHTML = `
       <div style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:8px;padding:0.75rem;text-align:center;">
         <div style="font-size:0.62rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Total to pay</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--fg-1);">₱${q.total.toFixed(2)}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--fg-1);">₱${Number(q.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
         <div style="font-size:0.66rem;color:var(--fg-3);margin-top:0.1rem;">${materials.length ? 'Service + materials' : 'Booked service'}</div>
       </div>`;
     decisionActions.style.display = 'none';
@@ -6641,7 +6851,7 @@ function buildInvoiceItemsHTML(items) {
   return items.map(it => `
     <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--line-2);">
       <span style="font-size:0.82rem;color:var(--fg-1);">${it.name}</span>
-      <span style="font-weight:700;font-size:0.82rem;color:var(--fg-1);">₱${it.price.toFixed(2)}</span>
+      <span style="font-weight:700;font-size:0.82rem;color:var(--fg-1);">₱${Number(it.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
     </div>`).join('');
 }
 
@@ -6649,8 +6859,8 @@ function invoicePaymentPickerHTML(inv, scope) {
   const choice = _invoicePaymentChoice[inv.booking_id] || null;
   const optStyle = (val) => `flex:1;padding:0.6rem;border-radius:8px;border:2px solid ${choice===val ? 'var(--brand-red)' : 'var(--line-2)'};background:${choice===val ? '#fff5f5' : '#fff'};cursor:pointer;text-align:left;`;
   const radioStyle = (val) => `width:14px;height:14px;border-radius:50%;border:2px solid ${choice===val?'var(--brand-red)':'var(--line-2)'};background:${choice===val?'var(--brand-red)':'#fff'};display:inline-block;margin-right:0.4rem;vertical-align:middle;`;
-  const btnLabel = choice === 'gcash' ? `Pay ₱${inv.total.toFixed(2)} with GCash`
-                  : choice === 'cash'  ? `Pay ₱${inv.total.toFixed(2)} in cash at the shop`
+  const btnLabel = choice === 'gcash' ? `Pay ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} with GCash`
+                  : choice === 'cash'  ? `Pay ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} in cash at the shop`
                   : 'Choose a payment method';
   return `
     <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--fg-3);margin:0.4rem 0 0.4rem;">Choose payment method</div>
@@ -6745,10 +6955,10 @@ function openInvoiceModal(bookingId) {
   document.getElementById('inv-date-right').textContent = new Date(inv.sent_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
   document.getElementById('inv-items').innerHTML = buildInvoiceItemsHTML(inv.items);
   document.getElementById('inv-amount-label').textContent = 'Amount to Pay';
-  document.getElementById('inv-amount-value').textContent = `₱${inv.total.toFixed(2)}`;
+  document.getElementById('inv-amount-value').textContent = `₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   const area = document.getElementById('inv-payment-area');
   if (inv.status === 'cash_pending') {
-    area.innerHTML = `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0.75rem 0.9rem;font-size:0.82rem;color:#92400e;"><strong>Pay ₱${inv.total.toFixed(2)} at the shop counter.</strong> We'll mark this invoice paid once the cashier receives your cash.</div>`;
+    area.innerHTML = `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0.75rem 0.9rem;font-size:0.82rem;color:#92400e;"><strong>Pay ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} at the shop counter.</strong> We'll mark this invoice paid once the cashier receives your cash.</div>`;
   } else {
     area.innerHTML = invoicePaymentPickerHTML(inv, 'modal');
   }
@@ -6760,7 +6970,7 @@ function _renderReceiptView(inv) {
   document.getElementById('inv-view-invoice').style.display = 'none';
   document.getElementById('inv-view-receipt').style.display = 'block';
   document.getElementById('inv-receipt-subtext').textContent =
-    `You paid ₱${inv.total.toFixed(2)} by ${inv.payment_method === 'gcash' ? 'GCash' : 'cash'}. Thank you for choosing MotoTyres!`;
+    `You paid ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} by ${inv.payment_method === 'gcash' ? 'GCash' : 'cash'}. Thank you for choosing MotoTyres!`;
   document.getElementById('rcpt-ref-left').textContent = `Receipt for #${inv.inv_ref}`;
   document.getElementById('rcpt-date-right').textContent = inv.paid_at
     ? new Date(inv.paid_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
@@ -6840,7 +7050,7 @@ function renderReturnOutcomeCards(kind) {
     let usageNote = '';
     if (kind === 'service' && _rfBooking) {
       if (o.value === 'refund') {
-        detail = `We return ₱${(_rfBooking.total_amount || 0).toFixed(2)}, what you paid for the service.`;
+        detail = `We return ₱${Number((_rfBooking.total_amount || 0)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}, what you paid for the service.`;
       } else if (o.value === 'redo_service' && _rfBooking.redo_stats) {
         usageNote = `<div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.35rem;">${_rfBooking.redo_stats.used_count} of ${_rfBooking.redo_stats.limit} back jobs used</div>`;
       }
@@ -6940,12 +7150,12 @@ function updateRfOutcomeFooter() {
     footer.style.color = 'var(--fg-2)';
     footer.style.background = 'var(--bg-subtle)';
     footer.style.fontWeight = '400';
-    footer.textContent = `Refund of ₱${computeRfRefundAmount().toFixed(2)} back to how you paid (GCash or cash), after we check the item at the shop.`;
+    footer.textContent = `Refund of ₱${Number(computeRfRefundAmount()).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} back to how you paid (GCash or cash), after we check the item at the shop.`;
   } else if (outcome === 'refund') {
     footer.style.color = '#15803d';
     footer.style.background = 'rgba(21,128,61,0.08)';
     footer.style.fontWeight = '700';
-    footer.textContent = `Refund amount: ₱${computeRfRefundAmount().toFixed(2)}`;
+    footer.textContent = `Refund amount: ₱${Number(computeRfRefundAmount()).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   } else if (outcome) {
     footer.style.color = 'var(--fg-2)';
     footer.style.background = 'var(--bg-subtle)';
@@ -7104,7 +7314,7 @@ function rfProductSummaryHTML(outcome, reasonsLine) {
   const picked = _rfOrder.items.filter(it => _rfItemQty[it.id]);
   const itemsLine = picked.length ? picked.map(it => `${it.product_name} ×${_rfItemQty[it.id]}`).join(', ') : '(no item selected yet)';
   const outOfStock = picked.some(it => (it.stock || 0) < _rfItemQty[it.id]);
-  const amount = '₱' + computeRfRefundAmount().toFixed(2);
+  const amount = '₱' + Number(computeRfRefundAmount()).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const HOURS = 'Monday – Sunday, 7:00 AM – 6:30 PM';
   const row = (label, value) => `<div style="margin-top:0.3rem;"><strong>${label}:</strong> ${value}</div>`;
 
@@ -7158,7 +7368,7 @@ function updateRfSummary() {
   const outcomeOpt = outcome ? RETURN_OUTCOMES[_rfKind].find(o => o.value === outcome) : null;
   let askLine;
   if (outcomeOpt && outcome === 'refund') {
-    askLine = `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--brand-red);">₱${computeRfRefundAmount().toFixed(2)} refund</span>`;
+    askLine = `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--brand-red);">₱${Number(computeRfRefundAmount()).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} refund</span>`;
   } else if (outcomeOpt && outcome === 'redo_service' && _rfBooking && _rfBooking.redo_stats) {
     const n = _rfBooking.redo_stats.used_count + 1;
     askLine = `Back job ${n} of ${_rfBooking.redo_stats.limit}`;
@@ -7415,7 +7625,7 @@ function returnOutcomeLine(r) {
   let title = opt ? opt.title : r.desired_outcome.replace(/_/g, ' ');
   if (r.kind === 'product' && r.desired_outcome === 'replacement') title += ' (in-store)';
   return (r.desired_outcome === 'refund' && r.requested_refund_amount)
-    ? `${title} (₱${Number(r.requested_refund_amount).toFixed(2)})` : title;
+    ? `${title} (₱${Number(Number(r.requested_refund_amount)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})})` : title;
 }
 
 // Customer-language timeline — what happened, in plain words, not a system log.
@@ -7496,7 +7706,7 @@ function returnTimelineEntries(r) {
     } else if (r.resolution === 'refund' && r.refund_amount && r.cash_ready_at) {
       entries.push({ time: r.resolved_at, text: `You received your ${pesoFmt(r.refund_amount)} refund in cash. This claim is closed.` });
     } else if (r.resolution === 'refund' && r.refund_amount) {
-      entries.push({ time: r.resolved_at, text: `₱${Number(r.refund_amount).toFixed(2)} refunded to your original payment method.` });
+      entries.push({ time: r.resolved_at, text: `₱${Number(Number(r.refund_amount)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} refunded to your original payment method.` });
     } else if (r.resolution === 'redo_service') {
       entries.push({ time: r.resolved_at, text: 'Your back job is complete.' });
     } else {
@@ -7972,7 +8182,7 @@ function openProductInfo(card) {
 
   document.getElementById('pi-name').textContent        = currentProductInfo.name;
   document.getElementById('pi-cat').textContent         = currentProductInfo.category;
-  document.getElementById('pi-price').textContent       = '₱' + currentProductInfo.price.toFixed(2);
+  document.getElementById('pi-price').textContent       = '₱' + Number(currentProductInfo.price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   document.getElementById('pi-stock').textContent       = currentProductInfo.stock + ' in stock';
   document.getElementById('pi-description').textContent = currentProductInfo.description || 'No description available.';
   document.getElementById('pi-qty').value               = 1;
@@ -8222,14 +8432,24 @@ function bestMechanicRecommendation() {
   return best ? { mechanic: best, ...bestCoverage } : null;
 }
 
-function buildMechanicPickerItem({ id, name, note, noteClass, disabled, selected, recommended }) {
+function buildMechanicPickerItem({ id, name, note, noteClass, disabled, selected, recommended, status, statusLabel, matches }) {
   const div = document.createElement('div');
   div.className = 'mech-picker-item'
     + (disabled ? ' disabled' : '') + (selected ? ' selected' : '') + (recommended ? ' recommended' : '');
   const nameEl = document.createElement('div');
   nameEl.className = 'mp-name';
   nameEl.textContent = name;
+  if (status) {                                   // Available / Reserved / Busy / Off Duty
+    const pill = document.createElement('span');
+    pill.className = 'mp-pill ' + status; pill.textContent = statusLabel;
+    nameEl.appendChild(pill);
+  }
   div.appendChild(nameEl);
+  if (matches) {
+    const tag = document.createElement('div');
+    tag.className = 'mp-match'; tag.textContent = 'Matches this service';
+    div.appendChild(tag);
+  }
   if (note) {
     const noteEl = document.createElement('div');
     noteEl.className = 'mp-note' + (noteClass ? ' ' + noteClass : '');
@@ -8274,21 +8494,27 @@ function renderMechanicPickerList() {
     disabled: false, selected: !selectedMechanicId,
   }));
 
-  mechanicsRoster.forEach(m => {
+  // mechanics whose specialization matches the chosen service come first
+  const ordered = mechanicsRoster.slice().sort((a, b) =>
+    (specializationMatches(b, selectedServiceNames).length > 0) - (specializationMatches(a, selectedServiceNames).length > 0));
+  ordered.forEach(m => {
     let note, noteClass;
     const isRecommended = !!rec && rec.mechanic.id === m.id;
-    if (m.busy) {
-      note = m.busy_until_closing
-        ? `Busy at ${startLabel} · occupied for the rest of the day`
-        : `Busy at ${startLabel} · free from ${m.busy_until_label || ''}`;
+    const off = !!m.off_duty;
+    if (off) {
+      note = 'Off duty today';
+      noteClass = 'mp-busy';
+    } else if (m.busy) {
+      note = `Already booked at ${startLabel}`;
       noteClass = 'mp-busy';
     } else {
       note = `Free at ${startLabel}`;
       noteClass = 'mp-free';
     }
     list.appendChild(buildMechanicPickerItem({
-      id: m.id, name: `${m.name} — ${m.specialization}`, note, noteClass, disabled: m.busy,
+      id: m.id, name: `${m.name} — ${m.specialization}`, note, noteClass, disabled: m.busy || off,
       selected: String(selectedMechanicId) === String(m.id), recommended: isRecommended,
+      status: m.status, statusLabel: m.status_label, matches: !off && specializationMatches(m, selectedServiceNames).length > 0,
     }));
   });
 }
@@ -8299,7 +8525,7 @@ function renderMechanicPickerList() {
 // in any of it (say so — everyone on duty is cross-trained regardless).
 function renderRecommendationPanel() {
   const panel = document.getElementById('mech-recommend-panel');
-  const freeMechanics = mechanicsRoster.filter(m => !m.busy);
+  const freeMechanics = mechanicsRoster.filter(m => !m.busy && !m.off_duty);
 
   if (!freeMechanics.length) {
     panel.style.display = 'none';
@@ -8542,10 +8768,10 @@ function shipProgressLine(o) {
   if (o.status === 'in_progress') return 'The shop is packing your order';
   if (o.status === 'done_packaging') {
     if (sh.paid) return 'Paid · the shop is booking your Lalamove delivery';
-    if (sh.options_sent) return `Choose your shipping option · by ${sh.deadline}`;
+    if (sh.options_sent) return `Choose your shipping and pay · ${shipTimeLeft(sh).text} left`;
     return 'Packed · shipping options coming soon';
   }
-  if (o.status === 'shipping') return sh.received_at ? 'You confirmed you received it · the shop will complete it' : 'On the way with Lalamove';
+  if (o.status === 'shipping') return sh.received_at ? 'You confirmed you received it · the shop will complete it' : 'On the way · press I received my order once it arrives';
   return '';
 }
 const OVP_PICKUP = ['Confirmed', 'Processing', 'Ready', 'Completed'];
@@ -8651,6 +8877,13 @@ function renderMyOrdersProgress() {
     const line = ship ? shipProgressLine(o)
       : ['Order received', 'The shop is preparing your items', 'Ready at the shop counter · open 8:00 AM – 6:30 PM'][idx];
     el.innerHTML = ovpHtml(ship ? OVP_DELIVERY : ['Confirmed', 'Processing', 'Ready to Pick Up', 'Completed'], idx, line, '');
+    if (ship && o.status === 'done_packaging' && !(o.ship || {}).paid && (o.ship || {}).options_sent) {
+      const l = el.querySelector('.ovp-line'); if (l) l.style.color = '#a16207';
+    }
+  });
+  document.querySelectorAll('[data-ordview]').forEach(btn => {
+    const o = ordersData[btn.dataset.ordview];
+    btn.classList.toggle('pay', !!(o && o.delivery_method === 'ship' && o.status === 'done_packaging' && o.ship && !o.ship.paid && o.ship.options_sent));
   });
 }
 
@@ -8896,15 +9129,12 @@ dlCheck();
 acctCheck();
 
 // ══ TRANSACTIONS ══
-let txAll = [], txLoaded = false, txFilter = { type: 'all', method: 'all' }, txOpenKey = null;
-const TX_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let txAll = [], txLoaded = false, txFilter = { type: 'all' }, txOpenKey = null;
 function txEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function txPeso(n) { return '₱' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function txDate(iso) { const [d, t] = (iso || '').split('T'); const [y, m, dd] = d.split('-').map(Number); const [h, mi] = (t || '0:0').split(':').map(Number); return new Date(y, m - 1, dd, h, mi); }
 function txFmtDate(iso) { return iso ? txDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'; }
 function txFmtTime(iso) { return iso ? txDate(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''; }
-function txMonthKey(iso) { return iso ? iso.slice(0, 7) : ''; }
-function txMonthLabel(key) { const [y, m] = key.split('-').map(Number); return `${TX_MONTHS[m - 1]} ${y}`; }
 
 async function loadTransactions() {
   try {
@@ -8912,12 +9142,6 @@ async function loadTransactions() {
     const data = await res.json();
     txAll = data.transactions || [];
     txLoaded = true;
-    // month picker: "All time" + every month that has something
-    const sel = document.getElementById('tx-month');
-    const keep = sel.value;
-    const months = [...new Set(txAll.map(t => txMonthKey(t.at)).filter(Boolean))].sort().reverse();
-    sel.innerHTML = '<option value="">All time</option>' + months.map(k => `<option value="${k}">${txMonthLabel(k)}</option>`).join('');
-    sel.value = months.includes(keep) ? keep : '';
     renderTransactions();
   } catch (e) {
     document.getElementById('tx-list').innerHTML = '<div class="tx-empty">Could not load your transactions. Please try again.</div>';
@@ -8939,53 +9163,35 @@ function txClass(t) { return t.type === 'refund' ? 'refund' : t.method; }
 function txLabelText(t) { return t.type === 'refund' ? (t.method === 'cash' ? 'Cash refund' : 'GCash refund') : (t.method === 'cash' ? 'Cash' : 'GCash'); }
 
 function renderTransactions() {
-  const monthKey = document.getElementById('tx-month').value;
-  const q = (document.getElementById('tx-search').value || '').trim().toLowerCase();
-  const inMonth = txAll.filter(t => !monthKey || txMonthKey(t.at) === monthKey);
-
-  // totals follow the month only; refunds are never counted as payments
-  const pays = inMonth.filter(t => t.type === 'payment');
-  const refs = inMonth.filter(t => t.type === 'refund');
   const sum = a => a.reduce((n, t) => n + t.amount, 0);
-  const cash = pays.filter(t => t.method === 'cash'), gc = pays.filter(t => t.method === 'gcash');
-  const stat = (lbl, dot, val, sub, color) => `<div class="tx-stat"><div class="tx-stat-lbl"><i style="background:${dot}"></i>${lbl}</div><div class="tx-stat-val" style="color:${color || 'var(--fg-1)'}">${txPeso(val)}</div><div class="tx-stat-sub">${sub}</div></div>`;
+  const paid = sum(txAll.filter(t => t.status === 'paid')), refunded = sum(txAll.filter(t => t.status === 'refunded'));
+  const hold = sum(txAll.filter(t => t.status === 'hold'));
+  const stat = (lbl, dot, val, sub, color, extra) => `<div class="tx-stat"><div class="tx-stat-lbl"><i style="background:${dot}"></i>${lbl}</div><div class="tx-stat-val" style="color:${color || 'var(--fg-1)'}">${txPeso(val)}${extra || ''}</div><div class="tx-stat-sub">${sub}</div></div>`;
   document.getElementById('tx-stats').innerHTML =
-    stat('Total paid', 'var(--fg-3)', sum(pays), `${pays.length} payment${pays.length === 1 ? '' : 's'}`) +
-    stat('Paid in cash', '#16a34a', sum(cash), `${cash.length} at the shop counter`, '#15803d') +
-    stat('Paid by GCash', '#2563eb', sum(gc), `${gc.length} online`, '#1d4ed8') +
-    stat('Refunded to you', '#7c3aed', sum(refs), `${refs.length} refund${refs.length === 1 ? '' : 's'}`, '#7c3aed');
+    stat('Total paid', '#16a34a', paid - refunded, `${txPeso(paid)} paid, minus ${txPeso(refunded)} refunded`, '#15803d') +
+    stat('Refunded', '#7c3aed', refunded, 'Money sent back to your GCash', '#6d28d9') +
+    stat('On hold', '#eab308', hold, 'Not charged yet · waiting for you to choose shipping', '#a16207', hold ? ' <span style="font-size:0.7rem;font-weight:600;color:var(--fg-3);">+ shipping</span>' : '');
 
-  const rows = inMonth.filter(t =>
-    (txFilter.type === 'all' || (txFilter.type === 'refund' ? t.type === 'refund' : t.kind === txFilter.type)) &&
-    (txFilter.method === 'all' || t.method === txFilter.method) &&
-    (!q || [t.receipt_no, t.ref, t.name, t.search].join(' ').toLowerCase().includes(q)));
-
+  const rows = txAll.filter(t => txFilter.type === 'all' || (txFilter.type === 'refund' ? t.status === 'refunded' : t.kind === txFilter.type));
   const list = document.getElementById('tx-list');
-  if (!rows.length) {
-    list.innerHTML = `<div class="tx-empty">${txAll.length ? 'No transactions match these filters.' : 'No transactions yet. Your payments and refunds will show up here.'}</div>`;
-    return;
-  }
-  const groups = {};
-  rows.forEach(t => { (groups[txMonthKey(t.at)] = groups[txMonthKey(t.at)] || []).push(t); });
-  list.innerHTML = Object.keys(groups).sort().reverse().map(k => {
-    const g = groups[k];
-    const paid = g.filter(t => t.type === 'payment').reduce((n, t) => n + t.amount, 0);
-    return `<div class="tx-group-head"><span>${txMonthLabel(k).toUpperCase()}</span><span>PAID ${txPeso(paid).replace('.00', '')}</span></div>` + g.map(t => {
-      const c = txClass(t);
-      return `<div class="tx-row" role="button" tabindex="0" onclick="openTxReceipt('${t.key}')" onkeydown="if(event.key==='Enter')openTxReceipt('${t.key}')">
-        <span class="tx-ico tx-bg-${c}">${txIcon(t)}</span>
-        <div class="tx-main">
-          <div class="tx-name">${txEsc(t.name)}</div>
-          <div class="tx-meta"><span class="tx-tag ${t.tag}">${txEsc(t.ref)}</span><span>${txFmtDate(t.at)} · ${txFmtTime(t.at)} · ${txEsc(t.receipt_no)}</span></div>
-        </div>
-        <div class="tx-side">
-          <span class="tx-label tx-bg-${t.method}">${txLabelText(t)}</span>
-          <span class="tx-amt ${t.type === 'refund' ? 'tx-cash' : ''}">${t.type === 'refund' ? '+' : ''}${txPeso(t.amount)}</span>
-          <span class="tx-view">View receipt</span>
-        </div>
-      </div>`;
-    }).join('');
-  }).join('');
+  if (!rows.length) { list.innerHTML = '<div class="tx-empty">Nothing here yet.</div>'; return; }
+  const ST = { paid: 'Paid', refunded: 'Refunded', hold: 'On hold', nocharge: 'No charge' };
+  const method = t => t.status === 'nocharge' ? '—' : (t.method === 'cash' ? 'Cash at the shop' : 'GCash');
+  list.innerHTML = `<div style="overflow-x:auto;"><table class="tx-table"><thead><tr><th>Date</th><th>Reference</th><th>Details</th><th>Method</th><th style="text-align:right;">Amount</th><th>Status</th></tr></thead><tbody>` +
+    rows.map(t => {
+      const click = (t.status === 'paid' || t.status === 'refunded') ? `onclick="openTxReceipt('${t.key}')"` : (t.order_id ? `onclick="openOrderDetails(${t.order_id})"` : '');
+      const amt = t.status === 'refunded' ? `<span style="color:#15803d;">+${txPeso(t.amount)}</span>`
+        : (t.status === 'nocharge' ? `<span style="color:var(--fg-3);">${txPeso(t.amount)}</span>`
+        : `${txPeso(t.amount)}${t.plus_shipping ? '<div class="tx-sub" style="font-weight:600;font-family:inherit;">+ shipping</div>' : ''}`);
+      return `<tr class="${click ? 'clk' : ''}" ${click}>
+        <td style="white-space:nowrap;">${txFmtDate(t.at)}<div class="tx-sub">${txFmtTime(t.at)}</div></td>
+        <td><span class="tx-tag ${t.tag}">${txEsc(t.ref)}</span></td>
+        <td style="min-width:180px;"><div style="font-weight:700;color:var(--fg-1);overflow-wrap:anywhere;">${txEsc(t.name)}</div>${t.detail ? `<div class="tx-sub">${txEsc(t.detail)}</div>` : ''}</td>
+        <td style="white-space:nowrap;">${method(t)}</td>
+        <td class="amt">${amt}</td>
+        <td><span class="tx-st ${t.status}">${ST[t.status] || t.status}</span></td>
+      </tr>`;
+    }).join('') + `</tbody></table></div>`;
 }
 
 function openTxReceipt(key) {

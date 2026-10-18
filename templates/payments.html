@@ -1041,7 +1041,7 @@ function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
   <hr class="divider">
   <div class="row"><span>Service</span><span>${service}</span></div>
   <hr class="divider">
-  <div class="total"><span>TOTAL</span><span>₱${parseFloat(amount).toFixed(2)}</span></div>
+  <div class="total"><span>TOTAL</span><span>₱${Number(parseFloat(amount)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
   <div class="footer">Thank you for choosing MotoTyres!</div>
   <br><button onclick="window.print()" style="width:100%;padding:8px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;">Print</button>
   </body></html>`);
@@ -1050,7 +1050,7 @@ function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
 
 function printOrdReceipt(ref, customer, phone, amount, method, date, items, delivery, isInstore) {
   const itemRows = items.map(i =>
-    `<div class="row"><span>${i.name} ×${i.qty}</span><span>₱${(i.price * i.qty).toFixed(2)}</span></div>`
+    `<div class="row"><span>${i.name} ×${i.qty}</span><span>₱${Number((i.price * i.qty)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`
   ).join('');
   const deliveryRow = isInstore
     ? `<div class="row"><span>Purchase type</span><span>In-store</span></div>`
@@ -1084,7 +1084,7 @@ function printOrdReceipt(ref, customer, phone, amount, method, date, items, deli
   <hr class="divider">
   ${itemRows}
   <hr class="divider">
-  <div class="total"><span>TOTAL</span><span>₱${parseFloat(amount).toFixed(2)}</span></div>
+  <div class="total"><span>TOTAL</span><span>₱${Number(parseFloat(amount)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
   <div class="footer">Thank you for choosing MotoTyres!</div>
   <br><button onclick="window.print()" style="width:100%;padding:8px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;">Print</button>
   </body></html>`);

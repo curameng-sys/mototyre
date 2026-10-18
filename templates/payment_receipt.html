@@ -155,7 +155,7 @@
           </div>
           <div class="rec-item-right">
             <div class="rec-item-qty">x{{ item.quantity }}</div>
-            <div class="rec-item-price">₱{{ '%.2f'|format(item.unit_price * item.quantity) }}</div>
+            <div class="rec-item-price">₱{{ (item.unit_price * item.quantity)|money }}</div>
           </div>
         </div>
         {% endfor %}
@@ -166,7 +166,7 @@
 
   <div class="rec-total-band">
     <span class="rec-total-label">Total Paid</span>
-    <span class="rec-total-amt">₱{{ '%.2f'|format(pmt.amount) }}</span>
+    <span class="rec-total-amt">₱{{ (pmt.amount)|money }}</span>
   </div>
 
   <div class="rec-method">

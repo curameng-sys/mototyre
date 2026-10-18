@@ -18,7 +18,7 @@ from io import BytesIO
 from security import (clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_otp_purpose,
     validate_return_kind, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
 import json as _json
-from order_notifications import order_status_message, with_stamp, shipping_destination
+from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_receipt_email
 from service_duration import (
     DEFAULT_DURATION_MIN, combine_services, combined_service_name, split_service_names,
     format_duration, minutes_to_ampm, minutes_to_hhmm, hhmm_to_minutes, slot_statuses,
@@ -155,7 +155,7 @@ def safe_return_origin(origin):
             return origin
     return "http://127.0.0.1:5000"
 
-def create_gcash_payment(amount, description, order_id=None, booking_id=None, origin=None):
+def create_gcash_payment(amount, description, order_id=None, booking_id=None, origin=None, line_items=None):
     headers = {
         "Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}",
         "Content-Type": "application/json"
@@ -167,17 +167,15 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None, or
     return_origin = safe_return_origin(origin)
     base_url = BASE_URL or return_origin
 
+    if line_items:
+        pm_items = [{"name": li['name'][:100], "quantity": 1, "amount": int(round(li['amount'] * 100)), "currency": "PHP"}
+                    for li in line_items]
+    else:
+        pm_items = [{"name": description, "quantity": 1, "amount": int(amount * 100), "currency": "PHP"}]
     payload = {
         "data": {
             "attributes": {
-                "line_items": [
-                    {
-                        "name": description,
-                        "quantity": 1,
-                        "amount": int(amount * 100),
-                        "currency": "PHP"
-                    }
-                ],
+                "line_items": pm_items,
                 "payment_method_types": ["gcash"],
                 "success_url": f"{base_url}/payment/success?order_id={order_id or ''}&booking_id={booking_id or ''}&origin={quote(return_origin, safe='')}&checkout_id={{CHECKOUT_SESSION_ID}}",
                 "cancel_url": f"{base_url}/payment/failed?order_id={order_id or ''}&booking_id={booking_id or ''}&origin={quote(return_origin, safe='')}"
@@ -223,9 +221,20 @@ def send_order_receipt_email(order, override_email=None):
             <tr>
               <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;">{product_name}</td>
               <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:14px;text-align:center;">{item.quantity}</td>
-              <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:14px;text-align:right;">&#8369;{item.unit_price:.2f}</td>
-              <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;text-align:right;font-weight:600;">&#8369;{subtotal:.2f}</td>
+              <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:14px;text-align:right;">&#8369;{item.unit_price:,.2f}</td>
+              <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;text-align:right;font-weight:600;">&#8369;{subtotal:,.2f}</td>
             </tr>"""
+
+        if order.delivery_method == 'ship' and order.paid_at and order.shipping_fee:
+            _subj, _html = ship_receipt_email(
+                user.fullname, f"ORD-{order.id:03d}",
+                [((i.product.name if i.product else 'Product'), i.quantity, i.unit_price * i.quantity) for i in order.items],
+                f"Shipping fee ({SHIP_OPTION_LABELS.get(order.shipping_option, order.shipping_option)} · Lalamove {order.shipping_vehicle or ''})",
+                order.shipping_fee, (order.total_amount or 0) + (order.shipping_fee or 0))
+            _send_gmail(recipient_email, _subj, _html)
+            order.receipt_sent = True
+            db.session.commit()
+            return
 
         delivery_label = "Shop Pickup — MotoTyres North Caloocan" if order.delivery_method == 'pickup' else "Ship to Address"
         delivery_detail = ""
@@ -235,6 +244,12 @@ def send_order_receipt_email(order, override_email=None):
 
         order_date = order.created_at.strftime("%B %d, %Y at %I:%M %p") if order.created_at else "—"
         order_num  = f"ORD-{order.id:03d}"
+        if order.delivery_method == 'ship' and order.paid_at and order.shipping_fee:
+            ship_label = f"Shipping fee ({SHIP_OPTION_LABELS.get(order.shipping_option, order.shipping_option)} · Lalamove {order.shipping_vehicle or ''})"
+            ship_value = f"&#8369;{order.shipping_fee:,.2f}"
+            grand_total = (order.total_amount or 0) + (order.shipping_fee or 0)
+        else:
+            ship_label, ship_value, grand_total = "Shipping", "To be arranged", order.total_amount or 0
 
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
@@ -296,15 +311,15 @@ def send_order_receipt_email(order, override_email=None):
             <table style="width:100%;border-collapse:collapse;">
               <tr>
                 <td style="padding:6px 0;color:#6b7280;font-size:13px;">Subtotal</td>
-                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">&#8369;{order.total_amount:.2f}</td>
+                <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">&#8369;{order.total_amount:,.2f}</td>
               </tr>
               <tr>
-                <td style="padding:6px 0;color:#6b7280;font-size:13px;">Shipping</td>
-                <td style="padding:6px 0;color:#6b7280;font-size:13px;text-align:right;">To be arranged</td>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;">{ship_label}</td>
+                <td style="padding:6px 0;color:#6b7280;font-size:13px;text-align:right;">{ship_value}</td>
               </tr>
               <tr style="border-top:2px solid #111827;">
                 <td style="padding:12px 0 6px;color:#111827;font-size:16px;font-weight:900;letter-spacing:1px;">TOTAL</td>
-                <td style="padding:12px 0 6px;color:#ff0f0f;font-size:22px;font-weight:900;text-align:right;">&#8369;{order.total_amount:.2f}</td>
+                <td style="padding:12px 0 6px;color:#ff0f0f;font-size:22px;font-weight:900;text-align:right;">&#8369;{grand_total:,.2f}</td>
               </tr>
             </table>
           </div>
@@ -591,6 +606,7 @@ class Order(db.Model):
     shipping_options_sent_at= db.Column(db.DateTime, nullable=True)
     shipping_deadline_at    = db.Column(db.DateTime, nullable=True)
     shipping_reminder_at    = db.Column(db.DateTime, nullable=True)
+    pay_started_at          = db.Column(db.DateTime, nullable=True)
     shipping_option         = db.Column(db.String(20), nullable=True)
     shipping_fee            = db.Column(db.Float, nullable=True)
     lalamove_fare           = db.Column(db.Float, nullable=True)
@@ -599,6 +615,7 @@ class Order(db.Model):
     rider_name              = db.Column(db.String(100), nullable=True)
     rider_phone             = db.Column(db.String(20), nullable=True)
     rider_plate             = db.Column(db.String(30), nullable=True)
+    rider_model             = db.Column(db.String(60), nullable=True)
     lalamove_link           = db.Column(db.String(500), nullable=True)
     shipping_started_at     = db.Column(db.DateTime, nullable=True)
     received_at             = db.Column(db.DateTime, nullable=True)
@@ -656,6 +673,7 @@ class Notification(db.Model):
     priority    = db.Column(db.Boolean, default=False)  # needs a customer decision — stays pinned to the top, unread, until opened
     booking_id  = db.Column(db.Integer, nullable=True)  # lets "open" land on the specific booking, not a list
     return_request_id = db.Column(db.Integer, nullable=True)  # same, for a return/warranty claim
+    order_id    = db.Column(db.Integer, nullable=True)  # lets "View order" open the order's details
 
 
 class ReturnRequest(db.Model):
@@ -790,27 +808,25 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False, return_request_id=None):
+def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False, return_request_id=None, order_id=None):
     db.session.add(Notification(user_id=user_id, title=title, message=message, type=type,
                                  status=status, booking_id=booking_id, priority=priority,
-                                 return_request_id=return_request_id))
+                                 return_request_id=return_request_id, order_id=order_id))
     db.session.commit()
 
 
-def _notify_order_customer(order, title, body, status=None):
+def _notify_order_customer(order, title, body, status=None, extra_html='', email=None):
     """Writes the order's bell notification and emails the exact same title/body
     to the customer's Gmail, so the two channels never say something different."""
-    send_notification(order.user_id, title, body, type='order', status=status)
+    send_notification(order.user_id, title, body, type='order', status=status, order_id=order.id)
     customer = User.query.get(order.user_id)
     if not (customer and customer.email):
         return False
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
-      <p>Hi {customer.fullname},</p>
-      <p>{body}</p>
-      <p>— MotoTyres North Caloocan</p>
-    </div>"""
-    _send_gmail(customer.email, f'{title} — MotoTyres', html)
+    if email:
+        _send_gmail(customer.email, email[0], email[1])
+        return True
+    html = build_order_email(customer.fullname, body, extra_html, ph_now())
+    _send_gmail(customer.email, f'{title} — MotoTyres North Caloocan', html)
     return True
 
 
@@ -1693,6 +1709,30 @@ def get_on_duty_mechanics(query_date=None):
     return roster, rostered_today, on_duty
 
 
+_MECH_STARTED = ('inspection', 'in_progress', 'inprogress')
+_MECH_LABELS = {'available': 'Available', 'reserved': 'Reserved', 'busy': 'Busy', 'off_duty': 'Off Duty'}
+
+
+def mechanic_status_names():
+    """(started names, reserved names): who has a started booking (Busy) and who has a Confirmed one that hasn't
+    started (Reserved). Same rule as the admin side: started wins, then Off Duty, then Reserved, then what the shop set."""
+    started, reserved = set(), set()
+    for b in Booking.query.filter(Booking.assigned_mechanic_name.isnot(None),
+                                  Booking.status.in_(('confirmed',) + _MECH_STARTED)).all():
+        (started if b.status in _MECH_STARTED else reserved).add(b.assigned_mechanic_name)
+    return started, reserved
+
+
+def mechanic_derived_status(m, started, reserved):
+    if m.name in started:
+        return 'busy'
+    if m.status == 'off_duty':
+        return 'off_duty'
+    if m.name in reserved:
+        return 'reserved'
+    return 'busy' if m.status == 'busy' else 'available'
+
+
 def get_daily_cap(query_date=None):
     query_date = query_date or ph_now().date()
     cap_row = get_capacity_row(query_date)
@@ -2049,6 +2089,22 @@ def build_transactions(user):
             continue
         ship_flow = o.delivery_method == 'ship'
         if ship_flow and not o.paid_at:        # Lalamove orders only count once the GCash payment really went through
+            # ...but the customer still sees them: "On hold" while waiting, "No charge" once cancelled.
+            names = ', '.join((i.product.name if i.product else 'Product') for i in o.items)
+            if o.status in ('confirmed', 'in_progress', 'done_packaging'):
+                _st, _detail = 'hold', 'Ship to Address'
+            elif o.status == 'cancelled':
+                _st = 'nocharge'
+                _detail = {'auto': 'Cancelled automatically · no payment in 24 hours', 'customer': 'Cancelled by you',
+                           'shop': 'Cancelled by the shop'}.get(o.cancelled_by or '', 'Cancelled')
+            else:
+                continue
+            out.append({
+                'key': f'o{o.id}h', 'kind': 'order', 'type': _st, 'tag': 'ORD', 'ref': f'ORD-{o.id:03d}',
+                'name': names, 'amount': round(o.total_amount or 0, 2), 'method': 'gcash',
+                'at': _tx_dt(o.created_at), 'status': _st, 'detail': _detail, 'order_id': o.id,
+                'plus_shipping': _st == 'hold', 'search': names,
+            })
             continue
         if method == 'gcash' and not ship_flow and o.status in ('awaiting_payment', 'cancelled', 'pending'):
             continue
@@ -2062,7 +2118,8 @@ def build_transactions(user):
         if ship_flow:
             fee = round(o.shipping_fee or 0, 2)
         rec = {
-            'key': f'o{o.id}', 'kind': 'order', 'type': 'payment', 'tag': 'ORD', 'ref': f'ORD-{o.id:03d}',
+            'key': f'o{o.id}', 'kind': 'order', 'type': 'payment', 'tag': 'ORD', 'ref': f'ORD-{o.id:03d}', 'order_id': o.id,
+            'detail': 'Ship to Address' if ship else 'Shop Pickup',
             'name': 'Online order' if ship else 'Order — picked up at the shop',
             'amount': round((o.total_amount or 0) + ((o.shipping_fee or 0) if ship_flow else 0), 2), 'method': method,
             'at': _tx_dt(paid_at), 'receipt_no': f'OR-ORD-{o.id:05d}',
@@ -2078,7 +2135,8 @@ def build_transactions(user):
         if ship_flow and o.status == 'refunded' and o.refund_amount:
             out.append({
                 'key': f'of{o.id}', 'kind': 'refund', 'type': 'refund', 'tag': 'ORD', 'ref': f'ORD-{o.id:03d}',
-                'name': 'Refund — cancelled order', 'amount': round(o.refund_amount, 2), 'method': 'gcash',
+                'name': 'Refund — cancelled order', 'amount': round(o.refund_amount, 2), 'method': 'gcash', 'order_id': o.id,
+                'detail': 'Cancelled by the shop' + (f' · {o.refund_reason}' if o.refund_reason else ''),
                 'at': _tx_dt(o.refunded_at or paid_at), 'receipt_no': f'RF-ORD-{o.id:05d}',
                 'customer': user.fullname, 'motorcycle': '', 'mechanic': '',
                 'sections': [{'title': 'Refunded', 'rows': [{'name': 'Order ORD-%03d (items + shipping)' % o.id, 'qty': 1, 'price': round(o.refund_amount, 2)}]}],
@@ -2110,6 +2168,9 @@ def build_transactions(user):
                         'screenshot': (shot if shot.startswith('http') else (f'/static/return_evidence/{shot}' if shot else ''))})
         out.append(rec)
 
+    for t in out:                         # what the Transactions page needs on every row
+        t.setdefault('status', 'refunded' if t['type'] == 'refund' else 'paid')
+        t.setdefault('detail', 'Service booking' if t['kind'] == 'booking' else ('Refund' if t['type'] == 'refund' else ''))
     out.sort(key=lambda t: t['at'] or '', reverse=True)
     return out
 
@@ -2477,10 +2538,8 @@ def cart_checkout():
 
     if is_ship:
         held = sum(q for _, q in resolved)
-        _notify_order_customer(order, 'Order Confirmed ✅', with_stamp(
-            f'Your order {ref} ({items_desc[:80]}) is confirmed. Nothing is charged yet. Once it is packed, we\'ll check '
-            f'Lalamove and send you the shipping options (Priority, Regular and Pooling). You\'ll have 24 hours to choose '
-            f'one and pay for your items and shipping together with GCash.', 'confirmed', is_ship=True), status='confirmed')
+        _t, _m, _s = ship_notice('placed', ref)
+        _notify_order_customer(order, _t, _m, status=_s)
         for admin in User.query.filter_by(role='admin').all():
             send_notification(admin.id, f'New order {ref}',
                 f'New order {ref}: {current_user.fullname} · Ship to Address · GCash on hold until the customer chooses shipping. {held} held from stock.',
@@ -2497,12 +2556,12 @@ def cart_checkout():
 
     send_notification(current_user.id, 'Order Placed!',
         with_stamp(
-            f'Your order {ref} for {items_desc[:80]} worth ₱{total:.2f} is now pending.',
+            f'Your order {ref} for {items_desc[:80]} worth ₱{total:,.2f} is now pending.',
             'pending', is_ship=False),
         type='order', status='pending')
     for admin in User.query.filter_by(role='admin').all():
         send_notification(admin.id, 'New Order Received',
-            f'{current_user.fullname} placed an order for ₱{total:.2f}.', type='order', status='pending')
+            f'{current_user.fullname} placed an order for ₱{total:,.2f}.', type='order', status='pending')
 
     # submitCartOrder() reloads the page on success, so a flash here is picked up by that reload.
     flash('Order placed successfully!', 'success')
@@ -2567,7 +2626,7 @@ def place_order():
         send_notification(
             current_user.id, 'Order Placed!',
             with_stamp(
-                f'Your order ORD-{order.id:03d} for {product.name} (x{quantity}) worth ₱{total:.2f} '
+                f'Your order ORD-{order.id:03d} for {product.name} (x{quantity}) worth ₱{total:,.2f} '
                 f'is now pending {delivery_text}.{_dest_text}',
                 'pending', is_ship=_is_ship),
             type='order', status='pending'
@@ -3244,7 +3303,11 @@ def get_mechanics():
         roster_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else None
     except ValueError:
         roster_date = None
-    _, _, mechanics = get_on_duty_mechanics(roster_date)
+    _, rostered_today, mechanics = get_on_duty_mechanics(roster_date)
+    # Off Duty mechanics are still shown (faded, not choosable) so the customer sees the whole crew.
+    off_duty_today = [m for m in rostered_today if m.status == 'off_duty']
+    mechanics = sorted(list(mechanics) + off_duty_today, key=lambda m: m.id)
+    _started, _reserved = mechanic_status_names()
 
     # A mechanic is busy only if their existing job's time window overlaps the
     # slot being picked — not for every booking they've ever had. Busy mechanics
@@ -3291,7 +3354,9 @@ def get_mechanics():
 
     result = []
     for m in mechanics:
-        row = {'id': m.id, 'name': m.name, 'specialization': m.specialization, 'busy': m.name in busy_names}
+        st = mechanic_derived_status(m, _started, _reserved)
+        row = {'id': m.id, 'name': m.name, 'specialization': m.specialization, 'busy': m.name in busy_names,
+               'status': st, 'status_label': _MECH_LABELS[st], 'off_duty': m.status == 'off_duty'}
         if m.name in busy_until:
             # "free from" is the next free 30-minute slot after their job ends
             free_at = -(-busy_until[m.name] // 30) * 30
@@ -3412,7 +3477,7 @@ def get_notifications():
             'id': n.id, 'title': title, 'message': message,
             'type': n.type, 'status': n.status, 'is_read': n.is_read,
             'priority': n.priority, 'booking_id': n.booking_id,
-            'return_request_id': n.return_request_id, 'still_pending': still_pending(n),
+            'return_request_id': n.return_request_id, 'order_id': n.order_id, 'still_pending': still_pending(n),
             'quotation': quotation, 'invoice': invoice,
             'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
         })
@@ -3476,11 +3541,10 @@ def confirm_order_received(oid):
             order.received_at = ph_now()
             db.session.commit()
             ref = f'ORD-{order.id:03d}'
-            _notify_order_customer(order, 'Thanks for confirming ✅',
-                f'You confirmed you received order {ref}. The shop will mark it completed shortly. Thank you!', status='shipping')
             for admin in User.query.filter_by(role='admin').all():
-                send_notification(admin.id, f'Customer received {ref}',
-                    f'{current_user.fullname} confirmed they received {ref}. You can set it to Completed.', type='order', status='shipping')
+                send_notification(admin.id, f'{ref} received by customer',
+                    f'{current_user.fullname} confirmed they received their order. Set it to Completed.',
+                    type='order', status='shipping', order_id=order.id)
         return jsonify({'success': True, 'new_status': 'shipping', 'received_at': _fmt_when(order.received_at)})
     if order.status != 'shipped':
         return jsonify({'success': False, 'message': 'Order is not in shipped status.'}), 400
@@ -3633,7 +3697,7 @@ def payment_success():
                 _notify_order_customer(order, 'Order Confirmed! ✅',
                     with_stamp(
                         f'Your payment for Order ORD-{order.id:03d} ({items_desc}) worth '
-                        f'₱{order.total_amount:.2f} has been confirmed.{_next_step}',
+                        f'₱{order.total_amount:,.2f} has been confirmed.{_next_step}',
                         'confirmed', is_ship=_is_ship),
                     status='confirmed')
             if order and order.status == 'confirmed':
@@ -3798,7 +3862,10 @@ def ship_grand_total(o):
 
 
 def _fmt_when(dt):
-    return dt.strftime('%b %d, %Y at %I:%M %p').replace(' at 0', ' at ') if dt else ''
+    """'Sat, Oct 17, 6:18 PM' - how Ship to Address dates read everywhere."""
+    if not dt:
+        return ''
+    return dt.strftime('%a, %b ') + str(dt.day) + ', ' + dt.strftime('%I:%M %p').lstrip('0')
 
 
 def _restock_order(order):
@@ -3844,13 +3911,15 @@ def _mark_ship_order_paid(order, checkout_id):
     ref = f'ORD-{order.id:03d}'
     label = SHIP_OPTION_LABELS.get(order.shipping_option, order.shipping_option)
     total = ship_grand_total(order)
-    _notify_order_customer(order, 'Payment received ✅',
-        f'We received your GCash payment of ₱{total:,.2f} for order {ref} (items ₱{order.total_amount:,.2f} + {label} shipping ₱{order.shipping_fee:,.2f}). '
-        f"We'll book your Lalamove delivery next and let you know when it's on its way.", status='paid')
+    _t, _m, _s = ship_notice('paid', ref, total=total, option=label, vehicle=order.shipping_vehicle or '')
+    _notify_order_customer(order, _t, _m, status=_s)
     for admin in User.query.filter_by(role='admin').all():
-        send_notification(admin.id, f'Order {ref} paid',
-            f'Order {ref} paid: ₱{total:,.2f} via GCash · {label} shipping. Book the Lalamove {order.shipping_vehicle or "vehicle"}, then set the order to Shipping.',
-            type='order', status='paid')
+        _who = (User.query.get(order.user_id).fullname if User.query.get(order.user_id) else 'The customer')
+        send_notification(admin.id, f'{ref} paid · ₱{total:,.2f}',
+            f'{_who} chose {label} shipping (₱{(order.shipping_fee or 0):,.2f}) and paid ₱{total:,.2f} with GCash via PayMongo. '
+            f'Book a Lalamove {order.shipping_vehicle or "vehicle"}, then set the order to Shipping.',
+            type='order', status='paid', order_id=order.id)
+    send_order_receipt_email(order)
     return True
 
 
@@ -3874,12 +3943,15 @@ def choose_shipping_option(oid):
     ref = f'ORD-{order.id:03d}'
     items_desc = ', '.join(f"{i.product.name} x{i.quantity}" for i in order.items if i.product)
     desc = f"MotoTyres Order #{order.id:03d}: {items_desc} + {SHIP_OPTION_LABELS[option]} shipping"
-    result = create_gcash_payment(amount=amount, description=desc[:100], order_id=order.id, origin=request.host_url)
+    result = create_gcash_payment(amount=amount, description=desc[:100], order_id=order.id, origin=request.host_url,
+        line_items=[{'name': f"Subtotal ({items_desc})"[:100], 'amount': float(order.total_amount or 0)},
+                    {'name': f"Shipping fee ({SHIP_OPTION_LABELS[option]} · Lalamove {order.shipping_vehicle or 'vehicle'})", 'amount': float(fee)}])
     if not result['success']:
         return jsonify({'success': False, 'error': 'Could not start the GCash payment. Please try again.'}), 502
     order.shipping_option = option
     order.shipping_fee = float(fee)
     order.payment_ref = result['checkout_id']
+    order.pay_started_at = ph_now()
     db.session.commit()
     return jsonify({'success': True, 'checkout_url': result['checkout_url']})
 
@@ -3893,6 +3965,12 @@ _LEGACY_SHIP = {'pending': 'confirmed', 'awaiting_payment': 'confirmed', 'proces
 
 def ship_status_key(o):
     return _LEGACY_SHIP.get(o.status, o.status)
+
+
+@app.template_filter('money')
+def _money_filter(n):
+    """Money everywhere reads like 1,500.00 (the template adds the peso sign)."""
+    return f'{float(n or 0):,.2f}'
 
 
 @app.template_filter('order_badge')
@@ -3916,17 +3994,47 @@ def ship_order_state(o):
         'deadline_iso': o.shipping_deadline_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if o.shipping_deadline_at else None,
         'deadline': _fmt_when(o.shipping_deadline_at),
         'vehicle': o.shipping_vehicle or '', 'reason': o.shipping_reason or '', 'prices': ship_prices(o),
-        'option': o.shipping_option or '', 'fee': o.shipping_fee, 'grand_total': ship_grand_total(o),
+        'option': (o.shipping_option or '') if o.paid_at else '', 'fee': o.shipping_fee if o.paid_at else None,
+        'grand_total': ship_grand_total(o) if o.paid_at else (o.total_amount or 0),
+        'reminder_sent': bool(o.shipping_reminder_at), 'cancel_reason': o.cancel_reason or '',
         'rider_type': o.rider_type or '', 'rider_name': o.rider_name or '', 'rider_phone': o.rider_phone or '',
-        'rider_plate': o.rider_plate or '', 'lalamove_link': o.lalamove_link or '',
+        'rider_plate': o.rider_plate or '', 'rider_model': o.rider_model or '', 'lalamove_link': o.lalamove_link or '',
         'received_at': _fmt_when(o.received_at), 'refund_amount': o.refund_amount, 'refunded_at': _fmt_when(o.refunded_at),
         'refund_reason': o.refund_reason or '', 'cancelled_by': o.cancelled_by or '',
     }
 
 
+@app.route('/customer/order/<int:oid>/cancel-ship', methods=['POST'])
+@login_required
+@require_active_account
+def cancel_ship_order(oid):
+    """The customer cancels a Ship to Address order while it waits for their shipping choice and payment.
+    Nothing was charged, so the items simply go back to stock."""
+    order = Order.query.filter_by(id=oid, user_id=current_user.id).first_or_404()
+    if order.delivery_method != 'ship' or order.status != 'done_packaging' or order.paid_at:
+        return jsonify({'success': False, 'error': 'This order can no longer be cancelled here. Please contact the shop.'}), 400
+    _restock_order(order)
+    order.status = 'cancelled'
+    order.cancelled_by = 'customer'
+    order.cancel_reason = 'Cancelled by the customer'
+    db.session.commit()
+    ref = f'ORD-{order.id:03d}'
+    _t, _m, _s = ship_notice('cancelled', ref, by='customer')
+    _notify_order_customer(order, _t, _m, status=_s)
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(admin.id, f'Order {ref} cancelled',
+            f'{current_user.fullname} cancelled {ref} before paying. Not charged. Items put back in stock.',
+            type='order', status='cancelled', order_id=order.id)
+    return jsonify({'success': True})
+
+
+PAY_GRACE_MINUTES = 15   # a customer who opened the GCash checkout this recently is allowed to finish paying
+
+
 def process_ship_deadlines():
-    """Every few minutes: remind 2 hours before the 24-hour deadline, and cancel by itself (items back to stock)
-    when the customer never chose and paid."""
+    """Runs every minute on its own, even if nobody has the website open.
+    2 hours before the 24-hour deadline: reminder. At the deadline with no payment: cancel, put the items back in
+    stock and tell the customer and the shop. A payment that is still in progress is allowed to finish first."""
     with app.app_context():
         now = ph_now()
         waiting = Order.query.filter(Order.delivery_method == 'ship', Order.status == 'done_packaging',
@@ -3934,23 +4042,29 @@ def process_ship_deadlines():
         for o in waiting:
             ref = f'ORD-{o.id:03d}'
             if now >= o.shipping_deadline_at:
+                if o.payment_ref and o.shipping_option:
+                    if _mark_ship_order_paid(o, o.payment_ref):        # they paid but never came back to the site
+                        continue
+                    if o.pay_started_at and now - o.pay_started_at < timedelta(minutes=PAY_GRACE_MINUTES):
+                        continue                                       # still paying: wait for that payment to finish first
+                items = ', '.join(f"{i.product.name if i.product else 'Item'} x{i.quantity}" for i in o.items)
+                deadline = _fmt_when(o.shipping_deadline_at)
                 _restock_order(o)
                 o.status = 'cancelled'
                 o.cancelled_by = 'auto'
                 o.cancel_reason = 'No payment within 24 hours'
                 db.session.commit()
-                _notify_order_customer(o, 'Order cancelled — no payment in 24 hours',
-                    f'Your order {ref} was cancelled because the shipping options were not chosen and paid within 24 hours. '
-                    f'You were not charged, and the items went back to stock. You can place the order again anytime.', status='cancelled')
+                _t, _m, _s = ship_notice('cancelled', ref, by='auto', deadline=deadline)
+                _notify_order_customer(o, _t, _m, status=_s)
                 for admin in User.query.filter_by(role='admin').all():
-                    send_notification(admin.id, f'Order {ref} cancelled',
-                        f'{ref} cancelled automatically: no payment in 24 hours. Items put back in stock.', type='order', status='cancelled')
+                    send_notification(admin.id, f'{ref} cancelled automatically',
+                        f'{ref} cancelled automatically · No payment by {deadline}. {items} went back to stock.',
+                        type='order', status='cancelled', order_id=o.id)
             elif not o.shipping_reminder_at and now >= o.shipping_deadline_at - timedelta(hours=2):
                 o.shipping_reminder_at = now
                 db.session.commit()
-                _notify_order_customer(o, 'Reminder: choose your shipping option',
-                    f'Your shipping options for order {ref} expire at {_fmt_when(o.shipping_deadline_at)} (about 2 hours from now). '
-                    f'Choose one and pay with GCash, or the order will be cancelled and the items put back in stock.', status='done_packaging')
+                _t, _m, _s = ship_notice('two_hours', ref, deadline=_fmt_when(o.shipping_deadline_at))
+                _notify_order_customer(o, _t, _m, status=_s)
 
 
 # ── Scheduler ─────────────────────────────────────────────────────────────────
@@ -3963,7 +4077,7 @@ scheduler.add_job(func=check_upcoming_bookings, trigger='interval', minutes=1,
                   id='booking_reminder_job', replace_existing=True)
 scheduler.add_job(func=check_day_before_reminders, trigger='interval', minutes=30,
                   id='day_before_reminder_job', replace_existing=True)
-scheduler.add_job(func=process_ship_deadlines, trigger='interval', minutes=5,
+scheduler.add_job(func=process_ship_deadlines, trigger='interval', minutes=1,
                   id='ship_deadline_job', replace_existing=True)
 scheduler.start()
 print('[SCHEDULER] Booking reminder service started — checking every 1 minute (15-min) / 30 minutes (day-before)')
@@ -4008,6 +4122,9 @@ with app.app_context():
         "ALTER TABLE `order` ADD COLUMN rider_name VARCHAR(100)",
         "ALTER TABLE `order` ADD COLUMN rider_phone VARCHAR(20)",
         "ALTER TABLE `order` ADD COLUMN rider_plate VARCHAR(30)",
+        "ALTER TABLE `order` ADD COLUMN rider_model VARCHAR(60)",
+        "ALTER TABLE `order` ADD COLUMN pay_started_at DATETIME",
+        "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
         "ALTER TABLE `order` ADD COLUMN shipping_started_at DATETIME",
         "ALTER TABLE `order` ADD COLUMN received_at DATETIME",

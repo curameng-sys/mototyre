@@ -68,25 +68,14 @@ def _ship_messages(ref, ship_address):
     dest    = shipping_destination(ship_address)
     to_dest = f' to {dest}' if dest else ''
     return {
-        'confirmed': (
-            'Order Confirmed ✅',
-            f'Your order {ref} is confirmed and the items are held for you. Nothing is charged yet. '
-            f'Once it is packed, we\'ll send you the shipping options.'),
-        'in_progress': (
-            'We\'re Packing Your Order 📦',
-            f'Your order {ref} is being packed now.'),
-        'done_packaging': (
-            'Your Order Is Packed 📦',
-            f'Your order {ref} is packed. We\'ll check Lalamove and send you your shipping options next.'),
+        'confirmed': ship_notice('placed', ref)[:2],
+        'in_progress': ship_notice('packing', ref)[:2],
+        'done_packaging': ship_notice('packed', ref)[:2],
         'shipping': (
-            'Your Order Is On The Way! 🚚',
+            'Order On The Way 🚚',
             f'Your order {ref} has been booked with Lalamove and is on its way{to_dest}.'),
-        'completed': (
-            'Order Completed! 🎉',
-            f'Your order {ref} is complete. Thank you for shopping with MotoTyres!'),
-        'cancelled': (
-            'Order Cancelled ❌',
-            f'Your order {ref} has been cancelled. You were not charged.'),
+        'completed': ship_notice('completed', ref)[:2],
+        'cancelled': ship_notice('cancelled', ref, by='shop')[:2],
         'refunded': (
             'Order Refunded 💸',
             f'Your order {ref} was cancelled and your payment was refunded to your GCash.'),
@@ -151,4 +140,183 @@ def order_status_message(status, order_id, delivery_method='pickup', ship_addres
     if status not in messages:
         return None
     title, body = messages[status]
+    if is_ship:                      # the notification window shows "Updated: ..." itself
+        return title, body
     return title, with_stamp(body, status, when, is_ship)
+
+
+# ═══════════════ Ship to Address (Lalamove): the exact customer notifications ═══════════════
+# One place for every title/message so the bell, the notification window and the email never disagree.
+# The notification window itself shows "Updated: [date and time]", so these messages don't repeat it.
+
+def _peso(n):
+    return f'₱{float(n):,.2f}'
+
+
+def _prices_line(prices):
+    prices = prices or {}
+    pool = _peso(prices['pooling']) if prices.get('pooling') else 'n/a'
+    return f"Priority {_peso(prices.get('priority') or 0)} · Regular {_peso(prices.get('regular') or 0)} · Pooling {pool}"
+
+
+def ship_notice(kind, ref, **c):
+    """Returns (title, message, status_tag) for a Ship to Address event.
+    kinds: placed packing packed options options_updated two_hours paid on_the_way
+           received_check completed cancelled refunded"""
+    if kind == 'placed':
+        return ('Order Placed 🧾',
+                f"Your order {ref} was placed. Nothing has been charged yet. We'll send your shipping options once your order is packed.", 'confirmed')
+    if kind == 'packing':
+        return ('Order Being Packed 📦',
+                f"Your order {ref} is being packed. We'll send your shipping options once it's done.", 'in_progress')
+    if kind == 'packed':
+        return ('Order Packed ✅',
+                f"{ref} is packed. We're checking Lalamove now and will send your shipping options shortly.", 'done_packaging')
+    if kind in ('options', 'options_updated'):
+        title = 'Choose Your Shipping 🚚' if kind == 'options' else 'Shipping Options Updated 🚚'
+        return (title,
+                f'{ref} is packed and goes by Lalamove {c.get("vehicle", "")}. {_prices_line(c.get("prices"))}. '
+                f'Choose one and pay by {c.get("deadline", "")}.', 'done_packaging')
+    if kind == 'two_hours':
+        return ('2 Hours Left to Pay ⏰',
+                f'Choose your shipping and pay for {ref} by {c.get("deadline", "")}. If not, your order will be cancelled automatically.', 'done_packaging')
+    if kind == 'paid':
+        return ('Payment Received 💳',
+                f"We got your {_peso(c.get('total', 0))} GCash payment for {ref}. We're booking your {c.get('option', '')} Lalamove {c.get('vehicle', '')} now.", 'paid')
+    if kind == 'on_the_way':
+        who = 'Driver' if c.get('rider_type') == 'driver' else 'Rider'
+        model = c.get('model') or ''
+        det = f'{model}, plate {c.get("plate", "")}' if model else f'plate {c.get("plate", "")}'
+        return ('Order On The Way 🚚',
+                f'{who} {c.get("name", "")} ({det}) is bringing {ref} by Lalamove {c.get("vehicle", "")}. Open your order to track it on Lalamove.', 'shipping')
+    if kind == 'received_check':
+        return ('Did You Get Your Order? 📦',
+                f"If {ref} has arrived, open My Orders and press I received my order. If it hasn't, please contact the shop.", 'shipping')
+    if kind == 'completed':
+        if c.get('by_shop'):
+            return ('Order Completed 🎉',
+                    f"We marked {ref} as completed because Lalamove shows it was delivered ({c.get('proof', '')}). "
+                    f"Didn't get it? Contact the shop right away.", 'completed')
+        return ('Order Completed 🎉', f'{ref} is completed. Thank you for shopping with MotoTyres!', 'completed')
+    if kind == 'cancelled':
+        by = c.get('by')
+        if by == 'auto':
+            when = c.get('deadline') or '24 hours after the shipping options were sent'
+            msg = (f"We didn't get your payment by {when}, so your order was cancelled automatically. "
+                   f"Nothing was charged. You're welcome to order again anytime.")
+        elif by == 'customer':
+            msg = f'You cancelled your order {ref}. Nothing was charged.'
+        else:
+            why = f' Reason: {c["reason"]}.' if c.get('reason') else ''
+            msg = f'The shop cancelled your order {ref}.{why} Nothing was charged.'
+        return ('Order Cancelled ❌', msg, 'cancelled')
+    if kind == 'refunded':
+        return ('Order Refunded 💸',
+                f'The shop cancelled {ref}. Reason: {c.get("reason", "")}. We refunded {_peso(c.get("amount", 0))} to your GCash through PayMongo.', 'refunded')
+    raise ValueError(kind)
+
+
+def _lala_logo(base_url):
+    """The official Lalamove logo (static/images/lalamove-logo.png) on the left of an email button.
+    Mail apps need an absolute address, so without BASE_URL a small orange mark stands in."""
+    if base_url:
+        return (f'<img src="{base_url.rstrip("/")}/static/images/lalamove-logo.png" width="20" height="20" alt="" '
+                f'style="vertical-align:middle;margin-right:8px;border:0;">')
+    return ('<span style="display:inline-block;background:#fff;color:#f16622;border-radius:50%;width:20px;height:20px;'
+            'line-height:20px;text-align:center;margin-right:8px;font-weight:900;">L</span>')
+
+
+def ship_email_extra(kind, **c):
+    """Extra HTML under the message in the email: the shipping options, the rider details, or the refund breakdown."""
+    if kind == 'refunded':
+        rows = [('Items', c.get('items_total', 0)), ('Shipping fee', c.get('shipping_fee', 0))]
+        tr = ''.join(f'<tr><td style="padding:5px 8px;color:#6b7280;">{k}</td><td style="padding:5px 8px;text-align:right;">{_peso(v)}</td></tr>' for k, v in rows)
+        return (f'<table style="width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 10px;border:1px solid #eee;">{tr}'
+                f'<tr><td style="padding:7px 8px;font-weight:700;border-top:1px solid #eee;">Back to your GCash</td>'
+                f'<td style="padding:7px 8px;text-align:right;font-weight:700;border-top:1px solid #eee;">{_peso(c.get("amount", 0))}</td></tr></table>'
+                f'<p style="margin:0;color:#6b7280;font-size:13px;">Sent through PayMongo. It may take a few days to show in your GCash.</p>')
+    if kind == 'on_the_way':
+        who = 'Driver' if c.get('rider_type') == 'driver' else 'Rider'
+        car = 'Car model' if c.get('rider_type') == 'driver' else 'Motorcycle model'
+        rows = [(who, c.get('name')), ('Mobile', c.get('phone')), (car, c.get('model')), ('Plate number', c.get('plate')),
+                ('Delivery', f"Lalamove {c.get('vehicle', '')} · {c.get('option', '')} shipping")]
+        tr = ''.join(f'<tr><td style="padding:5px 8px;color:#6b7280;">{k}</td><td style="padding:5px 8px;text-align:right;"><strong>{v}</strong></td></tr>'
+                     for k, v in rows)
+        return (f'<table style="width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 12px;border:1px solid #eee;">{tr}</table>'
+                f'<p style="margin:0 0 12px;"><a href="{c.get("link", "")}" target="_blank" style="display:inline-block;background:#f16622;color:#fff;text-decoration:none;'
+                f'font-weight:700;padding:10px 18px;border-radius:8px;">{_lala_logo(c.get("base_url"))}Track on Lalamove</a></p>'
+                f'<p style="margin:0;color:#6b7280;font-size:13px;">Shipping is already paid. Nothing to pay the {who.lower()}.</p>')
+    if kind not in ('options', 'options_updated'):
+        return ''
+    prices = c.get('prices') or {}
+    vehicle, reason = c.get('vehicle', ''), c.get('reason') or ''
+    if reason:
+        why = (f'<p style="margin:0 0 10px;">Your order goes by Lalamove <strong>{vehicle}</strong>. Reason: {reason}. '
+               f'A {vehicle} costs more than a motorcycle, so the shipping fee is higher.</p>')
+    else:
+        why = f'<p style="margin:0 0 10px;">Your order goes by Lalamove <strong>{vehicle}</strong>.</p>'
+    rows = [('Priority', prices.get('priority'), 'Highest fee · fastest, goes straight to you'),
+            ('Regular', prices.get('regular'), 'Standard delivery')]
+    if prices.get('pooling'):
+        rows.append(('Pooling', prices.get('pooling'), 'Lowest fee · may take longer, can carry other orders'))
+    tr = ''.join(
+        f'<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;"><strong>{n}</strong><br>'
+        f'<span style="color:#6b7280;font-size:12px;">{d}</span></td>'
+        f'<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap;"><strong>{_peso(v)}</strong></td></tr>'
+        for n, v, d in rows)
+    return (why +
+            f'<table style="width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 10px;">{tr}</table>'
+            f'<p style="margin:0 0 6px;">Items total: <strong>{_peso(c.get("items_total", 0))}</strong> (the shipping fee you choose is added when you pay).</p>'
+            f'<p style="margin:0 0 6px;">Pay by: <strong>{c.get("deadline", "")}</strong> (24 hours). '
+            f"We'll remind you 2 hours before.</p>")
+
+
+def build_order_email(name, body, extra_html='', when=None):
+    """The shared email shell: greeting, the same message the bell shows, optional details, and the Updated line."""
+    from html import escape
+    msg = escape(body).replace('\n', '<br>')
+    return (f'<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#111827;">'
+            f'<p>Hi {escape(name or "there")},</p><p>{msg}</p>{extra_html}'
+            f'<p style="color:#6b7280;font-size:12px;margin-top:14px;">Updated: {format_stamp(when)}</p>'
+            f'<p>— MotoTyres North Caloocan</p></div>')
+
+
+def _first_name(full):
+    return (full or 'there').strip().split(' ')[0] or 'there'
+
+
+def ship_on_the_way_email(customer_name, ref, c):
+    """('Your order ORD-036 is on the way', html) - the rider card, the paid note, the Track on Lalamove button."""
+    from html import escape
+    rider = c.get('rider_type') == 'driver'
+    who = 'Driver' if rider else 'Rider'
+    model_lbl = 'Car' if rider else 'Motorcycle'
+    rows = [(who, c.get('name')), ('Mobile', c.get('phone')), (model_lbl, c.get('model')), ('Plate no.', c.get('plate'))]
+    tr = ''.join(f'<tr><td style="padding:8px 12px;color:#4b5563;">{k}</td>'
+                 f'<td style="padding:8px 12px;text-align:right;font-weight:700;">{escape(str(v or ""))}</td></tr>' for k, v in rows)
+    opt = f' ({c["option"]})' if c.get('option') else ''
+    html = (f'<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#111827;">'
+            f'<p>Hi {escape(_first_name(customer_name))},</p>'
+            f'<p>Your order is on the way with Lalamove {escape(c.get("vehicle", ""))}{escape(opt)}.</p>'
+            f'<table style="width:100%;border-collapse:collapse;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;margin:8px 0 14px;">{tr}</table>'
+            f"<p>Shipping is already paid, so there's nothing to pay the {who.lower()}.</p>"
+            f'<p style="margin:0 0 14px;"><a href="{c.get("link", "")}" target="_blank" style="display:inline-block;background:#f16622;color:#fff;'
+            f'text-decoration:none;font-weight:700;padding:11px 18px;border-radius:8px;">{_lala_logo(c.get("base_url"))}Track on Lalamove &#8599;</a></p>'
+            f'<p>Once your order arrives, open My Orders and press <strong>I received my order</strong>.</p>'
+            f'<p style="color:#6b7280;font-size:12px;">- MotoTyres North Caloocan</p></div>')
+    return f'Your order {ref} is on the way', html
+
+
+def ship_receipt_email(customer_name, ref, items, shipping_label, shipping_fee, total):
+    """('Payment received for ORD-036', html): items, the shipping line and the total."""
+    from html import escape
+    tr = ''.join(f'<tr><td style="padding:7px 10px;">{escape(n)} &times;{q}</td><td style="padding:7px 10px;text-align:right;">{_peso(p)}</td></tr>'
+                 for n, q, p in items)
+    tr += f'<tr><td style="padding:7px 10px;">{escape(shipping_label)}</td><td style="padding:7px 10px;text-align:right;">{_peso(shipping_fee)}</td></tr>'
+    tr += (f'<tr><td style="padding:9px 10px;font-weight:700;border-top:1px solid #d1d5db;">Total paid</td>'
+           f'<td style="padding:9px 10px;text-align:right;font-weight:700;border-top:1px solid #d1d5db;">{_peso(total)}</td></tr>')
+    html = (f'<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#111827;">'
+            f'<p>Hi {escape(_first_name(customer_name))},</p><p>We got your GCash payment. Here\'s your receipt.</p>'
+            f'<table style="width:100%;border-collapse:collapse;background:#f3f4f6;border:1px solid #e5e7eb;font-size:14px;margin:8px 0 14px;">{tr}</table>'
+            f'<p style="color:#6b7280;font-size:12px;">- MotoTyres North Caloocan</p></div>')
+    return f'Payment received for {ref}', html

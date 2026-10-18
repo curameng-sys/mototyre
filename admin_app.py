@@ -22,7 +22,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from io import BytesIO
 from security import (clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_booking_status, validate_order_status,
     ALLOWED_RETURN_OUTCOMES, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
-from order_notifications import order_status_message, with_stamp, shipping_destination
+from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_on_the_way_email
 from delivery_zones import format_delivery_address
 from cloud_storage import upload_image
 from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDAY_INTAKE_MIN,
@@ -33,6 +33,7 @@ from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDA
     MULTIDAY_MIN_DAYS, MULTIDAY_MAX_DAYS, is_working_day, _overlaps, working_days_between,
     slot_statuses, MECHANIC_SPECIALIZATIONS)
 import json
+import re
 import os, uuid, random, string, base64, requests
 from urllib.parse import urlparse
 import threading
@@ -67,7 +68,8 @@ def _inject_current_year():
     """Makes {{ current_year }} available in every template — the footer
     copyright line reads the real year instead of whatever was hardcoded
     when that page was last touched."""
-    return {'current_year': datetime.now().year}
+    return {'current_year': datetime.now().year,
+            'SHOP_ADDRESS': os.getenv('SHOP_ADDRESS', 'Saranay Rd, Brgy 171 Bagumbong, Caloocan City, Metro Manila 1421')}
 
 # Gmail config
 
@@ -362,6 +364,8 @@ class Order(db.Model):
     rider_name              = db.Column(db.String(100), nullable=True)
     rider_phone             = db.Column(db.String(20), nullable=True)
     rider_plate             = db.Column(db.String(30), nullable=True)
+    rider_model = db.Column(db.String(60), nullable=True)
+    pay_started_at = db.Column(db.DateTime, nullable=True)
     lalamove_link           = db.Column(db.String(500), nullable=True)
     shipping_started_at     = db.Column(db.DateTime, nullable=True)
     received_at             = db.Column(db.DateTime, nullable=True)
@@ -520,6 +524,7 @@ class Notification(db.Model):
     priority    = db.Column(db.Boolean, default=False)  # needs a customer decision — stays pinned to the top, unread, until opened
     booking_id  = db.Column(db.Integer, nullable=True)  # lets "open" land on the specific booking, not a list
     return_request_id = db.Column(db.Integer, nullable=True)  # same, for a return/warranty claim
+    order_id    = db.Column(db.Integer, nullable=True)  # lets "View order" open the order's details
 
 
 class ReturnRequest(db.Model):
@@ -605,7 +610,7 @@ def ph_now():
     return datetime.utcnow() + timedelta(hours=8)
 
 def send_notification(user_id, title, message, type='update', status=None, booking_id=None, priority=False,
-                       return_request_id=None, collapse_minutes=None):
+                       return_request_id=None, collapse_minutes=None, order_id=None):
     """The one place a customer notification gets written. Email and the bell
     always carry the exact same title/message — see each call site, which
     builds one (title, message) pair and reuses it for both channels.
@@ -636,27 +641,25 @@ def send_notification(user_id, title, message, type='update', status=None, booki
             return
     db.session.add(Notification(user_id=user_id, title=title, message=message, type=type,
                                  status=status, booking_id=booking_id, priority=priority,
-                                 return_request_id=return_request_id))
+                                 return_request_id=return_request_id, order_id=order_id))
     db.session.commit()
 
 
-def _notify_order_customer(order, title, body, status=None):
+def _notify_order_customer(order, title, body, status=None, extra_html='', email=None):
     """Writes the order's bell notification and — unless this is a walk-in/
     in-store sale with no real account — emails the exact same title/body to
     the customer's Gmail, mirroring _notify_customer()'s pattern for bookings."""
-    send_notification(order.user_id, title, body, type='order', status=status)
+    send_notification(order.user_id, title, body, type='order', status=status, order_id=order.id)
     if order.is_instore or order.walkin_customer_id:
         return False
     customer = User.query.get(order.user_id)
     if not (customer and customer.email):
         return False
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
-      <p>Hi {customer.fullname},</p>
-      <p>{body}</p>
-      <p>— MotoTyres North Caloocan</p>
-    </div>"""
-    _send_gmail(customer.email, f'{title} — MotoTyres', html)
+    if email:
+        _send_gmail(customer.email, email[0], email[1])
+        return True
+    html = build_order_email(customer.fullname, body, extra_html, ph_now())
+    _send_gmail(customer.email, f'{title} — MotoTyres North Caloocan', html)
     return True
 
 
@@ -1037,8 +1040,9 @@ def _revenue_transactions(date_from=None, date_to=None):
         })
 
     _walkin_cache = {}
-    for o in Order.query.filter(Order.status == 'completed').filter(Order.items.any()).all():
-        d = o.created_at
+    _ship_paid = (Order.delivery_method == 'ship') & Order.paid_at.isnot(None) & Order.status.in_(['done_packaging', 'shipping', 'completed'])
+    for o in Order.query.filter(((Order.status == 'completed') & ((Order.delivery_method != 'ship') | Order.paid_at.isnot(None))) | _ship_paid).filter(Order.items.any()).all():
+        d = (o.paid_at if (o.delivery_method == 'ship' and o.paid_at) else o.created_at)
         if not in_range(d):
             continue
         is_sale = bool(o.is_instore or o.walkin_customer_id)
@@ -1055,7 +1059,8 @@ def _revenue_transactions(date_from=None, date_to=None):
             'ref': (f'SALE-{o.id:03d}' if is_sale else f'ORD-{o.id:03d}'),
             'type': ('sale' if is_sale else 'online'), 'customer': cust,
             'payment': (o.payment_method or 'cash').upper(),
-            'amount': o.total_amount, 'date': d, 'status': 'Completed', 'record_id': o.id,
+            'amount': (o.total_amount or 0) + ((o.shipping_fee or 0) if o.delivery_method == 'ship' else 0),
+            'date': d, 'status': 'Completed', 'record_id': o.id,
         })
 
     for rr in ReturnRequest.query.filter(ReturnRequest.resolution == 'refund', ReturnRequest.status == 'resolved').all():
@@ -1375,6 +1380,7 @@ def admin_dashboard():
         all_feedback=Feedback.query.order_by(Feedback.is_read.asc(), Feedback.created_at.desc()).all(),
         order_ship_json=order_ship_json,
         now=ph_now(),
+        mech_status=mechanic_status_map(), mech_labels=MECH_LABELS,
         today=ph_now().date(),
         customer_origin=BASE_URL,
     )
@@ -1619,6 +1625,101 @@ def booking_start_eligibility(bid):
                     'scheduled_time': booking.time.strftime('%I:%M %p')})
 
 
+# ═══════════════ MECHANIC STATUS: Available / Reserved / Busy / Off Duty ═══════════════
+STARTED_STATUSES = ('inspection', 'in_progress', 'inprogress')
+STARTED_LABELS = {'inspection': 'Inspection & Estimation', 'in_progress': 'In Progress', 'inprogress': 'In Progress'}
+MECH_LABELS = {'available': 'Available', 'reserved': 'Reserved', 'busy': 'Busy', 'off_duty': 'Off Duty'}
+_NO_JOBS = {'started': [], 'reserved': []}
+
+
+def _mechanic_jobs_map():
+    """{mechanic name: {'started': [bookings], 'reserved': [bookings]}} for every live booking. A booking that was
+    started (Inspection & Estimation / In Progress) makes the mechanic Busy; a Confirmed one that hasn't started makes
+    them Reserved. Completed and cancelled bookings free them."""
+    jobs = {}
+    rows = Booking.query.filter(Booking.assigned_mechanic_name.isnot(None),
+                                Booking.status.in_(('confirmed',) + STARTED_STATUSES)).order_by(Booking.date, Booking.time).all()
+    for b in rows:
+        d = jobs.setdefault(b.assigned_mechanic_name, {'started': [], 'reserved': []})
+        (d['started'] if b.status in STARTED_STATUSES else d['reserved']).append(b)
+    return jobs
+
+
+def _mechanic_effective(m, jobs_map=None):
+    """Which status shows, in this order: a started booking = Busy, Off Duty, a waiting Confirmed booking = Reserved,
+    and with no booking at all, whatever the admin chose in Edit (Available or Busy). A real booking beats anything manual."""
+    j = (jobs_map if jobs_map is not None else _mechanic_jobs_map()).get(m.name) or _NO_JOBS
+    if j['started']:
+        return 'busy'
+    if m.status == 'off_duty':
+        return 'off_duty'
+    if j['reserved']:
+        return 'reserved'
+    return 'busy' if m.status == 'busy' else 'available'
+
+
+def mechanic_status_map():
+    jobs = _mechanic_jobs_map()
+    return {m.name: _mechanic_effective(m, jobs) for m in Mechanic.query.all()}
+
+
+def _mech_now_text(name):
+    """'Kiko Egonia is now Busy' style status after an action (None when nobody is assigned)."""
+    if not name:
+        return None
+    m = Mechanic.query.filter_by(name=name).first()
+    return MECH_LABELS[_mechanic_effective(m)] if m else None
+
+
+def _prepare_mechanic_for_start(booking, chosen_name):
+    """Checks the mechanic who will do a job the admin is about to Start. Returns (mechanic, error)."""
+    chosen = (chosen_name or '').strip()
+    name = chosen or booking.assigned_mechanic_name
+    m = Mechanic.query.filter_by(name=name).first() if name else None
+    if not m:
+        return None, 'Choose the mechanic who will do this job.'
+    j = _mechanic_jobs_map().get(m.name) or _NO_JOBS
+    other = [x for x in j['started'] if x.id != booking.id]
+    if other:
+        return None, (f"{m.name} is still working on booking #{other[0].id}. "
+                      f"Choose another mechanic, or finish #{other[0].id} first.")
+    if m.status == 'off_duty':
+        return None, f'{m.name} is Off Duty. Choose another mechanic.'
+    if chosen and chosen != booking.assigned_mechanic_name and _mechanic_effective(m) == 'busy':
+        return None, f'{m.name} is Busy. Choose another mechanic.'
+    return m, None
+
+
+@admin_app.route('/api/booking/<int:bid>/start-info')
+@login_required
+@require_admin_or_staff
+def api_booking_start_info(bid):
+    """What the Start Service pop-up needs: the booking's mechanic and status, a note, and who can be chosen."""
+    b = Booking.query.get_or_404(bid)
+    jobs = _mechanic_jobs_map()
+    mechs = Mechanic.query.order_by(Mechanic.name).all()
+    status_of = {m.name: _mechanic_effective(m, jobs) for m in mechs}
+    cur = b.assigned_mechanic_name
+    note, need_pick = None, False
+    if not cur:
+        need_pick = True
+    else:
+        m = next((x for x in mechs if x.name == cur), None)
+        j = jobs.get(cur) or _NO_JOBS
+        other = [x for x in j['started'] if x.id != b.id]
+        if other:
+            need_pick = True
+            note = f"{cur} is still working on booking #{other[0].id}. Choose another mechanic, or finish #{other[0].id} first."
+        elif m and m.status == 'off_duty':
+            need_pick = True
+            note = f'{cur} is Off Duty. Choose another mechanic.'
+        else:
+            note = f'{cur} will change from {MECH_LABELS.get(status_of.get(cur), "Reserved")} to Busy until this job is completed or cancelled.'
+    options = [{'name': m.name, 'specialization': m.specialization, 'status': status_of[m.name], 'label': MECH_LABELS[status_of[m.name]],
+                'disabled': status_of[m.name] in ('busy', 'off_duty') and m.name != cur} for m in mechs]
+    return jsonify({'mechanic': cur, 'status': status_of.get(cur), 'note': note, 'need_pick': need_pick, 'options': options})
+
+
 @admin_app.route('/booking/<int:bid>/status', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -1657,6 +1758,15 @@ def update_booking_status(bid):
             return jsonify({'success': False, 'error': msg}), 409
         flash(msg, 'danger')
         return redirect(url_for('admin_dashboard'))
+    start_mechanic = None
+    if is_start and booking.status == 'confirmed':
+        start_mechanic, mech_err = _prepare_mechanic_for_start(booking, request.form.get('mechanic_name'))
+        if mech_err:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': mech_err, 'needs_mechanic': True}), 400
+            flash(mech_err, 'danger')
+            return redirect(url_for('admin_dashboard'))
+    was_status = booking.status
     if is_start and booking.status == 'confirmed':
         from sqlalchemy import text as _sql_text
         claimed = db.session.execute(
@@ -1670,6 +1780,14 @@ def update_booking_status(bid):
                 return jsonify({'success': False, 'error': msg}), 409
             flash(msg, 'danger')
             return redirect(url_for('admin_dashboard'))
+    if start_mechanic is not None:
+        if booking.assigned_mechanic_name != start_mechanic.name:
+            booking.assigned_mechanic_name = start_mechanic.name
+            booking.assigned_mechanic_specialization = start_mechanic.specialization
+        # old walk-in notes must not come back once this job is done
+        start_mechanic.manual_customer = None
+        start_mechanic.manual_service = None
+        start_mechanic.status = 'available'
     if is_start and not booking.actual_start_at:
         booking.actual_start_at = ph_now()
     if new_status == 'inspection' and not booking.inspection_at:
@@ -1726,8 +1844,19 @@ def update_booking_status(bid):
     if new_status in messages:
         title, body, priority = messages[new_status]
         _notify_customer(booking, title, body, priority=priority, status=new_status.replace('_', ''))
+    toast = f'Booking {booking.id} updated'
+    _mname = booking.assigned_mechanic_name
+    _mnow = _mech_now_text(_mname)
+    if new_status == 'cancelled':
+        toast = f'Booking {booking.id} cancelled' + (f' · {_mname} is now {_mnow}' if _mnow else '')
+    elif new_status in ('in_progress', 'inprogress') and was_status in STARTED_STATUSES:
+        toast = f'Booking {booking.id} is In Progress' + (f' · {_mname} stays Busy' if _mname else '')
+    elif is_start:
+        label = 'In Progress' if new_status in ('in_progress', 'inprogress') else 'started'
+        toast = f'Booking {booking.id} ' + ('is ' if label == 'In Progress' else '') + label + (f' · {_mname} is now Busy' if _mname else '')
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'success': True, 'new_status': new_status, 'message': 'Booking status updated!'})
+        return jsonify({'success': True, 'new_status': new_status, 'message': 'Booking status updated!', 'toast': toast,
+                        'mechanic_statuses': mechanic_status_map()})
     flash('Booking status updated!', 'success')
     return redirect(url_for('admin_dashboard'))
 
@@ -1839,7 +1968,11 @@ def complete_booking_invoice(bid):
         </div>"""
         _send_gmail(customer.email, f'{title} — MotoTyres', html)
 
-    return jsonify({'success': True, 'ref': ref, 'total': total, 'customer_first_name': customer_first_name})
+    _mname = booking.assigned_mechanic_name
+    _mnow = _mech_now_text(_mname)
+    return jsonify({'success': True, 'ref': ref, 'total': total, 'customer_first_name': customer_first_name,
+                    'toast': f'Booking {booking.id} completed' + (f' · {_mname} is now {_mnow}' if _mnow else ''),
+                    'mechanic_statuses': mechanic_status_map()})
 
 
 @admin_app.route('/booking/<int:bid>/invoice/record-cash', methods=['POST'])
@@ -1977,6 +2110,8 @@ def assign_booking_mechanic(bid):
         mechanic = Mechanic.query.get(int(mechanic_id)) if mechanic_id.isdigit() else None
         if not mechanic:
             return fail('Mechanic not found.')
+        if mechanic.status == 'off_duty':
+            return fail(f'{mechanic.name} is Off Duty and can\'t be assigned.')
         start_min = booking.time.hour * 60 + booking.time.minute
         duration  = booking.duration_minutes or DEFAULT_DURATION_MIN
         # The booking's own date/time isn't changing, so the shop-queue slot
@@ -2772,7 +2907,11 @@ def cancel_booking_day_panel(bid):
         body = (f"Your {booking.service} appointment ({ref}) on {date_str} at {time_str} was cancelled. "
                 f"Reason: {reason_text}. You can book again anytime, or reply with any questions.")
         emailed = _notify_customer(booking, title, body, priority=True, status='cancelled', cta_label='Book Again')
+    _mname = booking.assigned_mechanic_name
+    _mnow = _mech_now_text(_mname)
     return jsonify({'success': True, 'emailed': emailed,
+                     'toast': f'Booking {booking.id} cancelled' + (f' · {_mname} is now {_mnow}' if _mnow else ''),
+                     'mechanic_statuses': mechanic_status_map(),
                      'message': f'Cancelled{" — customer notified." if emailed else (" — customer not notified." if not notify else " — no email on file.")}'})
 
 
@@ -4494,6 +4633,7 @@ def api_set_capacity():
 # ═══════════════ SHIP TO ADDRESS (Lalamove) — the shop's side of the flow ═══════════════
 SHIP_OPTION_LABELS = {'priority': 'Priority', 'regular': 'Regular', 'pooling': 'Pooling'}
 SHIP_ACTIVE = ('confirmed', 'in_progress', 'done_packaging', 'shipping')
+SHIP_VEHICLES = ('Motorcycle', 'Sedan', 'Subcompact SUV')
 
 
 def _ship_prices(o):
@@ -4507,13 +4647,22 @@ def _ship_grand_total(o):
     return round((o.total_amount or 0) + (o.shipping_fee or 0), 2)
 
 
-def _fmt_when(dt):
-    return dt.strftime('%b %d, %Y at %I:%M %p').replace(' at 0', ' at ') if dt else ''
+def _ship_when(dt):
+    """'Sat, Oct 17, 6:18 PM' - how Ship to Address dates read everywhere."""
+    if not dt:
+        return ''
+    return dt.strftime('%a, %b ') + str(dt.day) + ', ' + dt.strftime('%I:%M %p').lstrip('0')
+
+
+@admin_app.template_filter('money')
+def _money_filter(n):
+    """Money everywhere reads like 1,500.00 (the template adds the peso sign)."""
+    return f'{float(n or 0):,.2f}'
 
 
 @admin_app.template_filter('when')
 def _when_filter(dt):
-    return _fmt_when(dt)
+    return _ship_when(dt)
 
 
 @admin_app.template_filter('time_left')
@@ -4610,50 +4759,62 @@ def ship_set_status(oid):
 @login_required
 @require_admin_or_staff
 def ship_send_options(oid):
-    """Send (or edit) the shipping options once the order is packed. The customer then has 24 hours to choose and pay."""
+    """Send (or edit) the shipping options once the order is packed. The customer then has 24 hours to choose and pay.
+    Sending or editing both start a fresh 24 hours and a fresh reminder."""
     order, err = _ship_order_or_error(oid, ('done_packaging',))
     if err: return err
     if order.paid_at:
         return jsonify({'success': False, 'error': 'This order is already paid.'}), 400
     d = request.get_json(silent=True) or {}
     vehicle = clean_str(d.get('vehicle', ''), max_len=40)
-    reason  = clean_str(d.get('reason', ''), max_len=200)
-    def money(key, required):
-        raw = str(d.get(key, '') if d.get(key) is not None else '').replace(',', '').strip()
+    reason  = clean_str(d.get('reason', ''), max_len=120)
+    errors, fields = [], []
+    if vehicle not in SHIP_VEHICLES:
+        errors.append('Choose the vehicle for this order.'); fields.append('vehicle')
+        vehicle = ''
+    if vehicle == 'Motorcycle':
+        reason = ''
+    elif vehicle:
+        if not reason:
+            errors.append('Type the reason. The customer will see it.' if d.get('reason_custom')
+                          else 'Choose a reason or type your own. The customer will see it.')
+            fields.append('reason')
+
+    def peso(key):
+        raw = str(d.get(key) if d.get(key) is not None else '').replace(',', '').replace('\u20b1', '').strip()
         if not raw:
-            return None, (f'Type the {key.title()} price.' if required else None)
-        try:
-            v = round(float(raw), 2)
-        except ValueError:
-            return None, f'The {key.title()} price is not a number.'
-        if v <= 0:
-            return None, f'The {key.title()} price must be more than 0.'
-        return v, None
-    prices, errors = {}, []
-    for key, req in (('priority', True), ('regular', True), ('pooling', False)):
-        v, e = money(key, req)
-        if e: errors.append(e)
+            return None, False
+        if not raw.isdigit() or not (1 <= int(raw) <= 2000):
+            return None, True
+        return int(raw), False
+    prices, price_bad = {}, False
+    for key in ('priority', 'regular'):
+        v, bad = peso(key)
         prices[key] = v
-    if not vehicle: errors.append('Choose the Lalamove vehicle.')
-    if not reason:  errors.append('Choose the reason for that vehicle.')
+        if v is None:
+            price_bad = True; fields.append(key)
+    if price_bad:
+        errors.append('Type the Lalamove price for Priority and Regular, from \u20b11 to \u20b12,000. Pooling can be left blank.')
+    v, bad = peso('pooling')
+    prices['pooling'] = v
+    if bad:
+        errors.append('Pooling must be from \u20b11 to \u20b12,000, or leave it blank.'); fields.append('pooling')
     if errors:
-        return jsonify({'success': False, 'error': ' '.join(errors)}), 400
+        return jsonify({'success': False, 'error': errors[0], 'errors': errors, 'fields': fields}), 400
     first = not order.shipping_options_sent_at
     order.shipping_vehicle = vehicle
-    order.shipping_reason = reason
+    order.shipping_reason = reason or None
     order.shipping_prices = json.dumps(prices)
-    if first:
-        order.shipping_options_sent_at = ph_now()
-        order.shipping_deadline_at = ph_now() + timedelta(hours=24)
-        order.shipping_reminder_at = None
+    order.shipping_options_sent_at = ph_now()
+    order.shipping_deadline_at = ph_now() + timedelta(hours=24)
+    order.shipping_reminder_at = None
     db.session.commit()
     ref = f'ORD-{order.id:03d}'
-    lines = f"Priority ₱{prices['priority']:,.2f}, Regular ₱{prices['regular']:,.2f}" + (f", Pooling ₱{prices['pooling']:,.2f}" if prices['pooling'] else '')
-    body = (f"Your order {ref} is packed. Lalamove {vehicle} ({reason}). Shipping options: {lines}. "
-            f"Choose one and pay your items (₱{order.total_amount:,.2f}) and shipping together with GCash by {_fmt_when(order.shipping_deadline_at)} (24 hours). "
-            f"If there is no payment by then, the order is cancelled and the items go back to stock.")
-    title = 'Choose your shipping option 🚚' if first else 'Your shipping options were updated'
-    _notify_order_customer(order, title, body, status='done_packaging')
+    _t, _m, _s = ship_notice('options' if first else 'options_updated', ref, vehicle=vehicle, prices=prices,
+                             deadline=_ship_when(order.shipping_deadline_at))
+    extra = ship_email_extra('options', vehicle=vehicle, reason=reason, prices=prices,
+                             items_total=order.total_amount, deadline=_ship_when(order.shipping_deadline_at))
+    _notify_order_customer(order, _t, _m, status=_s, extra_html=extra)
     return jsonify({'success': True, 'first': first})
 
 
@@ -4667,34 +4828,50 @@ def ship_start_shipping(oid):
     if not order.paid_at:
         return jsonify({'success': False, 'error': 'Shipping unlocks once the customer pays.'}), 400
     d = request.get_json(silent=True) or {}
-    rtype = 'driver' if clean_str(d.get('rider_type', 'rider'), max_len=10) == 'driver' else 'rider'
+    rtype = 'rider' if (order.shipping_vehicle or '') == 'Motorcycle' else 'driver'
+    who = rtype
     name  = clean_str(d.get('name', ''), max_len=100)
-    phone = clean_str(d.get('phone', ''), max_len=20)
-    plate = clean_str(d.get('plate', ''), max_len=30)
+    phone = re.sub(r'[\s-]', '', clean_str(d.get('phone', ''), max_len=20))
+    model = clean_str(d.get('model', ''), max_len=60)
+    plate = clean_str(d.get('plate', ''), max_len=30).upper()
     link  = clean_str(d.get('link', ''), max_len=500)
-    errors = []
-    if not name: errors.append(f"Type the {rtype}'s name.")
-    if not phone: errors.append(f"Type the {rtype}'s phone number.")
-    if not plate: errors.append('Type the plate number.')
-    if not link.lower().startswith(('http://', 'https://')): errors.append('Paste the Lalamove tracking link (it starts with https://).')
+    missing, bad, fields = [], [], []
+    for key, label, val in (('name', f'{who} name', name), ('phone', f'{who} mobile', phone),
+                            ('model', 'motorcycle model' if rtype == 'rider' else 'car model', model),
+                            ('plate', 'plate number', plate), ('link', 'Lalamove tracking link', link)):
+        if not val:
+            missing.append(label); fields.append(key)
+    if phone and not re.fullmatch(r'09\d{9}', phone):
+        bad.append('The mobile number must be 09 followed by 9 digits.'); fields.append('phone')
+    if link and not link.lower().startswith('https://'):
+        bad.append('The tracking link must start with https://'); fields.append('link')
     fare = None
     raw_fare = str(d.get('fare', '') if d.get('fare') is not None else '').replace(',', '').strip()
     if raw_fare:
         try:
             fare = round(float(raw_fare), 2)
+            if fare <= 0: raise ValueError
         except ValueError:
-            errors.append('The Lalamove fare is not a number.')
+            bad.append('The Lalamove fare is not a valid amount.'); fields.append('fare')
+    errors = []
+    if missing:
+        errors.append('Please add the ' + (', '.join(missing[:-1]) + ' and ' + missing[-1] if len(missing) > 1 else missing[0]) + '.')
+    errors += bad
     if errors:
-        return jsonify({'success': False, 'error': ' '.join(errors)}), 400
+        return jsonify({'success': False, 'error': errors[0], 'errors': errors, 'fields': fields}), 400
     order.rider_type, order.rider_name, order.rider_phone, order.rider_plate, order.lalamove_link = rtype, name, phone, plate, link
+    order.rider_model = model
     order.lalamove_fare = fare
     order.status = 'shipping'
     order.shipping_started_at = ph_now()
     db.session.commit()
     ref = f'ORD-{order.id:03d}'
-    body = (f"Your order {ref} is on its way with Lalamove. {rtype.title()}: {name} · {phone} · {plate}. "
-            f"Track your delivery on Lalamove: {link}")
-    _notify_order_customer(order, 'Your order is on its way! 🚚', body, status='shipping')
+    _t, _m, _s = ship_notice('on_the_way', ref, rider_type=rtype, name=name, model=model, plate=plate, vehicle=order.shipping_vehicle or '')
+    _cust = User.query.get(order.user_id)
+    mail = ship_on_the_way_email(_cust.fullname if _cust else '', ref, dict(
+        rider_type=rtype, name=name, phone=phone, model=model, plate=plate, vehicle=order.shipping_vehicle or '',
+        option=SHIP_OPTION_LABELS.get(order.shipping_option, ''), link=link, base_url=os.getenv('BASE_URL', '')))
+    _notify_order_customer(order, _t, _m, status=_s, email=mail)
     return jsonify({'success': True})
 
 
@@ -4705,17 +4882,24 @@ def ship_complete(oid):
     """Completed once the customer confirmed it arrived, or by the shop after checking Lalamove (with the proof saved)."""
     order, err = _ship_order_or_error(oid, ('shipping',))
     if err: return err
-    proof = clean_str((request.get_json(silent=True) or {}).get('proof', ''), max_len=500)
-    if not order.received_at and not proof:
-        return jsonify({'success': False, 'error': 'The customer has not confirmed yet. Check Lalamove and type the proof (for example "Delivered, signed by Juan, 2:40 PM").'}), 400
+    d = request.get_json(silent=True) or {}
+    proof = clean_str(d.get('proof', ''), max_len=500)
+    if not order.received_at:
+        errors, fields = [], []
+        if not d.get('delivered'):
+            errors.append('Tick the box once Lalamove shows the order as Delivered.'); fields.append('delivered')
+        if not proof:
+            errors.append('Write what Lalamove shows, like the time it was delivered.'); fields.append('proof')
+        if errors:
+            return jsonify({'success': False, 'error': errors[0], 'errors': errors, 'fields': fields}), 400
     order.status = 'completed'
     order.delivered_at = ph_now()
     order.completed_by_shop = not bool(order.received_at)
-    if proof:
+    if proof and order.completed_by_shop:
         order.completion_proof = proof
     db.session.commit()
-    notice = order_status_message('completed', order.id, delivery_method='ship', ship_address=order.ship_address, when=ph_now())
-    _notify_order_customer(order, notice[0], notice[1], status='completed')
+    _t, _m, _s = ship_notice('completed', f'ORD-{order.id:03d}', by_shop=bool(order.completed_by_shop), proof=order.completion_proof or '')
+    _notify_order_customer(order, _t, _m, status=_s)
     return jsonify({'success': True})
 
 
@@ -4729,9 +4913,9 @@ def ship_remind_received(oid):
         return jsonify({'success': False, 'error': 'The customer already confirmed.'}), 400
     order.received_reminder_at = ph_now()
     db.session.commit()
-    _notify_order_customer(order, 'Did you receive your order?',
-        f'Your order ORD-{order.id:03d} should have arrived. Please open it in My Orders and press "I received my order".', status='shipping')
-    return jsonify({'success': True, 'time': _fmt_when(order.received_reminder_at)})
+    _t, _m, _s = ship_notice('received_check', f'ORD-{order.id:03d}')
+    _notify_order_customer(order, _t, _m, status=_s)
+    return jsonify({'success': True, 'time': _ship_when(order.received_reminder_at)})
 
 
 @admin_app.route('/order/<int:oid>/ship/cancel', methods=['POST'])
@@ -4755,15 +4939,12 @@ def ship_cancel(oid):
         order.refunded_at = ph_now()
         order.refund_amount = _ship_grand_total(order)
         order.refund_reason = reason
-        title = 'Order cancelled — refunded 💸'
-        body = (f'Your order {ref} was cancelled by the shop: {reason} We sent ₱{order.refund_amount:,.2f} back to your GCash through PayMongo. '
-                f'It can take a few days to show up in your GCash.')
-        status = 'refunded'
+        title, body, status = ship_notice('refunded', ref, reason=reason, amount=order.refund_amount)
+        extra = ship_email_extra('refunded', items_total=order.total_amount, shipping_fee=order.shipping_fee or 0, amount=order.refund_amount)
     else:
         order.status = 'cancelled'
-        title = 'Order cancelled ❌'
-        body = f'Your order {ref} was cancelled by the shop.' + (f' {reason}' if reason else '') + ' You were not charged.'
-        status = 'cancelled'
+        title, body, status = ship_notice('cancelled', ref, by='shop', reason=reason)
+        extra = ''
     order.cancelled_by = 'shop'
     order.cancel_reason = reason or None
     if restock:
@@ -4771,7 +4952,12 @@ def ship_cancel(oid):
     else:
         order.stock_restocked = False
     db.session.commit()
-    _notify_order_customer(order, title, body, status=status)
+    _notify_order_customer(order, title, body, status=status, extra_html=extra)
+    stock_note = 'Items put back in stock.' if restock else 'Items NOT put back in stock.'
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(admin.id, f'{ref} ' + ('refunded' if order.status == 'refunded' else 'cancelled'),
+            (f'{ref} refunded \u00b7 \u20b1{order.refund_amount:,.2f} back to GCash via PayMongo. Reason: {reason}. ' if order.status == 'refunded'
+             else f'{ref} cancelled by the shop \u00b7 not charged. ') + stock_note, type='order', status=order.status, order_id=order.id)
     return jsonify({'success': True, 'status': order.status})
 
 
@@ -5232,71 +5418,49 @@ def api_mechanics_roster():
     _, rostered_today_list, _ = get_on_duty_mechanics(today)
     rostered_names = {m.name for m in rostered_today_list}
 
-    upcoming_bookings = Booking.query.filter(
-        Booking.date >= today, Booking.status.notin_(['cancelled', 'completed']),
-    ).order_by(Booking.date, Booking.time).all()
-    by_mechanic = {}
-    for b in upcoming_bookings:
-        if b.assigned_mechanic_name:
-            by_mechanic.setdefault(b.assigned_mechanic_name, []).append(b)
-
+    jobs_map = _mechanic_jobs_map()
     attendance_today = _attendance_for_date(today)
     result = []
+
+    def job_dict(b):
+        b_start = b.time.hour * 60 + b.time.minute
+        b_end = real_end_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN, b.overrun_minutes or 0)
+        started = b.status in STARTED_STATUSES
+        return {
+            'booking_id': b.id, 'ref': f'BKG-{b.id:03d}', 'customer': _booking_customer_name(b), 'service': b.service,
+            'date_label': b.date.strftime('%b %d'), 'start_label': minutes_to_ampm(b_start), 'end_label': minutes_to_ampm(b_end),
+            'is_today': b.date == today, 'state': 'started' if started else 'confirmed',
+            'status_label': STARTED_LABELS.get(b.status, ''), 'when_full': b.date.strftime('%b %d, %Y ') + b.time.strftime('%I:%M %p'),
+        }
+
     for m in mechanics:
-        jobs = by_mechanic.get(m.name, [])
-        current, nxt, has_job_today = None, None, False
-        for b in jobs:
-            b_start = b.time.hour * 60 + b.time.minute
-            b_end = real_end_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN, b.overrun_minutes or 0)
-            is_today = b.date == today
-            if is_today:
-                has_job_today = True
-            job = {
-                'booking_id': b.id, 'ref': f'BKG-{b.id:03d}',
-                'customer': _booking_customer_name(b), 'service': b.service,
-                'date_label': b.date.strftime('%b %d'), 'start_label': minutes_to_ampm(b_start),
-                'end_label': minutes_to_ampm(b_end), 'is_today': is_today,
-            }
-            if is_today and b_start <= now_min < b_end and current is None:
-                current = job
-            if ((not is_today) or (is_today and b_start > now_min)) and nxt is None:
-                nxt = job
-            if current and nxt:
-                break
+        j = jobs_map.get(m.name) or _NO_JOBS
+        all_jobs = j['started'] + j['reserved']
+        assigned = job_dict(all_jobs[0]) if all_jobs else None
+        more_count = max(0, len(all_jobs) - 1)
 
-        assigned = current or nxt or (jobs and {
-            'booking_id': jobs[0].id, 'ref': f'BKG-{jobs[0].id:03d}',
-            'customer': _booking_customer_name(jobs[0]), 'service': jobs[0].service,
-            'date_label': jobs[0].date.strftime('%b %d'),
-            'start_label': minutes_to_ampm(jobs[0].time.hour * 60 + jobs[0].time.minute),
-            'end_label': minutes_to_ampm(real_end_minutes(jobs[0].time.hour * 60 + jobs[0].time.minute,
-                                                            jobs[0].duration_minutes or DEFAULT_DURATION_MIN, jobs[0].overrun_minutes or 0)),
-            'is_today': jobs[0].date == today,
-        }) or None
-        more_count = max(0, len(jobs) - 1) if assigned else 0
-
-        # The manual fields are a fallback, never an override: a real booking
-        # always wins, and what's typed here only surfaces when there isn't
-        # one — always labelled so it's never mistaken for schedule data.
+        # What was typed in Edit only shows when there is no booking at all, and is always labelled.
         assigned_is_manual = False
-        if not assigned and (m.manual_customer or m.manual_service):
+        if not all_jobs and (m.manual_customer or m.manual_service):
             assigned = {'customer': m.manual_customer or '', 'service': m.manual_service or ''}
             assigned_is_manual = True
 
-        if m.status == 'off_duty':
-            effective_status = 'off_duty'
-        elif has_job_today:
-            effective_status = 'busy'
-        else:
-            effective_status = 'busy' if m.status == 'busy' else 'available'
+        lock = None
+        if j['started']:
+            sb = j['started'][0]
+            lock = {'kind': 'started', 'ref': f'#{sb.id}', 'status_label': STARTED_LABELS.get(sb.status, '')}
+        elif j['reserved']:
+            lock = {'kind': 'reserved', 'refs': [f'#{x.id}' for x in j['reserved']],
+                    'waiting': [{'ref': f'#{x.id}', 'service': x.service, 'when': x.date.strftime('%b %d, %Y ') + x.time.strftime('%I:%M %p')}
+                                for x in j['reserved']]}
 
         result.append({
             'id': m.id, 'name': m.name, 'specialization': m.specialization, 'status': m.status,
             'phone': m.phone, 'note': m.note,
             'attendance': attendance_today.get(m.id),
             'not_rostered_today': m.name not in rostered_names,
-            'effective_status': effective_status,
-            'active_jobs_count': len(jobs),
+            'effective_status': _mechanic_effective(m, jobs_map),
+            'active_jobs_count': len(all_jobs), 'lock': lock,
             'assigned': assigned, 'more_count': more_count, 'assigned_is_manual': assigned_is_manual,
             'manual_customer': m.manual_customer, 'manual_service': m.manual_service,
         })
@@ -5321,14 +5485,21 @@ def api_mechanic_assignable_bookings(mid):
         Booking.status.notin_(['cancelled', 'completed']),
     ).order_by(Booking.time).all()
 
+    mine = _mechanic_jobs_map().get(mechanic.name) or _NO_JOBS
+    taken = {(x.date, x.time) for x in mine['started'] + mine['reserved']}
     items = []
     for b in bookings:
         start_min = b.time.hour * 60 + b.time.minute
         duration = b.duration_minutes or DEFAULT_DURATION_MIN
-        ok, reason = _check_admin_booking_request(
-            b.date, start_min, duration, exclude_id=b.id,
-            mechanic_name=mechanic.name, require_slot_grid=False, check_shop_queue=False,
-        )
+        if mechanic.status == 'off_duty':
+            ok, reason = False, 'Off Duty'
+        elif (b.date, b.time) in taken:
+            ok, reason = False, 'already booked then'
+        else:
+            ok, reason = _check_admin_booking_request(
+                b.date, start_min, duration, exclude_id=b.id,
+                mechanic_name=mechanic.name, require_slot_grid=False, check_shop_queue=False,
+            )
         items.append({
             'booking_id': b.id, 'ref': f'BKG-{b.id:03d}',
             'customer': _booking_customer_name(b), 'service': b.service,
@@ -5387,6 +5558,19 @@ def edit_mechanic(mid):
     # mechanic fields), not a foreign key — a rename here does not rewrite
     # today's or past bookings, so a profile rename mid-shift can briefly
     # detach a mechanic from jobs already on the board under their old name.
+    old_name = m.name
+    jobs = _mechanic_jobs_map().get(old_name) or _NO_JOBS
+    removed = 0
+    if jobs['started']:
+        status = m.status                    # locked: it changes on its own when the booking is completed or cancelled
+    elif jobs['reserved']:
+        if status == 'off_duty':
+            for bk in jobs['reserved']:      # their waiting bookings go back to "not assigned yet"
+                bk.assigned_mechanic_name = None
+                bk.assigned_mechanic_specialization = None
+                removed += 1
+        else:
+            status = 'available'             # Reserved is automatic; Available / Busy can't be picked while booked
     m.name = name
     m.specialization = specialization
     m.phone = phone or None
@@ -5395,7 +5579,10 @@ def edit_mechanic(mid):
     m.manual_service = manual_service or None
     m.status = status
     db.session.commit()
-    return jsonify({'success': True})
+    msg = 'Mechanic updated.'
+    if status == 'off_duty' and old_name:
+        msg = f'{name} is now Off Duty' + (f' · {removed} booking{"s" if removed != 1 else ""} need{"s" if removed == 1 else ""} another mechanic' if removed else '')
+    return jsonify({'success': True, 'message': msg, 'toast': msg})
 
 
 @admin_app.route('/mechanic/<int:mid>/delete', methods=['POST'])
@@ -7394,13 +7581,16 @@ def generate_report():
     top_products_sold    = _rpt_detail['top_products']
 
     def order_counts_as_revenue(o):
+        if o.delivery_method == 'ship':      # Lalamove orders count once paid, never on hold, cancelled or refunded
+            return bool(o.paid_at) and o.status in ('done_packaging', 'shipping', 'completed')
         return (o.status not in ('cancelled', 'awaiting_payment')
                 and not (o.payment_method == 'cash' and o.delivery_method == 'pickup' and o.status != 'completed'))
 
     # Total Revenue mirrors the dashboard's definition (orders + completed bookings +
     # job-order payments) — previously this only summed orders, so it never matched
     # the "Total Revenue" figure shown on the Reports & Sales page above it.
-    order_revenue = sum(o.total_amount for o in orders if order_counts_as_revenue(o))
+    order_revenue = sum((o.total_amount or 0) + ((o.shipping_fee or 0) if o.delivery_method == 'ship' else 0)
+                        for o in orders if order_counts_as_revenue(o))
     booking_revenue = sum(b.total_amount or 0 for b in bookings if b.status == 'completed')
     job_order_revenue = db.session.query(func.sum(Payment.amount)).filter(
         func.date(Payment.paid_at) >= d_from, func.date(Payment.paid_at) <= d_to
@@ -7860,6 +8050,9 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN rider_name VARCHAR(100)",
         "ALTER TABLE `order` ADD COLUMN rider_phone VARCHAR(20)",
         "ALTER TABLE `order` ADD COLUMN rider_plate VARCHAR(30)",
+        "ALTER TABLE `order` ADD COLUMN rider_model VARCHAR(60)",
+        "ALTER TABLE `order` ADD COLUMN pay_started_at DATETIME",
+        "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
         "ALTER TABLE `order` ADD COLUMN shipping_started_at DATETIME",
         "ALTER TABLE `order` ADD COLUMN received_at DATETIME",
