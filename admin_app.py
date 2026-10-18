@@ -6715,13 +6715,28 @@ def booking_payment_submit(bid):
         amount_f = float(amount)
     except ValueError:
         return jsonify({'success': False, 'error': 'Invalid amount'}), 400
+    if booking.status == 'completed' and booking.invoice_paid:
+        return jsonify({'success': False, 'error': 'This booking is already paid.'}), 400
 
     try:
+        _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
         booking.status         = 'completed'
         if not booking.completed_at:
             booking.completed_at = ph_now()
         booking.payment_method = method
         booking.total_amount   = amount_f
+        # paid at the counter: the invoice is closed in the same step, so it lands in History with a receipt
+        booking.invoice_paid = True
+        booking.invoice_payment_method = method
+        booking.invoice_paid_at = ph_now()
+        booking.invoice_receipt_no = f'OR-{booking.id:06d}'
+        if method == 'gcash':
+            booking.invoice_gcash_ref = ref_no
+        else:
+            booking.invoice_cash_received = amount_f
+            booking.invoice_change = 0
+            booking.invoice_received_by = current_user.fullname
+        _deduct_quotation_parts(_q, booking)
         db.session.commit()
 
         # Notify customer

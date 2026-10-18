@@ -256,7 +256,7 @@
 <div class="main">
   <div class="page-header">
     <div class="page-title">BILLING <span class="accent">CENTER</span></div>
-    <div class="page-sub">Collect payments for bookings, job orders, and orders paid through GCash or cash, whether for pickup or delivery.</div>
+    <div class="page-sub">Collect payments for bookings, job orders, and orders. Customers who are away and chose Cash online show up here until the cashier records the cash; GCash payments move to History by themselves.</div>
   </div>
 
   <div class="bill-layout">
@@ -322,6 +322,8 @@
               {% else %}
                 <span class="badge b-nomethod">No Method Yet</span>
               {% endif %}
+            {% else %}
+              <span class="badge" style="background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;">At the shop</span>
             {% endif %}
           </td>
           <td class="date-cell">
@@ -340,8 +342,6 @@
               {% else %}
                 <span class="waiting-note">Waiting for customer</span>
               {% endif %}
-            {% elif b.bill_total is not none and b.quotation_decided %}
-              <span class="waiting-note">Send the invoice from Manage Bookings</span>
             {% else %}
             <button class="btn-collect btn-collect-bkg"
               data-type="booking"

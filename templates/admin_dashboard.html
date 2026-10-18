@@ -1163,10 +1163,13 @@
                          so starting one never silently drags the others along with it. #}
                       <span style="font-size:0.7rem;color:var(--muted);font-style:italic;">Click row to manage each service</span>
                     {% else %}
-                      {% if b.status == 'in_progress' and b.quotation and b.quotation.status in ['approved', 'declined'] and not b.walkin_customer_id %}
+                      {% if b.status == 'in_progress' and not b.walkin_customer_id %}
                         {% set _bill = booking_bill(b) %}
-                        <button type="button" onclick="openCompleteInvoiceModal({{ b.id }}, 'BKG-{{ '%03d'|format(b.id) }}', {{ (b.customer.fullname if b.customer else 'The customer')|tojson }}, {{ _bill[0] if _bill else 0 }}, true)" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.7rem;font-weight:700;font-family:inherit;cursor:pointer;">Complete &amp; send invoice</button>
-                        <div style="font-size:0.62rem;color:var(--muted);margin-top:0.25rem;">The customer then picks Cash or GCash</div>
+                        <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.04em;color:var(--muted);text-transform:uppercase;margin-bottom:0.25rem;">Work done? How is it paid?</div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-start;">
+                          <a href="{{ url_for('payments') }}" style="background:#f5f3ff;border:1px solid #ddd6fe;color:#5b21b6;padding:0.28rem 0.6rem;border-radius:6px;font-size:0.68rem;font-weight:700;text-decoration:none;white-space:nowrap;">At the shop · Collect payment</a>
+                          <button type="button" onclick="openCompleteInvoiceModal({{ b.id }}, 'BKG-{{ '%03d'|format(b.id) }}', {{ (b.customer.fullname if b.customer else 'The customer')|tojson }}, {{ _bill[0] if _bill else (booking_service_price(b.service)) }}, true)" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.28rem 0.6rem;border-radius:6px;font-size:0.68rem;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">Away · Send online invoice</button>
+                        </div>
                       {% elif b.status == 'in_progress' %}
                         <div style="font-size:0.7rem;color:#d97706;font-weight:600;">Collect via Billing</div>
                       {% elif b.status == 'inspection' %}
