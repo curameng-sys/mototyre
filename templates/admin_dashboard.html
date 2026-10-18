@@ -1114,8 +1114,8 @@
                         <span class="badge" style="background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe;">Quotation sent</span>
                         <div style="margin-top:0.3rem;font-size:0.7rem;color:var(--muted);">Waiting for customer</div>
                         <div style="margin-top:0.35rem;display:flex;gap:0.3rem;flex-wrap:wrap;" onclick="event.stopPropagation()">
-                          <button type="button" onclick="decideInPerson({{ b.quotation.id }}, 'approve', {{ (b.customer.fullname if b.customer else b.contact_name or 'The customer')|tojson }}, {{ b.quotation.total_amount or 0 }})" style="background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;padding:0.2rem 0.55rem;border-radius:6px;font-size:0.66rem;font-weight:700;font-family:inherit;cursor:pointer;">Approved in person</button>
-                          <button type="button" onclick="decideInPerson({{ b.quotation.id }}, 'decline', {{ (b.customer.fullname if b.customer else b.contact_name or 'The customer')|tojson }}, {{ b.quotation.total_amount or 0 }})" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.2rem 0.55rem;border-radius:6px;font-size:0.66rem;font-weight:700;font-family:inherit;cursor:pointer;">Declined in person</button>
+                          <button type="button" onclick="decideInPerson({{ b.quotation.id }}, 'approve', {{ (b.customer.fullname if b.customer else b.contact_name or 'The customer')|tojson|forceescape }}, {{ b.quotation.total_amount or 0 }})" style="background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;padding:0.2rem 0.55rem;border-radius:6px;font-size:0.66rem;font-weight:700;font-family:inherit;cursor:pointer;">Approved in person</button>
+                          <button type="button" onclick="decideInPerson({{ b.quotation.id }}, 'decline', {{ (b.customer.fullname if b.customer else b.contact_name or 'The customer')|tojson|forceescape }}, {{ b.quotation.total_amount or 0 }})" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.2rem 0.55rem;border-radius:6px;font-size:0.66rem;font-weight:700;font-family:inherit;cursor:pointer;">Declined in person</button>
                         </div>
                       {% elif b.quotation and b.quotation.status == 'approved' %}
                         <span class="badge" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;">Quotation approved</span>
@@ -1165,7 +1165,7 @@
                     {% else %}
                       {% if b.status == 'in_progress' and not b.walkin_customer_id %}
                         {% set _bill = booking_bill(b) %}
-                        <button type="button" onclick="openFinishChoice({{ b.id }}, 'BKG-{{ '%03d'|format(b.id) }}', {{ (b.customer.fullname if b.customer else 'The customer')|tojson }}, {{ _bill[0] if _bill else (booking_service_price(b.service)) }})" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.3rem 0.7rem;border-radius:6px;font-size:0.72rem;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">Complete booking</button>
+                        <button type="button" onclick="openFinishChoice({{ b.id }}, 'BKG-{{ '%03d'|format(b.id) }}', {{ (b.customer.fullname if b.customer else 'The customer')|tojson|forceescape }}, {{ _bill[0] if _bill else (booking_service_price(b.service)) }})" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.3rem 0.7rem;border-radius:6px;font-size:0.72rem;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;">Complete booking</button>
                       {% elif b.status == 'in_progress' %}
                         <div style="font-size:0.7rem;color:#d97706;font-weight:600;">Collect via Billing</div>
                       {% elif b.status == 'inspection' %}
@@ -1180,18 +1180,18 @@
                           <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form" id="start-service-form-{{ b.id }}">
                             <input type="hidden" name="status" value="inspection">
                             {% if elig.state == 'early_ok' %}
-                              <button type="button" onclick="openEarlyStartModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start early</button>
+                              <button type="button" onclick="openEarlyStartModal('{{ b.id }}', {{ (b.customer.fullname)|tojson|forceescape }}, {{ (b.service)|tojson|forceescape }})" style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start early</button>
                             {% elif elig.state == 'early_busy' %}
                               <button type="button" disabled title="{{ elig.message }}" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button>
                             {% elif elig.state == 'too_early' %}
                               <button type="button" disabled title="Can start from {{ elig.opens_at }}" style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button>
                             {% else %}
-                              <button type="button" onclick="openStartServiceModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start</button>
+                              <button type="button" onclick="openStartServiceModal('{{ b.id }}', {{ (b.customer.fullname)|tojson|forceescape }}, {{ (b.service)|tojson|forceescape }})" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start</button>
                             {% endif %}
                           </form>
                           <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form" id="cancel-booking-form-{{ b.id }}">
                             <input type="hidden" name="status" value="cancelled">
-                            <button type="button" onclick="openCancelBookingModal('{{ b.id }}', '{{ b.customer.fullname|e }}', '{{ b.service|e }}')" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">Cancel</button>
+                            <button type="button" onclick="openCancelBookingModal('{{ b.id }}', {{ (b.customer.fullname)|tojson|forceescape }}, {{ (b.service)|tojson|forceescape }})" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">Cancel</button>
                           </form>
                         </div>
                         {% if elig.state == 'early_busy' %}
@@ -1509,7 +1509,7 @@
               {% set sh_sent = sh and o.shipping_options_sent_at %}
               <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if o.paid_at else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ o.paid_at|when if o.paid_at else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
                 <td style="white-space:nowrap;">
-                  <a href="#" onclick="viewOrder({{ o.id }}, '{{ o_display_name|e }}', '{{ '' if o.is_instore else o.customer.email }}', '{{ '' if o.is_instore else o.customer.phone }}', '{{ o.customer.motorcycle_model or '' if not o.is_instore }}', '{{ o.customer.motorcycle_plate or '' if not o.is_instore }}', {{ o.total_amount }}, '{{ o.status }}', '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y — %I:%M %p') }}', {{ o.items|length }}); return false;"
+                  <a href="#" onclick="viewOrder({{ o.id }}, {{ (o_display_name)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.email)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.phone)|tojson|forceescape }}, {{ (o.customer.motorcycle_model or '' if not o.is_instore)|tojson|forceescape }}, {{ (o.customer.motorcycle_plate or '' if not o.is_instore)|tojson|forceescape }}, {{ o.total_amount }}, {{ (o.status)|tojson|forceescape }}, {{ (o.payment_method)|tojson|forceescape }}, {{ (o.created_at.strftime('%b %d, %Y — %I:%M %p'))|tojson|forceescape }}, {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
                     {{ o_display_ref }}
                   </a>
@@ -1961,7 +1961,7 @@
               {% endif %}
             </td>
             <td>
-              <button onclick="openEditService({{ s.id }}, '{{ s.name|e }}', '{{ (s.description or '')|e }}', {{ s.price or 0 }}, {{ s.duration_minutes or 60 }}, {{ 1 if s.is_multiday else 0 }}, '{{ (s.duration_label or '')|e }}')" class="btn-action-edit">Edit</button>
+              <button onclick="openEditService({{ s.id }}, {{ (s.name)|tojson|forceescape }}, {{ ((s.description or ''))|tojson|forceescape }}, {{ s.price or 0 }}, {{ s.duration_minutes or 60 }}, {{ 1 if s.is_multiday else 0 }}, {{ ((s.duration_label or ''))|tojson|forceescape }})" class="btn-action-edit">Edit</button>
             </td>
             <td>
               <form method="POST" action="{{ url_for('toggle_service', sid=s.id) }}">
@@ -6803,9 +6803,9 @@
     catch (err) { return; }
     const note = t => `<div style="width:100%;font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">${t}</div>`;
     if (e.state === 'ready') {
-      slot.innerHTML = `<button type="button" onclick="openStartServiceModal(${bid}, ${JSON.stringify(customer)}, ${JSON.stringify(service)})" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;cursor:pointer;${_START_BTN_CSS}">▶ Start</button>`;
+      slot.innerHTML = `<button type="button" onclick="openStartServiceModal(${bid}, ${JSON.stringify(customer).replace(/"/g, '&quot;')}, ${JSON.stringify(service).replace(/"/g, '&quot;')})" style="background:#fefce8;border:1px solid #fde047;color:#854d0e;cursor:pointer;${_START_BTN_CSS}">▶ Start</button>`;
     } else if (e.state === 'early_ok') {
-      slot.innerHTML = `<button type="button" onclick="openEarlyStartModal(${bid}, ${JSON.stringify(customer)}, ${JSON.stringify(service)})" style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;cursor:pointer;${_START_BTN_CSS}">▶ Start early</button>`;
+      slot.innerHTML = `<button type="button" onclick="openEarlyStartModal(${bid}, ${JSON.stringify(customer).replace(/"/g, '&quot;')}, ${JSON.stringify(service).replace(/"/g, '&quot;')})" style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;cursor:pointer;${_START_BTN_CSS}">▶ Start early</button>`;
     } else {
       const why = e.state === 'early_busy' ? e.message : `Can start from ${e.opens_at}`;
       slot.querySelector('button').title = why;

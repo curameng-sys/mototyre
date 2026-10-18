@@ -276,7 +276,7 @@
       </div>
       <div id="service-list-container">
         {% for s in services %}
-        <div class="service-item" onclick="addService('{{ s.name|e }}', {{ s.price }})">
+        <div class="service-item" onclick="addService({{ (s.name)|tojson|forceescape }}, {{ s.price }})">
           <div>
             <div class="svc-name">{{ s.name }}</div>
             {% if s.description %}<div class="svc-desc">{{ s.description }}</div>{% endif %}
