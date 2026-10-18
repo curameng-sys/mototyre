@@ -320,3 +320,24 @@ def ship_receipt_email(customer_name, ref, items, shipping_label, shipping_fee, 
             f'<table style="width:100%;border-collapse:collapse;background:#f3f4f6;border:1px solid #e5e7eb;font-size:14px;margin:8px 0 14px;">{tr}</table>'
             f'<p style="color:#6b7280;font-size:12px;">- MotoTyres North Caloocan</p></div>')
     return f'Payment received for {ref}', html
+
+
+def booking_receipt_email(customer_name, inv_ref, ref, service, items, total, method, when, receipt_no):
+    """('Payment received - Receipt INV-002', html): the receipt the customer also sees in the app."""
+    from html import escape
+    rows = ''.join(f'<tr><td style="padding:7px 10px;border-bottom:1px solid #eee;">{escape(str(n))}</td>'
+                   f'<td style="padding:7px 10px;border-bottom:1px solid #eee;text-align:right;">{_peso(p)}</td></tr>' for n, p in items)
+    how = 'GCash' if method == 'gcash' else 'cash'
+    html = (f'<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#111827;">'
+            f'<p>Hi {escape(_first_name(customer_name))},</p>'
+            f'<p>You paid {_peso(total)} by {how} for {escape(service)} ({ref}). Thank you for choosing MotoTyres North Caloocan!</p>'
+            f'<div style="text-align:center;margin:14px 0;"><span style="display:inline-block;background:#dcfce7;color:#166534;font-weight:700;'
+            f'font-size:12px;padding:5px 14px;border-radius:99px;">Paid &middot; Completed</span></div>'
+            f'<table style="width:100%;border-collapse:collapse;font-size:14px;"><tr><td style="padding:4px 10px;color:#6b7280;">Receipt for #{inv_ref}</td>'
+            f'<td style="padding:4px 10px;text-align:right;color:#6b7280;">{format_stamp(when).split(" at ")[0]}</td></tr></table>'
+            f'<table style="width:100%;border-collapse:collapse;font-size:14px;border:1px solid #eee;margin-top:6px;">{rows}'
+            f'<tr><td style="padding:9px 10px;font-weight:700;">Amount paid</td>'
+            f'<td style="padding:9px 10px;text-align:right;font-weight:700;color:#d00019;">{_peso(total)}</td></tr></table>'
+            f'<p style="color:#6b7280;font-size:12px;margin-top:12px;">Receipt no. {receipt_no}</p>'
+            f'<p style="color:#6b7280;font-size:12px;">- MotoTyres North Caloocan</p></div>')
+    return f'Payment received — Receipt {inv_ref}', html

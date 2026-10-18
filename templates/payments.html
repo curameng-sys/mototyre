@@ -280,7 +280,7 @@
   <div class="filter-row">
     <div class="search-box">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="pending-search" placeholder="Search customer, reference…" oninput="applyBillingFilters()">
+      <input type="text" id="pending-search" placeholder="Search customer, reference, invoice no.…" oninput="applyBillingFilters()">
     </div>
     <select id="type-filter" onchange="applyBillingFilters()">
       <option value="">All types ({{ pending_bookings|length + pending_jos|length + pending_orders|length }})</option>
@@ -298,7 +298,7 @@
   <div class="tbl-wrap">
     {% if pending_bookings %}
     <table id="pending-bkg-table">
-      <thead><tr><th>Reference</th><th>Customer</th><th>Amount</th><th>Method</th><th>Date</th><th></th></tr></thead>
+      <thead><tr><th>Reference</th><th>Customer</th><th>Amount</th><th>Method</th><th>Invoice sent</th><th></th></tr></thead>
       <tbody>
         {% for b in pending_bookings %}
         {% set svc_price = namespace(val=0) %}
@@ -306,7 +306,7 @@
         {% set row_amount = b.total_amount if (b.is_invoice_flow and b.total_amount) else svc_price.val %}
         {% set b_items %}[{"name":{{ b.service|tojson }},"qty":1,"price":{{ svc_price.val }}}]{% endset %}
         {% set cust_name = b.contact_name if b.walkin_customer_id else (b.contact_name or b.customer.fullname) %}
-        <tr class="pending-row" data-type="booking" data-amount="{{ row_amount }}" data-s="{{ cust_name|lower }} bkg-{{ '%03d'|format(b.id) }}">
+        <tr class="pending-row" data-type="booking" data-bid="{{ b.id }}" data-method="{{ b.invoice_payment_method or '' }}" data-amount="{{ row_amount }}" data-s="{{ cust_name|lower }} bkg-{{ '%03d'|format(b.id) }} inv-{{ '%03d'|format(b.id) }}">
           <td><span class="ref ref-bkg">BKG-{{ '%03d'|format(b.id) }}</span></td>
           <td>
             <div class="name">{{ cust_name }}</div>
@@ -474,7 +474,7 @@
   <div class="filter-row">
     <div class="search-box">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="hist-search" placeholder="Search customer, reference…" oninput="applyBillingFilters()">
+      <input type="text" id="hist-search" placeholder="Search customer, reference, invoice no.…" oninput="applyBillingFilters()">
     </div>
     <select id="type-filter" onchange="applyBillingFilters()">
       <option value="">All types ({{ history_jos|length + history_bookings|length + history_orders|length }})</option>
@@ -490,7 +490,7 @@
   {% if has_history %}
   <div class="tbl-wrap">
     <table id="hist-table">
-      <thead><tr><th>Reference</th><th>Customer</th><th>Amount</th><th>Method</th><th>Date</th><th></th></tr></thead>
+      <thead><tr><th>Reference</th><th>Customer</th><th>Amount</th><th>Method</th><th>Date paid</th><th></th></tr></thead>
       <tbody>
         {% for jo in history_jos %}
         <tr class="hist-row{% if jo.id in new_jo_ids %} is-new{% endif %}" data-type="joborder" data-amount="{{ jo.total_amount }}" data-ts="{{ (jo.payment.paid_at if jo.payment else jo.created_at).strftime('%Y%m%d%H%M%S') }}" data-s="{{ jo.customer_name|lower }} jo-{{ '%03d'|format(jo.id) }} {{ jo.customer_phone or '' }}{% if jo.payment and jo.payment.reference_no %} {{ jo.payment.reference_no }}{% endif %}">
@@ -550,20 +550,21 @@
         {% set o_ref = ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) %}
         {% set o_name = o.contact_name if o.is_instore else o.customer.fullname %}
         {% set o_phone = '' if o.is_instore else o.customer.phone %}
-        <tr class="hist-row{% if o.id in new_ord_ids %} is-new{% endif %}" data-type="{{ 'instore' if o.is_instore else 'online' }}" data-amount="{{ o.total_amount }}" data-ts="{{ (o.delivered_at or o.created_at).strftime('%Y%m%d%H%M%S') }}" data-s="{{ o_name|lower }} {{ o_ref|lower }} {{ o_phone }}">
+        {% set o_total = o.total_amount + ((o.shipping_fee or 0) if o.delivery_method == 'ship' else 0) %}
+        <tr class="hist-row{% if o.id in new_ord_ids %} is-new{% endif %}" data-type="{{ 'instore' if o.is_instore else 'online' }}" data-amount="{{ o_total }}" data-ts="{{ (o.delivered_at or o.created_at).strftime('%Y%m%d%H%M%S') }}" data-s="{{ o_name|lower }} {{ o_ref|lower }} {{ o_phone }}">
           <td><span class="h-type {{ 'h-sale' if o.is_instore else 'h-ord' }}">{{ 'SALE' if o.is_instore else 'ORD' }}</span><span class="ref {{ 'ref-sale' if o.is_instore else 'ref-ord' }}">{{ o_ref }}</span>{% if o.id in new_ord_ids %}<span class="new-tag">NEW</span>{% endif %}</td>
           <td>
             <div class="name">{{ o_name }}</div>
             <div class="sub">{% if o.is_instore %}In-store{% endif %} {{ o.items|length }} item{{ '' if o.items|length == 1 else 's' }}{% if not o.is_instore %} · {{ 'Ship to address' if o.delivery_method == 'ship' else 'Shop pickup' }}{% endif %}</div>
           </td>
-          <td><span class="amount">₱{{ '{:,.2f}'.format(o.total_amount) }}</span></td>
+          <td><span class="amount">₱{{ '{:,.2f}'.format(o_total) }}</span></td>
           <td>
             <span class="badge b-{{ o.payment_method }}">{{ o.payment_method|upper }}</span>
             {% if o.payment_method == 'gcash' and not o.is_instore %}<div class="sub">PayMongo{% if o.payment_ref %} · {{ o.payment_ref[:16] }}{% if o.payment_ref|length > 16 %}…{% endif %}{% endif %}</div>{% endif %}
           </td>
-          <td class="date-cell">{% set o_paid = o.delivered_at or o.created_at %}{{ o_paid.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o_paid.strftime('%I:%M %p') }}</span></td>
+          <td class="date-cell">{% set o_paid = (o.paid_at if o.delivery_method == 'ship' and o.paid_at else None) or o.delivered_at or o.created_at %}{{ o_paid.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o_paid.strftime('%I:%M %p') }}</span></td>
           <td>
-            <button class="btn-receipt" onclick="printOrdReceipt('{{ o_ref }}', '{{ o_name|e }}', '{{ o_phone }}', {{ o.total_amount }}, '{{ o.payment_method }}', '{{ o.created_at.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}], '{{ o.delivery_method }}', {{ 'true' if o.is_instore else 'false' }})">
+            <button class="btn-receipt" onclick="printOrdReceipt('{{ o_ref }}', '{{ o_name|e }}', '{{ o_phone }}', {{ o_total }}, '{{ o.payment_method }}', '{{ o_paid.strftime('%b %d, %Y %I:%M %p') }}', [{% for item in o.items %}{'name':'{{ item.product.name|e }}','qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}{% if o.delivery_method == 'ship' and o.shipping_fee %},{'name':'Shipping fee ({{ (o.shipping_option or '')|title }} · Lalamove {{ o.shipping_vehicle or '' }})','qty':1,'price':{{ o.shipping_fee }}}{% endif %}], '{{ o.delivery_method }}', {{ 'true' if o.is_instore else 'false' }})">
               {{ rcpt_icon }} Receipt
             </button>
           </td>
@@ -1049,49 +1050,20 @@ function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
 }
 
 function printOrdReceipt(ref, customer, phone, amount, method, date, items, delivery, isInstore) {
-  const itemRows = items.map(i =>
-    `<div class="row"><span>${i.name} ×${i.qty}</span><span>₱${Number((i.price * i.qty)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`
-  ).join('');
-  const deliveryRow = isInstore
-    ? `<div class="row"><span>Purchase type</span><span>In-store</span></div>`
-    : `<div class="row"><span>Delivery</span><span>${delivery === 'ship' ? 'Ship to Address' : 'Shop Pickup'}</span></div>`;
-  const phoneRow = isInstore ? '' : `<div class="row"><span>Phone</span><span>${phone}</span></div>`;
-  const w = window.open('', '_blank', 'width=400,height=600');
-  w.document.write(`<!DOCTYPE html><html><head><title>Receipt ${ref}</title>
-  <style>
-    body{font-family:Arial,sans-serif;padding:20px;max-width:320px;margin:0 auto;}
-    .logo{text-align:center;font-size:22px;font-weight:900;letter-spacing:3px;margin-bottom:4px;}
-    .logo span{color:#d00019;}
-    .addr{text-align:center;font-size:10px;color:#666;margin-bottom:12px;}
-    .title{text-align:center;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;border-top:1px dashed #ccc;border-bottom:1px dashed #ccc;padding:6px 0;}
-    .row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
-    .row span:first-child{color:#666;}
-    .row span:last-child{font-weight:600;}
-    .divider{border:none;border-top:1px dashed #ccc;margin:10px 0;}
-    .total{display:flex;justify-content:space-between;font-size:14px;font-weight:900;margin-top:8px;}
-    .footer{text-align:center;font-size:10px;color:#666;margin-top:14px;}
-    @media print{button{display:none;}}
-  </style></head><body>
-  <div class="logo">MOTO<span>TYRES</span></div>
-  <div class="addr">Saranay Rd, Brgy. 171 Bagumbong, Caloocan City<br>0915 269 8366 · Mon–Sun 8AM–6:30PM</div>
-  <div class="title">Official Receipt — ${isInstore ? 'In-Store' : 'Order'}</div>
-  <div class="row"><span>Reference</span><span>${ref}</span></div>
-  <div class="row"><span>Date</span><span>${date}</span></div>
-  <div class="row"><span>Customer</span><span>${customer}</span></div>
-  ${phoneRow}
-  <div class="row"><span>Payment</span><span>${method.toUpperCase()}</span></div>
-  ${deliveryRow}
-  <hr class="divider">
-  ${itemRows}
-  <hr class="divider">
-  <div class="total"><span>TOTAL</span><span>₱${Number(parseFloat(amount)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-  <div class="footer">Thank you for choosing MotoTyres!</div>
-  <br><button onclick="window.print()" style="width:100%;padding:8px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;">Print</button>
-  </body></html>`);
-  w.document.close();
+  const money = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const num = String((String(ref).match(/\d+/) || ['0'])[0]).padStart(5, '0');
+  document.getElementById('rcpt-title').textContent = 'OFFICIAL RECEIPT — ORDER';
+  const rows = [['Receipt No.', 'OR-ORD-' + num], ['Reference', ref], ['Date paid', date], ['Customer', customer]];
+  if (!isInstore) rows.push(['Phone', phone || '—']);
+  rows.push(isInstore ? ['Purchase type', 'In-store'] : ['Delivery', delivery === 'ship' ? 'Ship to Address' : 'Shop Pickup']);
+  document.getElementById('rcpt-details').innerHTML = rows.map(([l, v]) => `<div class="rcpt-row"><span>${l}</span><span>${v}</span></div>`).join('');
+  document.getElementById('rcpt-items').innerHTML = items.map(i =>
+    `<div class="rcpt-row"><span>${i.name}${i.qty > 1 ? ' ×' + i.qty : ''}</span><span>${money(i.price * i.qty)}</span></div>`).join('');
+  document.getElementById('rcpt-total-val').textContent = money(amount);
+  document.getElementById('rcpt-payment').innerHTML = `<div class="rcpt-row"><span>Payment</span><span>${String(method).toUpperCase()}</span></div>`;
+  document.getElementById('receipt-overlay').classList.add('open');
+  document.addEventListener('keydown', _rcptEscHandler);
 }
-
-// Recent Transactions: open that payment's receipt, same as its History row.
 function openRecentReceipt(el) {
   const kind = el.dataset.kind;
   if (kind === 'jo') { window.open(el.dataset.url, '_blank'); }
@@ -1249,6 +1221,45 @@ function _rcptEscHandler(e) { if (e.key === 'Escape') closeReceiptModal(); }
 function printReceipt() {
   window.print();
 }
+
+/* ── LIVE UPDATES: paid invoices move from Pending to History by themselves ── */
+(function livePolling() {
+  const POLL_MS = 15000;
+  const ids = (root, sel) => [...root.querySelectorAll(sel)].map(r => r.dataset.bid);
+  const signature = root => [...root.querySelectorAll('.pending-row[data-bid]')].map(r => 'p' + r.dataset.bid + ':' + (r.dataset.method || ''))
+      .concat([...root.querySelectorAll('.hist-row[data-bid]')].map(r => 'h' + r.dataset.bid)).sort().join(',');
+  let current = signature(document);
+  let pendingIds = new Set(ids(document, '.pending-row[data-bid]'));
+  let histIds = new Set(ids(document, '.hist-row[data-bid]'));
+  const money = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  setInterval(async () => {
+    if (document.hidden || document.querySelector('.bill-overlay.open')) return;      // never disturb an open window
+    try {
+      const res = await fetch(location.href, { credentials: 'same-origin' });
+      if (!res.ok) return;
+      const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+      const next = signature(doc);
+      if (next === current) return;
+      current = next;
+      const nowPending = new Set(ids(doc, '.pending-row[data-bid]')), nowHist = new Set(ids(doc, '.hist-row[data-bid]'));
+      const paid = [...new Set([...pendingIds].filter(i => !nowPending.has(i)).concat([...nowHist].filter(i => !histIds.has(i))))];
+      pendingIds = nowPending; histIds = nowHist;
+      const q = (document.getElementById('pending-search') || document.getElementById('hist-search') || {}).value || '';
+      document.querySelector('.bill-left').innerHTML = doc.querySelector('.bill-left').innerHTML;
+      const recent = doc.getElementById('recent-panel'), here = document.getElementById('recent-panel');
+      if (recent && here) here.innerHTML = recent.innerHTML;
+      const box = document.getElementById('pending-search') || document.getElementById('hist-search');
+      if (box) { box.value = q; applyBillingFilters(); }
+      for (const id of paid) {                                                          // tell the cashier what just got paid
+        const inv = await (await fetch(`/api/booking/${id}/invoice-data`)).json().catch(() => null);
+        if (!inv || !inv.paid) continue;
+        if (inv.payment_method === 'gcash') showBottomToast(`${inv.ref} paid by GCash (${money(inv.total)}).`);
+        const row = document.querySelector(`.hist-row[data-bid="${id}"]`);
+        if (row) { row.style.transition = 'background 0.3s'; row.style.background = 'rgba(22,163,74,.15)'; setTimeout(() => { row.style.background = ''; }, 2500); }
+      }
+    } catch (e) { /* try again next time */ }
+  }, POLL_MS);
+})();
 
 /* ── HIGHLIGHT + AUTO-OPEN RECEIPT AFTER RECORDING CASH ── */
 (function() {

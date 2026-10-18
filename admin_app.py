@@ -22,7 +22,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from io import BytesIO
 from security import (clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_booking_status, validate_order_status,
     ALLOWED_RETURN_OUTCOMES, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
-from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_on_the_way_email
+from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_on_the_way_email, booking_receipt_email
 from delivery_zones import format_delivery_address
 from cloud_storage import upload_image
 from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDAY_INTAKE_MIN,
@@ -2006,6 +2006,8 @@ def record_invoice_cash(bid):
     booking.invoice_change = round(received - booking.total_amount, 2)
     booking.invoice_received_by = current_user.fullname
     booking.invoice_receipt_no = f'OR-{booking.id:06d}'
+    # the invoice card stops being pinned to the top once it's paid
+    Notification.query.filter_by(booking_id=booking.id, type='invoice', priority=True).update({'priority': False})
     db.session.commit()
 
     ref = f'BKG-{booking.id:03d}'
@@ -2018,13 +2020,15 @@ def record_invoice_cash(bid):
     customer_first_name = (booking.contact_name if booking.walkin_customer_id
                             else (customer.fullname if customer else 'the customer')).split(' ')[0]
     if not booking.walkin_customer_id and customer and customer.email:
-        html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
-          <p>Hi {customer.fullname},</p>
-          <p>You paid ₱{booking.total_amount:,.2f} by cash for {booking.service} ({ref}). Thank you for choosing MotoTyres North Caloocan!</p>
-          <p>— MotoTyres North Caloocan</p>
-        </div>"""
-        _send_gmail(customer.email, 'Payment received — MotoTyres', html)
+        _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
+        if _q:
+            _rel = _q.items if _q.status == 'approved' else [i for i in _q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))]
+            _items = [(i.name, i.unit_price) for i in _rel]
+        else:
+            _items = [(booking.service, booking.total_amount)]
+        _subj, _html = booking_receipt_email(customer.fullname, f'INV-{booking.id:03d}', ref, booking.service, _items,
+                                             booking.total_amount, 'cash', booking.invoice_paid_at, booking.invoice_receipt_no)
+        _send_gmail(customer.email, _subj, _html)
 
     return jsonify({'success': True, 'ref': ref, 'receipt_no': booking.invoice_receipt_no,
                      'customer_first_name': customer_first_name, 'change': booking.invoice_change})
@@ -6484,13 +6488,18 @@ def payments():
               .filter(Order.items.any()).order_by(Order.created_at.desc()).limit(100).all()):
         _name = o.contact_name if o.is_instore else o.customer.fullname
         _ref = f'SALE-{o.id:03d}' if o.is_instore else f'ORD-{o.id:03d}'
+        _ship = (o.delivery_method == 'ship' and not o.is_instore)
+        _amt = (o.total_amount or 0) + ((o.shipping_fee or 0) if _ship else 0)       # what was really paid
+        _when = (o.paid_at if _ship and o.paid_at else None) or o.delivered_at or o.created_at
+        _items = [{'name': (i.product.name if i.product else 'Unknown'), 'qty': i.quantity, 'price': i.unit_price} for i in o.items]
+        if _ship and o.shipping_fee:
+            _items.append({'name': f"Shipping fee ({(o.shipping_option or '').title()} \u00b7 Lalamove {o.shipping_vehicle or ''})", 'qty': 1, 'price': o.shipping_fee})
         _recent.append({'tag': 'SALE' if o.is_instore else 'ORD', 'kind': 'ord', 'id': o.id, 'ref': _ref, 'customer': _name,
-                        'amount': o.total_amount, 'method': (o.payment_method or 'cash').lower(), 'paid_at': (o.delivered_at or o.created_at),
+                        'amount': _amt, 'method': (o.payment_method or 'cash').lower(), 'paid_at': _when,
                         'ord': {'ref': _ref, 'customer': _name, 'phone': '' if o.is_instore else (o.customer.phone or ''),
-                                'amount': o.total_amount, 'method': o.payment_method,
-                                'date': o.created_at.strftime('%b %d, %Y %I:%M %p'),
-                                'items': [{'name': (i.product.name if i.product else 'Unknown'), 'qty': i.quantity, 'price': i.unit_price}
-                                          for i in o.items],
+                                'amount': _amt, 'method': o.payment_method,
+                                'date': _when.strftime('%b %d, %Y %I:%M %p'),
+                                'items': _items,
                                 'delivery': o.delivery_method, 'is_instore': bool(o.is_instore)}})
     _recent.sort(key=lambda r: r['paid_at'], reverse=True)
     _today_d = ph_now().date()

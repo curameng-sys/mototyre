@@ -18,7 +18,7 @@ from io import BytesIO
 from security import (clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_otp_purpose,
     validate_return_kind, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
 import json as _json
-from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_receipt_email
+from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_receipt_email, booking_receipt_email
 from service_duration import (
     DEFAULT_DURATION_MIN, combine_services, combined_service_name, split_service_names,
     format_duration, minutes_to_ampm, minutes_to_hhmm, hhmm_to_minutes, slot_statuses,
@@ -3719,8 +3719,9 @@ def payment_success():
                 booking.payment_method = 'gcash'
                 booking.invoice_receipt_no = f'OR-{booking.id:06d}'
                 booking.invoice_gcash_ref = checkout_id or None
+                Notification.query.filter_by(booking_id=booking.id, type='invoice', priority=True).update({'priority': False})
                 db.session.commit()
-                flash('GCash payment successful — invoice paid!', 'success')
+                flash('Payment received. Thank you!', 'success')
                 ref = f'BKG-{booking.id:03d}'
                 send_notification(
                     booking.user_id, 'Payment received ✅',
@@ -3729,13 +3730,15 @@ def payment_success():
                 )
                 user = User.query.get(booking.user_id)
                 if user and user.email:
-                    html = f"""
-                    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;">
-                      <p>Hi {user.fullname},</p>
-                      <p>You paid ₱{booking.total_amount:,.2f} by GCash for {booking.service} ({ref}). Thank you for choosing MotoTyres North Caloocan!</p>
-                      <p>— MotoTyres North Caloocan</p>
-                    </div>"""
-                    _send_gmail(user.email, 'Payment received — MotoTyres', html)
+                    _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
+                    if _q:
+                        _rel = _q.items if _q.status == 'approved' else [i for i in _q.items if i.locked or i.item_type == 'product']
+                        _items = [(i.name, i.unit_price) for i in _rel]
+                    else:
+                        _items = [(booking.service, booking.total_amount)]
+                    _subj, _html = booking_receipt_email(user.fullname, f'INV-{booking.id:03d}', ref, booking.service, _items,
+                                                         booking.total_amount, 'gcash', booking.invoice_paid_at, booking.invoice_receipt_no)
+                    _send_gmail(user.email, _subj, _html)
         except Exception as e:
             print(f"[payment/success] booking error: {e}")
 
