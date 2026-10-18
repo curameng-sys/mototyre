@@ -340,6 +340,8 @@
               {% else %}
                 <span class="waiting-note">Waiting for customer</span>
               {% endif %}
+            {% elif b.bill_total is not none and b.quotation_decided %}
+              <span class="waiting-note">Send the invoice from Manage Bookings</span>
             {% else %}
             <button class="btn-collect btn-collect-bkg"
               data-type="booking"

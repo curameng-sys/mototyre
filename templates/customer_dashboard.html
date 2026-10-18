@@ -5544,7 +5544,7 @@ function openBookingDetails(bookingId) {
     } else {
       actions.style.display = 'none';
       decided.style.display = 'block';
-      decided.textContent = q.status === 'approved' ? 'You approved this quotation.' : 'You declined this quotation.';
+      decided.textContent = (q.status === 'approved' ? 'You approved this quotation.' : 'You declined this quotation.') + ' When the shop finishes your service, you will get an invoice here to pay by Cash or GCash.';
       decided.style.color = q.status === 'approved' ? 'var(--green,#16a34a)' : 'var(--fg-2)';
       pendingBox.style.display = 'none';
     }

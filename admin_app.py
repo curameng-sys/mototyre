@@ -705,6 +705,7 @@ def booking_service_price(service_str):
 
 
 admin_app.jinja_env.globals['booking_service_price'] = booking_service_price
+admin_app.jinja_env.globals['booking_bill'] = booking_bill
 
 
 def booking_finish_time(b):
@@ -6444,6 +6445,8 @@ def payments():
             b.is_invoice_flow = False
             _bill = booking_bill(b)                     # service + the extra work the customer approved
             b.bill_total, b.bill_lines, b.extra_item_count = (_bill[0], _bill[1], _bill[2]) if _bill else (None, None, 0)
+            _q = Quotation.query.filter_by(booking_id=b.id).order_by(Quotation.created_at.desc()).first()
+            b.quotation_decided = bool(_q and _q.status in ('approved', 'declined'))
 
         # Completed-but-unpaid invoices from the Inspection & Estimation flow
         # — the customer may or may not have picked a method yet.

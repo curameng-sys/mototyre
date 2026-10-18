@@ -1163,7 +1163,11 @@
                          so starting one never silently drags the others along with it. #}
                       <span style="font-size:0.7rem;color:var(--muted);font-style:italic;">Click row to manage each service</span>
                     {% else %}
-                      {% if b.status == 'in_progress' %}
+                      {% if b.status == 'in_progress' and b.quotation and b.quotation.status in ['approved', 'declined'] and not b.walkin_customer_id %}
+                        {% set _bill = booking_bill(b) %}
+                        <button type="button" onclick="openCompleteInvoiceModal({{ b.id }}, 'BKG-{{ '%03d'|format(b.id) }}', {{ (b.customer.fullname if b.customer else 'The customer')|tojson }}, {{ _bill[0] if _bill else 0 }}, true)" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.7rem;font-weight:700;font-family:inherit;cursor:pointer;">Complete &amp; send invoice</button>
+                        <div style="font-size:0.62rem;color:var(--muted);margin-top:0.25rem;">The customer then picks Cash or GCash</div>
+                      {% elif b.status == 'in_progress' %}
                         <div style="font-size:0.7rem;color:#d97706;font-weight:600;">Collect via Billing</div>
                       {% elif b.status == 'inspection' %}
                         <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form" id="no-extra-work-form-{{ b.id }}">
@@ -5219,8 +5223,8 @@
   }
 
   let _pendingCompleteInvoice = null;
-  async function openCompleteInvoiceModal(bookingId, ref, customerName, total) {
-    _pendingCompleteInvoice = { bookingId, ref };
+  async function openCompleteInvoiceModal(bookingId, ref, customerName, total, reloadAfter) {
+    _pendingCompleteInvoice = { bookingId, ref, reloadAfter: !!reloadAfter };
     const mech = await mechanicNameFor(bookingId), ml = document.getElementById('modal-ci-mech');
     ml.textContent = mech ? `${mech} will be freed up.` : ''; ml.style.display = mech ? 'block' : 'none';
     document.getElementById('modal-ci-text').innerHTML =
@@ -5230,11 +5234,16 @@
 
   async function confirmCompleteInvoice() {
     if (!_pendingCompleteInvoice) return;
-    const { bookingId, ref } = _pendingCompleteInvoice;
+    const { bookingId, ref, reloadAfter } = _pendingCompleteInvoice;
     document.getElementById('modal-complete-invoice').style.display = 'none';
     try {
       const res = await fetch(`/booking/${bookingId}/complete-invoice`, { method: 'POST' });
       const data = await res.json();
+      if (data.success && reloadAfter) {                     // started from the bookings table: show the new status
+        try { sessionStorage.setItem('mt_toast', data.toast || 'Invoice sent.'); } catch (e) {}
+        location.reload();
+        return;
+      }
       if (data.success) {
         await loadOutbox();
         showToast(data.toast || `${data.ref} completed. Invoice sent to ${data.customer_first_name}.`, 'success');
