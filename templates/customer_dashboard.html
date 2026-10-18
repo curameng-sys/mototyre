@@ -1863,7 +1863,7 @@
     <!-- Awaiting-decision prompt — only while the quotation is unanswered -->
     <div id="bd-quotation-pending-box" style="display:none;margin-top:1rem;padding:1rem;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
       <div style="font-size:0.82rem;color:#92400e;line-height:1.5;"><strong>The mechanic found additional work.</strong> Please approve or decline the quotation.</div>
-      <button type="button" onclick="document.getElementById('bd-quotation-wrap').scrollIntoView({behavior:'smooth',block:'center'})" style="margin-top:0.75rem;width:100%;padding:0.6rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Review quotation</button>
+      <button type="button" onclick="reviewQuotation()" style="margin-top:0.75rem;width:100%;padding:0.6rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Review quotation</button>
     </div>
 
     <!-- Inspection & Estimation quotation detail -->
@@ -5445,6 +5445,22 @@ const bookingsData = {
   }{% if not loop.last %},{% endif %}
   {% endfor %}
 };
+
+// "Review quotation": bring the quotation (findings, prices, Approve / Decline) into view inside the booking window and flash it.
+function reviewQuotation() {
+  const wrap = document.getElementById('bd-quotation-wrap');
+  if (!wrap || wrap.style.display === 'none') { showCartToast('The quotation is not available yet. Please refresh the page.'); return; }
+  const box = wrap.closest('.modal-box');
+  try {
+    const top = wrap.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 16;
+    box.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  } catch (e) {
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });      // fallback for any browser that can't scroll the window itself
+  }
+  wrap.style.transition = 'box-shadow 0.3s';
+  wrap.style.boxShadow = '0 0 0 3px rgba(208,0,25,0.35)';
+  setTimeout(() => { wrap.style.boxShadow = ''; }, 1800);
+}
 
 function openBookingDetails(bookingId) {
   const booking = bookingsData[bookingId];

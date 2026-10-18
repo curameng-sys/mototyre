@@ -1113,6 +1113,10 @@
                       {% if b.quotation and b.quotation.status == 'awaiting_customer' %}
                         <span class="badge" style="background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe;">Quotation sent</span>
                         <div style="margin-top:0.3rem;font-size:0.7rem;color:var(--muted);">Waiting for customer</div>
+                        <div style="margin-top:0.35rem;display:flex;gap:0.3rem;flex-wrap:wrap;" onclick="event.stopPropagation()">
+                          <button type="button" onclick="decideInPerson({{ b.quotation.id }}, 'approve', {{ (b.customer.fullname if b.customer else b.contact_name or 'The customer')|tojson }}, {{ b.quotation.total_amount or 0 }})" style="background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;padding:0.2rem 0.55rem;border-radius:6px;font-size:0.66rem;font-weight:700;font-family:inherit;cursor:pointer;">Approved in person</button>
+                          <button type="button" onclick="decideInPerson({{ b.quotation.id }}, 'decline', {{ (b.customer.fullname if b.customer else b.contact_name or 'The customer')|tojson }}, {{ b.quotation.total_amount or 0 }})" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.2rem 0.55rem;border-radius:6px;font-size:0.66rem;font-weight:700;font-family:inherit;cursor:pointer;">Declined in person</button>
+                        </div>
                       {% elif b.quotation and b.quotation.status == 'approved' %}
                         <span class="badge" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;">Quotation approved</span>
                         <div style="margin-top:0.3rem;">
@@ -6827,6 +6831,25 @@
       if (!quiet) alert('Network error. Please try again.');
       return { success: false, error: 'Network error. Please try again.' };
     }
+  }
+  // The customer is at the counter: staff records their answer to the quotation (it is logged and the customer is told).
+  async function decideInPerson(qid, decision, customer, total) {
+    const approve = decision === 'approve';
+    const money = '₱' + Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const yes = await askConfirm({
+      title: approve ? 'Customer approved the quotation?' : 'Customer declined the quotation?',
+      message: approve
+        ? `Only press this if ${customer} told you at the counter that they approve the extra work (${money}). The customer is notified and work starts.`
+        : `Only press this if ${customer} told you at the counter that they do not want the extra work. They are notified and the booked service continues.`,
+      confirmLabel: approve ? 'Yes, they approved' : 'Yes, they declined', cancelLabel: 'Go back', danger: !approve,
+      icon: approve ? undefined : 'x' });
+    if (!yes) return;
+    try {
+      const res = await fetch(`/quotation/${qid}/decide-in-person`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: JSON.stringify({ decision }) });
+      const data = await res.json();
+      if (data.success) { try { sessionStorage.setItem('mt_toast', data.toast || ''); } catch (e) {} location.reload(); }
+      else showToast(data.error || 'Could not record the answer.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
   // the short message after an action survives the page reload
   window.addEventListener('load', () => {

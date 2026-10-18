@@ -455,6 +455,9 @@ class Quotation(db.Model):
     created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     decided_at       = db.Column(db.DateTime, nullable=True)  # when approved/declined — set once, never on conversion
+    decided_in_person = db.Column(db.Boolean, default=False)   # the staff recorded the customer's answer at the shop
+    decided_by_staff  = db.Column(db.String(100), nullable=True)  # which staff member recorded it
+    parts_deducted    = db.Column(db.Boolean, default=False)   # the parts on this quotation were already taken out of stock
     not_covered         = db.Column(db.Boolean, default=False)  # back job only: the mechanic found the problem is NOT from the shop's work
     not_covered_reason  = db.Column(db.Text, nullable=True)
     not_covered_photos  = db.Column(db.String(500), nullable=True)  # comma-separated filenames under static/return_evidence/
@@ -470,6 +473,7 @@ class QuotationItem(db.Model):
     quantity     = db.Column(db.Integer, default=1)
     unit_price   = db.Column(db.Float, nullable=False)
     locked       = db.Column(db.Boolean, default=False)  # the booked service row — can't be removed client-side
+    product_id   = db.Column(db.Integer, nullable=True)  # which product a 'product' line is, so stock can be reduced
 
 
 class JobOrder(db.Model):
@@ -1864,6 +1868,67 @@ def update_booking_status(bid):
     return redirect(url_for('admin_dashboard'))
 
 
+def _deduct_quotation_parts(q, booking):
+    """The parts that end up on the invoice (everything if the customer approved; only the materials already used if
+    they declined) leave the shelf once, when the booking is completed. Never below zero. Returns what was taken."""
+    if not q or q.parts_deducted:
+        return []
+    used = []
+    billable = q.items if q.status == 'approved' else [i for i in q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))]
+    for it in billable:
+        if it.item_type != 'product':
+            continue
+        prod = Product.query.get(it.product_id) if it.product_id else Product.query.filter_by(name=it.name).first()
+        if not prod:
+            continue
+        take = min(int(it.quantity or 0), prod.stock or 0)
+        if take > 0:
+            prod.stock = (prod.stock or 0) - take
+        used.append({'name': prod.name, 'qty': take, 'wanted': int(it.quantity or 0), 'left': prod.stock})
+    q.parts_deducted = True
+    return used
+
+
+@admin_app.route('/quotation/<int:qid>/decide-in-person', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def quotation_decide_in_person(qid):
+    """The customer is standing at the counter, so staff records their answer to an Inspection & Estimation quotation
+    instead of waiting for them to tap it on their phone. It does exactly what the customer's own answer does, plus it
+    remembers who recorded it and tells the customer, so nothing is ever decided on their behalf unseen."""
+    q = Quotation.query.get_or_404(qid)
+    booking = Booking.query.get(q.booking_id) if q.booking_id else None
+    if not booking:
+        return jsonify({'success': False, 'error': 'This quotation is not attached to a booking.'}), 400
+    if q.status != 'awaiting_customer':
+        return jsonify({'success': False, 'error': 'This quotation has already been decided.'}), 400
+    decision = clean_str((request.get_json(silent=True) or request.form).get('decision', ''), max_len=10)
+    if decision not in ('approve', 'decline'):
+        return jsonify({'success': False, 'error': 'Invalid decision.'}), 400
+
+    q.status = 'approved' if decision == 'approve' else 'declined'
+    q.decided_at = ph_now()
+    q.decided_in_person = True
+    q.decided_by_staff = current_user.fullname
+    if booking.status == 'inspection':
+        booking.status = 'in_progress'
+        booking.in_progress_at = ph_now()
+    db.session.commit()
+
+    ref = f'BKG-{booking.id:03d}'
+    verb = 'approved' if decision == 'approve' else 'declined'
+    total = q.total_amount or 0
+    extra = f' (₱{total:,.2f})' if decision == 'approve' else ''
+    _notify_customer(booking, f'Quotation {verb} at the shop — {booking.service} ({ref})',
+        f'{current_user.fullname} recorded that you {verb} the quotation for {booking.service}{extra} at the shop. '
+        + ('We started work on your booking and the approved extra work.' if decision == 'approve'
+           else 'We started work on your booking. Extra work was not included.')
+        + ' If this is not right, please tell the staff right away.',
+        status='in_progress')
+    return jsonify({'success': True, 'new_status': q.status,
+                    'toast': f'Booking {booking.id}: quotation {verb} in person · work started'})
+
+
 @admin_app.route('/booking/<int:bid>/complete-invoice', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -1887,6 +1952,7 @@ def complete_booking_invoice(bid):
     else:
         total = booking_service_price(booking.service)
 
+    parts_used = _deduct_quotation_parts(q, booking)
     booking.status = 'completed'
     booking.completed_at = ph_now()
     booking.total_amount = total
@@ -1973,8 +2039,9 @@ def complete_booking_invoice(bid):
 
     _mname = booking.assigned_mechanic_name
     _mnow = _mech_now_text(_mname)
-    return jsonify({'success': True, 'ref': ref, 'total': total, 'customer_first_name': customer_first_name,
-                    'toast': f'Booking {booking.id} completed' + (f' · {_mname} is now {_mnow}' if _mnow else ''),
+    return jsonify({'success': True, 'ref': ref, 'total': total, 'customer_first_name': customer_first_name, 'parts_used': parts_used,
+                    'toast': f'Booking {booking.id} completed' + (f' · {_mname} is now {_mnow}' if _mnow else '')
+                             + (f' · {len(parts_used)} part{"s" if len(parts_used) != 1 else ""} taken out of stock' if parts_used else ''),
                     'mechanic_statuses': mechanic_status_map()})
 
 
@@ -5957,6 +6024,16 @@ def save_quotation():
     total = sum(float(i['unit_price']) * int(i['quantity']) for i in items)
     booking_id = data.get('booking_id')
     booking = Booking.query.get(booking_id) if booking_id else None
+    # A part can only be quoted if the shop really has that many (several lines for one product are added up).
+    _need = {}
+    for i in items:
+        if i.get('item_type') == 'product':
+            prod = (Product.query.get(int(i['product_id'])) if i.get('product_id') else Product.query.filter_by(name=i['name']).first())
+            if prod:
+                _need[prod.id] = (prod, _need.get(prod.id, (prod, 0))[1] + int(i['quantity']))
+    for prod, qty in _need.values():
+        if qty > (prod.stock or 0):
+            return jsonify({'success': False, 'error': f'Only {prod.stock or 0} left in stock of {prod.name}. Lower the amount before sending the quotation.'}), 400
 
     # Who inspected it is read from the booking's own assigned mechanic, not
     # whatever the client sent — the admin never types this, so there's
@@ -6004,6 +6081,7 @@ def save_quotation():
             quantity     = int(i['quantity']),
             unit_price   = float(i['unit_price']),
             locked       = bool(i.get('locked')),
+            product_id   = int(i['product_id']) if (i.get('item_type') == 'product' and i.get('product_id')) else None,
         ))
     db.session.commit()
 
@@ -8063,6 +8141,10 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN rider_model VARCHAR(60)",
         "ALTER TABLE `order` ADD COLUMN pay_started_at DATETIME",
         "ALTER TABLE `order` ADD COLUMN pay_sessions TEXT",
+        "ALTER TABLE quotation ADD COLUMN decided_in_person TINYINT(1) DEFAULT 0",
+        "ALTER TABLE quotation ADD COLUMN decided_by_staff VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE quotation ADD COLUMN parts_deducted TINYINT(1) DEFAULT 0",
+        "ALTER TABLE quotation_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
         "ALTER TABLE `order` ADD COLUMN shipping_started_at DATETIME",

@@ -790,6 +790,9 @@ class Quotation(db.Model):
     created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     decided_at       = db.Column(db.DateTime, nullable=True)
+    decided_in_person = db.Column(db.Boolean, default=False)
+    decided_by_staff  = db.Column(db.String(100), nullable=True)
+    parts_deducted    = db.Column(db.Boolean, default=False)
     items            = db.relationship('QuotationItem', backref='quotation', lazy=True)
 
 
@@ -802,6 +805,7 @@ class QuotationItem(db.Model):
     quantity     = db.Column(db.Integer, default=1)
     unit_price   = db.Column(db.Float, nullable=False)
     locked       = db.Column(db.Boolean, default=False)
+    product_id   = db.Column(db.Integer, nullable=True)
 
 
 @login_manager.user_loader
@@ -4182,6 +4186,10 @@ with app.app_context():
         "ALTER TABLE `order` ADD COLUMN rider_model VARCHAR(60)",
         "ALTER TABLE `order` ADD COLUMN pay_started_at DATETIME",
         "ALTER TABLE `order` ADD COLUMN pay_sessions TEXT",
+        "ALTER TABLE quotation ADD COLUMN decided_in_person TINYINT(1) DEFAULT 0",
+        "ALTER TABLE quotation ADD COLUMN decided_by_staff VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE quotation ADD COLUMN parts_deducted TINYINT(1) DEFAULT 0",
+        "ALTER TABLE quotation_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
         "ALTER TABLE `order` ADD COLUMN shipping_started_at DATETIME",

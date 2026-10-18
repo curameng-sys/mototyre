@@ -737,7 +737,7 @@
       motorcycle_model: document.getElementById('moto-model').value.trim(),
       motorcycle_plate: '',
       notes:            document.getElementById('notes').value.trim(),
-      items:            items.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price, locked: !!i.locked })),
+      items:            items.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price, locked: !!i.locked, product_id: i.product_id ? parseInt(i.product_id, 10) : null })),
     };
     if (HAS_BOOKING) {
       payload.booking_id   = {{ booking.id if booking else 'null' }};
