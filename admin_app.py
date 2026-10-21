@@ -1826,8 +1826,10 @@ def update_booking_status(bid):
                 return jsonify({'success': False, 'error': msg}), 409
             flash(msg, 'danger')
             return redirect(url_for('admin_dashboard'))
+    _start_assigned = None
     if start_mechanic is not None:
         if booking.assigned_mechanic_name != start_mechanic.name:
+            _start_assigned = 'changed' if booking.assigned_mechanic_name else 'assigned'
             booking.assigned_mechanic_name = start_mechanic.name
             booking.assigned_mechanic_specialization = start_mechanic.specialization
         # old walk-in notes must not come back once this job is done
@@ -1890,6 +1892,8 @@ def update_booking_status(bid):
     if new_status in messages:
         title, body, priority = messages[new_status]
         _notify_customer(booking, title, body, priority=priority, status=new_status.replace('_', ''))
+    if _start_assigned:                                   # the shop picked the mechanic at Start: tell the customer who it is
+        _send_mechanic_notice(booking, booking.assigned_mechanic_name, booking.assigned_mechanic_specialization, _start_assigned)
     toast = f'Booking {booking.id} updated'
     _mname = booking.assigned_mechanic_name
     _mnow = _mech_now_text(_mname)

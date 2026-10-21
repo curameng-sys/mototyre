@@ -4610,19 +4610,18 @@ function updateConfirmButtonText() {
     ? `Confirm ${startLabel} Drop-off`
     : (selectedEndLabel ? `Confirm ${startLabel} – ${selectedEndLabel}` : `Confirm ${startLabel}`);
 
+  // Only a mechanic the customer picked is named here. When the shop assigns, nobody is promised in advance:
+  // the customer is notified once the shop picks someone.
   let mechName = null;
   if (mechanicMode === 'choose' && selectedMechanicId) {
     const m = mechanicsRoster.find(x => String(x.id) === String(selectedMechanicId));
     if (m) mechName = m.name;
-  } else {
-    const free = mechanicsRoster.find(m => !m.busy && !m.off_duty);
-    if (free) mechName = free.name;
   }
 
   const durationText = currentJobIsMultiday ? (currentJobDurationLabel || '') : formatShopTime(currentJobDuration);
   subEl.textContent = mechName
     ? `${durationText} with ${mechName}`
-    : `${durationText} — shop will assign a mechanic`;
+    : `${durationText} · The shop will notify you who your mechanic is`;
   subEl.style.display = 'block';
 }
 
