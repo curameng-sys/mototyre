@@ -332,8 +332,42 @@ class Product(db.Model):
     price       = db.Column(db.Float, nullable=False)
     stock       = db.Column(db.Integer, default=0)
     image_url   = db.Column(db.String(500))
+    image_blob  = db.Column(db.LargeBinary(length=2**24 - 1), nullable=True)  # the photo itself when there is no cloud storage
+    image_mime  = db.Column(db.String(40), nullable=True)
     created_at  = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     order_items = db.relationship('OrderItem', backref='product', lazy=True)
+
+
+
+def product_img_src(p):
+    """Where a product's photo can really be loaded from, or '' when there is none:
+    a cloud URL; a photo kept in the database (shared by the shop and customer apps, wherever each one runs);
+    or an older photo file, only if this app can actually find that file on its own disk."""
+    v = (p.image_url or '').strip()
+    if not v:
+        return ''
+    if v.startswith('http'):
+        return v
+    if v.startswith('db'):
+        return url_for('product_photo', pid=p.id, v=v[3:] or '0')
+    if os.path.exists(os.path.join(admin_app.root_path, 'static', 'product_photos', v)):
+        return url_for('static', filename='product_photos/' + v)
+    return ''                                        # the file only exists where it was uploaded: show "No photo yet"
+
+
+@admin_app.route('/product-photo/<int:pid>')
+def product_photo(pid):
+    """Serves a product photo that is stored in the database."""
+    p = Product.query.get_or_404(pid)
+    if not p.image_blob:
+        abort(404)
+    resp = make_response(p.image_blob)
+    resp.headers['Content-Type'] = p.image_mime or 'image/jpeg'
+    resp.headers['Cache-Control'] = 'public, max-age=86400'      # the link carries a version, so a new photo is a new link
+    return resp
+
+
+admin_app.jinja_env.filters['product_img'] = product_img_src
 
 
 class Order(db.Model):
@@ -694,6 +728,25 @@ def booking_bill(booking):
     return round(sum(a for _, a in lines), 2), lines, extra
 
 
+def booking_extras(booking):
+    """What the inspection added to a booking (findings, extra services, parts), for the booking details window.
+    Each line says whether it is on the bill: everything if the customer approved; only the parts already used if
+    they declined; nothing yet while the quotation waits for the customer."""
+    q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
+    if not q or not q.items:
+        return None
+    kinds = {'product': 'Part', 'finding': 'Finding', 'service': 'Service'}
+    lines = []
+    for i in q.items:
+        if i.locked:
+            continue                                   # the booked service is already listed above
+        billed = q.status == 'approved' or (q.status == 'declined' and i.item_type == 'product'
+                                            and not booking.service.startswith(BACKJOB_PREFIX))
+        lines.append({'name': _line_name(i), 'amount': _line_amount(i), 'kind': kinds.get(i.item_type, 'Service'), 'billed': billed})
+    bill = booking_bill(booking)
+    return {'status': q.status, 'in_person': bool(q.decided_in_person), 'items': lines, 'total': bill[0] if bill else None}
+
+
 def awaiting_payment_ids():
     """Bookings whose invoice was sent but not paid yet. They are not 'complete' until the customer has paid
     (Cash recorded by the cashier, or GCash confirmed by PayMongo)."""
@@ -717,6 +770,7 @@ def booking_service_price(service_str):
 
 admin_app.jinja_env.globals['booking_service_price'] = booking_service_price
 admin_app.jinja_env.globals['booking_bill'] = booking_bill
+admin_app.jinja_env.globals['booking_extras'] = booking_extras
 
 
 def booking_finish_time(b):
@@ -5281,13 +5335,14 @@ def _save_product_image(file):
         return None
     cloud_url = upload_image(file, 'product_photos')
     if cloud_url:
-        return cloud_url
-    ext      = file.filename.rsplit('.', 1)[1].lower()
-    filename = f"product_{uuid.uuid4().hex}.{ext}"
-    folder   = os.path.join(admin_app.root_path, 'static', 'product_photos')
-    os.makedirs(folder, exist_ok=True)
-    file.save(os.path.join(folder, filename))
-    return filename  # bare filename — resolved against static/product_photos at render time, same convention as User.profile_pic
+        return cloud_url, None, None
+    # No cloud storage: keep the photo in the database, so the customer app (which may run somewhere else)
+    # can show it too. A file on this app's own disk would only ever be visible here.
+    file.stream.seek(0)
+    data = file.read()
+    if not data:
+        return None
+    return f"db:{int(datetime.utcnow().timestamp())}", data, (file.mimetype or 'image/jpeg')[:40]
 
 
 LOW_STOCK_BELOW = 5   # same cut-off the Manage Products table uses for its amber "low" count
@@ -5313,12 +5368,12 @@ def _product_change_response(product, saved_msg):
 @login_required
 @require_admin_or_staff
 def add_product():
-    image_url = _save_product_image(request.files.get('image'))
+    _img = _save_product_image(request.files.get('image'))
     new_p = Product(
         name=request.form['name'], category=request.form['category'],
         description=request.form.get('description', ''),
         price=float(request.form['price']), stock=int(request.form['stock']),
-        image_url=image_url
+        image_url=_img[0] if _img else None, image_blob=_img[1] if _img else None, image_mime=_img[2] if _img else None
     )
     db.session.add(new_p)
     db.session.commit()
@@ -5341,9 +5396,9 @@ def edit_product(pid):
     p.description = request.form.get('description', '')
     new_image = _save_product_image(request.files.get('image'))
     if new_image:
-        p.image_url = new_image
+        p.image_url, p.image_blob, p.image_mime = new_image
     elif request.form.get('remove_image') == '1':
-        p.image_url = None
+        p.image_url, p.image_blob, p.image_mime = None, None, None
     db.session.commit()
     return _product_change_response(p, f'Product "{p.name}" updated!')
 
@@ -8214,6 +8269,8 @@ with admin_app.app_context():
         "ALTER TABLE quotation ADD COLUMN decided_in_person TINYINT(1) DEFAULT 0",
         "ALTER TABLE quotation ADD COLUMN decided_by_staff VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE quotation ADD COLUMN parts_deducted TINYINT(1) DEFAULT 0",
+        "ALTER TABLE product ADD COLUMN image_blob MEDIUMBLOB DEFAULT NULL",
+        "ALTER TABLE product ADD COLUMN image_mime VARCHAR(40) DEFAULT NULL",
         "ALTER TABLE quotation_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",

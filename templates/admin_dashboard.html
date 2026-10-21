@@ -1060,7 +1060,9 @@
                     data-date="{{ b.date.strftime('%b %d, %Y') }}"
                     data-time="{{ b.time.strftime('%I:%M %p') }}"
                     data-status="{{ display_status }}"
-                    data-payment="{{ 'unpaid' if b.status != 'completed' else ((b.invoice_payment_method or b.payment_method) or 'cash') }}"
+                    data-payment="{{ 'unpaid' if (b.status != 'completed' or b_wait) else ((b.invoice_payment_method or b.payment_method) or 'cash') }}"
+                    data-extras="{{ (booking_extras(b))|tojson|forceescape }}"
+                    data-real-status="{{ b.status }}"
                     data-mechanic="{{ (b.assigned_mechanic_name or '')|e }}"
                     data-mechanic-spec="{{ (b.assigned_mechanic_specialization or '')|e }}"
                     data-preferred-mechanic="{{ (b.preferred_mechanic_name or '')|e }}"
@@ -1787,7 +1789,7 @@
                   data-id="{{ p.id }}" data-name="{{ p.name|e }}" data-category="{{ p.category|e }}"
                   data-price="{{ p.price }}" data-stock="{{ p.stock }}"
                   data-description="{{ (p.description or '')|e }}"
-                  data-image="{{ (p.image_url if p.image_url.startswith('http') else url_for('static', filename='product_photos/' + p.image_url)) if p.image_url else '' }}">
+                  data-image="{{ p|product_img }}">
                 <td>{{ loop.index }}</td>
                 <td style="font-weight:600;color:var(--text);">{{ p.name }}</td>
                 <td>{{ p.category }}</td>
@@ -2555,12 +2557,13 @@
       <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;text-align:center;">
         <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Mechanic</div>
         <div style="font-size:0.82rem;color:var(--text);font-weight:600;" id="bd-mechanic"></div>
-        <div style="display:flex;gap:0.35rem;margin-top:0.4rem;">
+        <div id="bd-mechanic-edit" style="display:flex;gap:0.35rem;margin-top:0.4rem;">
           <select id="bd-mechanic-reassign" style="flex:1;font-size:0.72rem;padding:0.25rem;">
             <option value="">Shop decides</option>
           </select>
           <button type="button" onclick="saveMechanicReassign()" style="font-size:0.72rem;padding:0.25rem 0.5rem;background:#1f2937;color:#fff;border:none;border-radius:5px;cursor:pointer;">Save</button>
         </div>
+        <div id="bd-mechanic-locked" style="display:none;margin-top:0.35rem;font-size:0.68rem;color:var(--muted);">Can't be changed · the job is finished</div>
         <div id="bd-preferred-mechanic" style="display:none;margin-top:0.35rem;font-size:0.68rem;color:var(--muted);"></div>
       </div>
     </div>
@@ -2569,6 +2572,15 @@
     <div style="margin-bottom:0.75rem;">
       <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;">Services Booked</div>
       <div id="bd-services-list" style="display:flex;flex-direction:column;gap:0.45rem;"></div>
+    </div>
+
+    <!-- What the inspection added -->
+    <div id="bd-extras-wrap" style="display:none;margin-bottom:0.75rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.5rem;">
+        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">Added after inspection</div>
+        <span id="bd-extras-tag"></span>
+      </div>
+      <div id="bd-extras-list" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
     </div>
 
     <!-- Payment & Total -->
@@ -6670,6 +6682,10 @@
     document.getElementById('bd-mechanic').textContent = mech;
     _currentBookingGroupIds = ids;
     populateMechanicReassign(d.mechanic || '');
+    // A finished or cancelled job keeps its mechanic: the picker is hidden (an unpaid invoice counts as finished work too)
+    const _finished = ['completed', 'cancelled'].includes((d.realStatus || d.status || '').replace('-', '_'));
+    document.getElementById('bd-mechanic-edit').style.display = _finished ? 'none' : 'flex';
+    document.getElementById('bd-mechanic-locked').style.display = _finished ? 'block' : 'none';
 
     // What the customer originally asked for — this never changes, even if the
     // shop has since reassigned the job to someone else.
@@ -6698,8 +6714,30 @@
     document.getElementById('bd-payment').textContent =
       d.payment === 'unpaid' ? 'Unpaid' : (d.payment === 'gcash' ? 'GCash' : 'Cash');
 
-    // Total
-    const totalAmount = parseFloat(d.totalAmount || 0);
+    // Added after inspection: findings, extra services and parts from the quotation
+    let extras = null;
+    try { extras = d.extras ? JSON.parse(d.extras) : null; } catch (e) { extras = null; }
+    const exWrap = document.getElementById('bd-extras-wrap');
+    if (extras && extras.items && extras.items.length) {
+      const money = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      const tag = { approved: ['#dcfce7', '#15803d', extras.in_person ? 'Approved at the shop' : 'Approved'],
+                    declined: ['#fee2e2', '#b91c1c', extras.in_person ? 'Declined at the shop' : 'Declined'],
+                    awaiting_customer: ['#fef3c7', '#92400e', 'Waiting for the customer'] }[extras.status] || ['#f3f4f6', '#4b5563', extras.status];
+      document.getElementById('bd-extras-tag').innerHTML = `<span style="font-size:0.66rem;font-weight:700;padding:0.2rem 0.55rem;border-radius:99px;background:${tag[0]};color:${tag[1]};">${tag[2]}</span>`;
+      document.getElementById('bd-extras-list').innerHTML = extras.items.map(it => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem;padding:0.55rem 0.8rem;background:#f9fafb;border:1px solid var(--border);border-radius:8px;${it.billed || extras.status === 'awaiting_customer' ? '' : 'opacity:0.6;'}">
+          <div style="min-width:0;"><div style="font-weight:600;font-size:0.82rem;color:var(--text);${it.billed || extras.status === 'awaiting_customer' ? '' : 'text-decoration:line-through;'}">${it.name.replace(/</g, '&lt;')}</div>
+            <div style="font-size:0.68rem;color:var(--muted);">${it.kind}${it.billed ? '' : (extras.status === 'awaiting_customer' ? ' · waiting for approval' : ' · not included')}</div></div>
+          <span style="font-weight:700;font-size:0.85rem;color:var(--text);white-space:nowrap;">${money(it.amount)}</span>
+        </div>`).join('');
+      exWrap.style.display = 'block';
+    } else {
+      exWrap.style.display = 'none';
+    }
+
+    // Total: the whole bill (booked service + what was added), not only the booked service
+    let totalAmount = parseFloat(d.totalAmount || 0);
+    if (extras && extras.total != null && !(d.status === 'completed' && totalAmount > 0)) totalAmount = extras.total;
     const totalWrap = document.getElementById('bd-total-wrap');
     if (totalAmount > 0) {
       document.getElementById('bd-total').textContent = '₱' + totalAmount.toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});

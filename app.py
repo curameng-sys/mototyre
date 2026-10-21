@@ -580,8 +580,42 @@ class Product(db.Model):
     price       = db.Column(db.Float, nullable=False)
     stock       = db.Column(db.Integer, default=0)
     image_url   = db.Column(db.String(500))
+    image_blob  = db.Column(db.LargeBinary(length=2**24 - 1), nullable=True)  # the photo itself when there is no cloud storage
+    image_mime  = db.Column(db.String(40), nullable=True)
     created_at  = db.Column(db.DateTime, default=ph_now)
     order_items = db.relationship('OrderItem', backref='product', lazy=True)
+
+
+
+def product_img_src(p):
+    """Where a product's photo can really be loaded from, or '' when there is none:
+    a cloud URL; a photo kept in the database (shared by the shop and customer apps, wherever each one runs);
+    or an older photo file, only if this app can actually find that file on its own disk."""
+    v = (p.image_url or '').strip()
+    if not v:
+        return ''
+    if v.startswith('http'):
+        return v
+    if v.startswith('db'):
+        return url_for('product_photo', pid=p.id, v=v[3:] or '0')
+    if os.path.exists(os.path.join(app.root_path, 'static', 'product_photos', v)):
+        return url_for('static', filename='product_photos/' + v)
+    return ''                                        # the file only exists where it was uploaded: show "No photo yet"
+
+
+@app.route('/product-photo/<int:pid>')
+def product_photo(pid):
+    """Serves a product photo that is stored in the database."""
+    p = Product.query.get_or_404(pid)
+    if not p.image_blob:
+        abort(404)
+    resp = make_response(p.image_blob)
+    resp.headers['Content-Type'] = p.image_mime or 'image/jpeg'
+    resp.headers['Cache-Control'] = 'public, max-age=86400'      # the link carries a version, so a new photo is a new link
+    return resp
+
+
+app.jinja_env.filters['product_img'] = product_img_src
 
 
 class Order(db.Model):
@@ -4203,6 +4237,8 @@ with app.app_context():
         "ALTER TABLE quotation ADD COLUMN decided_in_person TINYINT(1) DEFAULT 0",
         "ALTER TABLE quotation ADD COLUMN decided_by_staff VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE quotation ADD COLUMN parts_deducted TINYINT(1) DEFAULT 0",
+        "ALTER TABLE product ADD COLUMN image_blob MEDIUMBLOB DEFAULT NULL",
+        "ALTER TABLE product ADD COLUMN image_mime VARCHAR(40) DEFAULT NULL",
         "ALTER TABLE quotation_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
