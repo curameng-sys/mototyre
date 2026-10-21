@@ -12,11 +12,35 @@ customer and admin app upload their own profile pictures, and the customer
 app also uploads return-evidence photos, so both services need this set.
 """
 import os
+import re
 import logging
-import cloudinary
-import cloudinary.uploader
 
 logger = logging.getLogger(__name__)
+
+
+def _clean_cloudinary_url():
+    """The Cloudinary SDK reads CLOUDINARY_URL the moment it is imported and crashes the whole app (failed deploy)
+    if the value is not exactly cloudinary://<key>:<secret>@<cloud>. Tidy up the usual copy-paste slips first, and if
+    it is still not usable, ignore it with a log line instead of taking the site down (photos then go to the database)."""
+    raw = os.environ.get('CLOUDINARY_URL')
+    if raw is None:
+        return
+    v = raw.strip().strip('"').strip("'").strip()
+    if v.upper().startswith('CLOUDINARY_URL='):          # the key name pasted into the value box
+        v = v.split('=', 1)[1].strip().strip('"').strip("'").strip()
+    if re.fullmatch(r'cloudinary://[^:@\s]+:[^@\s]+@[^\s/]+', v):
+        os.environ['CLOUDINARY_URL'] = v
+        return
+    os.environ.pop('CLOUDINARY_URL', None)
+    logger.error('CLOUDINARY_URL is not in the form cloudinary://<api_key>:<api_secret>@<cloud_name> - ignoring it '
+                 '(check the colon between the key and the secret). Photos will be kept in the database instead.')
+    print('[cloudinary] CLOUDINARY_URL ignored: it must look like cloudinary://<api_key>:<api_secret>@<cloud_name>')
+
+
+_clean_cloudinary_url()
+
+import cloudinary            # noqa: E402  (imported after the check above on purpose)
+import cloudinary.uploader   # noqa: E402
 
 CLOUDINARY_CONFIGURED = bool(os.getenv('CLOUDINARY_URL') or os.getenv('CLOUDINARY_CLOUD_NAME'))
 

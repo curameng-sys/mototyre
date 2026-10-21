@@ -5327,11 +5327,19 @@ def admin_api_services():
 
 
 
+PRODUCT_PHOTO_TYPES = {'png', 'jpg', 'jpeg', 'jfif', 'webp', 'gif'}   # the picker offers JPG, PNG and WEBP
+
+
+def _product_photo_ok(file):
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    return ext in PRODUCT_PHOTO_TYPES or (file.mimetype or '').startswith('image/')
+
+
 def _save_product_image(file):
     """Uploads a product photo to Cloudinary (falls back to local disk only
     when Cloudinary isn't configured, e.g. local dev) and returns the URL/path
     to store on Product.image_url, or None if no usable file was given."""
-    if not file or file.filename == '' or not allowed_file(file.filename):
+    if not file or file.filename == '' or not _product_photo_ok(file):
         return None
     cloud_url = upload_image(file, 'product_photos')
     if cloud_url:
@@ -5346,6 +5354,14 @@ def _save_product_image(file):
 
 
 LOW_STOCK_BELOW = 5   # same cut-off the Manage Products table uses for its amber "low" count
+
+
+def _product_photo_error():
+    msg = "That photo can't be used. Choose a JPG, PNG or WEBP photo."
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': False, 'error': msg})
+    flash(msg, 'danger')
+    return redirect(url_for('admin_dashboard'))
 
 
 def _product_change_response(product, saved_msg):
@@ -5368,7 +5384,10 @@ def _product_change_response(product, saved_msg):
 @login_required
 @require_admin_or_staff
 def add_product():
-    _img = _save_product_image(request.files.get('image'))
+    _file = request.files.get('image')
+    _img = _save_product_image(_file)
+    if _file and _file.filename and not _img:
+        return _product_photo_error()
     new_p = Product(
         name=request.form['name'], category=request.form['category'],
         description=request.form.get('description', ''),
@@ -5394,7 +5413,11 @@ def edit_product(pid):
     p.price       = float(request.form['price'])
     p.stock       = int(request.form['stock'])
     p.description = request.form.get('description', '')
-    new_image = _save_product_image(request.files.get('image'))
+    _file = request.files.get('image')
+    new_image = _save_product_image(_file)
+    if _file and _file.filename and not new_image:
+        db.session.rollback()                     # keep the product as it was rather than silently keeping the old photo
+        return _product_photo_error()
     if new_image:
         p.image_url, p.image_blob, p.image_mime = new_image
     elif request.form.get('remove_image') == '1':
