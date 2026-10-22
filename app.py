@@ -75,7 +75,11 @@ _secure_cookies = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
 # one typically isn't even configured for it — so this is opt-in by host,
 # never something that has to be remembered as a separate setting.
 _db_host = urlparse(DATABASE_URL.replace('mysql+pymysql://', 'mysql://', 1)).hostname or ''
-_engine_options = {} if _db_host in ('localhost', '127.0.0.1', '') else {'connect_args': {'ssl': {'ssl': {}}}}
+# pre_ping + recycle: a hosted MySQL closes idle connections, and the next request that reuses a
+# dead one fails with "MySQL server has gone away" — a random-looking 500. Ping first, and retire
+# connections before the server's idle timeout.
+_engine_options = {} if _db_host in ('localhost', '127.0.0.1', '') else {
+    'connect_args': {'ssl': {'ssl': {}}}, 'pool_pre_ping': True, 'pool_recycle': 280}
 app.config.update(
     SECRET_KEY=os.getenv('SECRET_KEY', 'mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4'),
     SESSION_COOKIE_NAME='mototyre_customer_session',

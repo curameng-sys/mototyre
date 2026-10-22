@@ -8727,7 +8727,21 @@ function showToast(msg, type) {
       data.bookings.forEach(b => {
         const known = bookingsData[b.id];
         if (!known || known.status === b.status) return;
+        const wasCancelled = known.status === 'cancelled';
         known.status = b.status;
+        // The shop restored a cancelled booking (or cancelled one): bring back / remove the Cancel button,
+        // and redraw the calendar, upcoming list and booking limits so it counts again without a reload.
+        if (wasCancelled || b.status === 'cancelled') {
+          const mbRow = document.querySelector(`tr.booking-row[data-booking-id="${b.id}"]`);
+          const slot = mbRow && mbRow.querySelector('.mb-cancel-slot');
+          if (slot) {
+            slot.innerHTML = b.status === 'confirmed'
+              ? `<button type="button" onclick="event.stopPropagation(); openCancelFor(${b.id})" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.66rem;padding:0.25em 0.7em;border-radius:99px;background:#fff;border:1px solid #fecaca;color:#b91c1c;cursor:pointer;">Cancel booking</button>`
+              : '';
+          }
+          if (typeof renderCalendar === 'function') renderCalendar();
+          if (typeof refreshBookingLimits === 'function') refreshBookingLimits();
+        }
         const label = badgeText(b.status);
         const cls   = bookingBadgeClass(b.status);
         // Update full bookings table row

@@ -1006,27 +1006,14 @@
               </tr>
             </thead>
             <tbody>
-              {# Group bookings by their shared booking_batch (set only when 2+ bookings
-                 were submitted together — customer queue or walk-in multi-service).
-                 A single booking always gets its own unique key, so it never merges
-                 with any other booking, even one made later the same day. #}
-              {% set ns = namespace(seen=[], groups={}) %}
+              {# One row per booking, so every row has its own status, time, mechanic and action buttons
+                 (one motor can finish before the other). Bookings submitted together through the queue
+                 share a booking_batch and are tagged "Queue 1 of 2" instead of being merged. #}
               {% for b in all_bookings %}
-                {% set key = b.booking_batch if b.booking_batch else ('single-' + b.id|string) %}
-                {% if key not in ns.seen %}
-                  {% set _ = ns.seen.append(key) %}
-                {% endif %}
-              {% endfor %}
-
-              {% for group_key in ns.seen %}
-                {% set group_bookings = [] %}
-                {% for b in all_bookings %}
-                  {% set key = b.booking_batch if b.booking_batch else ('single-' + b.id|string) %}
-                  {% if key == group_key %}
-                    {% set _ = group_bookings.append(b) %}
-                  {% endif %}
-                {% endfor %}
-                {% set b = group_bookings[0] %}
+                {% set group_bookings = [b] %}
+                {% set queue_sibs = ((all_bookings | selectattr('booking_batch', 'equalto', b.booking_batch) | sort(attribute='id') | list) if b.booking_batch else []) %}
+                {% set queue_pos = (queue_sibs | map(attribute='id') | list).index(b.id) + 1 if queue_sibs else 0 %}
+                {% set queue_done = queue_sibs | selectattr('status', 'equalto', 'completed') | list | length %}
                 {% set b_wait       = group_bookings[0].id in awaiting_pay %}
                 {% set is_done      = (group_bookings | selectattr('status','equalto','completed') | list | length == group_bookings | length) and not b_wait %}
                 {% set is_cancelled = group_bookings | selectattr('status','equalto','cancelled') | list | length == group_bookings | length %}
@@ -1071,7 +1058,7 @@
                     data-total-amount="{{ group_bookings | sum(attribute='total_amount') }}"
                     data-created="{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}"
                     data-walkin="{{ '1' if b.walkin_customer_id else '' }}">
-                  <td>{{ b.id }}{% if group_bookings|length > 1 %}<span style="font-size:0.6rem;color:#5b21b6;margin-left:3px;">+{{ group_bookings|length - 1 }}</span>{% endif %}</td>
+                  <td{% if queue_sibs|length > 1 %} style="box-shadow:inset 3px 0 0 #7c3aed;"{% endif %}>{{ b.id }}</td>
                   <td>
                     <div class="bk-name" style="font-weight:600;color:var(--text);">
                       {% if b.walkin_customer_id %}
@@ -1082,14 +1069,14 @@
                       {% endif %}
                     </div>
                     {% if b.motorcycle_model %}
-                      <div style="font-size:0.7rem;color:var(--muted);">{{ b.motorcycle_model }}</div>
+                      <div style="font-size:0.7rem;color:var(--muted);">{{ b.motorcycle_model }}{% if b.motorcycle_plate %} · {{ b.motorcycle_plate }}{% endif %}</div>
+                    {% endif %}
+                    {% if queue_sibs|length > 1 %}
+                      <div style="margin-top:0.25rem;"><span title="Booked together in one queue submission (BKG-{{ queue_sibs | map(attribute='id') | map('string') | join(', BKG-') }})" style="font-size:0.63rem;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;padding:0.12rem 0.45rem;border-radius:4px;font-weight:700;white-space:nowrap;">Queue {{ queue_pos }} of {{ queue_sibs|length }}{% if queue_done %} · {{ queue_done }} done{% endif %}</span></div>
                     {% endif %}
                   </td>
                   <td>
                     {{ b.service }}
-                    {% if group_bookings|length > 1 %}
-                      <span style="font-size:0.68rem;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;padding:0.15rem 0.5rem;border-radius:4px;margin-left:0.4rem;vertical-align:middle;font-weight:600;">+{{ group_bookings|length - 1 }} more</span>
-                    {% endif %}
                     <div style="font-size:0.7rem;color:var(--muted);">₱{{ (booking_service_price(b.service))|money }}</div>
                     {% if b.assigned_mechanic_name %}
                       {% set _ms = mech_status.get(b.assigned_mechanic_name, 'available') %}
@@ -1116,10 +1103,15 @@
                       {% if b.quotation and b.quotation.status == 'awaiting_customer' %}
                         <span class="badge" style="background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe;">Quotation sent</span>
                         <div style="margin-top:0.3rem;font-size:0.7rem;color:var(--muted);">Waiting for customer</div>
+                        {# An in-person answer is chosen on the quotation page ("The customer is at the shop"), so a quotation still
+                           waiting here was sent online and the customer answers it themselves. Only a walk-in with no account has
+                           no phone to answer on, so the counter buttons stay for them. #}
+                        {% if b.walkin_customer_id %}
                         <div style="margin-top:0.35rem;display:flex;gap:0.3rem;flex-wrap:wrap;" onclick="event.stopPropagation()">
                           <button type="button" onclick="decideInPerson({{ b.quotation.id }}, 'approve', {{ (b.customer.fullname if b.customer else b.contact_name or 'The customer')|tojson|forceescape }}, {{ b.quotation.total_amount or 0 }})" style="background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;padding:0.2rem 0.55rem;border-radius:6px;font-size:0.66rem;font-weight:700;font-family:inherit;cursor:pointer;">Approved in person</button>
                           <button type="button" onclick="decideInPerson({{ b.quotation.id }}, 'decline', {{ (b.customer.fullname if b.customer else b.contact_name or 'The customer')|tojson|forceescape }}, {{ b.quotation.total_amount or 0 }})" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.2rem 0.55rem;border-radius:6px;font-size:0.66rem;font-weight:700;font-family:inherit;cursor:pointer;">Declined in person</button>
                         </div>
+                        {% endif %}
                       {% elif b.quotation and b.quotation.status == 'approved' %}
                         <span class="badge" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;">Quotation approved</span>
                         <div style="margin-top:0.3rem;">
@@ -2307,7 +2299,7 @@
       <div class="page-header">
         <div class="page-header-left">
           <div class="page-title">Transaction <span class="accent">History</span></div>
-          <div class="page-sub">All completed transactions — job orders, in-store sales, and online orders.</div>
+          <div class="page-sub">Every paid transaction — service bookings, job orders, in-store sales, online orders, and refunds.</div>
         </div>
       </div>
 
@@ -2315,9 +2307,11 @@
       <div class="filter-bar">
         <select id="txn-type" onchange="filterTxns()">
           <option value="">Type ▼</option>
+          <option value="Booking">Booking</option>
           <option value="Job Order">Job Order</option>
           <option value="Sale">Sale</option>
           <option value="Online">Online</option>
+          <option value="Refund">Refund</option>
         </select>
         <select id="txn-payment" onchange="filterTxns()">
           <option value="">Payment ▼</option>
@@ -5061,7 +5055,9 @@
     try {
       const res = await fetch(`/booking/${bid}/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await res.json();
-      if (data.success) { showToast('Booking restored.', 'success'); loadDaySchedule(); }
+      // The Manage Bookings table and its tab counts are rendered by the server, so reload to move the
+      // booking out of the Cancelled tab and back into Confirmed.
+      if (data.success) { try { sessionStorage.setItem('mt_toast', 'Booking restored.'); } catch (e) {} location.reload(); }
       else showToast(data.error || 'Could not restore.', 'error');
     } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
@@ -8715,6 +8711,8 @@ function _applyTxnPagination(filtered) {
     'Job Order': 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe',
     'Sale':      'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0',
     'Online':    'background:#fff7ed;color:#c2410c;border:1px solid #fed7aa',
+    'Booking':   'background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe',
+    'Refund':    'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca',
   };
   const payColors = {
     'CASH':  'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0',
@@ -8738,7 +8736,7 @@ function _applyTxnPagination(filtered) {
       <td><span style="display:inline-block;padding:.2rem .55rem;border-radius:99px;font-size:.63rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;${typeColors[t.type]||''}">${t.type}</span></td>
       <td style="font-weight:600;color:var(--text);">${t.customer}</td>
       <td><span style="display:inline-block;padding:.2rem .55rem;border-radius:99px;font-size:.63rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;${payColors[t.payment]||''}">${t.payment}</span></td>
-      <td style="font-size:1rem;font-weight:700;letter-spacing:.01em;color:var(--text);">₱${t.total.toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      <td style="font-size:1rem;font-weight:700;letter-spacing:.01em;color:${t.total < 0 ? 'var(--red)' : 'var(--text)'};">${t.total < 0 ? '−' : ''}₱${Math.abs(t.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
       <td style="font-size:.78rem;color:var(--muted);">${t.date}</td>
     </tr>`).join('');
 

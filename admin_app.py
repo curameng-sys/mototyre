@@ -1114,9 +1114,16 @@ def _revenue_transactions(date_from=None, date_to=None):
 
     txns = []
 
-    for b in Booking.query.filter(Booking.status == 'completed', Booking.total_amount > 0,
-                                   Booking.is_archived == False).all():
-        d = b.completed_at or b.created_at
+    # Archiving only tidies the Bookings list — a paid job is still a sale, so archived ones stay here.
+    # A booking whose invoice was sent but not yet paid isn't revenue until the cash is in / GCash succeeds.
+    _unpaid_invoiced = {r[0] for r in db.session.query(Notification.booking_id).filter(
+        Notification.type == 'invoice', Notification.booking_id.isnot(None)).all()}
+    if _unpaid_invoiced:
+        _unpaid_invoiced = {b.id for b in Booking.query.filter(Booking.id.in_(_unpaid_invoiced), Booking.invoice_paid == False).all()}
+    for b in Booking.query.filter(Booking.status == 'completed', Booking.total_amount > 0).all():
+        if b.id in _unpaid_invoiced:
+            continue
+        d = b.invoice_paid_at or b.completed_at or b.created_at
         if not in_range(d):
             continue
         cust = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown')
@@ -1160,6 +1167,19 @@ def _revenue_transactions(date_from=None, date_to=None):
             'date': d, 'status': 'Completed', 'record_id': o.id,
         })
 
+    # A paid Ship to Address order the shop cancelled was refunded in full through PayMongo: the sale stays on
+    # the books (dated when it was paid) and the refund is its own negative line, so the books show both.
+    for o in Order.query.filter(Order.status == 'refunded', Order.paid_at.isnot(None), Order.refund_amount.isnot(None)).all():
+        cust = o.customer.fullname if o.customer else 'Unknown'
+        ref = f'ORD-{o.id:03d}'
+        if in_range(o.paid_at):
+            txns.append({'ref': ref, 'type': 'online', 'customer': cust, 'payment': (o.payment_method or 'gcash').upper(),
+                         'amount': o.refund_amount, 'date': o.paid_at, 'status': 'Completed', 'record_id': o.id})
+        if in_range(o.refunded_at):
+            txns.append({'ref': f'RF-ORD-{o.id:03d}', 'type': 'refund', 'customer': cust, 'payment': '—',
+                         'amount': -o.refund_amount, 'date': o.refunded_at, 'status': 'Refunded',
+                         'record_id': o.id, 'refund_for': ref, 'return_ref': 'Cancelled by the shop'})
+
     for rr in ReturnRequest.query.filter(ReturnRequest.resolution == 'refund', ReturnRequest.status == 'resolved').all():
         d = rr.resolved_at
         if not in_range(d):
@@ -1185,6 +1205,8 @@ def _order_refund_totals():
     for rr in ReturnRequest.query.filter(ReturnRequest.resolution == 'refund', ReturnRequest.status == 'resolved',
                                           ReturnRequest.order_id.isnot(None)).all():
         totals[rr.order_id] = totals.get(rr.order_id, 0) + (rr.refund_amount or 0)
+    for o in Order.query.filter(Order.status == 'refunded', Order.refund_amount.isnot(None)).all():
+        totals[o.id] = totals.get(o.id, 0) + o.refund_amount     # shop-cancelled paid order: refunded in full
     if not totals:
         return {}
     orders_by_id = {o.id: o for o in Order.query.filter(Order.id.in_(totals.keys())).all()}
@@ -3127,7 +3149,15 @@ def restore_booking_day_panel(bid):
         return jsonify({'success': False, 'error': 'This booking is not cancelled.'}), 400
     booking.status = 'confirmed'
     db.session.commit()
-    return jsonify({'success': True, 'message': 'Booking restored.'})
+
+    ref = f'BKG-{booking.id:03d}'
+    date_str = booking.date.strftime('%b %d, %Y')
+    time_str = booking.time.strftime('%I:%M %p')
+    title = f'Restored — {booking.date.strftime("%b %d")} at {time_str}'
+    body = (f"Good news — your {booking.service} appointment ({ref}) on {date_str} at {time_str} is back on and "
+            f"confirmed. Nothing else changed. If this time no longer works for you, you can cancel or rebook from your dashboard.")
+    emailed = _notify_customer(booking, title, body, priority=True, status='confirmed', cta_label='View My Bookings')
+    return jsonify({'success': True, 'emailed': emailed, 'message': 'Booking restored.'})
 
 
 @admin_app.route('/api/blocked-slots', methods=['GET', 'POST', 'DELETE'])
@@ -6915,62 +6945,13 @@ def api_transactions():
     except ValueError:
         _last_viewed = None
 
-    paid_jos = JobOrder.query.join(Payment, Payment.job_order_id == JobOrder.id).all()
-    for jo in paid_jos:
+    # Same single source as the Dashboard revenue card and Reports, so this page can never miss a
+    # booking, a paid online order or a refund that those show.
+    _labels = {'booking': 'Booking', 'job_order': 'Job Order', 'sale': 'Sale', 'online': 'Online', 'refund': 'Refund'}
+    for t in _revenue_transactions():
         txns.append({
-            '_dt': jo.payment.paid_at,
-            'ref': f'JO-{jo.id:03d}',
-            'type': 'Job Order',
-            'customer': jo.customer_name or 'Unknown',
-            'payment': (jo.payment.payment_method or 'cash').upper(),
-            'status': 'Paid',
-            'total': jo.total_amount,
-        })
-
-    sale_orders = Order.query.filter(
-        Order.walkin_customer_id != None, Order.status == 'completed'
-    ).filter(Order.items.any()).all()
-    for o in sale_orders:
-        wc = WalkInCustomer.query.get(o.walkin_customer_id) if o.walkin_customer_id else None
-        txns.append({
-            '_dt': o.created_at,
-            'ref': f'ORD-{o.id:03d}',
-            'type': 'Sale',
-            'customer': wc.name if wc else 'Walk-in',
-            'payment': (o.payment_method or 'cash').upper(),
-            'status': 'Completed',
-            'total': o.total_amount,
-        })
-
-    # In-Store Parts Purchase sales — a typed name, not a WalkInCustomer
-    # lookup, so they're tracked separately via is_instore rather than
-    # walkin_customer_id.
-    instore_orders = Order.query.filter(
-        Order.is_instore == True, Order.walkin_customer_id == None, Order.status == 'completed'
-    ).filter(Order.items.any()).all()
-    for o in instore_orders:
-        txns.append({
-            '_dt': o.created_at,
-            'ref': f'SALE-{o.id:03d}',
-            'type': 'Sale',
-            'customer': o.contact_name or 'Walk-in',
-            'payment': (o.payment_method or 'cash').upper(),
-            'status': 'Completed',
-            'total': o.total_amount,
-        })
-
-    online_orders = Order.query.filter(
-        Order.walkin_customer_id == None, Order.is_instore == False, Order.status == 'completed'
-    ).filter(Order.items.any()).all()
-    for o in online_orders:
-        txns.append({
-            '_dt': o.created_at,
-            'ref': f'ORD-{o.id:03d}',
-            'type': 'Online',
-            'customer': o.customer.fullname if o.customer else 'Unknown',
-            'payment': (o.payment_method or 'cash').upper(),
-            'status': 'Completed',
-            'total': o.total_amount,
+            '_dt': t['date'], 'ref': t['ref'], 'type': _labels.get(t['type'], t['type'].title()),
+            'customer': t['customer'], 'payment': t['payment'], 'status': t['status'], 'total': t['amount'],
         })
 
     txns.sort(key=lambda x: x['_dt'], reverse=True)
