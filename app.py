@@ -1046,6 +1046,13 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+# Evidence photos come straight from phones and downloads, so they arrive as .webp / .jfif / .bmp too.
+# The page already accepts any image, so the server must not silently drop the same ones.
+RETURN_PHOTO_EXTENSIONS = ALLOWED_EXTENSIONS | {'jfif', 'jpe', 'webp', 'bmp'}
+def allowed_photo(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in RETURN_PHOTO_EXTENSIONS
+
+
 def cleanup_abandoned_gcash_orders():
     cutoff = ph_now() - timedelta(minutes=30)
     abandoned = Order.query.filter(
@@ -2903,7 +2910,7 @@ def _save_return_photos(files):
     for file in files[:RETURN_PHOTOS_MAX]:
         if not (file and file.filename):
             continue
-        if not allowed_file(file.filename):
+        if not allowed_photo(file.filename):
             skipped += 1
             continue
         file.seek(0, os.SEEK_END)
@@ -2965,7 +2972,7 @@ def create_return_request():
         incoming_photos = incoming_photos[:RETURN_NEW_PHOTOS_MAX]
     valid_photo_count = 0
     for f in incoming_photos:
-        if not allowed_file(f.filename):
+        if not allowed_photo(f.filename):
             continue
         f.seek(0, os.SEEK_END)
         size = f.tell()

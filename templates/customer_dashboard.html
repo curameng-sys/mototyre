@@ -1081,7 +1081,7 @@
                     </div>
                   </div>
                 </td>
-                <td>₱{{ (o.total_amount)|money }}</td>
+                <td>₱{{ (o.total_amount + ((o.shipping_fee or 0) if (o.delivery_method == 'ship' and o.paid_at) else 0))|money }}</td>
                 <td>
               {{ o|order_badge }}
             </td>
@@ -1556,7 +1556,7 @@
               {% endif %}
             </td>
             <td>
-              <div style="display:flex;align-items:center;gap:0.4rem;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;"><span style="color:var(--fg-3);display:flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span>₱{{ (o.total_amount)|money }}</div>
+              <div style="display:flex;align-items:center;gap:0.4rem;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;"><span style="color:var(--fg-3);display:flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span>₱{{ (o.total_amount + ((o.shipping_fee or 0) if (o.delivery_method == 'ship' and o.paid_at) else 0))|money }}</div>
               {% if o.payment_method == 'gcash' %}
               <span style="display:inline-flex;align-items:center;gap:0.3rem;margin-top:0.25rem;font-family:'Syne',sans-serif;font-weight:700;font-size:0.62rem;padding:0.15em 0.6em;border-radius:6px;background:#dbeafe;color:#1d4ed8;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>GCash</span>
               {% else %}
@@ -7292,6 +7292,7 @@ function handleReturnPhotoFiles(fileList) {
   for (const f of files) {
     if (_rfPhotos.length >= RF_MAX_PHOTOS) { skipped++; continue; }
     if (!f.type.startsWith('image/')) { skipped++; continue; }
+    if (!/\.(png|jpe?g|jfif|jpe|gif|webp|bmp)$/i.test(f.name)) { skipped++; continue; }   // same list the server accepts, so a photo shown here is never dropped later
     if (f.size > 5 * 1024 * 1024) { skipped++; continue; }
     _rfPhotos.push(f);
   }
