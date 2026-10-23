@@ -910,7 +910,7 @@ def _verify_otp(email, otp_input, purpose):
     db.session.commit()
     return {"valid": True, "message": "OTP verified."}
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'jfif', 'jpe', 'webp', 'bmp'}   # phone/download screenshots arrive as .webp / .jfif too
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
