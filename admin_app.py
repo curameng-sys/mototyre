@@ -1214,6 +1214,19 @@ def _order_refund_totals():
             for oid, amt in totals.items()}
 
 
+def _revenue_for_period(period):
+    """Net revenue for the Dashboard card: This Month (default, so the first thing seen is how the shop is doing
+    now), This Year, or All Time. The records themselves are never reset; only the date range changes."""
+    today = ph_now().date()
+    if period == 'year':
+        date_from = date(today.year, 1, 1)
+    elif period == 'all':
+        date_from = None
+    else:
+        period, date_from = 'month', date(today.year, today.month, 1)
+    return period, _reports_summary(date_from, today if date_from else None)['net_revenue']
+
+
 def _reports_summary(date_from=None, date_to=None):
     """Everything the Dashboard's revenue card, the Reports & Sales page,
     and Transaction History all read from — one computation, so they can
@@ -1397,7 +1410,7 @@ def admin_dashboard():
     # Sales page and Transaction History read from, so this card can never
     # drift from either of them.
     _rpt = _reports_summary()
-    _total_rev = _rpt['net_revenue']
+    _rev_period, _total_rev = _revenue_for_period(request.args.get('period', 'month'))
     all_orders      = Order.query.filter_by(is_archived=False).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
     archived_orders = Order.query.filter_by(is_archived=True).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
 
@@ -1540,7 +1553,7 @@ def api_dashboard_stats():
     numbers admin_dashboard() computes for the initial page load, kept to
     just what the stat cards / chart / Pending Actions / Recent Bookings
     actually need, so polling this stays cheap."""
-    _total_rev = _reports_summary()['net_revenue']
+    _rev_period, _total_rev = _revenue_for_period(request.args.get('period', 'month'))
 
     _booking_status_counts = dict(db.session.query(Booking.status, func.count(Booking.id)).filter(Booking.is_archived == False).group_by(Booking.status).all())
     if 'inprogress' in _booking_status_counts:
@@ -1594,6 +1607,7 @@ def api_dashboard_stats():
         'total_orders': Order.query.filter_by(is_archived=False).filter(Order.items.any()).count(),
         'total_users': User.query.count(),
         'total_revenue': f'{_total_rev:,.2f}',
+        'revenue_period': _rev_period,
         'booking_status_counts': _booking_status_counts,
         'order_status_counts': dict(db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()),
         'new_users_today': User.query.filter(func.date(User.id) == date.today()).count(),

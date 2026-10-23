@@ -760,7 +760,16 @@
         </div>
         <div class="stat-card green">
           <div class="stat-icon" style="font-size:20px;font-weight:700;line-height:1;">₱</div>
-          <div class="stat-value" id="stat-total-revenue">₱{{ total_revenue }}</div><div class="stat-label">Total Revenue</div>
+          <div class="stat-value" id="stat-total-revenue">₱{{ total_revenue }}</div>
+          <div class="stat-label" style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">Revenue
+            {# The records are never reset; this only picks the date range that is added up. #}
+            <select id="rev-period" onchange="setRevPeriod(this.value)" title="Which period to add up. Nothing is deleted; All Time is every payment ever recorded."
+                    style="font-family:inherit;font-size:0.7rem;font-weight:600;padding:0.1rem 0.3rem;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);cursor:pointer;">
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
         </div>
         <div class="stat-card orange">
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
@@ -8821,10 +8830,25 @@ function _setStatText(id, text) {
   }
 }
 
+// Revenue card period: This Month by default; the choice is remembered in this browser.
+let _revPeriod = 'month';
+try { _revPeriod = localStorage.getItem('revPeriod') || 'month'; } catch (e) {}
+if (!['month', 'year', 'all'].includes(_revPeriod)) _revPeriod = 'month';
+function setRevPeriod(p) {
+  _revPeriod = p;
+  try { localStorage.setItem('revPeriod', p); } catch (e) {}
+  refreshDashboardOverview();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('rev-period');
+  if (sel) sel.value = _revPeriod;
+  if (_revPeriod !== 'month') refreshDashboardOverview();     // the page is drawn with This Month; switch to the saved choice
+});
+
 async function refreshDashboardOverview() {
   if (!document.getElementById('sec-dashboard')) return;
   try {
-    const res = await fetch('/api/dashboard-stats');
+    const res = await fetch('/api/dashboard-stats?period=' + encodeURIComponent(_revPeriod));
     if (!res.ok) return;
     const d = await res.json();
 
