@@ -4759,9 +4759,13 @@ function renderNotifications() {
 
   // Filter
   let filtered = notifications;
-  if (activeFilter === 'booking') filtered = notifications.filter(n => n.type === 'booking');
+  // "Appointments" is everything about a booking: its status, quotation, invoice/payment and reminders,
+  // not just the type 'booking' rows. "Unread" uses the same rule as the bell's red number, so the tab
+  // and the badge always show the same items (a quotation or invoice still waiting on the customer counts).
+  const APPT_TYPES = ['booking', 'quotation', 'quotation_decision', 'invoice', 'reminder'];
+  if (activeFilter === 'booking') filtered = notifications.filter(n => APPT_TYPES.includes(n.type));
   else if (activeFilter === 'order') filtered = notifications.filter(n => n.type === 'order');
-  else if (activeFilter === 'unread') filtered = notifications.filter(n => !n.is_read);
+  else if (activeFilter === 'unread') filtered = notifications.filter(stillPending);
 
   // Anything the customer might want to push back on (a delay, a mechanic
   // swap, a reschedule, more info the shop needs, an item that has to come
@@ -8702,7 +8706,21 @@ function showToast(msg, type) {
 
 /* ══ REALTIME POLLING ══ */
 (function() {
-  const POLL_MS = 30000;   // the Home bars and status labels refresh every 30 seconds
+  const POLL_MS = 4000;    // the Home bars, status labels, bell and claims refresh every 4 seconds
+  let _claimsSig = null;   // fingerprint of the customer's return claims as last seen
+
+  // A claim the shop just moved along (approved, refund sent, replacement ready...) is drawn from data baked into
+  // the page, so the page itself has to be re-read. Only do that when it can't interrupt anything: nothing open,
+  // nothing being typed, and not in the middle of picking a booking slot. The open section is restored on reload.
+  function _safeToReload() {
+    if (document.hidden) return false;
+    if (document.querySelector('.modal-overlay.open')) return false;
+    const a = document.activeElement;
+    if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return false;
+    const book = document.getElementById('sec-book');
+    if (book && book.classList.contains('active')) return false;
+    return true;
+  }
 
   function badgeText(status) {
     if (status === 'inspection') return 'Inspection & Estimation';
@@ -8723,6 +8741,15 @@ function showToast(msg, type) {
       const res = await fetch('/api/customer/poll');
       if (!res.ok) return;
       const data = await res.json();
+
+      // ── Return claims ── (first poll only remembers the fingerprint; a later change means the shop acted)
+      if (data.returns_sig !== undefined) {
+        if (_claimsSig === null) _claimsSig = data.returns_sig;
+        else if (data.returns_sig !== _claimsSig) {
+          if (_safeToReload()) { location.reload(); return; }
+          // can't refresh right now: keep the old fingerprint so the next quiet tick tries again
+        }
+      }
 
       // ── Bookings ──
       data.bookings.forEach(b => {
@@ -8797,8 +8824,9 @@ function showToast(msg, type) {
     } catch(e) {}
   }
 
-  // First poll after 30 s, then every 30 s
-  setTimeout(() => { poll(); setInterval(poll, POLL_MS); }, POLL_MS);
+  // First poll after 4 s, then every 4 s while the tab is in view; coming back to the tab polls right away
+  setTimeout(() => { poll(); setInterval(() => { if (!document.hidden) poll(); }, POLL_MS); }, POLL_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 })();
 
 

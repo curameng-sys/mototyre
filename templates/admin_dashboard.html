@@ -8885,6 +8885,85 @@ function _renderRecentBookings(rows) {
 
 setInterval(refreshDashboardOverview, 15000);
 
+// ── Live updates: when a customer (or another staff member) changes something, the open lists refresh
+// by themselves. The server gives a short fingerprint per area every few seconds; an area is re-read only
+// when its fingerprint changed, and never while a pop-up is open or a field is being used.
+(function liveUpdates() {
+  const POLL_MS = 4000;
+  let last = null;                      // fingerprints from the previous check
+  const pending = new Set();             // areas that changed but could not be refreshed yet
+  let busy = false;
+
+  function safeNow() {
+    if (document.hidden) return false;
+    if (document.querySelector('.modal-overlay.open')) return false;
+    const a = document.activeElement;
+    return !(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName));
+  }
+
+  // Re-read a server-drawn section from the dashboard page and swap its contents, keeping what the person
+  // had typed or picked in its filter bar.
+  async function swapSections(ids) {
+    const res = await fetch('/dashboard', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+    // the Ship to Address order data lives outside the section; keep it as fresh as the rows it belongs to
+    const curShip = document.getElementById('order-ship-data'), freshShip = doc.getElementById('order-ship-data');
+    if (curShip && freshShip) {
+      curShip.textContent = freshShip.textContent;
+      try {   // the page parsed it once at load into a const object; refill that same object
+        if (typeof orderShipData === 'object') {
+          Object.keys(orderShipData).forEach(k => delete orderShipData[k]);
+          Object.assign(orderShipData, JSON.parse(freshShip.textContent));
+        }
+      } catch (e) {}
+    }
+    ids.forEach(id => {
+      const cur = document.getElementById(id), fresh = doc.getElementById(id);
+      if (!cur || !fresh) return;
+      const kept = [...cur.querySelectorAll('input[type=text], select')].filter(el => el.id || el.closest('.filter-bar'));
+      const values = kept.map(el => el.value);
+      cur.innerHTML = fresh.innerHTML;
+      const again = [...cur.querySelectorAll('input[type=text], select')].filter(el => el.id || el.closest('.filter-bar'));
+      again.forEach((el, i) => { if (values[i] !== undefined) el.value = values[i]; });
+    });
+    if (ids.includes('sec-bookings')) {
+      document.querySelectorAll('#sec-bookings .bk-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === _activeBookingTab));
+      applyBookingTabFilter();
+    }
+    if (ids.includes('sec-orders') && typeof applyOrderFilters === 'function') applyOrderFilters();
+  }
+
+  async function refreshChanged() {
+    const sections = [];
+    if (pending.has('bookings') || pending.has('quotes')) sections.push('sec-bookings');
+    if (pending.has('orders')) sections.push('sec-orders');
+    if (sections.length) await swapSections(sections);
+    if (pending.has('returns') && typeof loadReturns === 'function') loadReturns();
+    const txnOpen = document.getElementById('sec-transactions');
+    if (txnOpen && txnOpen.classList.contains('active') && typeof loadTxns === 'function'
+        && (pending.has('bookings') || pending.has('orders') || pending.has('returns'))) loadTxns();
+    pending.clear();
+  }
+
+  async function tick() {
+    if (busy || document.hidden) return;
+    busy = true;
+    try {
+      const res = await fetch('/api/live-signature', { credentials: 'same-origin' });
+      if (!res.ok) return;
+      const now = await res.json();
+      if (last) Object.keys(now).forEach(k => { if (now[k] !== last[k]) pending.add(k); });
+      last = now;
+      if (pending.size && safeNow()) await refreshChanged();
+    } catch (e) { /* quiet: the next tick retries */ }
+    finally { busy = false; }
+  }
+
+  setInterval(tick, POLL_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+})();
+
 // ── Reports & Sales: live date-range filtering ──
 const RPT_TYPE_LABELS = { booking: 'Service Booking', job_order: 'Job Order', online: 'Online Order', sale: 'In-Store Sale', refund: 'Refund' };
 const RPT_TYPE_COLORS = { booking: '#7c3aed', job_order: '#2563eb', online: '#ea580c', sale: '#0d9488', refund: '#dc2626' };

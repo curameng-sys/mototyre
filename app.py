@@ -3583,9 +3583,18 @@ def customer_poll():
         .order_by(Order.created_at.desc()).all()
     unread_count = Notification.query.filter_by(
         user_id=current_user.id, is_read=False).count()
+    # One short fingerprint of every claim, so the page can tell "the shop moved my claim along" without
+    # shipping the whole claim: any change to what the customer sees on it changes this string.
+    import hashlib
+    _claims = ReturnRequest.query.filter_by(user_id=current_user.id).order_by(ReturnRequest.id).all()
+    _claims_sig = hashlib.md5(repr([
+        (r.id, r.status, r.resolution, r.item_returned, r.awaiting_customer_info, r.customer_at_shop,
+         r.refund_amount, bool(r.refund_receipt), str(r.cash_ready_at), str(r.redo_date), str(r.redo_time))
+        for r in _claims]).encode()).hexdigest()
     return jsonify({
         'bookings': [{'id': b.id, 'status': b.status} for b in bookings],
         'orders':   [{'id': o.id, 'status': o.status, 'ship': ship_order_state(o) if o.delivery_method == 'ship' else None} for o in orders],
+        'returns_sig': _claims_sig,
         'unread_notifications': unread_count
     })
 

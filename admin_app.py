@@ -1508,6 +1508,30 @@ def admin_dashboard():
     )
 
 
+@admin_app.route('/api/live-signature')
+@login_required
+@require_admin_or_staff
+def api_live_signature():
+    """A short fingerprint per area (bookings, orders, return claims, quotations). The open admin page asks for
+    this every few seconds and only re-reads an area when its fingerprint changed, so a customer booking,
+    cancelling, paying or answering a quotation shows up without anyone pressing refresh."""
+    import hashlib
+
+    def fp(rows):
+        return hashlib.md5(repr([tuple(str(c) for c in r) for r in rows]).encode()).hexdigest()
+
+    bookings = db.session.query(Booking.id, Booking.status, Booking.date, Booking.time, Booking.assigned_mechanic_name,
+                                Booking.invoice_paid, Booking.invoice_payment_method, Booking.is_archived,
+                                Booking.overrun_minutes, Booking.total_amount).order_by(Booking.id).all()
+    orders = db.session.query(Order.id, Order.status, Order.paid_at, Order.is_archived, Order.shipping_option,
+                              Order.refunded_at, Order.received_at).order_by(Order.id).all()
+    returns = db.session.query(ReturnRequest.id, ReturnRequest.status, ReturnRequest.resolution, ReturnRequest.item_returned,
+                               ReturnRequest.awaiting_customer_info, ReturnRequest.refund_receipt,
+                               ReturnRequest.cash_ready_at, ReturnRequest.customer_at_shop).order_by(ReturnRequest.id).all()
+    quotes = db.session.query(Quotation.id, Quotation.status).order_by(Quotation.id).all()
+    return jsonify({'bookings': fp(bookings), 'orders': fp(orders), 'returns': fp(returns), 'quotes': fp(quotes)})
+
+
 @admin_app.route('/api/dashboard-stats')
 @login_required
 @require_admin_or_staff
