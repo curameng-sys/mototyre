@@ -8889,8 +8889,8 @@ setInterval(refreshDashboardOverview, 15000);
 // by themselves. The server gives a short fingerprint per area every few seconds; an area is re-read only
 // when its fingerprint changed, and never while a pop-up is open or a field is being used.
 (function liveUpdates() {
-  const POLL_MS = 4000;
-  let last = null;                      // fingerprints from the previous check
+  const POLL_MS = 2000;
+  let last = null;                     // fingerprints from the previous check
   const pending = new Set();             // areas that changed but could not be refreshed yet
   let busy = false;
 

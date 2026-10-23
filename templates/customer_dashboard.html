@@ -8720,7 +8720,7 @@ function showToast(msg, type) {
 
 /* ══ REALTIME POLLING ══ */
 (function() {
-  const POLL_MS = 4000;    // the Home bars, status labels, bell and claims refresh every 4 seconds
+  const POLL_MS = 2000;    // the Home bars, status labels, bell and claims refresh every 2 seconds
   let _claimsSig = null;   // fingerprint of the customer's return claims as last seen
 
   // A claim the shop just moved along (approved, refund sent, replacement ready...) is drawn from data baked into
@@ -8755,6 +8755,15 @@ function showToast(msg, type) {
       const res = await fetch('/api/customer/poll');
       if (!res.ok) return;
       const data = await res.json();
+
+      // ── Mechanic availability while booking ── the picker was loaded when the time was chosen; the shop may have
+      // started a job or assigned someone since, so a mechanic shown as free could already be taken. Re-ask
+      // (one light request) so the list, and a mechanic the customer already picked, stay truthful.
+      const bookSec = document.getElementById('sec-book');
+      if (bookSec && bookSec.classList.contains('active') && typeof selectedDate !== 'undefined' && selectedDate
+          && typeof selectedTime !== 'undefined' && selectedTime && typeof loadMechanics === 'function') {
+        loadMechanics(selectedDate, selectedTime, currentJobDuration);
+      }
 
       // ── Return claims ── (first poll only remembers the fingerprint; a later change means the shop acted)
       if (data.returns_sig !== undefined) {
@@ -8838,7 +8847,7 @@ function showToast(msg, type) {
     } catch(e) {}
   }
 
-  // First poll after 4 s, then every 4 s while the tab is in view; coming back to the tab polls right away
+  // First poll after 2 s, then every 2 s while the tab is in view; coming back to the tab polls right away
   setTimeout(() => { poll(); setInterval(() => { if (!document.hidden) poll(); }, POLL_MS); }, POLL_MS);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 })();

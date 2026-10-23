@@ -6590,10 +6590,13 @@ def payments():
             ~JobOrder.id.in_(paid_jo_ids) if paid_jo_ids else True
         ).order_by(JobOrder.created_at.desc()).all()
 
-        # Only bookings the mechanic has actually started — a merely-confirmed
-        # booking has no work done yet, so there's nothing to bill for it.
+        # A booking is billed once the work is done, not while it is still being worked on, so an
+        # in-progress booking is NOT listed here on its own. The one way in is "Complete booking → At the
+        # shop" in Manage Bookings, which opens this page with ?collect=<id> for that single booking.
+        _collect_id = request.args.get('collect', type=int)
         pending_bookings = Booking.query.filter(
             Booking.status.in_(['in_progress', 'inprogress']),
+            (Booking.id == _collect_id) if _collect_id else db.false(),
             Booking.payment_method.in_(['cash', None]),
             Booking.walkin_customer_id == None,
             Booking.is_archived == False,
