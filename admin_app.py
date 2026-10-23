@@ -2338,6 +2338,10 @@ def assign_booking_mechanic(bid):
         flash(msg, 'danger')
         return redirect(url_for('admin_dashboard'))
 
+    # A finished or cancelled booking is a closed record: who did the work and when it ran must not change afterwards.
+    if booking.status in ('completed', 'cancelled', 'ready_for_pickup'):
+        return fail(f"This booking is already {booking.status.replace('_', ' ')}, so its mechanic can't be changed.")
+
     old_name = booking.assigned_mechanic_name
     if mechanic_id:
         mechanic = Mechanic.query.get(int(mechanic_id)) if mechanic_id.isdigit() else None
@@ -2579,10 +2583,12 @@ def reschedule_booking(bid):
     create a conflict that didn't exist before. The customer is told either
     way it can succeed: this route only ever produces a booking that's sound."""
     booking  = Booking.query.get_or_404(bid)
-    if booking.status in ('inspection', 'in_progress', 'inprogress', 'completed'):
+    if booking.status in ('inspection', 'in_progress', 'inprogress', 'completed', 'cancelled', 'ready_for_pickup'):
+        _why = ("Reschedule isn't available once work has started." if booking.status in ('inspection', 'in_progress', 'inprogress')
+                else f"This booking is already {booking.status.replace('_', ' ')}, so it can't be rescheduled.")
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'error': "Reschedule isn't available once work has started."}), 400
-        flash("Reschedule isn't available once work has started.", 'danger')
+            return jsonify({'success': False, 'error': _why}), 400
+        flash(_why, 'danger')
         return redirect(url_for('admin_dashboard'))
     date_str = clean_str(request.form.get('date', ''), max_len=10)
     time_str = clean_str(request.form.get('time', ''), max_len=5)
@@ -2772,10 +2778,13 @@ def _compute_day_clash_ids(the_date, bookings=None):
     bookings are clashing — like the month calendar's badge dots — should use
     this instead of paying for fixes they'll never render. Same detection
     logic as _compute_day_clashes, kept in sync by hand since it's short."""
+    # Only work still ahead of the shop can clash. A completed (or cancelled / ready-for-pickup) job is over: its
+    # mechanic is free again, and nothing can be moved or reassigned on it, so it never belongs in this panel.
+    _closed = ('cancelled', 'completed', 'ready_for_pickup')
     if bookings is None:
-        bookings = Booking.query.filter(Booking.date == the_date, Booking.status != 'cancelled').order_by(Booking.time).all()
+        bookings = Booking.query.filter(Booking.date == the_date, Booking.status.notin_(_closed)).order_by(Booking.time).all()
     else:
-        bookings = [b for b in bookings if b.status != 'cancelled']
+        bookings = [b for b in bookings if b.status not in _closed]
 
     _, _, on_duty = get_on_duty_mechanics(the_date)
     on_duty_names = {m.name for m in on_duty}
@@ -2798,10 +2807,13 @@ def _compute_day_clash_ids(the_date, bookings=None):
 def _compute_day_clashes(the_date, bookings=None):
     """Every clash open on one day, in booking order, each with its cause in
     plain words and a preview of what each numbered fix would actually do."""
+    # Only work still ahead of the shop can clash. A completed (or cancelled / ready-for-pickup) job is over: its
+    # mechanic is free again, and nothing can be moved or reassigned on it, so it never belongs in this panel.
+    _closed = ('cancelled', 'completed', 'ready_for_pickup')
     if bookings is None:
-        bookings = Booking.query.filter(Booking.date == the_date, Booking.status != 'cancelled').order_by(Booking.time).all()
+        bookings = Booking.query.filter(Booking.date == the_date, Booking.status.notin_(_closed)).order_by(Booking.time).all()
     else:
-        bookings = [b for b in bookings if b.status != 'cancelled']
+        bookings = [b for b in bookings if b.status not in _closed]
 
     _, _, on_duty = get_on_duty_mechanics(the_date)
     on_duty_names = {m.name for m in on_duty}
@@ -2863,6 +2875,9 @@ def resolve_clash(bid):
 
     def fail(msg):
         return jsonify({'success': False, 'error': msg}), 400
+
+    if booking.status in ('completed', 'cancelled', 'ready_for_pickup'):
+        return fail(f"This booking is already {booking.status.replace('_', ' ')}, so it can't be moved or reassigned.")
 
     if fix == 'preferred':
         _, _, on_duty = get_on_duty_mechanics(booking.date)
