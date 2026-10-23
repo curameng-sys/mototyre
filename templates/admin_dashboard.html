@@ -5563,7 +5563,6 @@
         <td><span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${statusLabel}</span>${isSecondBackJob(r) ? '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;margin-left:0.3rem;">2nd back job</span>' : ''}</td>
         <td onclick="event.stopPropagation()">
           ${act ? `<button type="button" class="${act.light ? 'btn-cancel' : 'btn-primary-custom'}" style="padding:0.3rem 0.6rem;font-size:0.72rem;" onclick="openReturnModal(${r.id}, '${act.key}')">${act.label}</button>` : ''}
-          ${(!act || act.key !== 'view') ? `<button type="button" class="btn-cancel" style="padding:0.3rem 0.6rem;font-size:0.72rem;${act ? 'margin-top:0.3rem;' : ''}" onclick="openReturnModal(${r.id}, 'view')">See details</button>` : ''}
         </td>
       </tr>`;
   }
