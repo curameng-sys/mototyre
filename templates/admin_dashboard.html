@@ -1475,7 +1475,6 @@
           <option>done packaging</option>
           <option>processing</option>
           <option>shipping</option>
-          <option>shipped</option>
           <option>ready for pickup</option>
           <option>delivered</option>
           <option>completed</option>
@@ -5553,7 +5552,7 @@
 
     const act = returnNextAction(r);
     return `
-      <tr>
+      <tr style="cursor:pointer;" onclick="openReturnModal(${r.id}, 'view')" title="Click to see the full details">
         <td><div style="font-weight:700;">${r.ref}</div><div style="font-size:0.72rem;color:var(--muted);">${r.origin || '—'}</div></td>
         <td>${r.kind === 'product' ? 'Product' : 'Service'}</td>
         <td><div>${r.customer}</div><div style="font-size:0.72rem;color:var(--muted);">${r.motorcycle || '—'}</div></td>
@@ -5562,7 +5561,10 @@
         <td>${photosHTML}</td>
         <td>${ageHTML}</td>
         <td><span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${statusLabel}</span>${isSecondBackJob(r) ? '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;margin-left:0.3rem;">2nd back job</span>' : ''}</td>
-        <td>${act ? `<button type="button" class="${act.light ? 'btn-cancel' : 'btn-primary-custom'}" style="padding:0.3rem 0.6rem;font-size:0.72rem;" onclick="openReturnModal(${r.id}, '${act.key}')">${act.label}</button>` : ''}</td>
+        <td onclick="event.stopPropagation()">
+          ${act ? `<button type="button" class="${act.light ? 'btn-cancel' : 'btn-primary-custom'}" style="padding:0.3rem 0.6rem;font-size:0.72rem;" onclick="openReturnModal(${r.id}, '${act.key}')">${act.label}</button>` : ''}
+          ${(!act || act.key !== 'view') ? `<button type="button" class="btn-cancel" style="padding:0.3rem 0.6rem;font-size:0.72rem;${act ? 'margin-top:0.3rem;' : ''}" onclick="openReturnModal(${r.id}, 'view')">See details</button>` : ''}
+        </td>
       </tr>`;
   }
 
@@ -5970,6 +5972,12 @@
         actionsHTML = `
           <div style="margin-top:0.9rem;">
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Send the money from the shop's GCash, then upload the receipt.</div>
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;font-size:0.82rem;background:#f5f5f4;border:1px solid var(--border);border-radius:8px;padding:0.45rem 0.7rem;margin-bottom:0.55rem;">
+              <span style="color:var(--muted);">Send to</span>
+              <strong>${r.gcash_number || '—'}</strong>
+              <span style="color:var(--muted);">&middot; ${r.gcash_account_name || ''}</span>
+              <button type="button" class="btn-cancel" style="padding:0.1rem 0.5rem;font-size:0.7rem;" onclick="copyText('${(r.gcash_number || '').replace(/'/g, '')}', this)">Copy</button>
+            </div>
             <button type="button" class="btn-primary-custom" style="padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="openGcashRelease(${r.id})">Release ${fmtPeso(r.refund_amount)}</button>
           </div>`;
       } else if (r.resolution === 'refund' && !r.cash_ready_at) {
