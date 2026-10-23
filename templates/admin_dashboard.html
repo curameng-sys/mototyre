@@ -922,7 +922,7 @@
           'in_progress':{'bg': '#eef2ff', 'fg': '#4338ca'},
           'inprogress': {'bg': '#eef2ff', 'fg': '#4338ca'},
           'completed':  {'bg': '#f0fdf4', 'fg': '#15803d'},
-          'cancelled':  {'bg': '#f3f4f6', 'fg': '#4b5563'},
+          'cancelled':  {'bg': '#fef2f2', 'fg': '#b91c1c'},
         } %}
         {% if recent_bookings %}
         <div style="overflow-x:auto;" id="recent-bookings-wrap">
@@ -8806,7 +8806,8 @@ const BK_STATUS_COLORS = {
   inspection:  { bg: '#fffbeb', fg: '#b45309' },
   in_progress: { bg: '#eef2ff', fg: '#4338ca' },
   completed:   { bg: '#f0fdf4', fg: '#15803d' },
-  cancelled:   { bg: '#f3f4f6', fg: '#4b5563' },
+  inprogress:  { bg: '#eef2ff', fg: '#4338ca' },
+  cancelled:   { bg: '#fef2f2', fg: '#b91c1c' },
 };
 
 function _setStatText(id, text) {
@@ -8866,7 +8867,7 @@ function _renderRecentBookings(rows) {
     return;
   }
   const bodyRows = rows.map(b => {
-    const sc = BK_STATUS_COLORS[b.status] || BK_STATUS_COLORS.cancelled;
+    const sc = BK_STATUS_COLORS[b.status] || { bg: '#f3f4f6', fg: '#4b5563' };   // an unknown status stays neutral, never red
     const label = b.awaiting_quotation ? 'Inspection &amp; Estimation · Quotation sent'
       : (b.status || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     return `<tr>
