@@ -3342,6 +3342,9 @@ def api_time_slots():
             'end_label': minutes_to_ampm(s['end']),
             'available': s['available'],
             'reason':    s['reason'],
+            # how many more jobs fit at once in this window (mechanics on duty minus jobs already in it) —
+            # lets the page allow a second motorcycle of the same customer at the same time while a mechanic is free
+            'spots':     max(len(on_duty) - sum(1 for bs, be in intervals if s['start'] < be and bs < s['end']), 0),
         } for s in slots],
         'total_minutes':  combo['total_minutes'],
         'duration_label': combo['duration_label'],

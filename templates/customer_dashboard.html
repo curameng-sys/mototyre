@@ -3399,6 +3399,7 @@ function hideAmberNotice(elId) {
 }
 
 function intervalsOverlap(aStart, aEnd, bStart, bEnd) { return aStart < bEnd && bStart < aEnd; }
+const _slotSpots = {};   // 'YYYY-MM-DD HH:MM' -> how many more jobs fit at once in that window (from /api/slots)
 function hhmmToMinutes(hhmm) { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; }
 function minutesToAmpmJS(m) {
   let h = Math.floor(m / 60), mm = m % 60;
@@ -3736,10 +3737,19 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
   const startMin = hhmmToMinutes(timeVal);
   const duration = currentJobDuration || 60;
   const endMin   = startMin + duration;
-  const overlapsQueued = bookingQueue.some(b => b.date === dateVal &&
+  // Two motorcycles of the same customer can be booked at the same time as long as the shop still has a
+  // free mechanic for each (the server's per-slot count of open spots), and never with the same mechanic.
+  const queuedHere = bookingQueue.filter(b => b.date === dateVal &&
     intervalsOverlap(startMin, endMin, hhmmToMinutes(b.time), hhmmToMinutes(b.time) + (b.duration_minutes || 60)));
-  if (overlapsQueued && !rule.merge) {
-    showCartToast('That time overlaps a booking already in your queue.'); return;
+  if (queuedHere.length && !rule.merge) {
+    const spots = _slotSpots[dateVal + ' ' + timeVal];
+    if (spots === undefined || queuedHere.length >= spots) {
+      showCartToast('That time overlaps a booking already in your queue, and no other mechanic is free then.'); return;
+    }
+    const pickedMech = (mechanicMode === 'choose' && selectedMechanicId) ? String(selectedMechanicId) : '';
+    if (pickedMech && queuedHere.some(b => String(b.mechanic_id || '') === pickedMech)) {
+      showCartToast('That mechanic is already in your queue at this time. Pick someone else, or let the shop assign one.'); return;
+    }
   }
 
   // "Let the Shop Assign" never sends a mechanic_id, even though a name was
@@ -4464,8 +4474,12 @@ async function renderTimeSlots(dateStr) {
     // Server says a slot works, but it can still collide with something the
     // customer already queued in this browser (the server doesn't know about
     // that yet) — that takes priority as the more specific, more current reason.
-    const queuedConflict = slot.available &&
-      queuedIntervals.some(([qs, qe]) => intervalsOverlap(startMin, endMin, qs, qe));
+    // ...but it only truly clashes when the customer's queued jobs here have used up every free mechanic
+    // (slot.spots), so a second motorcycle at the same time is fine while one is still free.
+    _slotSpots[dateStr + ' ' + slot.time] = slot.spots;
+    const queuedOverlaps = queuedIntervals.filter(([qs, qe]) => intervalsOverlap(startMin, endMin, qs, qe)).length;
+    const queuedConflict = slot.available && queuedOverlaps > 0 &&
+      (slot.spots === undefined || queuedOverlaps >= slot.spots);
     const isAvailable = slot.available && !queuedConflict;
 
     if (isAvailable && slot.time === prevSelectedTime) {
