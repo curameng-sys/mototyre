@@ -1782,7 +1782,7 @@
         {% if all_products %}
         <div style="overflow-x:auto;">
           <table class="table" id="products-table">
-            <thead><tr><th>Name</th><th>Motor Model</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
+            <thead><tr><th>#</th><th>Name</th><th>Motor Model</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
             <tbody>
               {% for p in all_products %}
               <tr style="cursor:pointer;" onclick="openEditProductFromRow(this)"
@@ -1790,6 +1790,7 @@
                   data-price="{{ p.price }}" data-stock="{{ p.stock }}"
                   data-description="{{ (p.description or '')|e }}"
                   data-image="{{ p|product_img }}">
+                <td>{{ p.id }}</td>
                 <td style="font-weight:600;color:var(--text);">{{ p.name }}</td>
                 <td>{% if p.motor_model %}{{ p.motor_model }}{% else %}<span style="color:var(--muted);">—</span>{% endif %}</td>
                 <td>{{ p.category }}</td>

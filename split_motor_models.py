@@ -38,7 +38,16 @@ def is_model_segment(seg):
 KEEP_UPPER = {'OEM', 'GPC', 'RCB', 'MTRT', 'HIRC', 'ZIC', 'TPS', 'ISC', 'LED', 'CP', 'CVT', 'MM', 'ML', 'FI', 'AT', 'II', 'KYB'}
 
 
+def strip_extra(m):
+    """Drop wording that is not a motorcycle: where it was made (THAILAND / INDONESIA), which side (FRONT / REAR) and sizes
+    (55 MM). The original text stays in the product's description."""
+    m = re.sub(r'\(\s*(THAILAND|INDONESIA)\s*\)', '', m, flags=re.I)
+    m = re.sub(r'\s*-\s*(FRONT|REAR|\d+\s*MM)', '', m, flags=re.I)
+    return m
+
+
 def tidy_model(m):
+    m = strip_extra(m)
     m = re.sub(r'\s+', ' ', m).strip(' ,-')
     m = re.sub(r'\bCLICK(\d)', r'CLICK \1', m, flags=re.I)
     return m.upper()
@@ -82,7 +91,7 @@ def split_one(raw, category):
     if tail:
         # a segment with a model keyword AND unrelated words (sizes, origin, FRONT/REAR) is flagged for a human look
         model = ', '.join(tail)
-        if re.search(r'\b(MM|FEET|FT|FRONT|REAR|THAILAND|INDONESIA|CARB)\b', model, re.I):
+        if re.search(r'\b(FEET|FT)\b', model, re.I):       # CARB is a model version, kept; origin / side / size are stripped
             note = 'check: model segment also has other words'
         kept = [s for s in segs[:i] if s != '']
         return title_name(kept), tidy_model(model), note
@@ -119,7 +128,7 @@ def main():
 MANUAL = {229, 266, 398}      # the parser cannot split these safely (model inside a part code / in brackets / odd wording)
 
 
-def apply_changes(rows, include_flagged):
+def apply_changes(rows, include_flagged, only_ids=None):
     import json
     from datetime import datetime
     from db_conn import get_pymysql_connection
@@ -131,6 +140,8 @@ def apply_changes(rows, include_flagged):
         print('Added the product.motor_model column.')
     todo = []
     for pid, name, cat, new_name, model, note in rows:
+        if only_ids is not None and pid not in only_ids:
+            continue
         if pid in MANUAL or (note.startswith('check') and not include_flagged):
             continue
         if (cat or '').strip().upper() in ('TIRE', 'TIRES'):
@@ -169,6 +180,7 @@ if __name__ == '__main__':
     ch = [r for r in rows if r[4]]
     print(len(rows), 'products |', len(ch), 'get a motor model |', sum(1 for r in rows if r[5].startswith('check')), 'flagged')
     if '--apply' in sys.argv:
-        apply_changes(rows, '--include-flagged' in sys.argv)
+        only = {int(x) for x in sys.argv[sys.argv.index('--ids') + 1].split(',')} if '--ids' in sys.argv else None
+        apply_changes(rows, '--include-flagged' in sys.argv, only)
     else:
         print('PREVIEW ONLY: nothing was written. Add --apply to save.')
