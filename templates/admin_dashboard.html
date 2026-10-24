@@ -2719,10 +2719,8 @@
       <div class="form-group">
         <label>Category</label>
         <select name="category" required>
-          <option value="">-- Select Category --</option>
-          <option>Tires</option><option>Brake Parts</option><option>Engine Parts</option>
-          <option>Chain & Sprockets</option><option>Filters</option><option>Lubricants</option>
-          <option>Accessories</option><option>Other Spare Parts</option>
+          <option value="">-- SELECT CATEGORY --</option>
+          {% for c in product_categories %}<option>{{ c }}</option>{% endfor %}
         </select>
       </div>
       <div class="form-group"><label>Price (₱)</label><input type="number" name="price" step="0.01" min="0" placeholder="0.00" required></div>
@@ -2772,10 +2770,8 @@
       <div class="form-group">
         <label>Category</label>
         <select name="category" id="edit-product-category" required>
-          <option value="">-- Select Category --</option>
-          <option>Tires</option><option>Brake Parts</option><option>Engine Parts</option>
-          <option>Chain & Sprockets</option><option>Filters</option><option>Lubricants</option>
-          <option>Accessories</option><option>Other Spare Parts</option>
+          <option value="">-- SELECT CATEGORY --</option>
+          {% for c in product_categories %}<option>{{ c }}</option>{% endfor %}
         </select>
       </div>
       <div class="form-group"><label>Price (₱)</label><input type="number" name="price" id="edit-product-price" step="0.01" min="0" required></div>
@@ -8468,7 +8464,7 @@ function _renderPartsGrid(products) {
     return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.9rem;display:flex;flex-direction:column;gap:0.4rem;transition:border-color 0.15s,box-shadow 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.08);"
         onmouseover="this.style.borderColor='var(--red)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.13)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'">
       <div style="font-size:0.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">${p.category}</div>
-      <div style="font-weight:700;font-size:0.88rem;color:var(--text);line-height:1.3;flex:1;">${p.name}</div>
+      <div style="font-weight:700;font-size:0.88rem;color:var(--text);line-height:1.3;flex:1;">${p.name}${p.motor_model ? `<div style="font-weight:500;font-size:0.74rem;color:var(--muted);margin-top:0.15rem;">${p.motor_model}</div>` : ''}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span style="font-weight:800;font-family:inherit;font-size:1.15rem;color:var(--red);">₱${p.price.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
         <span style="font-size:0.7rem;color:${stockColor};">${p.stock} left</span>
@@ -8486,7 +8482,7 @@ function filterPartsProducts() {
   const cat = document.getElementById('parts-cat').value;
   const filtered = _partsAll.filter(p =>
     (!cat || p.category === cat) &&
-    (!q   || p.name.toLowerCase().includes(q))
+    (!q   || (p.name + ' ' + (p.motor_model || '')).toLowerCase().includes(q))
   );
   _partsPage = 1;
   _applyPartsPagination(filtered);

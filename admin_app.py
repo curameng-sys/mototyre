@@ -1215,6 +1215,19 @@ def _order_refund_totals():
             for oid, amt in totals.items()}
 
 
+STANDARD_PRODUCT_CATEGORIES = ['TIRE', 'BRAKE PARTS', 'ENGINE PARTS', 'CHAIN & SPROCKETS', 'FILTERS', 'LUBRICANTS',
+                               'ACCESSORIES', 'OTHER SPARE PARTS']
+
+
+def product_category_options():
+    """What the Add / Edit Product category dropdown offers: the standard categories first, then every other category
+    already in use on a product (so editing a product never has to guess), all in capitals and each listed once.
+    A 'category' with no letters in it (a price typed into the wrong box, like 1,101.00) is not offered."""
+    used = {(c or '').strip().upper() for (c,) in db.session.query(Product.category).distinct().all()}
+    extra = sorted(c for c in used if c and any(ch.isalpha() for ch in c) and c not in STANDARD_PRODUCT_CATEGORIES)
+    return STANDARD_PRODUCT_CATEGORIES + extra
+
+
 def _revenue_for_period(period):
     """Net revenue for the Dashboard card: This Month (default, so the first thing seen is how the shop is doing
     now), This Year, or All Time. The records themselves are never reset; only the date range changes."""
@@ -1508,6 +1521,7 @@ def admin_dashboard():
         all_bookings=_all_bookings_list,
         all_orders=all_orders,
         all_products=Product.query.all(),
+        product_categories=product_category_options(),
         all_users=User.query.all(),
         all_services=Service.query.order_by(Service.name).all(),
         mechanic_specializations=MECHANIC_SPECIALIZATIONS,

@@ -245,12 +245,12 @@
     <div class="product-grid" id="products-panel" style="{% if booking %}display:none;{% endif %}">
       {% for p in products %}
       <div class="product-card {% if p.stock == 0 %}out-of-stock{% endif %}"
-           data-id="{{ p.id }}" data-name="{{ p.name|e }}"
+           data-id="{{ p.id }}" data-name="{{ p.name|e }}" data-motor-model="{{ (p.motor_model or '')|e }}"
            data-price="{{ p.price }}" data-stock="{{ p.stock }}"
            onclick="addProduct(this)" style="{% if p.stock == 0 %}opacity:.4;cursor:not-allowed;pointer-events:none;{% endif %}">
         <div style="flex:1;min-width:0;">
           <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</div>
-          <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem;">{{ p.category }}</div>
+          <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem;">{{ p.category }}{% if p.motor_model %} · {{ p.motor_model }}{% endif %}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#111827;">₱{{ (p.price)|money }}</div>
@@ -540,7 +540,7 @@
 
   function filterProducts() {
     const q = document.getElementById('product-search').value.toLowerCase();
-    allProducts.forEach(c => c.style.display = c.dataset.name.toLowerCase().includes(q) ? '' : 'none');
+    allProducts.forEach(c => c.style.display = (c.dataset.name + ' ' + (c.dataset.motorModel || '')).toLowerCase().includes(q) ? '' : 'none');
   }
 
   function addProduct(el) {
