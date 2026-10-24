@@ -1478,6 +1478,7 @@
         data-category="{{ p.category }}"
         data-id="{{ p.id }}"
         data-name="{{ p.name|e }}"
+        data-motor-model="{{ (p.motor_model or '')|e }}"
         data-price="{{ p.price }}"
         data-stock="{{ p.stock }}"
         data-description="{{ (p.description or '')|e }}"
@@ -1494,6 +1495,7 @@
         </div>
         {% endif %}
         <div class="product-name">{{ p.name }}</div>
+        {% if p.motor_model %}<div style="font-size:0.74rem;color:var(--fg-2);margin-bottom:0.2rem;">Fits: {{ p.motor_model }}</div>{% endif %}
         <div class="product-cat">{{ p.category }}</div>
         <div class="product-price">₱{{ (p.price)|money }}</div>
         <div class="product-stock">{{ p.stock }} in stock</div>
@@ -8163,7 +8165,7 @@ function applyShopFilters() {
   const cards = Array.from(document.querySelectorAll('#product-grid .product-card'));
   _shopFiltered = cards.filter(card => {
     const matchesCat = _shopCategory === 'all' || card.dataset.category === _shopCategory;
-    const matchesSearch = !q || card.dataset.name.toLowerCase().includes(q);
+    const matchesSearch = !q || (card.dataset.name + ' ' + (card.dataset.motorModel || '')).toLowerCase().includes(q);   // search finds a part by the motorcycle it fits too
     return matchesCat && matchesSearch;
   });
   const noProducts = document.getElementById('no-products');

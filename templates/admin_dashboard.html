@@ -1782,16 +1782,16 @@
         {% if all_products %}
         <div style="overflow-x:auto;">
           <table class="table" id="products-table">
-            <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
+            <thead><tr><th>Name</th><th>Motor Model</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
             <tbody>
               {% for p in all_products %}
               <tr style="cursor:pointer;" onclick="openEditProductFromRow(this)"
-                  data-id="{{ p.id }}" data-name="{{ p.name|e }}" data-category="{{ p.category|e }}"
+                  data-id="{{ p.id }}" data-name="{{ p.name|e }}" data-motor-model="{{ (p.motor_model or '')|e }}" data-category="{{ p.category|e }}"
                   data-price="{{ p.price }}" data-stock="{{ p.stock }}"
                   data-description="{{ (p.description or '')|e }}"
                   data-image="{{ p|product_img }}">
-                <td>{{ loop.index }}</td>
                 <td style="font-weight:600;color:var(--text);">{{ p.name }}</td>
+                <td>{% if p.motor_model %}{{ p.motor_model }}{% else %}<span style="color:var(--muted);">—</span>{% endif %}</td>
                 <td>{{ p.category }}</td>
                 <td>₱{{ (p.price)|money }}</td>
                 <td>
@@ -2692,7 +2692,8 @@
   <div class="modal-box">
     <h5>Add New Product</h5>
     <form method="POST" id="add-product-form" action="{{ url_for('add_product') }}" enctype="multipart/form-data">
-      <div class="form-group"><label>Product Name</label><input type="text" name="name" placeholder="e.g. IRC MB99 Front Tire" required></div>
+      <div class="form-group"><label>Product Name</label><input type="text" name="name" placeholder="e.g. Honda Air Filter 17210-K1Z-N20" required></div>
+      <div class="form-group"><label>Motor Model (optional)</label><input type="text" name="motor_model" maxlength="255" placeholder="e.g. PCX 160, or NMAX / AEROX"></div>
       <div class="form-group">
         <label>Product Image (optional)</label>
         <div class="img-drop-zone" id="add-img-drop" onclick="document.getElementById('add-img-input').click()"
@@ -2745,6 +2746,7 @@
     </div>
     <form method="POST" id="edit-product-form" action="" enctype="multipart/form-data">
       <div class="form-group"><label>Product Name</label><input type="text" name="name" id="edit-product-name" required></div>
+      <div class="form-group"><label>Motor Model (optional)</label><input type="text" name="motor_model" id="edit-product-motor-model" maxlength="255" placeholder="e.g. PCX 160, or NMAX / AEROX"></div>
       <div class="form-group">
         <label>Product Image (optional)</label>
         <div class="img-drop-zone" id="edit-img-drop" onclick="document.getElementById('edit-img-input').click()"
@@ -7390,11 +7392,12 @@
     setTimeout(() => { bar.style.width = bar.dataset.width + '%'; }, 100);
   });
 
-  function openEditProduct(id, name, category, price, stock, description, image) {
+  function openEditProduct(id, name, category, price, stock, description, image, motorModel) {
     document.getElementById('edit-product-name').value    = name;
     document.getElementById('edit-product-price').value   = (parseFloat(price) || 0).toFixed(2);
     document.getElementById('edit-product-stock').value   = stock;
     document.getElementById('edit-product-desc').value    = description;
+    document.getElementById('edit-product-motor-model').value = motorModel || '';
     document.getElementById('edit-product-form').action   = '/product/' + id + '/edit';
     document.getElementById('delete-product-form').action = '/product/' + id + '/delete';
     const sel = document.getElementById('edit-product-category');
@@ -7410,7 +7413,7 @@
   }
 
   function openEditProductFromRow(row) {
-    openEditProduct(row.dataset.id, row.dataset.name, row.dataset.category, row.dataset.price, row.dataset.stock, row.dataset.description, row.dataset.image);
+    openEditProduct(row.dataset.id, row.dataset.name, row.dataset.category, row.dataset.price, row.dataset.stock, row.dataset.description, row.dataset.image, row.dataset.motorModel);
   }
 
   /* ── Product image picker (Add / Edit Product modals) ── */

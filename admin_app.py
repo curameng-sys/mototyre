@@ -327,6 +327,7 @@ class Product(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     barcode     = db.Column(db.String(100))
     name        = db.Column(db.String(150), nullable=False)
+    motor_model = db.Column(db.String(255))   # which motorcycle(s) it fits, e.g. 'NMAX / AEROX' — kept out of the name
     category    = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     price       = db.Column(db.Float, nullable=False)
@@ -5473,6 +5474,7 @@ def add_product():
         return _product_photo_error()
     new_p = Product(
         name=request.form['name'], category=request.form['category'],
+        motor_model=clean_str(request.form.get('motor_model', ''), max_len=255) or None,
         description=request.form.get('description', ''),
         price=float(request.form['price']), stock=int(request.form['stock']),
         image_url=_img[0] if _img else None, image_blob=_img[1] if _img else None, image_mime=_img[2] if _img else None
@@ -5492,6 +5494,7 @@ def edit_product(pid):
     p             = Product.query.get_or_404(pid)
     p.barcode     = request.form.get('barcode', '').strip() or None
     p.name        = request.form['name']
+    p.motor_model = clean_str(request.form.get('motor_model', ''), max_len=255) or None
     p.category    = request.form['category']
     p.price       = float(request.form['price'])
     p.stock       = int(request.form['stock'])
@@ -6090,6 +6093,7 @@ def import_products():
                 db.session.add(Product(
                     barcode=str(row.get('barcode', '')).strip() or None,
                     name=name, category=category, price=price, stock=stock,
+                    motor_model=str(row.get('motor_model', '')).strip()[:255] or None,
                     description=str(row.get('description', '')).strip() or None
                 ))
                 imported += 1
@@ -7034,7 +7038,7 @@ def api_transactions():
 @require_admin_or_staff
 def api_products():
     products = Product.query.order_by(Product.category, Product.name).all()
-    return jsonify([{'id': p.id, 'name': p.name, 'price': p.price, 'stock': p.stock, 'category': p.category} for p in products])
+    return jsonify([{'id': p.id, 'name': p.name, 'motor_model': p.motor_model or '', 'price': p.price, 'stock': p.stock, 'category': p.category} for p in products])
 
 
 @admin_app.route('/pos/products')
@@ -7042,7 +7046,7 @@ def api_products():
 @require_admin_or_staff
 def pos_products():
     products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
-    return jsonify([{'id': p.id, 'name': p.name, 'price': p.price, 'stock': p.stock, 'category': p.category} for p in products])
+    return jsonify([{'id': p.id, 'name': p.name, 'motor_model': p.motor_model or '', 'price': p.price, 'stock': p.stock, 'category': p.category} for p in products])
 
 
 @admin_app.route('/pos/checkout', methods=['POST'])
@@ -8331,6 +8335,7 @@ with admin_app.app_context():
         "ALTER TABLE quotation ADD COLUMN parts_deducted TINYINT(1) DEFAULT 0",
         "ALTER TABLE product ADD COLUMN image_blob MEDIUMBLOB DEFAULT NULL",
         "ALTER TABLE product ADD COLUMN image_mime VARCHAR(40) DEFAULT NULL",
+        "ALTER TABLE product ADD COLUMN motor_model VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE quotation_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",

@@ -579,6 +579,7 @@ class Product(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     barcode     = db.Column(db.String(100))
     name        = db.Column(db.String(150), nullable=False)
+    motor_model = db.Column(db.String(255))   # which motorcycle(s) it fits — kept out of the name
     category    = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     price       = db.Column(db.Float, nullable=False)
@@ -4262,6 +4263,7 @@ with app.app_context():
         "ALTER TABLE quotation ADD COLUMN parts_deducted TINYINT(1) DEFAULT 0",
         "ALTER TABLE product ADD COLUMN image_blob MEDIUMBLOB DEFAULT NULL",
         "ALTER TABLE product ADD COLUMN image_mime VARCHAR(40) DEFAULT NULL",
+        "ALTER TABLE product ADD COLUMN motor_model VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE quotation_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",

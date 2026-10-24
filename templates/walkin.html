@@ -582,6 +582,7 @@
       <div class="product-card {% if p.stock == 0 %}out-of-stock{% endif %}"
            data-id="{{ p.id }}"
            data-name="{{ p.name }}"
+           data-motor-model="{{ (p.motor_model or '')|e }}"
            data-price="{{ p.price }}"
            data-stock="{{ p.stock }}"
            data-cat="{{ p.category }}"
@@ -589,7 +590,7 @@
            onclick="addProduct(this)">
         <div style="flex:1; min-width:0;">
           <div style="font-family:'Syne',sans-serif; font-size:0.82rem; font-weight:700; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
-          <div style="font-size:0.7rem; color:var(--muted); margin-top:0.1rem;">{{ p.category }}</div>
+          <div style="font-size:0.7rem; color:var(--muted); margin-top:0.1rem;">{{ p.category }}{% if p.motor_model %} · {{ p.motor_model }}{% endif %}</div>
         </div>
         <div style="text-align:right; flex-shrink:0;">
           <div style="font-family:'Bebas Neue',sans-serif; font-size:1.05rem; color:#111827;">&#8369;{{ '%.2f'|format(p.price) }}</div>
@@ -1016,7 +1017,7 @@ function filterProducts() {
   const q = document.getElementById('product-search').value.toLowerCase();
   document.querySelectorAll('.product-card').forEach(card => {
     const matchCat  = activeCat === 'all' || (CAT_MAP[activeCat] || []).includes(card.dataset.cat.toUpperCase());
-    const matchText = card.dataset.name.toLowerCase().includes(q);
+    const matchText = (card.dataset.name + ' ' + (card.dataset.motorModel || '')).toLowerCase().includes(q);
     card.style.display = (matchCat && matchText) ? '' : 'none';
   });
 }
