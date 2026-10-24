@@ -7581,7 +7581,7 @@
   let csvParsedRows = [];
 
   function downloadCsvTemplate() {
-    const csv = 'name,category,price,stock,description\nIRC MB99 Front Tire,Tires,1250.00,10,Front tire for underbone';
+    const csv = 'name,category,price,stock,description\nIRC MB99 Front Tire,TIRE,1250.00,10,Front tire for underbone';
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     a.download = 'products_template.csv';
