@@ -4550,6 +4550,9 @@ async function renderTimeSlots(dateStr) {
 
   checkBookingReady();
   updateConfirmButtonText();
+  // the summary line under the services ("1:00 PM – 2:05 PM") reads the end time of the picked slot, which has just
+  // been recomputed for the new services — redraw it, or it keeps showing the end time from the previous selection
+  updateServiceSummary();
   loadMechanics(selectedDate, selectedTime, currentJobDuration);
 }
 

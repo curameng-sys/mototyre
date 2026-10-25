@@ -2651,6 +2651,27 @@ def _booking_customer_name(b):
 # capacity — that's a capacity question (the Panel-3 bottleneck), never
 # surfaced here.
 
+# A job that has been started and is STILL not completed after its scheduled end (plus anything staff recorded as extra time)
+# is running long — the system now notices that by itself instead of waiting for someone to press +30m. Nobody knows how much
+# longer it will take, so it is assumed to need a further quarter hour from now until staff records something else.
+_STARTED_STATES = ('inspection', 'in_progress', 'inprogress')
+AUTO_LATE_GRACE_MIN = 5      # not flagged for a few minutes of normal slack
+AUTO_LATE_ASSUME_MIN = 15    # how much longer an unrecorded overrun is assumed to need
+
+
+def _live_end_minutes(b):
+    """-> (end minute of day, auto_late). The booking's scheduled / recorded end, pushed out to 'now + 15 min' when it is today,
+    in progress, and already past that end by more than the grace period."""
+    start = b.time.hour * 60 + b.time.minute
+    end = real_end_minutes(start, b.duration_minutes or DEFAULT_DURATION_MIN, b.overrun_minutes or 0)
+    if b.status in _STARTED_STATES and b.date == ph_now().date():
+        now = ph_now()
+        now_min = now.hour * 60 + now.minute
+        if now_min >= end + AUTO_LATE_GRACE_MIN:
+            return now_min + AUTO_LATE_ASSUME_MIN, True
+    return end, False
+
+
 def _mechanic_overlap_causes(bookings):
     """bookings: active Booking rows all assigned to the SAME mechanic. Returns
     {booking.id: cause dict} for every one that overlaps an earlier-starting
@@ -2666,10 +2687,11 @@ def _mechanic_overlap_causes(bookings):
         for j in range(i - 1, -1, -1):
             prev = ordered[j]
             prev_start = prev.time.hour * 60 + prev.time.minute
-            prev_end = real_end_minutes(prev_start, prev.duration_minutes or DEFAULT_DURATION_MIN, prev.overrun_minutes or 0)
+            prev_end, auto_late = _live_end_minutes(prev)
             if mechanic_overlaps(cur_start, cur_end, prev_start, prev_end):
-                running_long = (prev.overrun_minutes or 0) > 0
-                suffix = ' (running long)' if running_long else ''
+                running_long = (prev.overrun_minutes or 0) > 0 or auto_late
+                suffix = (' (running past its scheduled time)' if auto_late and not (prev.overrun_minutes or 0)
+                          else ' (running long)') if running_long else ''
                 causes[cur.id] = {
                     'text': f"{cur.assigned_mechanic_name} is still on {_booking_customer_name(prev)}'s job until {minutes_to_ampm(prev_end)}{suffix}",
                     'type': 'running_long' if running_long else 'double_booked',
@@ -2687,7 +2709,7 @@ def _mechanic_free_at(mechanic_name, booking_date, start_min, end_min, exclude_i
     ).all()
     for o in others:
         o_start = o.time.hour * 60 + o.time.minute
-        o_end = real_end_minutes(o_start, o.duration_minutes or DEFAULT_DURATION_MIN, o.overrun_minutes or 0)
+        o_end, _late = _live_end_minutes(o)          # a job already running past its end still holds the mechanic
         if mechanic_overlaps(start_min, end_min, o_start, o_end):
             return False
     return True

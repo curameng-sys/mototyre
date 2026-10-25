@@ -8830,6 +8830,45 @@ function _setStatText(id, text) {
   }
 }
 
+// Category dropdowns (Add / Edit Product): with ~170 categories the plain pop-up runs off the screen. Show a list of 8 rows
+// that scrolls (type a letter to jump), then fold back to a normal dropdown once one is picked. Still a real <select>, so
+// required, value and the Edit form's own code keep working as before.
+(function scrollingCategorySelects() {
+  const ROWS = 8;
+  function enhance(sel) {
+    if (!sel || sel.dataset.scrolling) return;
+    sel.dataset.scrolling = '1';
+    const holder = document.createElement('div');
+    holder.style.position = 'relative';
+    sel.parentNode.insertBefore(holder, sel);
+    holder.appendChild(sel);
+    let open = false;
+    const expand = () => {
+      if (open) return;
+      holder.style.height = sel.offsetHeight + 'px';          // keep the form from jumping while the list is open
+      sel.size = ROWS;
+      Object.assign(sel.style, { position: 'absolute', left: '0', top: '0', width: '100%', height: 'auto', zIndex: '60' });
+      open = true;
+    };
+    const collapse = () => {
+      if (!open) return;
+      sel.size = 1;
+      Object.assign(sel.style, { position: '', left: '', top: '', width: '', height: '', zIndex: '' });
+      holder.style.height = '';
+      open = false;
+    };
+    sel.addEventListener('mousedown', e => { if (!open) { e.preventDefault(); expand(); sel.focus(); } });
+    sel.addEventListener('change', collapse);
+    sel.addEventListener('blur', collapse);
+    sel.addEventListener('click', e => { if (open && e.target && e.target.tagName === 'OPTION') setTimeout(collapse, 0); });
+    sel.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Enter') { collapse(); if (e.key === 'Enter') e.preventDefault(); } });
+  }
+  function init() {
+    document.querySelectorAll('#modal-add-product select[name="category"], #modal-edit-product select[name="category"]').forEach(enhance);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
 // Revenue card period: This Month by default; the choice is remembered in this browser.
 let _revPeriod = 'month';
 try { _revPeriod = localStorage.getItem('revPeriod') || 'month'; } catch (e) {}
