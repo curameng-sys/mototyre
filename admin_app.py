@@ -8,6 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_, not_
+from sqlalchemy import text as _sql_text
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -25,6 +26,7 @@ from security import (clean_str, clean_int, clean_float, is_valid_email, is_vali
 from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_on_the_way_email, booking_receipt_email
 from delivery_zones import format_delivery_address
 from cloud_storage import upload_image
+from service_duration import queue_numbers, ordinal
 from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDAY_INTAKE_MIN,
     compute_finish_time, mechanic_origin_note, compute_finish_minutes, all_slot_starts,
     SHOP_CLOSE_MIN, mechanic_overlaps, minutes_to_ampm, hhmm_to_minutes, minutes_to_hhmm,
@@ -257,6 +259,7 @@ class Booking(db.Model):
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
     overrun_minutes  = db.Column(db.Integer, default=0)  # counter-staff-recorded extra time on top of duration_minutes
+    cancelled_at     = db.Column(db.DateTime, nullable=True)   # when it was cancelled — lets the queue tell a customer they moved up
     was_rescheduled  = db.Column(db.Boolean, default=False)  # set once, first time this booking's date/time changes after creation
     completed_at     = db.Column(db.DateTime, nullable=True)  # when status actually reached completed — the warranty window's start
     invoice_payment_method = db.Column(db.String(10), nullable=True)  # customer's pick on the post-completion invoice: 'cash' or 'gcash'
@@ -450,6 +453,20 @@ class Feedback(db.Model):
     message    = db.Column(db.Text, default='')
     is_read    = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+
+
+class BookingStatusSeen(db.Model):
+    """The status each booking had the last time the Manage Bookings tab counters looked, so a change can be counted once."""
+    __tablename__ = 'booking_status_seen'
+    booking_id = db.Column(db.Integer, primary_key=True)
+    status     = db.Column(db.String(20))
+
+
+class BookingTabBadge(db.Model):
+    """The red number on each Manage Bookings status tab: how many bookings moved into that status since the tab was opened."""
+    __tablename__ = 'booking_tab_badge'
+    tab    = db.Column(db.String(20), primary_key=True)     # confirmed / inspection / inprogress / completed / cancelled
+    unseen = db.Column(db.Integer, default=0)
 
 
 class AppState(db.Model):
@@ -1487,6 +1504,20 @@ def admin_dashboard():
     )
 
     _all_bookings_list = Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all()
+    # Manage Bookings is grouped by day and numbered by the shared queue rules. Archived bookings still count in the numbering
+    # (so archiving never renumbers anyone) but are not listed. Days from today on come first, soonest first; older days after.
+    _today = ph_now().date()
+    _qdates = {b.date for b in _all_bookings_list}
+    _qnums = queue_numbers(Booking.query.filter(Booking.date.in_(_qdates)).all()) if _qdates else {}
+    _by_day = {}
+    for _b in _all_bookings_list:
+        _by_day.setdefault(_b.date, []).append(_b)
+    _days = sorted(d for d in _by_day if d >= _today) + sorted((d for d in _by_day if d < _today), reverse=True)
+    _booking_days = []
+    for _d in _days:
+        _rows = sorted(_by_day[_d], key=lambda b: (0 if b.id in _qnums else 1, _qnums[b.id]['n'] if b.id in _qnums else 0, b.time, b.id))
+        _live_total = next((_qnums[b.id]['total'] for b in _rows if b.id in _qnums), 0)
+        _booking_days.append({'date': _d, 'label': _d.strftime('%A, %b ').upper() + str(_d.day), 'count': _live_total, 'rows': _rows})
     _q_booking_ids = [b.id for b in _all_bookings_list]
     _latest_quotations = {}
     if _q_booking_ids:
@@ -1519,6 +1550,9 @@ def admin_dashboard():
         recent_bookings=_all_bookings_list[:5],
         awaiting_quotation_count=_awaiting_quotation_count,
         all_bookings=_all_bookings_list,
+        booking_days=_booking_days,
+        queue_nums=_qnums,
+        bk_unseen=_sync_booking_tab_badges(),
         all_orders=all_orders,
         all_products=Product.query.all(),
         product_categories=product_category_options(),
@@ -1534,6 +1568,75 @@ def admin_dashboard():
         today=ph_now().date(),
         customer_origin=BASE_URL,
     )
+
+
+BOOKING_TABS = ('confirmed', 'inspection', 'inprogress', 'completed', 'cancelled')
+
+
+def _tab_of(status):
+    key = (status or '').replace('_', '')
+    return key if key in BOOKING_TABS else None
+
+
+def _sync_booking_tab_badges():
+    """Count every booking that moved INTO a status since the last look (including ones the admin moved, and brand-new bookings).
+    It compares each booking's status with the one remembered last time, so none of the booking / start / cancel / pay code has to
+    know about it. Returns {tab: unseen}. The very first run only records the starting point, so nothing is counted for old data."""
+    locked = False
+    try:
+        try:
+            locked = db.session.execute(_sql_text("SELECT GET_LOCK('mt_bk_tab_sync', 3)")).scalar() == 1
+        except Exception:
+            locked = True                                   # not MySQL: nothing to lock
+        if locked:
+            db.session.commit()                             # end any old snapshot so the diff below sees the latest rows
+            seen = {r.booking_id: r for r in BookingStatusSeen.query.all()}
+            badges = {r.tab: r for r in BookingTabBadge.query.all()}
+            first_run = not seen
+            for bid, status in db.session.query(Booking.id, Booking.status).all():
+                row = seen.get(bid)
+                if row is None:
+                    db.session.add(BookingStatusSeen(booking_id=bid, status=status))
+                    changed_into = None if first_run else status
+                elif row.status != status:
+                    row.status = status
+                    changed_into = status
+                else:
+                    continue
+                tab = _tab_of(changed_into)
+                if tab:
+                    if tab not in badges:
+                        badges[tab] = BookingTabBadge(tab=tab, unseen=0)
+                        db.session.add(badges[tab])
+                    badges[tab].unseen = (badges[tab].unseen or 0) + 1
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+    finally:
+        try:
+            if locked:
+                db.session.execute(_sql_text("SELECT RELEASE_LOCK('mt_bk_tab_sync')"))
+        except Exception:
+            pass
+    try:
+        return {r.tab: int(r.unseen or 0) for r in BookingTabBadge.query.all()}
+    except Exception:
+        db.session.rollback()
+        return {}
+
+
+@admin_app.route('/api/booking-tabs/<tab>/seen', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def booking_tab_seen(tab):
+    """The admin opened this tab: its red number goes away."""
+    if tab not in BOOKING_TABS:
+        return jsonify({'success': False}), 404
+    row = BookingTabBadge.query.get(tab)
+    if row and row.unseen:
+        row.unseen = 0
+        db.session.commit()
+    return jsonify({'success': True})
 
 
 @admin_app.route('/api/live-signature')
@@ -1557,7 +1660,8 @@ def api_live_signature():
                                ReturnRequest.awaiting_customer_info, ReturnRequest.refund_receipt,
                                ReturnRequest.cash_ready_at, ReturnRequest.customer_at_shop).order_by(ReturnRequest.id).all()
     quotes = db.session.query(Quotation.id, Quotation.status).order_by(Quotation.id).all()
-    return jsonify({'bookings': fp(bookings), 'orders': fp(orders), 'returns': fp(returns), 'quotes': fp(quotes)})
+    return jsonify({'bookings': fp(bookings), 'orders': fp(orders), 'returns': fp(returns), 'quotes': fp(quotes),
+                    'bk_unseen': _sync_booking_tab_badges()})
 
 
 @admin_app.route('/api/dashboard-stats')
@@ -1973,8 +2077,17 @@ def update_booking_status(bid):
         booking.in_progress_at = ph_now()
         if not booking.inspection_at:
             booking.inspection_at = booking.in_progress_at   # skipped straight to work
+    _q_before = None
+    if new_status == 'cancelled':
+        try:
+            _q_before = _queue_day_numbers(booking.date)
+        except Exception:
+            _q_before = None
+        booking.cancelled_at = ph_now()
     booking.status = new_status
     db.session.commit()
+    if _q_before is not None:
+        _notify_queue_moved(booking.date, _q_before)
 
     ref = f'BKG-{booking.id:03d}'
     date_str = booking.date.strftime('%b %d, %Y')
@@ -2651,6 +2764,33 @@ def _booking_customer_name(b):
 # capacity — that's a capacity question (the Panel-3 bottleneck), never
 # surfaced here.
 
+# ── Queue numbers (the numbers come from service_duration.queue_numbers(), never stored, so admin and customer agree) ──
+admin_app.jinja_env.globals['ordinal'] = ordinal
+
+
+def _queue_day_numbers(day):
+    return queue_numbers(Booking.query.filter(Booking.date == day).all())
+
+
+def _notify_queue_moved(day, before):
+    """After a cancellation on `day`: tell each customer whose queue number went down. Best effort: it can never stop a cancel."""
+    try:
+        after = _queue_day_numbers(day)
+        moved = {}
+        for b in Booking.query.filter(Booking.date == day, Booking.status != 'cancelled').all():
+            if b.walkin_customer_id:
+                continue
+            old, new = before.get(b.id), after.get(b.id)
+            if old and new and new['n'] < old['n']:
+                moved.setdefault(b.user_id, b)
+        for uid, b in moved.items():
+            send_notification(uid, f'You moved up for {day.strftime("%a, %b %d")}',
+                              'A booking before yours was cancelled, so your queue numbers moved up.',
+                              type='queue', status='queue_moved', booking_id=b.id)
+    except Exception:
+        db.session.rollback()
+
+
 # A job that has been started and is STILL not completed after its scheduled end (plus anything staff recorded as extra time)
 # is running long — the system now notices that by itself instead of waiting for someone to press +30m. Nobody knows how much
 # longer it will take, so it is assumed to need a further quarter hour from now until staff records something else.
@@ -3178,8 +3318,15 @@ def cancel_booking_day_panel(bid):
     reason = clean_str(data.get('reason', ''), max_len=300)
     if notify and not reason:
         return jsonify({'success': False, 'error': 'Say why you are cancelling — the customer sees this reason.'}), 400
+    try:
+        _q_before = _queue_day_numbers(booking.date)
+    except Exception:
+        _q_before = None
     booking.status = 'cancelled'
+    booking.cancelled_at = ph_now()
     db.session.commit()
+    if _q_before is not None:
+        _notify_queue_moved(booking.date, _q_before)
 
     emailed = False
     if notify:
@@ -8372,6 +8519,7 @@ with admin_app.app_context():
         "ALTER TABLE product ADD COLUMN image_blob MEDIUMBLOB DEFAULT NULL",
         "ALTER TABLE product ADD COLUMN image_mime VARCHAR(40) DEFAULT NULL",
         "ALTER TABLE product ADD COLUMN motor_model VARCHAR(255) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN cancelled_at DATETIME DEFAULT NULL",
         "ALTER TABLE quotation_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",

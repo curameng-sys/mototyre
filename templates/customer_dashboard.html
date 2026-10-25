@@ -1019,13 +1019,29 @@
       </a>
     </div>
 
-    <div class="two-col">
+    {# Queue no. cell: the number while Confirmed, "Your turn" once the service starts, a dash for cancelled / completed. The same rules
+   are in queueCellHTML() in the script below, which redraws these cells when the live check sees a change. #}
+{% macro queue_cell(b, q) -%}
+{%- if b.status in ['inspection', 'in_progress', 'inprogress'] -%}
+<span style="font-size:0.74rem;font-weight:700;color:#15803d;white-space:nowrap;">&#10003; Your turn &middot; Service started</span>
+{%- elif b.status in ['confirmed', 'pending'] and q -%}
+<div style="display:flex;align-items:center;gap:0.55rem;">
+  <span style="flex-shrink:0;width:34px;height:34px;border-radius:9px;background:#f3eefe;border:1px solid #ddd0fb;color:#6d28d9;font-family:'Bebas Neue',sans-serif;font-size:1.25rem;line-height:34px;text-align:center;">{{ q.n }}</span>
+  <div style="line-height:1.25;">
+    <div style="font-size:0.74rem;font-weight:700;color:#6d28d9;">{{ ordinal(q.n) }} in line</div>
+    <div style="font-size:0.7rem;color:var(--fg-3);">of {{ q.total }} bookings that day</div>
+    {%- if q.moved_up %}<div style="font-size:0.7rem;font-weight:700;color:#15803d;">&#9650; You moved up</div>{% endif %}
+  </div>
+</div>
+{%- else -%}<span style="color:var(--fg-3);">&mdash;</span>{%- endif -%}
+{%- endmacro %}
+<div class="two-col">
       <div class="card">
         <div class="card-head"><h5>Recent Bookings</h5><a href="#" onclick="showSection('book', null)">+ Book Now</a></div>
         {% if bookings %}
         <div style="overflow-x:auto;">
           <table class="table">
-            <thead><tr><th>Service</th><th>Date</th><th>Status</th></tr></thead>
+            <thead><tr><th>Service</th><th>Queue no.</th><th>Date</th><th>Status</th></tr></thead>
             <tbody>
               {% for b in bookings[:4] %}
               <tr data-booking-ov-id="{{ b.id }}">
@@ -1046,6 +1062,7 @@
                     </div>
                   </div>
                 </td>
+                <td data-ov-queue="{{ b.id }}">{{ queue_cell(b, queue_info.get(b.id)) }}</td>
                 <td data-ov-date="{{ b.id }}">{{ b.date.strftime('%b %d') }}</td>
                 <td>{% if b.pay_wait %}<span class="badge badge-pending">Awaiting payment</span>{% else %}<span class="badge badge-{{ b.status }}">{{ 'Inspection & Estimation' if b.status == 'inspection' else b.status|replace('_', ' ')|title }}</span>{% endif %}</td>
               </tr>
@@ -4701,6 +4718,7 @@ const NOTIF_ICONS = {
   mechanic: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
   cost:     '<span style="display:inline-block;font-size:18px;font-weight:700;line-height:1;">₱</span>',
   update:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  queue:    '<span style="display:inline-block;font-family:Bebas Neue,sans-serif;font-size:21px;font-weight:400;line-height:1;">#</span>',
   reminder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
 };
 
@@ -4729,6 +4747,8 @@ const NOTIF_COLOR_MAP = {
   done_packaging: { bg: 'rgba(13,148,136,0.18)', color: '#5eead4' },
   shipping:    { bg: 'rgba(14,165,233,0.18)',  color: '#7dd3fc' },
   paid:        { bg: 'rgba(21,128,61,0.15)',   color: '#86efac' },
+  queue:       { bg: '#f3eefe', color: '#6d28d9' },
+  queue_moved: { bg: '#f3eefe', color: '#6d28d9' },
   default:     { bg: 'rgba(0,0,0,0.05)', color: '#484340' },
 };
 
@@ -4781,7 +4801,7 @@ function renderNotifications() {
   // "Appointments" is everything about a booking: its status, quotation, invoice/payment and reminders,
   // not just the type 'booking' rows. "Unread" uses the same rule as the bell's red number, so the tab
   // and the badge always show the same items (a quotation or invoice still waiting on the customer counts).
-  const APPT_TYPES = ['booking', 'quotation', 'quotation_decision', 'invoice', 'reminder'];
+  const APPT_TYPES = ['booking', 'quotation', 'quotation_decision', 'invoice', 'reminder', 'queue'];
   if (activeFilter === 'booking') filtered = notifications.filter(n => APPT_TYPES.includes(n.type));
   else if (activeFilter === 'order') filtered = notifications.filter(n => n.type === 'order');
   else if (activeFilter === 'unread') filtered = notifications.filter(stillPending);
@@ -4953,6 +4973,40 @@ function renderNotifications() {
         ${inv.status === 'paid' ? `<button onclick="deleteNotif(event, ${n.id})" style="position:absolute;top:0.8rem;right:0.8rem;background:none;border:none;color:#4b5563;font-size:0.9rem;cursor:pointer;" title="Delete notification">✕</button>` : ''}`;
       div.style.position = 'relative';
       list.appendChild(div);
+      return;
+    }
+
+    // Queue numbers: the day's numbers as small cards, with a purple "QUEUE NUMBER" tag. Same unread dot / dismiss as the rest.
+    if (n.type === 'queue' && n.queue) {
+      const qd = document.createElement('div');
+      qd.className = 'notif-item';
+      qd.style.cssText = `display:flex;gap:0.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line-1);cursor:pointer;background:${pending ? 'rgba(208,0,25,0.05)' : 'transparent'};`;
+      qd.onclick = async () => {
+        if (n.is_read) return;
+        try { await fetch(`/api/notifications/${n.id}/read`, { method: 'POST' }); n.is_read = true; renderNotifications(); } catch (e) {}
+      };
+      const cardsHTML = n.queue.cards.map(c => `
+        <div style="display:flex;align-items:center;gap:0.65rem;background:#fff;border:1px solid #ddd0fb;border-radius:10px;padding:0.5rem 0.65rem;margin-top:0.45rem;">
+          <span style="flex-shrink:0;width:30px;height:30px;border-radius:8px;background:#f3eefe;border:1px solid #ddd0fb;color:#6d28d9;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;line-height:30px;text-align:center;">${c.n}</span>
+          <div style="min-width:0;line-height:1.3;">
+            <div style="font-size:0.78rem;color:var(--fg-1);overflow-wrap:anywhere;">${c.service}${c.motorcycle ? ' &middot; ' + c.motorcycle : ''}</div>
+            <div style="font-size:0.74rem;color:var(--fg-3);"><b style="color:#6d28d9;">${c.ord} of ${c.total}</b> bookings that day</div>
+          </div>
+        </div>`).join('');
+      qd.innerHTML = `
+        <div style="width:38px;height:38px;border-radius:10px;background:#f3eefe;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#6d28d9;">${NOTIF_ICONS.queue}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;color:var(--fg-1);margin-bottom:0.2rem;">${n.title}</div>
+          <div style="font-size:0.78rem;color:var(--fg-3);line-height:1.5;">${n.message}</div>
+          ${cardsHTML}
+          <span style="display:inline-block;margin-top:0.55rem;font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:#ede4fd;color:#6d28d9;padding:0.2em 0.55em;border-radius:5px;">Queue number</span>
+          <div style="font-size:0.7rem;color:#4b5563;margin-top:0.3rem;">${time}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem;flex-shrink:0;">
+          <button onclick="deleteNotif(event, ${n.id})" style="background:none;border:none;color:#4b5563;font-size:0.9rem;cursor:pointer;padding:0.25rem;border-radius:6px;line-height:1;" onmouseover="this.style.color='#fca5a5';this.style.background='rgba(220,38,38,0.1)'" onmouseout="this.style.color='#4b5563';this.style.background='none'" title="Delete notification">✕</button>
+          ${pending ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--brand-red);display:inline-block;margin-right:0.45rem;"></span>' : ''}
+        </div>`;
+      list.appendChild(qd);
       return;
     }
 
@@ -8728,6 +8782,31 @@ function showToast(msg, type) {
   const POLL_MS = 2000;    // the Home bars, status labels, bell and claims refresh every 2 seconds
   let _claimsSig = null;   // fingerprint of the customer's return claims as last seen
 
+  // Queue no. column on Home: same rules as the queue_cell macro near the top of this page.
+  let _queueInfo = {{ (queue_info or {})|tojson }};
+  const _ordinal = n => { const s = (n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({1: 'st', 2: 'nd', 3: 'rd'}[n % 10] || 'th'); return n + s; };
+  function queueCellHTML(status, q) {
+    if (['inspection', 'in_progress', 'inprogress'].includes(status))
+      return '<span style="font-size:0.74rem;font-weight:700;color:#15803d;white-space:nowrap;">&#10003; Your turn &middot; Service started</span>';
+    if (['confirmed', 'pending'].includes(status) && q) {
+      return `<div style="display:flex;align-items:center;gap:0.55rem;">
+        <span style="flex-shrink:0;width:34px;height:34px;border-radius:9px;background:#f3eefe;border:1px solid #ddd0fb;color:#6d28d9;font-family:'Bebas Neue',sans-serif;font-size:1.25rem;line-height:34px;text-align:center;">${q.n}</span>
+        <div style="line-height:1.25;">
+          <div style="font-size:0.74rem;font-weight:700;color:#6d28d9;">${_ordinal(q.n)} in line</div>
+          <div style="font-size:0.7rem;color:var(--fg-3);">of ${q.total} bookings that day</div>
+          ${q.moved_up ? '<div style="font-size:0.7rem;font-weight:700;color:#15803d;">&#9650; You moved up</div>' : ''}
+        </div></div>`;
+    }
+    return '<span style="color:var(--fg-3);">&mdash;</span>';
+  }
+  function redrawQueueCells() {
+    document.querySelectorAll('[data-ov-queue]').forEach(td => {
+      const id = td.dataset.ovQueue;
+      const b = bookingsData[id];
+      if (b) td.innerHTML = queueCellHTML(b.status, _queueInfo[id]);
+    });
+  }
+
   // A claim the shop just moved along (approved, refund sent, replacement ready...) is drawn from data baked into
   // the page, so the page itself has to be re-read. Only do that when it can't interrupt anything: nothing open,
   // nothing being typed, and not in the middle of picking a booking slot. The open section is restored on reload.
@@ -8808,6 +8887,10 @@ function showToast(msg, type) {
         if (ovRow) updateBadge(ovRow.querySelector('.badge'), cls, label);
         showToast('Booking status updated to ' + label, 'booking');
       });
+
+      // ── Queue numbers ── (a cancellation ahead of you, or the service starting, changes this column)
+      if (data.queue) _queueInfo = data.queue;
+      redrawQueueCells();
 
       // ── Orders ──
       data.orders.forEach(o => {

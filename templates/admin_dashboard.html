@@ -305,6 +305,22 @@
     }
     .bk-tab:hover { background: var(--ink) !important; color: var(--text) !important; }
     .bk-tab.active { background: var(--text) !important; border-color: var(--text) !important; color: #fff !important; font-weight: 600; }
+    /* Queue numbers (Manage Bookings) */
+    .queue-note { display:flex; gap:0.55rem; align-items:flex-start; background:#f5f0ff; border:1px solid #e2d6fb; color:#4c3a86; border-radius:10px; padding:0.65rem 0.9rem; font-size:0.78rem; line-height:1.5; margin-bottom:1rem; }
+    .queue-note b { color:#3b2a75; }
+    .bk-day-row td { background:#faf8ff; border-top:1px solid #ece4fb; border-bottom:1px solid #ece4fb; padding:0.5rem 0.9rem !important; }
+    .bk-day-name { font-family:'Syne',sans-serif; font-weight:700; font-size:0.7rem; letter-spacing:0.07em; color:#6d28d9; }
+    .bk-day-count { font-size:0.68rem; color:var(--muted); margin-left:0.55rem; }
+    .qcell { display:flex; flex-direction:column; align-items:center; width:46px; line-height:1.15; }
+    .qbox { width:30px; height:30px; border-radius:8px; border:1.5px solid #7c3aed; color:#6d28d9; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:1.15rem; }
+    .qbox.qbox-first { background:#7c3aed; color:#fff; }
+    .qbox.qbox-none { border-color:var(--border); color:var(--muted); background:#f9fafb; font-family:inherit; font-size:0.9rem; }
+    .qord { font-size:0.58rem; color:#6d28d9; font-weight:700; margin-top:0.2rem; }
+    .qref { font-size:0.56rem; color:var(--muted); margin-top:0.1rem; white-space:nowrap; }
+    .booked-on { font-size:0.66rem; color:#7c3aed; margin-top:0.2rem; }
+    .bk-tab-count { position: relative; }
+    .bk-new { position:absolute; top:-9px; right:-10px; min-width:16px; height:16px; padding:0 4px; border-radius:99px; background:#dc2626; color:#fff !important; font-family:'DM Sans',sans-serif; font-size:0.6rem; font-weight:700; line-height:16px; text-align:center; box-shadow:0 0 0 2px #fff; pointer-events:none; }
+    .bk-tab.active .bk-new { box-shadow:0 0 0 2px var(--text); }
     .bk-tab-count { background: rgba(0,0,0,0.08) !important; color: inherit !important; font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 99px; font-weight: 700; }
     .bk-tab.active .bk-tab-count { background: rgba(255,255,255,0.2) !important; color: #fff !important; }
 
@@ -978,22 +994,24 @@
       <!-- Status Tabs -->
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
         <button class="bk-tab active" data-tab="confirmed" onclick="switchBookingTab('confirmed', this)">
-          Confirmed <span class="bk-tab-count">{{ booking_status_counts.get('confirmed', 0) }}</span>
+          Confirmed <span class="bk-tab-count">{{ booking_status_counts.get('confirmed', 0) }}<span class="bk-new" data-bk-new="confirmed"{% if not bk_unseen.get('confirmed') %} style="display:none;"{% endif %}>{{ bk_unseen.get('confirmed', 0) }}</span></span>
         </button>
         <button class="bk-tab" data-tab="inspection" onclick="switchBookingTab('inspection', this)">
-          Inspection &amp; Estimation <span class="bk-tab-count">{{ booking_status_counts.get('inspection', 0) }}</span>
+          Inspection &amp; Estimation <span class="bk-tab-count">{{ booking_status_counts.get('inspection', 0) }}<span class="bk-new" data-bk-new="inspection"{% if not bk_unseen.get('inspection') %} style="display:none;"{% endif %}>{{ bk_unseen.get('inspection', 0) }}</span></span>
         </button>
         <button class="bk-tab" data-tab="inprogress" onclick="switchBookingTab('inprogress', this)">
-          In Progress <span class="bk-tab-count">{{ booking_status_counts.get('in_progress', 0) + booking_status_counts.get('inprogress', 0) }}</span>
+          In Progress <span class="bk-tab-count">{{ booking_status_counts.get('in_progress', 0) + booking_status_counts.get('inprogress', 0) }}<span class="bk-new" data-bk-new="inprogress"{% if not bk_unseen.get('inprogress') %} style="display:none;"{% endif %}>{{ bk_unseen.get('inprogress', 0) }}</span></span>
         </button>
         <button class="bk-tab" data-tab="completed" onclick="switchBookingTab('completed', this)">
-          Completed <span class="bk-tab-count">{{ booking_status_counts.get('completed', 0) }}</span>
+          Completed <span class="bk-tab-count">{{ booking_status_counts.get('completed', 0) }}<span class="bk-new" data-bk-new="completed"{% if not bk_unseen.get('completed') %} style="display:none;"{% endif %}>{{ bk_unseen.get('completed', 0) }}</span></span>
         </button>
         <button class="bk-tab" data-tab="cancelled" onclick="switchBookingTab('cancelled', this)">
-          Cancelled <span class="bk-tab-count">{{ booking_status_counts.get('cancelled', 0) }}</span>
+          Cancelled <span class="bk-tab-count">{{ booking_status_counts.get('cancelled', 0) }}<span class="bk-new" data-bk-new="cancelled"{% if not bk_unseen.get('cancelled') %} style="display:none;"{% endif %}>{{ bk_unseen.get('cancelled', 0) }}</span></span>
         </button>
       </div>
 
+      <div class="queue-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div><b>Queue numbers:</b> each day's bookings are numbered by <b>booked time</b> first. If two bookings have the same time, <b>whoever booked first</b> gets the lower number. The number stays the same in every tab, and moves up if an earlier booking is cancelled.</div></div>
       <div class="filter-bar">
         <input type="text" placeholder="Search customer or service..." oninput="filterBookingsSearch(this.value)">
       </div>
@@ -1018,7 +1036,10 @@
               {# One row per booking, so every row has its own status, time, mechanic and action buttons
                  (one motor can finish before the other). Bookings submitted together through the queue
                  share a booking_batch and are tagged "Queue 1 of 2" instead of being merged. #}
-              {% for b in all_bookings %}
+              {% for day in booking_days %}
+              <tr class="bk-day-row"><td colspan="8"><span class="bk-day-name">{{ day.label }}</span><span class="bk-day-count">{{ day.count }} booking{{ '' if day.count == 1 else 's' }} that day</span></td></tr>
+              {% for b in day.rows %}
+                {% set q = queue_nums.get(b.id) %}
                 {% set group_bookings = [b] %}
                 {% set queue_sibs = ((all_bookings | selectattr('booking_batch', 'equalto', b.booking_batch) | sort(attribute='id') | list) if b.booking_batch else []) %}
                 {% set queue_pos = (queue_sibs | map(attribute='id') | list).index(b.id) + 1 if queue_sibs else 0 %}
@@ -1067,7 +1088,13 @@
                     data-total-amount="{{ group_bookings | sum(attribute='total_amount') }}"
                     data-created="{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}"
                     data-walkin="{{ '1' if b.walkin_customer_id else '' }}">
-                  <td{% if queue_sibs|length > 1 %} style="box-shadow:inset 3px 0 0 #7c3aed;"{% endif %}>{{ b.id }}</td>
+                  <td{% if q %} style="box-shadow:inset 3px 0 0 #7c3aed;"{% endif %}>
+                    {% if q %}
+                      <div class="qcell"><span class="qbox{{ ' qbox-first' if q.n == 1 }}">{{ q.n }}</span><span class="qord">{{ ordinal(q.n) }}</span><span class="qref">BKG-{{ '%03d'|format(b.id) }}</span></div>
+                    {% else %}
+                      <div class="qcell"><span class="qbox qbox-none">&mdash;</span><span class="qref">BKG-{{ '%03d'|format(b.id) }}</span></div>
+                    {% endif %}
+                  </td>
                   <td>
                     <div class="bk-name" style="font-weight:600;color:var(--text);">
                       {% if b.walkin_customer_id %}
@@ -1106,6 +1133,7 @@
                       <div style="font-size:0.78rem;color:var(--muted);font-style:italic;">Multiple dates/times</div>
                       <div style="font-size:0.72rem;color:var(--muted);">click to view</div>
                     {% endif %}
+                    <div class="booked-on">Booked on {{ b.created_at.strftime('%b %d') }}, {{ b.created_at.hour % 12 or 12 }}:{{ '%02d'|format(b.created_at.minute) }} {{ 'AM' if b.created_at.hour < 12 else 'PM' }}</div>
                   </td>
                   <td>
                     {% if all_same_status and b.status == 'inspection' %}
@@ -1237,6 +1265,7 @@
                     {% endif %}
                   </td>
                 </tr>
+              {% endfor %}
               {% endfor %}
             </tbody>
           </table>
@@ -4571,16 +4600,16 @@
     if (kind !== 'delay_notice' && !f) return '';
     let label, disabled = false;
     if (kind === 'preferred') {
-      label = f.available ? `${n}. Give it to ${f.mechanic} — free now, same slot` : `${n}. ${f.mechanic} isn't free — ${f.reason}`;
+      label = f.available ? `Give it to ${f.mechanic} — free now, same slot` : `${f.mechanic} isn't free — ${f.reason}`;
       disabled = !f.available;
     } else if (kind === 'move_time') {
-      label = f.available ? `${n}. Keep ${c.assigned_mechanic}, move to ${f.label}` : `${n}. Move the time — nothing free within 14 days`;
+      label = f.available ? `Keep ${c.assigned_mechanic}, move to ${f.label}` : `Move the time — nothing free within 14 days`;
       disabled = !f.available;
     } else if (kind === 'any_free') {
-      label = f.available ? `${n}. Hand to ${f.mechanic} at the same time (changes the customer's request)` : `${n}. No one else on duty is free at this time`;
+      label = f.available ? `Hand to ${f.mechanic} at the same time (changes the customer's request)` : `No one else on duty is free at this time`;
       disabled = !f.available;
     } else {
-      label = `${n}. Keep the slot, send a delay notice`;
+      label = `Keep the slot, send a delay notice`;
     }
     const cls = disabled ? 'btn-cancel' : 'btn-primary-custom';
     return `<button type="button" class="${cls}" ${disabled ? 'disabled' : `onclick="applyClashFix(${c.id}, '${kind}')"`}
@@ -7310,8 +7339,21 @@
 
   let _activeBookingTab = 'confirmed';
 
+  function applyBkBadges(map) {
+    document.querySelectorAll('#sec-bookings .bk-new').forEach(b => {
+      const n = (map && map[b.dataset.bkNew]) || 0;
+      b.textContent = n > 99 ? '99+' : n;
+      b.style.display = n > 0 ? '' : 'none';
+    });
+  }
+
   function switchBookingTab(status, el) {
     _activeBookingTab = status;
+    const _badge = document.querySelector(`#sec-bookings .bk-new[data-bk-new="${status}"]`);
+    if (_badge && _badge.style.display !== 'none') {            // opening the tab clears its red number
+      _badge.style.display = 'none';
+      fetch(`/api/booking-tabs/${status}/seen`, { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+    }
     document.querySelectorAll('.bk-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
     applyBookingTabFilter();
@@ -7319,15 +7361,23 @@
 
   function applyBookingTabFilter(search) {
     const q = (search !== undefined ? search : document.querySelector('#sec-bookings input[type=text]').value).toLowerCase();
+    let header = null, shown = 0;
+    const closeHeader = () => { if (header) header.style.display = shown ? '' : 'none'; };
     document.querySelectorAll('#bookings-table tbody tr').forEach(row => {
+      if (row.classList.contains('bk-day-row')) {      // a day header is visible only while one of its bookings is
+        closeHeader(); header = row; shown = 0; return;
+      }
       // Match against the underlying status data, not the displayed text — a grouped
       // row shows "Mixed statuses"/one badge in the cell, which won't reliably contain
       // the tab keyword. A grouped row matches a tab if ANY booking in it has that status.
       const rawStatuses = (row.dataset.statuses || row.dataset.status || '').split('|||');
       const matchesTab = rawStatuses.some(s => s.replace(/[_\s]+/g, '').toLowerCase().includes(_activeBookingTab));
       const matchesSearch = !q || row.textContent.toLowerCase().includes(q);
-      row.style.display = (matchesTab && matchesSearch) ? '' : 'none';
+      const ok = matchesTab && matchesSearch;
+      row.style.display = ok ? '' : 'none';
+      if (ok) shown++;
     });
+    closeHeader();
   }
 
   function filterBookingsSearch(query) {
@@ -9016,9 +9066,11 @@ setInterval(refreshDashboardOverview, 15000);
     try {
       const res = await fetch('/api/live-signature', { credentials: 'same-origin' });
       if (!res.ok) return;
-      const now = await res.json();
+      const body = await res.json();
+      const { bk_unseen, ...now } = body;                       // bk_unseen is a counter, not a section fingerprint
       if (last) Object.keys(now).forEach(k => { if (now[k] !== last[k]) pending.add(k); });
       last = now;
+      if (bk_unseen && typeof applyBkBadges === 'function') applyBkBadges(bk_unseen);
       if (pending.size && safeNow()) await refreshChanged();
     } catch (e) { /* quiet: the next tick retries */ }
     finally { busy = false; }

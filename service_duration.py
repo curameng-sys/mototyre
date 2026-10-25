@@ -345,6 +345,57 @@ def validate_booking(start_minutes, duration_minutes, shop_intervals, daily_coun
     return True, None
 
 
+def queue_numbers(bookings):
+    """Each day's queue: {booking_id: {'n': position, 'total': how many numbered bookings that day, 'moved_up': bool}}.
+
+    Computed from the bookings themselves every time (nothing is stored), so the admin side and the customer side can never
+    show different numbers. Rules:
+      * every day starts again at 1;
+      * earlier booked TIME gets the lower number;
+      * same time: whoever booked first gets the lower number; a customer who booked several at once (same booking_batch)
+        keeps their own queue order (Queue 1 of 2 before Queue 2 of 2) and stays together;
+      * a cancelled booking has no number, so the ones after it move up by themselves;
+      * status never matters (Confirmed, Inspection & Estimation, In Progress, Completed all keep their place);
+      * archived bookings still count, so archiving never renumbers anyone.
+    moved_up is True when a booking that sits ahead of this one in the day's order was cancelled AFTER this one was made
+    (it only counts if cancelled_at was recorded, so an old cancellation never shows a false "You moved up").
+    Pass bookings from any number of days; they are grouped by date here."""
+    by_day = {}
+    for b in bookings:
+        by_day.setdefault(b.date, []).append(b)
+    out = {}
+    for day, rows in by_day.items():
+        first_made = {}                         # earliest booking time in each batch, so a batch stays together on a tie
+        for b in rows:
+            key = b.booking_batch or ('single-%s' % b.id)
+            made = b.created_at or datetime.max
+            if key not in first_made or made < first_made[key]:
+                first_made[key] = made
+
+        def order(b):
+            key = b.booking_batch or ('single-%s' % b.id)
+            return (b.time, first_made[key], b.id)
+
+        live = sorted((b for b in rows if b.status != 'cancelled'), key=order)
+        cancelled = sorted((b for b in rows if b.status == 'cancelled'), key=order)
+        total = len(live)
+        for i, b in enumerate(live, 1):
+            moved = False
+            for c in cancelled:
+                when = getattr(c, 'cancelled_at', None)
+                if when and b.created_at and when > b.created_at and order(c) < order(b):
+                    moved = True
+                    break
+            out[b.id] = {'n': i, 'total': total, 'moved_up': moved}
+    return out
+
+
+def ordinal(n):
+    """1 -> '1st', 2 -> '2nd', 3 -> '3rd', 4 -> '4th', 11 -> '11th', 21 -> '21st'."""
+    suffix = 'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+    return f'{n}{suffix}'
+
+
 def get_ph_holidays(year):
     """Philippine regular + special non-working holidays. Mirrors
     customer_dashboard.html's getPHHolidays() exactly — the calendar that greys

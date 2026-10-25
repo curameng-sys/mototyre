@@ -19,6 +19,7 @@ from security import (clean_str, clean_int, clean_float, is_valid_email, is_vali
     validate_return_kind, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
 import json as _json
 from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_receipt_email, booking_receipt_email
+from service_duration import queue_numbers, ordinal
 from service_duration import (
     DEFAULT_DURATION_MIN, combine_services, combined_service_name, split_service_names,
     format_duration, minutes_to_ampm, minutes_to_hhmm, hhmm_to_minutes, slot_statuses,
@@ -391,6 +392,15 @@ def send_booking_confirmation_email(booking):
             return
 
         f = _booking_confirmation_facts(booking)
+        queue_row = ''
+        try:                                    # this booking's place in the day's queue (same numbers the app shows)
+            q = _queue_day_numbers(booking.date).get(booking.id)
+            if q:
+                queue_row = ('<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Queue number</td>'
+                             f'<td style="padding:6px 0;color:#6d28d9;font-size:13px;font-weight:700;text-align:right;">'
+                             f'{ordinal(q["n"])} of {q["total"]} bookings that day</td></tr>')
+        except Exception:
+            queue_row = ''
 
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
@@ -416,6 +426,7 @@ def send_booking_confirmation_email(booking):
               <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Mechanic</td><td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{f['mechanic_label']}</td></tr>
               <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Services</td><td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{f['services']}</td></tr>
               <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Motorcycle</td><td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">{f['motorcycle']}</td></tr>
+              {queue_row}
             </table>
             {"<div style='margin-top:16px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;color:#92400e;font-size:13px;'>The shop will assign your mechanic. We'll email you again once a mechanic is assigned — your appointment time stays the same.</div>" if f['mechanic_pending'] else ''}
             <div style="margin-top:16px;padding-top:16px;border-top:1px dashed #e5e7eb;color:#374151;font-size:13px;">
@@ -524,6 +535,8 @@ class Booking(db.Model):
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
     overrun_minutes  = db.Column(db.Integer, default=0)  # counter-staff-recorded extra time on top of duration_minutes
+    cancelled_at     = db.Column(db.DateTime, nullable=True)   # when it was cancelled — lets the queue tell a customer they moved up
+    walkin_customer_id = db.Column(db.Integer, nullable=True)   # set on walk-in bookings made at the counter
     was_rescheduled  = db.Column(db.Boolean, default=False)  # set once, first time this booking's date/time changes after creation
     completed_at     = db.Column(db.DateTime, nullable=True)  # when status actually reached completed — the warranty window's start
     invoice_payment_method = db.Column(db.String(10), nullable=True)  # customer's pick on the post-completion invoice: 'cash' or 'gcash'
@@ -857,6 +870,76 @@ def send_notification(user_id, title, message, type='update', status=None, booki
                                  status=status, booking_id=booking_id, priority=priority,
                                  return_request_id=return_request_id, order_id=order_id))
     db.session.commit()
+
+
+# ── Queue numbers ──────────────────────────────────────────────────────────────────────────────
+# The numbers themselves come from service_duration.queue_numbers() and are never stored, so this side and the admin side
+# always agree. Everything below is a best-effort extra: if it fails, booking / cancelling still go through untouched.
+
+app.jinja_env.globals['ordinal'] = ordinal
+
+
+def _queue_day_numbers(day):
+    return queue_numbers(Booking.query.filter(Booking.date == day).all())
+
+
+def _queue_cards(user_id, day, numbers=None):
+    """The customer's own bookings for one day, with their place in that day's queue, in queue order."""
+    numbers = numbers if numbers is not None else _queue_day_numbers(day)
+    cards = []
+    for b in Booking.query.filter(Booking.user_id == user_id, Booking.date == day, Booking.status != 'cancelled').all():
+        q = numbers.get(b.id)
+        if q:
+            cards.append({'id': b.id, 'ref': f'BKG-{b.id:03d}', 'n': q['n'], 'ord': ordinal(q['n']), 'total': q['total'],
+                          'service': b.service, 'motorcycle': b.motorcycle_model or '', 'moved_up': q['moved_up']})
+    return sorted(cards, key=lambda c: c['n'])
+
+
+def _queue_info_for(bookings):
+    """{booking_id: {'n', 'total', 'moved_up'}} for the given bookings, from the whole shop's bookings on those days."""
+    days = {b.date for b in bookings}
+    if not days:
+        return {}
+    nums = queue_numbers(Booking.query.filter(Booking.date.in_(days)).all())
+    return {b.id: nums[b.id] for b in bookings if b.id in nums}
+
+
+def _queue_day_label(day):
+    return day.strftime('%a, %b %d')
+
+
+def _notify_queue_confirmed(user_id, bookings):
+    """'Your queue numbers for Sat, Oct 24' — one notification per day the customer just booked."""
+    try:
+        for day in sorted({b.date for b in bookings}):
+            first = next(b for b in bookings if b.date == day)
+            send_notification(user_id, f'Your queue numbers for {_queue_day_label(day)}',
+                              'Bookings are numbered by booked time, then by who booked first.',
+                              type='queue', status='queue', booking_id=first.id)
+    except Exception:
+        db.session.rollback()
+        app.logger.exception('queue-number notification failed')
+
+
+def _notify_queue_moved(day, before):
+    """After a cancellation on `day`: tell every customer whose number went down. `before` = _queue_day_numbers(day) taken
+    just before the booking was cancelled."""
+    try:
+        after = _queue_day_numbers(day)
+        moved = {}
+        for b in Booking.query.filter(Booking.date == day, Booking.status != 'cancelled').all():
+            if getattr(b, 'walkin_customer_id', None):
+                continue
+            old, new = before.get(b.id), after.get(b.id)
+            if old and new and new['n'] < old['n']:
+                moved.setdefault(b.user_id, b)
+        for uid, b in moved.items():
+            send_notification(uid, f'You moved up for {_queue_day_label(day)}',
+                              'A booking before yours was cancelled, so your queue numbers moved up.',
+                              type='queue', status='queue_moved', booking_id=b.id)
+    except Exception:
+        db.session.rollback()
+        app.logger.exception('queue moved-up notification failed')
 
 
 def _notify_order_customer(order, title, body, status=None, extra_html='', email=None):
@@ -1472,7 +1555,12 @@ def customer_dashboard():
         if _m and _m.lower() not in _seen_motos:
             _seen_motos.add(_m.lower())
             saved_motorcycles.append(_m)
+    try:
+        queue_info = _queue_info_for(bookings)
+    except Exception:
+        queue_info = {}
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders, saved_motorcycles=saved_motorcycles,
+                           queue_info=queue_info,
                            products=products, services=services, returns=returns,
                            delivery_zone_barangays=DELIVERY_ZONE_BARANGAYS,
                            delivery_zone_cities=DELIVERY_ZONE_CITIES,
@@ -2036,6 +2124,7 @@ def book_service():
         f"Please arrive 10 minutes early so we can start on time.",
         type='booking', status='confirmed', booking_id=booking.id,
     )
+    _notify_queue_confirmed(current_user.id, [booking])
     for admin in User.query.filter_by(role='admin').all():
         send_notification(
             admin.id, 'New Booking Confirmed',
@@ -2063,6 +2152,10 @@ def customer_cancel_booking(bid):
 
     # The page may be stale (another device, or the shop just pressed Start), so don't trust
     # what it showed — the UPDATE below only matches a booking that is still Confirmed right now.
+    try:
+        _q_before = _queue_day_numbers(b.date)          # the day's queue as it is right now, for the "You moved up" notice
+    except Exception:
+        _q_before = None
     claimed = db.session.execute(
         text("UPDATE booking SET status = 'cancelled' WHERE id = :id AND user_id = :uid AND status = 'confirmed'"),
         {'id': b.id, 'uid': current_user.id}).rowcount
@@ -2070,6 +2163,13 @@ def customer_cancel_booking(bid):
     db.session.refresh(b)
     if not claimed:
         return refuse(b.status)
+    try:                                                # best effort: never lets a queue detail break a cancel
+        b.cancelled_at = ph_now()
+        db.session.commit()
+        if _q_before is not None:
+            _notify_queue_moved(b.date, _q_before)
+    except Exception:
+        db.session.rollback()
     ref = f'BKG-{b.id:03d}'
     send_notification(current_user.id, f'Cancelled — {b.date.strftime("%b %d")} at {b.time.strftime("%I:%M %p")}',
                       f'You cancelled your {b.service} booking ({ref}) on {b.date.strftime("%b %d, %Y")} at '
@@ -2479,6 +2579,7 @@ def book_multiple_services():
                 f"Your appointments are confirmed:\n{lines}\nPlease arrive 10 minutes early for each.",
                 type='booking', status='confirmed',
             )
+        _notify_queue_confirmed(current_user.id, created_bookings)
 
         for admin in User.query.filter_by(role='admin').all():
             send_notification(
@@ -3445,7 +3546,7 @@ def get_notifications():
     return_ids = {n.return_request_id for n in notifs if n.return_request_id}
     claims = {r.id: r for r in ReturnRequest.query.filter(ReturnRequest.id.in_(return_ids)).all()} if return_ids else {}
 
-    quotation_booking_ids = {n.booking_id for n in notifs if n.type in ('quotation', 'invoice') and n.booking_id}
+    quotation_booking_ids = {n.booking_id for n in notifs if n.type in ('quotation', 'invoice', 'queue') and n.booking_id}
     quotations_by_booking = {}
     bookings_by_id = {}
     if quotation_booking_ids:
@@ -3532,6 +3633,19 @@ def get_notifications():
             'sent_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
         }
 
+    _day_numbers = {}
+
+    def queue_payload(n):
+        """The small cards of a queue notification: this customer's bookings that day with their CURRENT place in the queue,
+        so the bell always agrees with the dashboard and the admin side."""
+        b = bookings_by_id.get(n.booking_id)
+        if not b:
+            return None
+        if b.date not in _day_numbers:
+            _day_numbers[b.date] = _queue_day_numbers(b.date)
+        cards = _queue_cards(n.user_id, b.date, _day_numbers[b.date])
+        return {'date_label': _queue_day_label(b.date), 'cards': cards} if cards else None
+
     results = []
     for n in notifs:
         title, message = n.title, n.message
@@ -3547,6 +3661,7 @@ def get_notifications():
             'priority': n.priority, 'booking_id': n.booking_id,
             'return_request_id': n.return_request_id, 'order_id': n.order_id, 'still_pending': still_pending(n),
             'quotation': quotation, 'invoice': invoice,
+            'queue': queue_payload(n) if n.type == 'queue' else None,
             'created_at': n.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
         })
     return jsonify(results)
@@ -3599,6 +3714,7 @@ def customer_poll():
         'bookings': [{'id': b.id, 'status': b.status} for b in bookings],
         'orders':   [{'id': o.id, 'status': o.status, 'ship': ship_order_state(o) if o.delivery_method == 'ship' else None} for o in orders],
         'returns_sig': _claims_sig,
+        'queue': _queue_info_for(bookings),
         'unread_notifications': unread_count
     })
 
@@ -4264,6 +4380,7 @@ with app.app_context():
         "ALTER TABLE product ADD COLUMN image_blob MEDIUMBLOB DEFAULT NULL",
         "ALTER TABLE product ADD COLUMN image_mime VARCHAR(40) DEFAULT NULL",
         "ALTER TABLE product ADD COLUMN motor_model VARCHAR(255) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN cancelled_at DATETIME DEFAULT NULL",
         "ALTER TABLE quotation_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
