@@ -327,6 +327,39 @@
     .form-group select option { background: var(--bg-page); color: var(--fg-1); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
     .moto-field-wrap { position: relative; }
+    /* My Motorcycles cards + the booking form's motorcycle picker */
+    .mm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.6rem; }
+    .mm-card { display: flex; gap: 0.65rem; align-items: flex-start; padding: 0.75rem 0.85rem; border: 1px solid var(--line-2); border-radius: 10px; background: #fff; min-width: 0; }
+    .mm-ico { flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px; background: var(--bg-subtle); border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; color: var(--fg-2); }
+    .mm-ico.red { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+    .mm-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.86rem; color: var(--fg-1); overflow-wrap: anywhere; }
+    .mm-sub { font-size: 0.74rem; color: var(--fg-3); overflow-wrap: anywhere; }
+    .mm-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+    .mm-tag { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.6rem; padding: 0.2em 0.6em; border-radius: 99px; white-space: nowrap; }
+    .mm-tag.new { background: #dcfce7; color: #15803d; }
+    .mm-tag.booked { background: #ede9fe; color: #6d28d9; }
+    .mm-tag.queue { background: #dbeafe; color: #1d4ed8; }
+    .mm-acts { display: flex; gap: 0.35rem; margin-top: 0.5rem; }
+    .mm-btn { padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg-page); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.68rem; cursor: pointer; color: var(--fg-1); }
+    .mm-btn.danger { color: #b91c1c; border-color: #fecaca; background: #fff; }
+    .mm-add { display: flex; gap: 0.65rem; align-items: center; padding: 0.75rem 0.85rem; border: 1.5px dashed var(--line-2); border-radius: 10px; background: var(--bg-subtle); cursor: pointer; text-align: left; font-family: inherit; color: var(--fg-1); width: 100%; }
+    .mm-add:hover { border-color: var(--brand-red-border); background: var(--brand-red-soft); }
+    .mm-empty { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center; padding: 1.4rem 1rem; border: 1.5px dashed var(--line-2); border-radius: 12px; background: var(--bg-subtle); }
+    .mpick { position: relative; }
+    .mpick-btn { width: 100%; display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.75rem; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg-page); cursor: pointer; text-align: left; font-family: inherit; color: var(--fg-1); min-height: 44px; }
+    .mpick-btn .mpick-txt { flex: 1; min-width: 0; line-height: 1.25; }
+    .mpick-btn b { display: block; font-size: 0.86rem; overflow-wrap: anywhere; }
+    .mpick-btn small { display: block; font-size: 0.72rem; color: var(--fg-3); }
+    .mpick-menu { display: none; position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid var(--line-2); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); padding: 0.35rem; max-height: 320px; overflow-y: auto; }
+    .mpick-menu.open { display: block; }
+    .mpick-head { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+    .mpick-head a { color: var(--brand-red); text-transform: none; letter-spacing: 0; font-size: 0.72rem; text-decoration: none; }
+    .mpick-opt { width: 100%; display: flex; gap: 0.6rem; align-items: center; padding: 0.5rem; border: none; background: none; border-radius: 8px; cursor: pointer; text-align: left; font-family: inherit; color: var(--fg-1); }
+    .mpick-opt:hover, .mpick-opt.on { background: var(--brand-red-soft); }
+    .mpick-opt .mpick-txt { flex: 1; min-width: 0; line-height: 1.25; }
+    .mpick-opt b { display: block; font-size: 0.84rem; }
+    .mpick-opt small { display: block; font-size: 0.72rem; color: var(--fg-3); }
+    .mpick-empty { padding: 0.6rem 0.5rem; font-size: 0.78rem; color: var(--fg-3); }
     .moto-dropdown {
       display: none;
       position: absolute;
@@ -1238,20 +1271,22 @@
           <!-- Vehicle information -->
           <div class="appt-section-label">Vehicle Information</div>
           <div class="form-grid">
-            <div class="form-group moto-field-wrap">
-              <label>Motorcycle Model</label>
-              <select id="moto-select" onchange="onMotoSelectChange()"></select>
-              <div id="moto-new-wrap" style="display:none;margin-top:0.4rem;position:relative;">
-                <input type="text" id="moto-model" value="" placeholder="e.g. Honda Beat" autocomplete="off"
-                  oninput="filterMotorcycleModels(); refreshBookingLimits()" onfocus="filterMotorcycleModels()">
-                <div id="motorcycle-model-dropdown" class="moto-dropdown"></div>
+            <div class="form-group">
+              <label>Motorcycle</label>
+              <div class="mpick" id="mpick">
+                <button type="button" id="mpick-btn" class="mpick-btn" onclick="toggleMotoPicker(event)" aria-haspopup="listbox"></button>
+                <div id="mpick-menu" class="mpick-menu" role="listbox"></div>
               </div>
+              <input type="hidden" id="moto-model" value="">
+              <input type="hidden" id="moto-plate" value="">
+              <div style="font-size:0.7rem;color:var(--fg-3);margin-top:0.35rem;">This list is your saved motorcycles from My Motorcycles in your account.</div>
             </div>
             <div class="form-group">
               <label>Odometer <span style="color:var(--fg-3);font-size:0.72rem;">(km)</span></label>
               <input type="number" id="odometer" placeholder="e.g. 12500" min="0" max="999999" style="appearance:textfield;">
             </div>
           </div>
+          <div id="moto-booked-note" style="display:none;margin:-0.2rem 0 0.9rem;padding:0.7rem 0.85rem;background:#fefce8;border:1px solid #fde68a;border-radius:10px;font-size:0.78rem;color:#713f12;line-height:1.5;"></div>
           <div class="form-group">
             <label>Mechanic</label>
             <div style="font-size:0.75rem;color:var(--fg-3);margin-bottom:0.5rem;">Name who you want, or leave it to the shop — both are fine.</div>
@@ -1344,6 +1379,11 @@
         <!-- Booking Queue Panel -->
         <div id="booking-queue-panel" style="display:block;margin-top:1.5rem;">
           <div class="appt-section-label" style="margin-top:0;">Booking Queue</div>
+          <label id="queue-select-all" style="display:none;align-items:center;gap:0.55rem;padding:0.5rem 0.75rem;margin-bottom:0.5rem;border:1px solid var(--line-2);border-radius:10px;background:#fff;font-size:0.8rem;font-weight:600;color:var(--fg-1);cursor:pointer;">
+            <input type="checkbox" id="queue-all-check" onclick="toggleQueueAll(this.checked)" style="width:16px;height:16px;accent-color:#1d4ed8;margin:0;">
+            <span style="flex:1;">Select all</span>
+            <span id="queue-picked-count" style="font-size:0.74rem;color:var(--fg-3);font-weight:600;"></span>
+          </label>
           <div id="booking-queue-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:320px;overflow-y:auto;padding-right:0.35rem;"><div style="font-size:0.8rem;color:var(--fg-3);">No bookings in your queue yet.</div></div>
           <div id="cancel-policy-section" style="margin-top:1.25rem;">
             <div class="appt-section-label" style="margin-top:0;">Cancellation Policy</div>
@@ -1374,7 +1414,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             Confirm All Bookings
           </button>
-          <div id="policy-hint" style="display:none;margin-top:0.45rem;font-size:0.72rem;color:var(--fg-3);text-align:center;">Tick "I understand the cancellation policy" to confirm.</div>
+          <div id="policy-hint" style="display:none;margin-top:0.45rem;font-size:0.72rem;color:var(--fg-3);text-align:center;"></div>
         </div>
 
       </div>
@@ -1423,9 +1463,9 @@
               <div style="display:flex;align-items:flex-start;gap:0.45rem;">
                 <span style="color:var(--fg-3);margin-top:2px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="5.5" cy="17" r="3"/><circle cx="18.5" cy="17" r="3"/><path d="M8.5 17h5l2-6h-4l-1.5-3H6"/><path d="M15.5 11l3 6"/><path d="M13 8h3"/></svg></span>
                 <div>
-                  {% if b.motorcycle_model %}
-                  <div style="font-size:0.85rem;color:var(--fg-1);">{{ b.motorcycle_model }}</div>
-                  {% if b.motorcycle_plate %}<div style="font-size:0.75rem;color:var(--fg-3);">{{ b.motorcycle_plate }}</div>{% endif %}
+                  {% if b.motorcycle_model or b.motorcycle_plate %}
+                  <div style="font-size:0.85rem;color:var(--fg-1);">{{ b.motorcycle_model or b.motorcycle_plate }}</div>
+                  {% if b.motorcycle_model and b.motorcycle_plate %}<div style="font-size:0.75rem;color:var(--fg-3);">{{ b.motorcycle_plate }}</div>{% endif %}
                   {% else %}
                   <div style="font-size:0.85rem;color:var(--fg-3);">Not given</div>
                   {% endif %}
@@ -1806,10 +1846,58 @@
             <div style="text-align:right;"><button type="button" id="dl-save-btn" class="acct-save" disabled onclick="saveDefaultAddress()" style="width:auto;padding:0.6rem 1.4rem;">Save Default Address</button></div>
           </div>
         </div>
+
+        <div class="card" id="my-motos-card">
+          <div class="card-head"><h5>My Motorcycles</h5><span id="mm-count" style="font-size:0.74rem;color:var(--fg-3);"></span></div>
+          <div class="card-body">
+            <div style="display:flex;gap:0.6rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.76rem;color:#1e3a8a;margin-bottom:1rem;line-height:1.5;">
+              <span style="flex-shrink:0;margin-top:1px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="3.5"/><circle cx="18.5" cy="17" r="3.5"/><path d="M15 6h2l3 7"/><path d="M5.5 17 9 10h6l3.5 7"/><path d="M9 10 7.5 6H5"/></svg></span>
+              <span>Motorcycles saved here show up under <strong>Your motorcycles</strong> when you book a service. Add the plate number so two of the same model (like two Honda Click 125i) never get mixed up.</span>
+            </div>
+            <div id="mm-list"></div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
+</div>
+
+<!-- ═══ ADD / EDIT A MOTORCYCLE (My Motorcycles and the booking form use the same form) ═══ -->
+<div class="modal-overlay" id="modal-moto-form" onclick="if(event.target===this) closeModal('modal-moto-form')">
+  <div class="modal-box" style="width:480px;max-width:95vw;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;margin-bottom:0.9rem;">
+      <div>
+        <h5 id="mf-title" style="margin:0;">Add a motorcycle</h5>
+        <div style="font-size:0.76rem;color:var(--fg-3);margin-top:0.2rem;">Yours, a family member's, a friend's, etc. It shows up in the motorcycle dropdown when you book.</div>
+      </div>
+      <button type="button" onclick="closeModal('modal-moto-form')" aria-label="Close" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;line-height:1;">✕</button>
+    </div>
+    <input type="hidden" id="mf-id">
+    <div class="form-grid">
+      <div class="form-group moto-field-wrap">
+        <label>Model <span style="color:var(--brand-red);">*</span></label>
+        <input type="text" id="mf-model" maxlength="100" placeholder="Type to search, e.g. Honda Click 125i" autocomplete="off"
+          oninput="filterMotorcycleModels(); mfClearErr(this)" onfocus="filterMotorcycleModels()">
+        <div id="motorcycle-model-dropdown" class="moto-dropdown"></div>
+      </div>
+      <div class="form-group">
+        <label>Plate number <span style="color:var(--brand-red);">*</span></label>
+        <input type="text" id="mf-plate" maxlength="20" placeholder="E.G. ABC 1234" autocomplete="off" style="text-transform:uppercase;"
+          oninput="this.value=this.value.toUpperCase(); mfClearErr(this)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Whose motorcycle? <span style="color:var(--fg-3);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+      <input type="text" id="mf-owner" maxlength="60" placeholder="e.g. Mine, Kuya's, Papa's, a friend's">
+    </div>
+    <div style="font-size:0.72rem;color:var(--fg-3);margin:-0.3rem 0 0.8rem;">No plate yet? Type the temporary plate or MV file number.</div>
+    <div id="mf-err" role="alert" style="display:none;margin-bottom:0.7rem;padding:0.5rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.76rem;color:#b91c1c;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-moto-form')">Cancel</button>
+      <button type="button" id="mf-save" class="acct-save" style="width:auto;padding:0.6rem 1.4rem;" onclick="saveMotoForm()">Save Motorcycle</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ BOOKING DETAILS MODAL ═══ -->
@@ -2704,7 +2792,7 @@
   };
 
   function filterMotorcycleModels() {
-    const input = document.getElementById('moto-model');
+    const input = document.getElementById('mf-model');
     const dropdown = document.getElementById('motorcycle-model-dropdown');
     const q = input.value.trim().toLowerCase();
 
@@ -2726,13 +2814,13 @@
   }
 
   function selectMotorcycleModel(value) {
-    document.getElementById('moto-model').value = value;
+    document.getElementById('mf-model').value = value;
     document.getElementById('motorcycle-model-dropdown').classList.remove('open');
-    refreshBookingLimits();
+    mfClearErr(document.getElementById('mf-model'));
   }
 
   document.addEventListener('click', function (e) {
-    const input = document.getElementById('moto-model');
+    const input = document.getElementById('mf-model');
     const dropdown = document.getElementById('motorcycle-model-dropdown');
     if (input && dropdown && !input.contains(e.target) && !dropdown.contains(e.target)) {
       dropdown.classList.remove('open');
@@ -3334,7 +3422,16 @@ function selectPayment(method) {
   /* ── CALENDAR ── */
 const SHOP_CLOSE_MINUTES = 18 * 60 + 30; // 6:30 PM — mirrors service_duration.SHOP_CLOSE_MIN
 let currentYear, currentMonth, selectedDate = null, selectedTime = null, bookedData = { fully_booked: [] };
-const today = new Date(); today.setHours(0,0,0,0);
+// The shop's real date and time come from the server (Philippine time), not the device clock.
+const SHOP_NOW_MS_AT_LOAD = {{ shop_now_ms|default(0)|int }};
+const _shopClockStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 0;
+function shopNowMs() {
+  if (!SHOP_NOW_MS_AT_LOAD) return Date.now() + 8 * 3600e3;
+  const ran = (typeof performance !== 'undefined' && performance.now) ? performance.now() - _shopClockStart : 0;
+  return SHOP_NOW_MS_AT_LOAD + ran;
+}
+function shopTodayIso() { return new Date(shopNowMs()).toISOString().slice(0, 10); }
+const today = new Date(shopTodayIso() + 'T00:00:00'); today.setHours(0,0,0,0);
 currentYear = today.getFullYear(); currentMonth = today.getMonth();
 
 // ── Philippine Regular & Special Non-Working Holidays ──
@@ -3436,16 +3533,21 @@ function minutesToAmpmJS(m) {
 //  3. Up to 3 upcoming bookings per account; bookings waiting in the queue count too.
 const MAX_BOOKINGS_PER_DAY = 2, MAX_UPCOMING_BOOKINGS = 3;
 function motoKeyJS(model) { return (model || '').trim().toLowerCase().replace(/\s+/g, ' ') || 'unspecified'; }
-function bookingMotoKey(b) { return (b.motorcycle_plate || '').trim().toLowerCase() || motoKeyJS(b.motorcycle_model); }
+function plateKeyJS(p) { return String(p || '').replace(/[\s\-]+/g, '').toLowerCase(); }
+function bookingMotoKey(b) { return plateKeyJS(b.motorcycle_plate) || motoKeyJS(b.motorcycle_model); }
+// The motorcycle picked in the booking form: by plate (two of the same model never get mixed up).
+function currentMotoKey() {
+  return plateKeyJS((document.getElementById('moto-plate') || {}).value) || motoKeyJS((document.getElementById('moto-model') || {}).value);
+}
 function finishMinutesJS(start, dur) { return (start < 720 && start + dur > 720) ? start + dur + 30 : start + dur; }
 
 function checkBookingRulesJS(dateVal, key) {
-  const todayIso = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);   // shop time
+  const todayIso = new Date(shopNowMs()).toISOString().slice(0, 10);   // shop time
   const live = Object.values(bookingsData).filter(b => b.status !== 'cancelled');
   const sameDay = live.filter(b => b.date_iso === dateVal);
   const queueDay = bookingQueue.filter(q => q.date === dateVal);
 
-  const qm = queueDay.find(q => motoKeyJS(q.motorcycle_model) === key);
+  const qm = queueDay.find(q => bookingMotoKey(q) === key);
   if (qm) return { merge: 'queue', target: qm };
   const bm = sameDay.find(b => bookingMotoKey(b) === key);
   if (bm) {
@@ -3564,21 +3666,21 @@ function schedCardFor(x) {
     const svcs = (q.services && q.services.length) ? q.services : String(q.service_display || '').split(',').map(v => v.trim()).filter(Boolean);
     const when = q.is_multiday ? `${noZero(minutesToAmpmJS(hhmmToMinutes(q.time)))} drop-off` : noZero(q._displayTime || '');
     return { first: svcs[0] || '', more: Math.max(0, svcs.length - 1), queued: true,
-             meta: [short(q.date), when, q.motorcycle_model].filter(Boolean).join(' · ') };
+             meta: [short(q.date), when, q.motorcycle_model, q.motorcycle_plate].filter(Boolean).join(' · ') };
   }
   const b = x.booking;
   const svcs = (b.service || '').split(',').map(v => v.trim()).filter(Boolean);
   const when = b.is_multiday ? `${noZero(b.time)} drop-off` : (b.end_time ? `${noZero(b.time)} – ${noZero(b.end_time)}` : noZero(b.time));
   return { first: svcs[0] || '', more: Math.max(0, svcs.length - 1), ref: 'BKG-' + String(b.id).padStart(3, '0'),
-           meta: [short(b.date_iso), when, b.motorcycle_model].filter(Boolean).join(' · ') };
+           meta: [short(b.date_iso), when, b.motorcycle_model, b.motorcycle_plate].filter(Boolean).join(' · ') };
 }
 function schedItemsOnDate(dateIso, key) {
   const real = Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.date_iso === dateIso && (!key || bookingMotoKey(b) === key)).map(b => ({ booking: b }));
-  const queued = bookingQueue.filter(q => q.date === dateIso && !q._mergesInto && (!key || motoKeyJS(q.motorcycle_model) === key)).map(q => ({ queue: q }));
+  const queued = bookingQueue.filter(q => q.date === dateIso && !q._mergesInto && (!key || bookingMotoKey(q) === key)).map(q => ({ queue: q }));
   return [...real, ...queued];
 }
 function schedUpcomingItems() {
-  const todayIso = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  const todayIso = new Date(shopNowMs()).toISOString().slice(0, 10);
   const real = Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.status !== 'completed' && b.date_iso >= todayIso).map(b => ({ booking: b }));
   const queued = bookingQueue.filter(q => !q._mergesInto).map(q => ({ queue: q }));
   const dateOf = x => x.booking ? x.booking.date_iso : x.queue.date;
@@ -3713,7 +3815,7 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
   hideQueueMissing();
 
   // 2. Everything filled in: same motorcycle that day (A) → 2 bookings that day (B) → 3 upcoming (C).
-  const motoKey = motoKeyJS(document.getElementById('moto-model').value);
+  const motoKey = currentMotoKey();
   const rule = checkBookingRulesJS(dateVal, motoKey);
   if (rule.merge && !mergeMode) {
     const plan = mergePlan(rule, timeVal);
@@ -3791,6 +3893,8 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
     is_multiday:      !!currentJobIsMultiday,
     duration_label:   currentJobDurationLabel || '',
     motorcycle_model: document.getElementById('moto-model').value,
+    motorcycle_plate: document.getElementById('moto-plate').value,
+    _selected:        true,
     odometer:         document.getElementById('odometer').value,
     mechanic_id:      mechId,
     mechanic_name:    mechName,
@@ -3822,7 +3926,6 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
     }
   }
   bookingQueue.push(entry);
-  rememberMotorcycle(entry.motorcycle_model);
   renderBookingQueue();
   resetBookingForm(true);
   showCartToast(mergeMsg || (rule.merge === 'booking'
@@ -3846,7 +3949,12 @@ function updateBookingSteps() {
 }
 
 function renderBookingQueue() {
+  // A queue item for a date that has already passed can't be booked any more: it leaves the queue.
+  const _todayIso = shopTodayIso();
+  if (bookingQueue.some(q => q.date < _todayIso)) { bookingQueue = bookingQueue.filter(q => q.date >= _todayIso); _queueOpen.clear(); }
   if (typeof refreshBookingLimits === 'function') refreshBookingLimits();   // the queue counts toward the limits
+  if (typeof renderMyMotorcycles === 'function') renderMyMotorcycles();     // "In queue" tags
+  if (typeof renderMotoPicker === 'function') renderMotoPicker(true);
   const panel  = document.getElementById('booking-queue-panel');
   const list   = document.getElementById('booking-queue-list');
   const badge  = document.getElementById('queue-badge-wrap');
@@ -3910,7 +4018,9 @@ function renderBookingQueue() {
           <div style="padding:0.65rem 0.85rem;border-top:1px solid var(--line-1);background:#fff;">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;">
               <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:var(--fg-1);">
+                <input type="checkbox" ${q._selected ? 'checked' : ''} onclick="toggleQueuePick(${r.i}, this.checked)" aria-label="Confirm this booking" style="width:16px;height:16px;accent-color:#1d4ed8;margin:0;cursor:pointer;">
                 ${r.when}
+                ${q._selected ? '' : tag('Stays in queue', '#f3f4f6', '#4b5563')}
                 ${showSame ? tag('Same time', '#fef3c7', '#92400e') : ''}
                 ${r.merges ? tag('Adds to BKG-' + String(q._mergesInto).padStart(3, '0'), '#dbeafe', '#1d4ed8') : ''}
               </div>
@@ -3924,7 +4034,7 @@ function renderBookingQueue() {
             <div style="margin-top:0.4rem;padding:0.45rem 0.65rem;border:1px dashed #93c5fd;border-radius:8px;display:flex;flex-direction:column;gap:0.25rem;">
               ${more.map(m => `<div style="display:flex;justify-content:space-between;gap:0.6rem;font-size:0.78rem;color:var(--fg-2);"><span>${m}</span><span style="color:var(--fg-3);">${durationOf(m)}</span></div>`).join('')}
             </div>` : ''}
-            ${q.motorcycle_model ? `<div style="margin-top:0.25rem;font-size:0.72rem;color:var(--fg-3);">${q.motorcycle_model}</div>` : ''}
+            ${(q.motorcycle_model || q.motorcycle_plate) ? `<div style="margin-top:0.25rem;font-size:0.72rem;color:var(--fg-3);">${[q.motorcycle_model, q.motorcycle_plate].filter(Boolean).join(' · ')}</div>` : ''}
             <div style="margin-top:0.2rem;font-size:0.72rem;color:#1d4ed8;">Mechanic: ${q.mechanic_name || 'Shop will assign'}</div>
             ${q.notes ? `<div style="margin-top:0.2rem;font-size:0.72rem;color:var(--fg-3);overflow-wrap:anywhere;">Note: ${q.notes}</div>` : ''}
             ${q._mechIssue ? issueBlockHTML(q, r.i) : ''}
@@ -4002,18 +4112,48 @@ function resetBookingForm(keepDate) {
 }
 
 // Confirm All Bookings stays disabled until the queue has something AND the policy box is ticked.
+const CONFIRM_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
 function updateConfirmAll() {
   const btn   = document.getElementById('btn-confirm-all-bottom');
   const check = document.getElementById('policy-check');
   const sect  = document.getElementById('cancel-policy-section');
   const hint  = document.getElementById('policy-hint');
   if (!btn || !check) return;
-  const has = bookingQueue.length > 0;
+  const total = bookingQueue.length, picked = bookingQueue.filter(q => q._selected).length;
+  const has = total > 0;
   if (sect) sect.style.display = has ? 'block' : 'none';
-  btn.disabled = !has || !check.checked || btn.dataset.busy === '1';
+  const all = document.getElementById('queue-select-all');
+  if (all) {
+    all.style.display = has ? 'flex' : 'none';
+    document.getElementById('queue-all-check').checked = has && picked === total;
+    document.getElementById('queue-all-check').indeterminate = picked > 0 && picked < total;
+    document.getElementById('queue-picked-count').textContent = `${picked} of ${total} selected`;
+  }
+  if (btn.dataset.busy !== '1') {
+    const label = !picked ? 'Confirm Bookings'
+      : (picked === total && total > 1) ? `Confirm All ${total} Bookings`
+      : `Confirm ${picked} Booking${picked === 1 ? '' : 's'}`;
+    btn.innerHTML = CONFIRM_ICON + ' ' + label;
+  }
+  btn.disabled = !has || !picked || !check.checked || btn.dataset.busy === '1';
   btn.style.opacity = btn.disabled ? '0.45' : '1';
   btn.style.cursor  = btn.disabled ? 'not-allowed' : 'pointer';
-  if (hint) hint.style.display = (has && !check.checked) ? 'block' : 'none';
+  if (hint) {
+    const need = [];
+    if (has && !picked) need.push('the bookings you want to confirm');
+    if (has && !check.checked) need.push('"I understand the cancellation policy"');
+    hint.textContent = need.length ? `Tick ${need.join(' and ')} to confirm.` : '';
+    hint.style.display = need.length ? 'block' : 'none';
+  }
+}
+function toggleQueuePick(i, on) {
+  if (!bookingQueue[i]) return;
+  bookingQueue[i]._selected = !!on;
+  renderBookingQueue();
+}
+function toggleQueueAll(on) {
+  bookingQueue.forEach(q => { q._selected = !!on; });
+  renderBookingQueue();
 }
 function onPolicyToggle() {
   const check = document.getElementById('policy-check');
@@ -4103,13 +4243,14 @@ async function issuePickTime(i, val) {
 
 async function submitAllBookings() {
   if (!bookingQueue.length) { showCartToast('Queue is empty.'); return; }
+  if (!bookingQueue.some(q => q._selected)) { updateConfirmAll(); return; }
   if (!document.getElementById('policy-check').checked) { updateConfirmAll(); return; }
 
   const btnBot = document.getElementById('btn-confirm-all-bottom');
   const label  = btnBot.innerHTML;
   btnBot.dataset.busy = '1';
   btnBot.disabled = true; btnBot.textContent = 'Submitting…';
-  const snapshot = bookingQueue.slice();
+  const snapshot = bookingQueue.filter(q => q._selected);   // unticked items stay in the queue
 
   try {
     const res = await fetch('/customer/book-multiple', {
@@ -4154,7 +4295,7 @@ async function submitAllBookings() {
     // Always put the button back, whatever happened above.
     btnBot.innerHTML = label;
     delete btnBot.dataset.busy;
-    updateConfirmAll();
+    renderBookingQueue();
   }
 }
 
@@ -4186,7 +4327,7 @@ function openCancelFor(id) { _currentBookingDetailId = id; openCancelMyBooking()
 function renderUpcomingBookings() {
   const wrap = document.getElementById('upcoming-bookings-list');
   if (!wrap) return;
-  const nowShop = Date.now() + 8 * 3600e3;                         // shop time
+  const nowShop = shopNowMs();                         // shop time
   const todayIso = new Date(nowShop).toISOString().slice(0, 10);
   const noZero = t => (t || '').replace(/^0/, '');
   const items = [];
@@ -4208,7 +4349,7 @@ function renderUpcomingBookings() {
   bookingQueue.forEach((q, i) => { if (q._mergesInto && q.merge_mode) return; items.push({
     key: 'q' + i, date: q.date, start: hhmmToMinutes(q.time), id: null, queued: true, merges: !!q._mergesInto, fresh: false,
     when: q.is_multiday ? `${minutesToAmpmJS(hhmmToMinutes(q.time))} drop-off` : (q._displayTime || ''),
-    services: (q.services || []).slice(), moto: q.motorcycle_model || '', mechanic: q.mechanic_name,
+    services: (q.services || []).slice(), moto: [q.motorcycle_model, q.motorcycle_plate].filter(Boolean).join(' · '), mechanic: q.mechanic_name,
     status: 'queued', ref: q._mergesInto ? 'Adds to BKG-' + String(q._mergesInto).padStart(3, '0') : 'In queue',
   }); });
 
@@ -4291,7 +4432,7 @@ function bookingsOnDate(dateIso) {
   return { real, queued, count: real.length + queued.filter(q => !q._mergesInto).length };
 }
 function upcomingBookingCount() {
-  const todayIso = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  const todayIso = new Date(shopNowMs()).toISOString().slice(0, 10);
   return Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.status !== 'completed' && b.date_iso >= todayIso).length
        + bookingQueue.filter(q => !q._mergesInto).length;
 }
@@ -4301,9 +4442,9 @@ function refreshBookingLimits() {
   if (!el) return;
   const dateIso = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : '';
   const dateLabel = dateIso ? new Date(dateIso + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';
-  const typed = (document.getElementById('moto-model') || {}).value || '';
-  const motoName = typed.trim() || ACCOUNT_PROFILE.moto || 'Your motorcycle';
-  const key = motoKeyJS(typed.trim() || ACCOUNT_PROFILE.moto);
+  const _m = (typeof currentMoto === 'function') ? currentMoto() : null;
+  const motoName = _m ? [_m.model, _m.plate, _m.owner].filter(Boolean).join(' · ') : 'Pick a motorcycle';
+  const key = currentMotoKey();
 
   const card = (title, value, valueColor, sub, bar, reached) => `
     <div style="border:1px solid ${reached ? '#fca5a5' : 'var(--line-2)'};border-radius:10px;padding:0.65rem 0.75rem;background:${reached ? '#fef2f2' : '#fff'};">
@@ -4321,8 +4462,9 @@ function refreshBookingLimits() {
     c1 = card('1 booking per motorcycle per day', '—', 'var(--fg-3)', 'Pick a date to check.');
   } else {
     const day = bookingsOnDate(dateIso);
-    const taken = day.real.some(b => bookingMotoKey(b) === key) || day.queued.some(q => motoKeyJS(q.motorcycle_model) === key);
-    c1 = card('1 booking per motorcycle per day', taken ? 'Already booked' : 'Free', taken ? '#dc2626' : '#16a34a', `${motoName} on ${dateLabel}`, '', taken);
+    const taken = !!_m && (day.real.some(b => bookingMotoKey(b) === key) || day.queued.some(q => bookingMotoKey(q) === key));
+    c1 = !_m ? card('1 booking per motorcycle per day', '—', 'var(--fg-3)', 'Pick a motorcycle to check.')
+             : card('1 booking per motorcycle per day', taken ? 'Already booked' : 'Free', taken ? '#dc2626' : '#16a34a', `${motoName} on ${dateLabel}`, '', taken);
   }
 
   // 2. two bookings a day, each for a different motorcycle
@@ -4333,12 +4475,8 @@ function refreshBookingLimits() {
     const n = bookingsOnDate(dateIso).count;
     c2 = card(`Bookings on ${dateLabel}`, `${n} of ${MAX_BOOKINGS_PER_DAY}`, n >= MAX_BOOKINGS_PER_DAY ? '#dc2626' : 'var(--fg-1)', 'Each for a different motorcycle', bar(n, MAX_BOOKINGS_PER_DAY), n >= MAX_BOOKINGS_PER_DAY);
   }
-
-  // 3. three upcoming bookings at a time (the queue counts)
-  const up = upcomingBookingCount();
-  const c3 = card('Upcoming bookings', `${up} of ${MAX_UPCOMING_BOOKINGS}`, up >= MAX_UPCOMING_BOOKINGS ? '#dc2626' : 'var(--fg-1)',
-                  'Frees up when one is completed or cancelled', bar(up, MAX_UPCOMING_BOOKINGS), up >= MAX_UPCOMING_BOOKINGS);
-  el.innerHTML = c1 + c2 + c3;
+  el.innerHTML = c1 + c2;
+  if (typeof refreshMotoBookedNote === 'function') refreshMotoBookedNote();
 }
 
 // "09:00 AM" / "1:30 PM" (as bookingsData stores it) -> minutes since midnight
@@ -4369,8 +4507,8 @@ async function renderCalendar() {
     if (dateObj.getTime() === today.getTime()) cell.classList.add('today');
 
     const isToday = dateObj.getTime() === today.getTime();
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const now = new Date(shopNowMs());
+    const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
     const pastClosing = isToday && nowMinutes >= SHOP_CLOSE_MINUTES;
     const isQueued = bookingQueue.some(b => b.date === dateStr);
     const holidayName = isHoliday(dateStr);
@@ -4602,6 +4740,7 @@ function missingForQueue() {
   if (!document.getElementById('selected-date-value').value) out.push('a date');
   if (!selectedServiceNames.length) out.push('at least one service');
   if (!document.getElementById('selected-time-value').value) out.push('a time');
+  if (!document.getElementById('moto-plate').value) out.push('a motorcycle');
   if (mechanicMode === 'choose' && !selectedMechanicId) out.push('a mechanic');
   if (!/^[a-zA-Z\s]+$/.test(name) || !name) out.push('your full name');
   if (!/^0\d{10}$/.test(mobile)) out.push('a valid mobile number (09XXXXXXXXX)');
@@ -5580,7 +5719,7 @@ function openBookingDetails(bookingId) {
     : (booking.end_time ? `${booking.time} – ${booking.end_time}` : booking.time);
 
   // Motorcycle info
-  document.getElementById('bd-model').textContent = booking.motorcycle_model || '—';
+  document.getElementById('bd-model').textContent = [booking.motorcycle_model, booking.motorcycle_plate].filter(Boolean).join(' · ') || '—';
 
   // Odometer
   const odoEl = document.getElementById('bd-odo-wrap');
@@ -5807,7 +5946,7 @@ const ordersData = {
     created_at: '{{ o.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
     delivered_at: {{ (o.delivered_at.strftime("%b %d, %Y at %I:%M %p")|tojson) if o.delivered_at else 'null' }},
     ship: {{ (o.ship_state or none)|tojson }},
-    return_window: {{ ({'expired': o.return_window.expired, 'days_left': o.return_window.days_left, 'label': o.return_window.label} if o.return_window else none)|tojson }},
+    return_window: {{ ({'expired': o.return_window.expired, 'days_left': o.return_window.days_left, 'label': o.return_window.label, 'deadline_label': o.return_window.deadline.strftime('%B %d, %Y')} if o.return_window else none)|tojson }},
     open_claim: {{ ({'id': o.open_claim.id, 'ref': 'RMA-%03d'|format(o.open_claim.id), 'status': o.open_claim.status} if o.open_claim else none)|tojson }},
     replacement_stats: {{ (o.replacement_stats or none)|tojson }},
     items: [
@@ -6570,6 +6709,12 @@ function renderClaimableOrders() {
 // (the tracker lives on the ORIGINAL service's card, which is what this one
 // links back to). It still appears in this list since it carries the
 // original's inherited warranty window.
+// "Motorcycle: Honda Click 125i · NAB 1234" (just the model for older bookings with no plate); no line at all if none
+function motoLineHTML(b) {
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const moto = [b.motorcycle_model, b.motorcycle_plate].map(x => String(x || '').trim()).filter(Boolean).join(' · ');
+  return moto ? `<div style="font-size:0.78rem;color:var(--fg-2);">Motorcycle: ${esc(moto)}</div>` : '';
+}
 function backJobCardHTML(b) {
   const tag = b.backjob_done
     ? `<span style="font-size:0.7rem;font-weight:700;color:#15803d;">Done</span>`
@@ -6587,7 +6732,7 @@ function backJobCardHTML(b) {
         </div>
         ${rwBadge('#ede9fe', '#6d28d9', '#c4b5fd', '', 'Back job')}
       </div>
-      <div style="font-size:0.78rem;color:var(--fg-2);">Motorcycle: ${b.motorcycle_model || '—'}</div>
+      ${motoLineHTML(b)}
       <div style="font-size:0.78rem;color:var(--fg-2);">Mechanic: ${b.mechanic_name || 'Shop assigned'}</div>
       <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.3rem;">Back job ${b.backjob_number} of 2 · original booking: <a href="#" onclick="showSection('bookings', null); setTimeout(() => openBookingDetails(${b.backjob_original_id}), 150); return false;" style="color:var(--fg-3);">${originRef}</a></div>
       <div class="rw-foot" style="border-top:1px solid var(--line-1);margin-top:0.7rem;padding-top:0.6rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
@@ -6624,7 +6769,7 @@ function renderClaimableBookings() {
         </div>
         ${claimBadgeHTML(b.return_window, 'service', !!refund)}
       </div>
-      <div style="font-size:0.78rem;color:var(--fg-2);">Motorcycle: ${b.motorcycle_model || '—'}</div>
+      ${motoLineHTML(b)}
       <div style="font-size:0.78rem;color:var(--fg-2);">Mechanic: ${b.mechanic_name || 'Shop assigned'}</div>
       <div class="rw-foot" style="border-top:1px solid var(--line-1);margin-top:0.7rem;padding-top:0.6rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
         <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">Total ${pesoFmt(b.total_amount)}</span>
@@ -8406,52 +8551,246 @@ function updateMechNote() {
   }
 }
 
-// ── Saved motorcycles ──
-const ADD_MOTO = '__add__';
-let savedMotorcycles = {{ (saved_motorcycles or [])|tojson }};
+// ── My Motorcycles (Account Information) and the booking form's motorcycle picker: one list, MY_MOTOS ──
+const MOTO_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="3.5"/><circle cx="18.5" cy="17" r="3.5"/><path d="M15 6h2l3 7"/><path d="M5.5 17 9 10h6l3.5 7"/><path d="M9 10 7.5 6H5"/></svg>';
+var MY_MOTOS = {{ (my_motorcycles or [])|tojson }};      // var: other code may ask before this line has run
+var selectedMotoId = MY_MOTOS.length ? MY_MOTOS[0].id : null;
+const _mmEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const _mmShort = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const _mmLong = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 
-function renderMotoSelect(want) {
-  const sel = document.getElementById('moto-select');
-  if (!sel) return;
-  const prev = want !== undefined ? want : sel.value;
-  sel.innerHTML = '';
-  savedMotorcycles.forEach(m => {
-    const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o);
-  });
-  const add = document.createElement('option'); add.value = ADD_MOTO; add.textContent = '+ Add another motorcycle';
-  sel.appendChild(add);
-  const has = prev && [...sel.options].some(o => o.value === prev);
-  sel.value = has ? prev : (savedMotorcycles.length ? savedMotorcycles[0] : ADD_MOTO);
-  syncMotoFromSelect(false);
+function motoById(id) { return (MY_MOTOS || []).find(m => String(m.id) === String(id)) || null; }
+function currentMoto() { return motoById(selectedMotoId); }
+function motoSubLine(m) { return ['Plate ' + m.plate, m.owner].filter(Boolean).join(' · '); }
+
+// Real bookings (not cancelled / completed) and queue items for this motorcycle, from today on.
+function motoRealBookings(m, dateIso) {
+  const t = shopTodayIso(), k = plateKeyJS(m.plate);
+  return Object.values(bookingsData).filter(b => !['cancelled', 'completed'].includes(b.status) && plateKeyJS(b.motorcycle_plate) === k
+    && (dateIso ? b.date_iso === dateIso : b.date_iso >= t)).sort((x, y) => x.date_iso < y.date_iso ? -1 : 1);
+}
+function motoQueueItems(m, dateIso) {
+  const t = shopTodayIso(), k = plateKeyJS(m.plate);
+  return bookingQueue.filter(q => plateKeyJS(q.motorcycle_plate) === k && (dateIso ? q.date === dateIso : q.date >= t))
+    .sort((x, y) => x.date < y.date ? -1 : 1);
+}
+function motoTagsHTML(m, dateIso) {
+  const out = [];
+  if (m.is_new) out.push('<span class="mm-tag new">New</span>');
+  const real = motoRealBookings(m, dateIso), queued = motoQueueItems(m, dateIso);
+  if (real.length) out.push(`<span class="mm-tag booked">Booked ${_mmShort(real[0].date_iso)}</span>`);
+  if (queued.length) out.push(`<span class="mm-tag queue">In queue ${_mmShort(queued[0].date)}</span>`);
+  return out.join('');
 }
 
-function syncMotoFromSelect(focus) {
-  const sel = document.getElementById('moto-select');
-  const input = document.getElementById('moto-model');
-  const wrap = document.getElementById('moto-new-wrap');
-  if (sel.value === ADD_MOTO) {
-    if (wrap.style.display === 'none') input.value = '';
-    wrap.style.display = 'block';
-    if (focus) input.focus();
-  } else {
-    input.value = sel.value;
-    wrap.style.display = 'none';
+function renderMyMotorcycles() {
+  const list = document.getElementById('mm-list');
+  if (!list || !MY_MOTOS) return;
+  document.getElementById('mm-count').textContent = MY_MOTOS.length ? `${MY_MOTOS.length} saved` : 'None saved yet';
+  if (!MY_MOTOS.length) {
+    list.innerHTML = `
+      <div class="mm-empty">
+        <span class="mm-ico">${MOTO_ICON}</span>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.86rem;color:var(--fg-1);">No motorcycles saved yet</div>
+        <div style="font-size:0.76rem;color:var(--fg-3);">Add one and it shows up when you book a service.</div>
+        <button type="button" class="acct-save" style="width:auto;padding:0.55rem 1.2rem;margin-top:0.3rem;" onclick="openMotoForm()">+ Add Motorcycle</button>
+      </div>`;
+    return;
   }
-  refreshBookingLimits();
+  list.innerHTML = '<div class="mm-grid">' + MY_MOTOS.map(m => `
+    <div class="mm-card">
+      <span class="mm-ico">${MOTO_ICON}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="mm-name">${_mmEsc(m.model)}</div>
+        <div class="mm-sub">Plate ${_mmEsc(m.plate)}</div>
+        ${m.owner ? `<div class="mm-sub">${_mmEsc(m.owner)}</div>` : ''}
+        <div class="mm-tags">${motoTagsHTML(m)}</div>
+        <div class="mm-acts">
+          <button type="button" class="mm-btn" onclick="openMotoForm(${m.id})">Edit</button>
+          <button type="button" class="mm-btn danger" onclick="removeMoto(${m.id})">Remove</button>
+        </div>
+      </div>
+    </div>`).join('') + `
+    <button type="button" class="mm-add" onclick="openMotoForm()">
+      <span class="mm-ico">+</span>
+      <span><span style="display:block;font-family:'Syne',sans-serif;font-weight:700;font-size:0.84rem;color:#1d4ed8;">Add Motorcycle</span>
+      <span style="display:block;font-size:0.72rem;color:var(--fg-3);">Yours, a family member's, a friend's, etc.</span></span>
+    </button></div>`;
 }
 
-function onMotoSelectChange() {
-  syncMotoFromSelect(true);
+// ── the picker on Schedule a Service ──
+function renderMotoPicker(keepOpen) {
+  const btn = document.getElementById('mpick-btn'), menu = document.getElementById('mpick-menu');
+  if (!btn || !menu || !MY_MOTOS) return;
+  if (selectedMotoId !== null && !currentMoto()) selectedMotoId = MY_MOTOS.length ? MY_MOTOS[0].id : null;
+  const m = currentMoto();
+  document.getElementById('moto-model').value = m ? m.model : '';
+  document.getElementById('moto-plate').value = m ? m.plate : '';
+  const day = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : '';
+  const chev = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--fg-3);"><polyline points="6 9 12 15 18 9"/></svg>';
+  btn.innerHTML = m
+    ? `<span class="mm-ico red">${MOTO_ICON}</span><span class="mpick-txt"><b>${_mmEsc(m.model)}</b><small>${_mmEsc(motoSubLine(m))}</small></span>${chev}`
+    : `<span class="mm-ico">${MOTO_ICON}</span><span class="mpick-txt" style="color:var(--fg-3);font-size:0.84rem;">No motorcycles saved yet</span>${chev}`;
+  const check = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand-red)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>';
+  const opts = MY_MOTOS.map(x => {
+    const on = m && String(x.id) === String(m.id);
+    const tags = [x.is_new ? '<span class="mm-tag new">New</span>' : ''];
+    if (day) {
+      if (motoRealBookings(x, day).length) tags.push(`<span class="mm-tag booked">Booked ${_mmShort(day)}</span>`);
+      else if (motoQueueItems(x, day).length) tags.push(`<span class="mm-tag queue">In queue ${_mmShort(day)}</span>`);
+    }
+    return `<button type="button" role="option" aria-selected="${on}" class="mpick-opt${on ? ' on' : ''}" onclick="selectMoto(${x.id})">
+      <span class="mm-ico${on ? ' red' : ''}">${MOTO_ICON}</span>
+      <span class="mpick-txt"><b>${_mmEsc(x.model)}</b><small>${_mmEsc(motoSubLine(x))}</small>${tags.join('') ? `<span class="mm-tags" style="margin-top:0.25rem;">${tags.join('')}</span>` : ''}</span>
+      ${on ? check : ''}</button>`;
+  }).join('');
+  menu.innerHTML = `<div class="mpick-head"><span>Your motorcycles</span><a href="javascript:void(0)" onclick="manageMotorcycles()">Manage</a></div>`
+    + (opts || '<div class="mpick-empty">No motorcycles saved yet</div>')
+    + `<div style="border-top:1px solid var(--line-1);margin:0.3rem 0;"></div>
+       <button type="button" class="mpick-opt" onclick="openMotoForm(null, true)">
+         <span class="mm-ico" style="color:#1d4ed8;">+</span>
+         <span class="mpick-txt"><b style="color:#1d4ed8;">+ Add a motorcycle</b><small>Yours, a family member's, a friend's, etc.</small></span></button>`;
+  if (!keepOpen) menu.classList.remove('open');
+  refreshMotoBookedNote();
+}
+function toggleMotoPicker(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('mpick-menu');
+  if (menu.classList.contains('open')) { menu.classList.remove('open'); return; }
+  renderMotoPicker(true);          // fresh "Booked" / "In queue" tags for the date picked right now
+  menu.classList.add('open');
+}
+function selectMoto(id) {
+  selectedMotoId = id;
+  renderMotoPicker();
+  refreshBookingLimits();
+  hideQueueMissing();
   if (typeof checkBookingReady === 'function') checkBookingReady();
 }
+function manageMotorcycles() {
+  document.getElementById('mpick-menu').classList.remove('open');
+  showSection('profile', null);
+  setTimeout(() => { const c = document.getElementById('my-motos-card'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
+}
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('mpick');
+  if (wrap && !wrap.contains(e.target)) { const mn = document.getElementById('mpick-menu'); if (mn) mn.classList.remove('open'); }
+});
 
-// Once a booking with a new motorcycle is added, it joins the customer's list.
-function rememberMotorcycle(model) {
-  model = (model || '').trim();
-  if (!model) return;
-  const known = savedMotorcycles.find(m => m.toLowerCase() === model.toLowerCase());
-  if (!known) savedMotorcycles.push(model);
-  renderMotoSelect(known || model);
+// Yellow note under the picker when the picked motorcycle is already booked (or queued) on the picked date.
+function refreshMotoBookedNote() {
+  const box = document.getElementById('moto-booked-note');
+  if (!box) return;
+  const m = currentMoto();
+  const day = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : '';
+  if (!m || !day) { box.style.display = 'none'; return; }
+  const real = Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.date_iso === day && plateKeyJS(b.motorcycle_plate) === plateKeyJS(m.plate));
+  const queued = motoQueueItems(m, day);
+  if (!real.length && !queued.length) { box.style.display = 'none'; return; }
+  const noZero = t => (t || '').replace(/^0/, '');
+  const lines = real.map(b => `${b.end_time ? noZero(b.time) + ' – ' + noZero(b.end_time) : noZero(b.time)} · ${_mmEsc(b.service)} · BKG-${String(b.id).padStart(3, '0')}`)
+    .concat(queued.map(q => `In your queue · ${_mmEsc(noZero(q._displayTime || ''))} · ${_mmEsc((q.services || []).join(', ') || q.service_display || '')}`));
+  box.innerHTML = `<div style="font-weight:700;">Your ${_mmEsc(m.model)} (${_mmEsc(m.plate)}) is already booked on ${_mmLong(day)}</div>`
+    + lines.map(l => `<div>${l}</div>`).join('')
+    + `<div style="margin-top:0.2rem;">One motorcycle can only be booked once a day.</div>
+       <div style="margin-top:0.55rem;font-weight:600;">Booking another motorcycle on the same day?</div>
+       <button type="button" onclick="openMotoForm(null, true)" style="margin-top:0.35rem;padding:0.4rem 0.8rem;border-radius:8px;border:1px solid #fde68a;background:#fff;color:#1d4ed8;font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;cursor:pointer;">+ Add a motorcycle</button>`;
+  box.style.display = 'block';
+}
+
+// ── add / edit form ──
+let _mfFromBooking = false;
+function mfClearErr(el) {
+  if (el) el.style.borderColor = '';
+  const e = document.getElementById('mf-err'); e.style.display = 'none'; e.textContent = '';
+}
+function openMotoForm(id, fromBooking) {
+  const mm = document.getElementById('mpick-menu'); if (mm) mm.classList.remove('open');
+  const m = id ? motoById(id) : null;
+  _mfFromBooking = !!fromBooking;
+  document.getElementById('mf-id').value = m ? m.id : '';
+  document.getElementById('mf-title').textContent = m ? 'Edit motorcycle' : 'Add a motorcycle';
+  document.getElementById('mf-save').textContent = m ? 'Save Changes' : 'Save Motorcycle';
+  document.getElementById('mf-model').value = m ? m.model : '';
+  document.getElementById('mf-plate').value = m ? m.plate : '';
+  document.getElementById('mf-owner').value = m ? m.owner : '';
+  ['mf-model', 'mf-plate'].forEach(x => { document.getElementById(x).style.borderColor = ''; });
+  mfClearErr();
+  document.getElementById('motorcycle-model-dropdown').classList.remove('open');
+  document.getElementById('modal-moto-form').classList.add('open');
+  setTimeout(() => document.getElementById('mf-model').focus(), 40);
+}
+function mfShowErr(msg, field) {
+  const e = document.getElementById('mf-err'); e.textContent = msg; e.style.display = 'block';
+  if (field) { const el = document.getElementById('mf-' + field); if (el) { el.style.borderColor = '#dc2626'; el.focus(); } }
+}
+async function saveMotoForm() {
+  const id = document.getElementById('mf-id').value;
+  const body = { model: document.getElementById('mf-model').value.trim(),
+                 plate: document.getElementById('mf-plate').value.trim().toUpperCase(),
+                 owner: document.getElementById('mf-owner').value.trim() };
+  if (!body.model) { mfShowErr('Type the motorcycle model.', 'model'); return; }
+  if (!body.plate) { mfShowErr('Type the plate number. No plate yet? Type the temporary plate or MV file number.', 'plate'); return; }
+  const dup = MY_MOTOS.find(x => String(x.id) !== String(id) && plateKeyJS(x.plate) === plateKeyJS(body.plate));
+  if (dup) { mfShowErr(`That plate is already saved as your ${dup.model}.`, 'plate'); return; }
+  const btn = document.getElementById('mf-save'); btn.disabled = true;
+  try {
+    const res = await fetch(id ? `/customer/motorcycles/${id}` : '/customer/motorcycles', {
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!data.success) { mfShowErr(data.error || 'Could not save the motorcycle.', data.field); return; }
+    const saved = data.motorcycle;
+    if (id) MY_MOTOS = MY_MOTOS.map(x => String(x.id) === String(id) ? saved : x);
+    else MY_MOTOS.push(saved);
+    if (!id && (_mfFromBooking || !currentMoto())) selectedMotoId = saved.id;
+    closeModal('modal-moto-form');
+    renderMyMotorcycles();
+    renderMotoPicker();
+    refreshBookingLimits();
+    hideQueueMissing();
+    showCartToast(id ? 'Motorcycle updated.' : (_mfFromBooking ? `${saved.model} added and picked for this booking.` : `${saved.model} added to My Motorcycles.`));
+  } catch (e) {
+    mfShowErr('Network error. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── remove: asks first; not while it has a booking or queue item today or later ──
+function cantRemoveMoto(m, cards) {
+  showSchedModal({ icon: 'calendar', title: "Can't remove it yet",
+    message: `Your ${m.model} (${m.plate}) has a booking from today on. You can remove it once that booking is done or cancelled. Past bookings stay in your history.`,
+    cards, buttons: [{ label: 'OK', primary: true, safe: true }] });
+}
+async function removeMoto(id) {
+  const m = motoById(id);
+  if (!m) return;
+  const real = motoRealBookings(m), queued = motoQueueItems(m);
+  if (real.length || queued.length) {
+    cantRemoveMoto(m, real.map(b => schedCardFor({ booking: b })).concat(queued.map(q => schedCardFor({ queue: q }))));
+    return;
+  }
+  const ok = await askConfirm('Remove this motorcycle?',
+    `${m.model} (${m.plate}) will be taken off My Motorcycles and the motorcycle dropdown. Past bookings for it stay in your history.`,
+    'Remove', 'Keep it');
+  if (!ok) return;
+  try {
+    const res = await fetch(`/customer/motorcycles/${id}/remove`, { method: 'POST', credentials: 'same-origin' });
+    const data = await res.json();
+    if (!data.success) {
+      if (data.bookings) cantRemoveMoto(m, data.bookings.map(b => ({ first: b.service, more: 0, ref: b.ref, meta: [b.date, b.time].join(' · ') })));
+      else showCartToast(data.error || 'Could not remove the motorcycle.');
+      return;
+    }
+    MY_MOTOS = MY_MOTOS.filter(x => String(x.id) !== String(id));
+    if (String(selectedMotoId) === String(id)) selectedMotoId = MY_MOTOS.length ? MY_MOTOS[0].id : null;
+    renderMyMotorcycles();
+    renderMotoPicker();
+    refreshBookingLimits();
+    showCartToast(`${m.model} removed from My Motorcycles.`);
+  } catch (e) {
+    showCartToast('Network error. Please try again.');
+  }
 }
 
 function setMechanicMode(mode) {
@@ -8981,7 +9320,7 @@ function ovpHtml(steps, cur, line, ref) {
 }
 
 function renderOverviewProgress() {
-  const shopNow = new Date(Date.now() + 8 * 3600e3);
+  const shopNow = new Date(shopNowMs());
   const todayIso = shopNow.toISOString().slice(0, 10);
   const tomorrowIso = new Date(shopNow.getTime() + 86400e3).toISOString().slice(0, 10);
   const noZero = t => (t || '').replace(/^0/, '');
@@ -9030,7 +9369,7 @@ function renderOverviewProgress() {
 
 // ══ MY BOOKINGS: live progress bar + cancel/lock slot, kept in step with the 30-second poll ══
 function renderMyBookingsProgress() {
-  const shopNow = new Date(Date.now() + 8 * 3600e3);
+  const shopNow = new Date(shopNowMs());
   const todayMs = Date.parse(shopNow.toISOString().slice(0, 10) + 'T00:00:00Z');
   const noZero = t => (t || '').replace(/^0/, '');
   document.querySelectorAll('[data-mbp]').forEach(el => {
@@ -9465,7 +9804,8 @@ renderMyOrdersProgress();
 // initial state of the motorcycle dropdown and the mechanic dropdown + note
 updateBookingSteps();
 updateConfirmAll();
-renderMotoSelect();
+renderMyMotorcycles();
+renderMotoPicker();
 renderMechSelect();
 updateMechNote();
 </script>

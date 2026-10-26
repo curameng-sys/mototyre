@@ -1829,7 +1829,7 @@ def _mechanic_notice_email(customer_name, booking, mech_name, spec, kind):
         f'<tr><td style="padding:9px 0;border-bottom:1px solid #eee;color:#555;font-size:14px;">{k}</td>'
         f'<td style="padding:9px 0;border-bottom:1px solid #eee;text-align:right;font-weight:bold;font-size:14px;">{v}</td></tr>'
         for k, v in [('Booking', f'BKG-{booking.id:03d}'), ('Service', booking.service), ('Date & time', when),
-                     ('Mechanic', mech_name), ('Motorcycle', booking.motorcycle_model or '—')])
+                     ('Mechanic', mech_name), ('Motorcycle', _moto_label(booking, '—'))])
     headline = 'Your mechanic has been assigned' if kind == 'assigned' else 'Your mechanic has changed'
     intro = ('the shop assigned a mechanic to your booking:' if kind == 'assigned'
              else 'the shop changed the mechanic on your booking:')
@@ -1884,6 +1884,11 @@ def _send_mechanic_notice(booking, mech_name, spec, kind):
     booking.assign_notice_emailed = emailed
     db.session.commit()
     return emailed
+
+
+def _moto_label(b, empty=''):
+    """'Honda Click 125i · NAB 1234' (just the model for older bookings with no plate)."""
+    return ' · '.join(x for x in ((getattr(b, 'motorcycle_model', '') or '').strip(), (getattr(b, 'motorcycle_plate', '') or '').strip()) if x) or empty
 
 
 def _mechanic_assigned_notification(booking, new_name):
@@ -2295,7 +2300,8 @@ def complete_booking_invoice(bid):
         customer_row = User.query.get(booking.user_id)
         q = Quotation(customer_name=(customer_row.fullname if customer_row else 'Customer'),
                       customer_phone=(customer_row.phone if customer_row and customer_row.phone else ''),
-                      motorcycle_model=booking.motorcycle_model or '', total_amount=total, status='approved',
+                      motorcycle_model=booking.motorcycle_model or '', motorcycle_plate=booking.motorcycle_plate or '',
+                      total_amount=total, status='approved',
                       booking_id=booking.id, inspected_by=booking.assigned_mechanic_name, created_by=current_user.id,
                       decided_at=ph_now())
         db.session.add(q)
@@ -2447,7 +2453,7 @@ def api_booking_invoice_data(bid):
         'receipt_no': booking.invoice_receipt_no or (f'OR-{booking.id:06d}' if is_paid else None),
         'service': booking.service,
         'customer_name': customer_name, 'customer_phone': customer_phone or '',
-        'motorcycle': booking.motorcycle_model or '', 'mechanic': mechanic or '',
+        'motorcycle': _moto_label(booking), 'mechanic': mechanic or '',
         'items': items, 'total': booking.total_amount,
         'paid': is_paid, 'payment_method': payment_method_used,
         'cash_received': booking.invoice_cash_received, 'change': booking.invoice_change,
@@ -3242,7 +3248,7 @@ def _running_late_email(customer_name, booking, headline, intro, label, big_time
         for k, v in [('Booking', f'BKG-{booking.id:03d}'), ('Service', booking.service),
                      ('Date', booking.date.strftime('%a, %b %d, %Y')),
                      ('Mechanic', booking.assigned_mechanic_name or 'To be assigned'),
-                     ('Motorcycle', booking.motorcycle_model or '—')])
+                     ('Motorcycle', _moto_label(booking, '—'))])
     return f"""
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#fff;border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;">
       <div style="background:#111;padding:16px 22px;font-size:22px;font-weight:900;letter-spacing:1px;color:#fff;">MOTO <span style="color:#d00019;">TYRE</span></div>
@@ -3682,9 +3688,7 @@ def api_day_panel():
                 tags.append('Rescheduled')
             if b.preferred_mechanic_name and b.assigned_mechanic_name and b.preferred_mechanic_name != b.assigned_mechanic_name:
                 tags.append('Not their mechanic')
-            moto = (b.motorcycle_model or '').strip()
-            if b.motorcycle_plate:
-                moto = f'{moto} ({b.motorcycle_plate})' if moto else b.motorcycle_plate
+            moto = _moto_label(b)
             cards.append({
                 'id': b.id,
                 'customer': _booking_customer_name(b),
@@ -3908,7 +3912,7 @@ def api_outbox():
         customer_name = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown customer')
         return {
             'booking_id': b.id, 'ref': f'BKG-{b.id:03d}', 'service': b.service,
-            'customer_name': customer_name, 'motorcycle': b.motorcycle_model or '',
+            'customer_name': customer_name, 'motorcycle': _moto_label(b),
             'decision': q.status, 'completed': completed,
             'total': total, 'original': breakdown['decline_total'],
             'booked': breakdown['booked'], 'materials': breakdown['materials'], 'extra': breakdown['extra'],
@@ -4095,7 +4099,7 @@ def api_returns():
         elif r.kind == 'service' and r.booking_id in bookings:
             b = bookings[r.booking_id]
             origin = f"{b.service} — {b.date.strftime('%b %d, %Y')}"
-            motorcycle = b.motorcycle_model
+            motorcycle = _moto_label(b) or None
             origin_date = b.date.strftime('%b %d, %Y')
             claim_value = b.total_amount
             original_mechanic = b.assigned_mechanic_name
@@ -8152,7 +8156,7 @@ def _booking_report_data(first, last, include_cancelled):
     shown = sorted(completed + (cancelled if include_cancelled else []), key=lambda b: (b.date, b.time, b.id))
     for b in shown:
         base = {'ref': f'#{b.id}', 'date': _short_date(b.date), 'time': minutes_to_ampm(b.time.hour * 60 + b.time.minute),
-                'customer': _booking_customer_name(b), 'motorcycle': b.motorcycle_model or '',
+                'customer': _booking_customer_name(b), 'motorcycle': _moto_label(b),
                 'service': b.service, 'mechanic': b.assigned_mechanic_name or ''}
         if b.status == 'cancelled':
             rows.append({**base, 'status': 'Cancelled', 'payment': '', 'extra_note': '',
@@ -8565,7 +8569,7 @@ def _rma_report_data(first, last, partial, include):
                 ob = bookings.get(r.booking_id)
                 rb = bookings.get(r.redo_booking_id)
                 mech = ob.assigned_mechanic_name if ob else ''
-                out[cat].append({**base, 'motorcycle': (ob.motorcycle_model if ob else '') or '', 'service': item, 'origin': origin,
+                out[cat].append({**base, 'motorcycle': _moto_label(ob) if ob else '', 'service': item, 'origin': origin,
                                  'original_mechanic': mech, 'reason': reasons(r),
                                  'back_job': f'BKG-{rb.id:03d}' if rb else '—', 'back_job_date': sd(rb.date) if rb else sd(r.redo_date),
                                  'done_by': (rb.assigned_mechanic_name if rb else None) or r.redo_mechanic_name or '',

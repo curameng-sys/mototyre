@@ -371,7 +371,7 @@ def _booking_confirmation_facts(booking):
 
     motorcycle = (booking.motorcycle_model or '').strip()
     if booking.motorcycle_plate:
-        motorcycle = f'{motorcycle} ({booking.motorcycle_plate})' if motorcycle else booking.motorcycle_plate
+        motorcycle = f'{motorcycle} · {booking.motorcycle_plate}' if motorcycle else booking.motorcycle_plate
     motorcycle = motorcycle or 'On file'
 
     return {
@@ -810,6 +810,19 @@ class ReturnRequestItem(db.Model):
     return_request_id = db.Column(db.Integer, db.ForeignKey('return_request.id'), nullable=False)
     order_item_id     = db.Column(db.Integer, nullable=False)
     quantity          = db.Column(db.Integer, nullable=False)
+
+
+class CustomerMotorcycle(db.Model):
+    """A motorcycle the customer saved under My Motorcycles: theirs, a family member's, a friend's. The booking form's
+    motorcycle dropdown lists exactly these. Removing one only sets removed_at, so past bookings keep their history."""
+    __tablename__ = 'customer_motorcycle'
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    model      = db.Column(db.String(100), nullable=False)
+    plate      = db.Column(db.String(20), nullable=False)
+    owner      = db.Column(db.String(60))
+    created_at = db.Column(db.DateTime, default=lambda: ph_now())
+    removed_at = db.Column(db.DateTime)
 
 
 class JobOrder(db.Model):
@@ -1574,8 +1587,14 @@ def customer_dashboard():
         queue_info = _queue_info_for(bookings)
     except Exception:
         queue_info = {}
+    try:
+        my_motorcycles = _my_motorcycles(current_user.id)
+    except Exception:
+        db.session.rollback()
+        my_motorcycles = []
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders, saved_motorcycles=saved_motorcycles,
-                           queue_info=queue_info,
+                           queue_info=queue_info, my_motorcycles=my_motorcycles, today_iso=ph_now().date().isoformat(),
+                           shop_now_ms=int((ph_now() - datetime(1970, 1, 1)).total_seconds() * 1000),
                            products=products, services=services, returns=returns,
                            delivery_zone_barangays=DELIVERY_ZONE_BARANGAYS,
                            delivery_zone_cities=DELIVERY_ZONE_CITIES,
@@ -1749,10 +1768,59 @@ MAX_BOOKINGS_PER_ACCOUNT_DAY = 2       # per account per day, each for a differe
 MAX_UPCOMING_BOOKINGS = 3              # upcoming bookings per account at a time (the Booking Queue counts too)
 
 
+MOTO_NEW_DAYS = 3                      # a saved motorcycle shows "New" for this many days
+
+
+def _norm_plate(plate):
+    """'nab  1234' -> 'NAB 1234' (capitals, single spaces)."""
+    import re as _re
+    return _re.sub(r'\s+', ' ', (plate or '').strip()).upper()
+
+
+def _plate_key(plate):
+    import re as _re
+    return _re.sub(r'[\s\-]+', '', (plate or '')).lower()
+
+
+def _moto_upcoming_bookings(user_id, plate):
+    """This customer's bookings from today on for that plate that still hold the motorcycle (not cancelled/completed)."""
+    key = _plate_key(plate)
+    if not key:
+        return []
+    rows = Booking.query.filter(Booking.user_id == user_id, Booking.date >= ph_now().date(), Booking.is_archived == False,
+                                Booking.status.notin_(['cancelled', 'completed'])).order_by(Booking.date, Booking.time).all()
+    return [b for b in rows if _plate_key(b.motorcycle_plate) == key]
+
+
+def _moto_dict(m, upcoming=None):
+    upcoming = upcoming if upcoming is not None else _moto_upcoming_bookings(m.user_id, m.plate)
+    return {'id': m.id, 'model': m.model, 'plate': m.plate, 'owner': m.owner or '',
+            'is_new': bool(m.created_at and (ph_now() - m.created_at).days < MOTO_NEW_DAYS),
+            'booked': [{'id': b.id, 'ref': f'BKG-{b.id:03d}', 'date_iso': b.date.isoformat(),
+                        'date': f"{b.date.strftime('%b')} {b.date.day}", 'time': minutes_to_ampm(b.time.hour * 60 + b.time.minute),
+                        'service': b.service, 'status': b.status} for b in upcoming]}
+
+
+def _my_motorcycles(user_id):
+    rows = CustomerMotorcycle.query.filter_by(user_id=user_id, removed_at=None).order_by(CustomerMotorcycle.created_at).all()
+    return [_moto_dict(m) for m in rows]
+
+
+def _moto_form_error(user_id, model, plate, exclude_id=None):
+    if not model:
+        return 'Type the motorcycle model.', 'model'
+    if not plate:
+        return 'Type the plate number. No plate yet? Type the temporary plate or MV file number.', 'plate'
+    for m in CustomerMotorcycle.query.filter_by(user_id=user_id, removed_at=None).all():
+        if m.id != exclude_id and _plate_key(m.plate) == _plate_key(plate):
+            return f'That plate is already saved as your {m.model}.', 'plate'
+    return None, None
+
+
 def _moto_key(model, plate=''):
     """Which motorcycle a booking is for: its plate if there is one, otherwise the model typed on the form."""
     import re as _re
-    plate = (plate or '').strip().lower()
+    plate = _plate_key(plate)
     model = _re.sub(r'\s+', ' ', (model or '').strip().lower())
     return plate or model or 'unspecified'
 
@@ -2128,7 +2196,7 @@ def book_service():
             is_multiday=combo['is_multiday'],
             status='confirmed',
             motorcycle_model=clean_str(request.form.get('motorcycle_model', ''), max_len=100),
-            motorcycle_plate=clean_str(request.form.get('motorcycle_plate', ''), max_len=20),
+            motorcycle_plate=_norm_plate(clean_str(request.form.get('motorcycle_plate', ''), max_len=20)),
             notes=clean_str(request.form.get('notes', ''), max_len=500),
             contact_name=clean_str(request.form.get('contact_name', ''), max_len=100),
             contact_mobile=clean_str(request.form.get('contact_mobile', ''), max_len=13),
@@ -2557,7 +2625,7 @@ def book_multiple_services():
                 is_multiday=combo['is_multiday'],
                 status='confirmed',
                 motorcycle_model=clean_str(b.get('motorcycle_model', ''), max_len=100),
-                motorcycle_plate=clean_str(b.get('motorcycle_plate', ''), max_len=20),
+                motorcycle_plate=_norm_plate(clean_str(b.get('motorcycle_plate', ''), max_len=20)),
                 notes=clean_str(b.get('notes', ''), max_len=500),
                 contact_name=clean_str(b.get('contact_name', ''), max_len=100),
                 contact_mobile=clean_str(b.get('contact_mobile', ''), max_len=13),
@@ -3757,6 +3825,60 @@ def customer_poll():
     })
 
 
+# ── My Motorcycles (Account Information + the booking form's motorcycle dropdown) ──────────────────────
+
+def _moto_payload():
+    d = request.get_json(silent=True) or {}
+    return (clean_str(d.get('model', ''), max_len=100).strip(), _norm_plate(clean_str(d.get('plate', ''), max_len=20)),
+            clean_str(d.get('owner', ''), max_len=60).strip())
+
+
+@app.route('/customer/motorcycles', methods=['POST'])
+@login_required
+def add_my_motorcycle():
+    model, plate, owner = _moto_payload()
+    err, field = _moto_form_error(current_user.id, model, plate)
+    if err:
+        return jsonify({'success': False, 'error': err, 'field': field}), 400
+    m = CustomerMotorcycle(user_id=current_user.id, model=model, plate=plate, owner=owner or None, created_at=ph_now())
+    db.session.add(m)
+    db.session.commit()
+    return jsonify({'success': True, 'motorcycle': _moto_dict(m, [])})
+
+
+@app.route('/customer/motorcycles/<int:mid>', methods=['POST'])
+@login_required
+def edit_my_motorcycle(mid):
+    m = CustomerMotorcycle.query.filter_by(id=mid, user_id=current_user.id, removed_at=None).first_or_404()
+    model, plate, owner = _moto_payload()
+    err, field = _moto_form_error(current_user.id, model, plate, exclude_id=m.id)
+    if err:
+        return jsonify({'success': False, 'error': err, 'field': field}), 400
+    if _plate_key(plate) != _plate_key(m.plate):
+        up = _moto_upcoming_bookings(current_user.id, m.plate)
+        if up:
+            b = up[0]
+            return jsonify({'success': False, 'field': 'plate',
+                            'error': f"This motorcycle is booked on {b.date.strftime('%b')} {b.date.day} (BKG-{b.id:03d}), "
+                                     f"so its plate can't be changed until that booking is done or cancelled."}), 400
+    m.model, m.plate, m.owner = model, plate, owner or None
+    db.session.commit()
+    return jsonify({'success': True, 'motorcycle': _moto_dict(m)})
+
+
+@app.route('/customer/motorcycles/<int:mid>/remove', methods=['POST'])
+@login_required
+def remove_my_motorcycle(mid):
+    """Takes it off My Motorcycles and the dropdown. Not while it has a booking today or later; past bookings stay."""
+    m = CustomerMotorcycle.query.filter_by(id=mid, user_id=current_user.id, removed_at=None).first_or_404()
+    up = _moto_upcoming_bookings(current_user.id, m.plate)
+    if up:
+        return jsonify({'success': False, 'error': "Can't remove it yet", 'bookings': _moto_dict(m, up)['booked']}), 400
+    m.removed_at = ph_now()
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 # ── Order confirm received ────────────────────────────────────────────────────
 
 @app.route('/customer/order/<int:oid>/confirm-received', methods=['POST'])
@@ -3768,15 +3890,22 @@ def confirm_order_received(oid):
     if order.delivery_method == 'ship':
         if order.status != 'shipping':
             return jsonify({'success': False, 'message': 'This order is not on its way yet.'}), 400
-        if not order.received_at:
-            order.received_at = ph_now()
-            db.session.commit()
-            ref = f'ORD-{order.id:03d}'
-            for admin in User.query.filter_by(role='admin').all():
-                send_notification(admin.id, f'{ref} received by customer',
-                    f'{current_user.fullname} confirmed they received their order. Set it to Completed.',
-                    type='order', status='shipping', order_id=order.id)
-        return jsonify({'success': True, 'new_status': 'shipping', 'received_at': _fmt_when(order.received_at)})
+        # The customer saying it arrived is the proof: the order completes right away, the same way the admin's
+        # Complete button does after a customer confirmation (no courier proof needed, completed_by_shop stays off).
+        ref = f'ORD-{order.id:03d}'
+        order.received_at = order.received_at or ph_now()
+        order.status = 'completed'
+        order.delivered_at = ph_now()
+        order.completed_by_shop = False
+        db.session.commit()
+        _t, _m, _s = ship_notice('completed', ref, by_shop=False, proof='')
+        _notify_order_customer(order, _t, _m, status=_s)
+        for admin in User.query.filter_by(role='admin').all():
+            send_notification(admin.id, f'{ref} received by customer',
+                f'{current_user.fullname} confirmed they received their order, so it was completed automatically.',
+                type='order', status='completed', order_id=order.id)
+        return jsonify({'success': True, 'new_status': 'completed', 'received_at': _fmt_when(order.received_at),
+                        'delivered_at': order.delivered_at.strftime('%b %d, %Y at %I:%M %p')})
     if order.status != 'shipped':
         return jsonify({'success': False, 'message': 'Order is not in shipped status.'}), 400
     if order.payment_method == 'cash' and order.delivery_method == 'pickup':

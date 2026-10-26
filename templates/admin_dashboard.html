@@ -1121,8 +1121,8 @@
                         {{ b.customer.fullname }}
                       {% endif %}
                     </div>
-                    {% if b.motorcycle_model %}
-                      <div style="font-size:0.7rem;color:var(--muted);">{{ b.motorcycle_model }}{% if b.motorcycle_plate %} · {{ b.motorcycle_plate }}{% endif %}</div>
+                    {% if b.motorcycle_model or b.motorcycle_plate %}
+                      <div style="font-size:0.7rem;color:var(--muted);">{{ [b.motorcycle_model, b.motorcycle_plate]|select|join(' · ') }}</div>
                     {% endif %}
                     {% if queue_sibs|length > 1 %}
                       <div style="margin-top:0.25rem;"><span title="Booked together in one queue submission (BKG-{{ queue_sibs | map(attribute='id') | map('string') | join(', BKG-') }})" style="font-size:0.63rem;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;padding:0.12rem 0.45rem;border-radius:4px;font-weight:700;white-space:nowrap;">Queue {{ queue_pos }} of {{ queue_sibs|length }}{% if queue_done %} · {{ queue_done }} done{% endif %}</span></div>
@@ -6859,7 +6859,7 @@
     const sameSlot = svcDates.every(x => x === svcDates[0]) && svcTimes.every(x => x === svcTimes[0]);
     document.getElementById('bd-date').textContent = sameSlot ? d.date : 'Multiple dates';
     document.getElementById('bd-time').textContent = sameSlot ? d.time : 'See services below';
-    const moto = [d.motoModel, d.motoPlate].filter(Boolean).join(' — ');
+    const moto = [d.motoModel, d.motoPlate].filter(Boolean).join(' · ');
     document.getElementById('bd-moto').textContent = moto || '—';
     const mech = d.mechanic ? (d.mechanic + (d.mechanicSpec ? ' · ' + d.mechanicSpec : '')) : '—';
     document.getElementById('bd-mechanic').textContent = mech;

@@ -368,7 +368,7 @@
         <div class="booking-ref-box">
           <div>
             <div class="booking-ref-id">{{ booking.ref }}</div>
-            <div class="booking-ref-sub">{{ booking.customer_name }} · {{ booking.motorcycle_model or 'No motorcycle model' }}</div>
+            <div class="booking-ref-sub">{{ booking.customer_name }} · {{ [booking.motorcycle_model, booking.motorcycle_plate]|select|join(' · ') or 'No motorcycle model' }}</div>
             <div class="booking-ref-mech {{ '' if booking.assigned_mechanic_name else 'unassigned' }}" id="booking-ref-mech">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
               <span id="booking-ref-mech-text">{{ ('Mechanic: ' + booking.assigned_mechanic_name) if booking.assigned_mechanic_name else 'No mechanic assigned yet' }}</span>
@@ -379,6 +379,7 @@
         <input type="hidden" id="cust-name" value="{{ booking.customer_name }}">
         <input type="hidden" id="cust-phone" value="{{ booking.customer_phone }}">
         <input type="hidden" id="moto-model" value="{{ booking.motorcycle_model }}">
+        <input type="hidden" id="moto-plate" value="{{ booking.motorcycle_plate or '' }}">
       {% else %}
         <div class="info-grid">
           <div>
@@ -754,7 +755,7 @@
       customer_name:    name,
       customer_phone:   document.getElementById('cust-phone').value.trim(),
       motorcycle_model: document.getElementById('moto-model').value.trim(),
-      motorcycle_plate: '',
+      motorcycle_plate: (document.getElementById('moto-plate') || {}).value || '',
       notes:            document.getElementById('notes').value.trim(),
       items:            items.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price, locked: !!i.locked, product_id: i.product_id ? parseInt(i.product_id, 10) : null })),
     };
