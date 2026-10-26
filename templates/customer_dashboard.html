@@ -420,7 +420,10 @@
     .amber-notice { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.78rem; line-height: 1.4; margin-bottom: 0.6rem; }
     .time-slot-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; background: var(--bg-subtle); border: 1.5px solid var(--line-2); color: var(--fg-1); border-radius: 10px; padding: 0.65rem 0.4rem; min-height: 58px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
     .time-slot-btn:hover:not(:disabled) { background: var(--brand-red-soft); border-color: var(--brand-red-border); color: var(--brand-red); }
-    .time-slot-btn .slot-start { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.05rem; line-height: 1.1; }
+    .time-slot-btn .slot-start { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.92rem; line-height: 1.1; white-space: nowrap; }
+    .slot-group-label { grid-column: 1 / -1; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); margin-top: 0.2rem; }
+    .slot-lunch { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.6rem; font-size: 0.72rem; color: var(--fg-3); margin: 0.15rem 0; }
+    .slot-lunch::before, .slot-lunch::after { content: ''; flex: 1; border-top: 1px dashed var(--line-2); }
     .time-slot-btn .slot-sub { font-size: 0.68rem; color: var(--fg-3); line-height: 1.2; }
     .time-slot-btn .slot-sub.slot-done { color: var(--green); font-weight: 700; }
     .time-slot-btn.booked { opacity: 0.35; cursor: not-allowed; }
@@ -1205,14 +1208,6 @@
           </div>
           <input type="hidden" id="selected-date-value">
 
-          <!-- Time slots -->
-          <div class="appt-section-label" id="time-slots-heading" style="margin-top:0;">Available Time Slots</div>
-          <div id="time-clear-notice" class="amber-notice" style="display:none;"></div>
-          <div id="time-slots-wrap" class="time-slots-grid">
-            <div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Choose your services first. Time slots are built around how long the work actually takes.</div>
-          </div>
-          <input type="hidden" id="selected-time-value">
-
           <!-- Service type -->
           <div class="appt-section-label">Service Type <span style="color:var(--fg-3);font-weight:400;font-size:0.72rem;text-transform:none;letter-spacing:0;">(select one or more · up to 4 hours per booking)</span></div>
           <div class="form-group">
@@ -1231,6 +1226,14 @@
             <div id="service-total" style="margin-top:0.5rem;"></div>
             <div id="service-multiday-note" style="display:none;margin-top:0.4rem;font-size:0.72rem;color:#c2410c;"></div>
           </div>
+
+          <!-- Time slots -->
+          <div class="appt-section-label" id="time-slots-heading">Available Time Slots</div>
+          <div id="time-clear-notice" class="amber-notice" style="display:none;"></div>
+          <div id="time-slots-wrap" class="time-slots-grid">
+            <div style="grid-column:1/-1;color:var(--fg-3);font-size:0.82rem;padding:0.5rem 0;">Choose your services first. Time slots are built around how long the work actually takes.</div>
+          </div>
+          <input type="hidden" id="selected-time-value">
 
           <!-- Vehicle information -->
           <div class="appt-section-label">Vehicle Information</div>
@@ -4507,7 +4510,7 @@ async function renderTimeSlots(dateStr) {
     }
 
     const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'time-slot-btn';
+    btn.type = 'button'; btn.className = 'time-slot-btn'; btn.dataset.time = slot.time;
 
     let subClass, subLine;
     if (isAvailable) {
@@ -4545,7 +4548,18 @@ async function renderTimeSlots(dateStr) {
       `${minutesToAmpmJS(hhmmToMinutes(prevSelectedTime))} doesn't fit anymore with the services you picked. Choose another time.`);
   } else {
     wrap.innerHTML = '';
-    built.forEach(btn => wrap.appendChild(btn));
+    // Morning, the lunch break, then Afternoon, so the missing 12:00 slot is explained instead of just gone
+    const _mk = (cls, text) => { const d = document.createElement('div'); d.className = cls; d.textContent = text; return d; };
+    let _part = null;
+    built.forEach(btn => {
+      const part = currentJobIsMultiday ? 'all' : (hhmmToMinutes(btn.dataset.time) < 12 * 60 ? 'am' : 'pm');
+      if (part !== _part && part !== 'all') {
+        if (part === 'pm' && _part === 'am') wrap.appendChild(_mk('slot-lunch', '12:00 – 12:30 PM · Lunch break'));
+        wrap.appendChild(_mk('slot-group-label', part === 'am' ? 'Morning' : 'Afternoon'));
+      }
+      _part = part;
+      wrap.appendChild(btn);
+    });
     if (prevSelectedTime && prevStillFits) {
       selectedTime = prevSelectedTime;
       selectedEndLabel = prevEndLabel;

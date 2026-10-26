@@ -26,7 +26,7 @@ from security import (clean_str, clean_int, clean_float, is_valid_email, is_vali
 from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_on_the_way_email, booking_receipt_email
 from delivery_zones import format_delivery_address
 from cloud_storage import upload_image
-from service_duration import queue_numbers, ordinal
+from service_duration import queue_numbers, ordinal, BREAK_START_MIN, BREAK_END_MIN
 from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDAY_INTAKE_MIN,
     compute_finish_time, mechanic_origin_note, compute_finish_minutes, all_slot_starts,
     SHOP_CLOSE_MIN, mechanic_overlaps, minutes_to_ampm, hhmm_to_minutes, minutes_to_hhmm,
@@ -2819,21 +2819,33 @@ AUTO_LATE_WARNING = False    # OFF: the system no longer flags a still-in-progre
                              # Set to True to bring the automatic warning back.
 AUTO_LATE_GRACE_MIN = 5      # not flagged for a few minutes of normal slack
 AUTO_LATE_ASSUME_MIN = 15    # how much longer an unrecorded overrun is assumed to need
+LATE_HEADS_UP_MIN = 15       # a job still running past its time warns this many minutes before the mechanic's next booking starts
 
 
 def _live_end_minutes(b):
     """-> (end minute of day, auto_late). The booking's scheduled / recorded end. When it is today, started, and still not
     done after that end, it really is still holding the mechanic: the end becomes NOW (nothing assumed beyond that), or
-    'now + 15 min' if AUTO_LATE_WARNING is on."""
+    'now + 15 min' if AUTO_LATE_WARNING is on. A booking that is today, still Pending / Confirmed and past its start time
+    hasn't begun yet but still needs its full time: its end becomes 'if it starts now' (auto_late = 'late_start').
+    The 12:00-12:30 lunch break counts the same way it does everywhere else: nothing starts in it, and work pauses
+    through it, so during the break a late job can't end before 12:30 and a late start can't begin before 12:30."""
     start = b.time.hour * 60 + b.time.minute
-    end = real_end_minutes(start, b.duration_minutes or DEFAULT_DURATION_MIN, b.overrun_minutes or 0)
-    if b.status in _STARTED_STATES and b.date == ph_now().date():
-        now = ph_now()
-        now_min = now.hour * 60 + now.minute
+    duration = b.duration_minutes or DEFAULT_DURATION_MIN
+    end = real_end_minutes(start, duration, b.overrun_minutes or 0)
+    if b.date != ph_now().date():
+        return end, False
+    now = ph_now()
+    now_min = now.hour * 60 + now.minute
+    if b.status in ('pending', 'confirmed') and now_min > start:
+        begin = BREAK_END_MIN if BREAK_START_MIN <= now_min < BREAK_END_MIN else now_min
+        later = compute_finish_minutes(begin, duration) + (b.overrun_minutes or 0)
+        if later > end:
+            return later, 'late_start'
+    if b.status in _STARTED_STATES:
         if AUTO_LATE_WARNING and now_min >= end + AUTO_LATE_GRACE_MIN:
             return now_min + AUTO_LATE_ASSUME_MIN, True
         if now_min > end:
-            return now_min, True
+            return (BREAK_END_MIN if BREAK_START_MIN <= now_min < BREAK_END_MIN else now_min), True
     return end, False
 
 
@@ -2853,17 +2865,37 @@ def _mechanic_overlap_causes(bookings):
             prev = ordered[j]
             prev_start = prev.time.hour * 60 + prev.time.minute
             prev_end, auto_late = _live_end_minutes(prev)
+            heads_up = False
             if auto_late and not AUTO_LATE_WARNING:
-                # running past its time with no extension recorded: a clash only once the next job's start has actually come
-                hit = prev_end >= cur_start and prev_start < cur_end
+                # running past its time with no extension recorded: warn from LATE_HEADS_UP_MIN before the next job starts,
+                # so staff can extend the time or move / reassign the next one before it actually overlaps
+                hit = prev_end + LATE_HEADS_UP_MIN > cur_start and prev_start < cur_end
+                heads_up = hit and prev_end < cur_start
             else:
                 hit = mechanic_overlaps(cur_start, cur_end, prev_start, prev_end)
             if hit:
                 running_long = (prev.overrun_minutes or 0) > 0 or auto_late
                 suffix = (' (running past its scheduled time)' if auto_late and not (prev.overrun_minutes or 0)
                           else ' (running long)') if running_long else ''
+                if auto_late == 'late_start':
+                    _now = ph_now()
+                    _now_min = _now.hour * 60 + _now.minute
+                    _left = cur_start - _now_min
+                    _when = ('right after the lunch break (12:30 PM)' if BREAK_START_MIN <= _now_min < BREAK_END_MIN else 'now')
+                    text = (f"{cur.assigned_mechanic_name} hasn't started {_booking_customer_name(prev)}'s "
+                            f"{minutes_to_ampm(prev_start)} booking yet. If it starts {_when} it runs until {minutes_to_ampm(prev_end)}, "
+                            + (f"and this booking starts at {minutes_to_ampm(cur_start)}, in {_left} min. " if _left > 0
+                               else "into this booking. ")
+                            + "Start it, move it, or reassign this booking")
+                elif heads_up:
+                    _sched = real_end_minutes(prev_start, prev.duration_minutes or DEFAULT_DURATION_MIN, prev.overrun_minutes or 0)
+                    text = (f"{cur.assigned_mechanic_name} is still on {_booking_customer_name(prev)}'s job (booked until "
+                            f"{minutes_to_ampm(_sched)}) and this booking starts at {minutes_to_ampm(cur_start)}, in "
+                            f"{cur_start - prev_end} min. Extend the time or move this booking")
+                else:
+                    text = f"{cur.assigned_mechanic_name} is still on {_booking_customer_name(prev)}'s job until {minutes_to_ampm(prev_end)}{suffix}"
                 causes[cur.id] = {
-                    'text': f"{cur.assigned_mechanic_name} is still on {_booking_customer_name(prev)}'s job until {minutes_to_ampm(prev_end)}{suffix}",
+                    'text': text,
                     'type': 'running_long' if running_long else 'double_booked',
                     'blocker_id': prev.id,
                     'blocker_end': prev_end,
