@@ -1132,8 +1132,14 @@
                     {{ b.service }}
                     <div style="font-size:0.7rem;color:var(--muted);">₱{{ (booking_service_price(b.service))|money }}</div>
                     {% if b.assigned_mechanic_name %}
+                      {% if b.id in (row_mech or {}) %}
+                      {# not started yet: Reserved for this booking (Busy shows only on the row that is in progress) #}
+                      {% set _ms = row_mech[b.id] %}
+                      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.15rem;">Mechanic: {{ b.assigned_mechanic_name }} <span class="mpill {{ _ms }}" title="{{ 'Off Duty' if _ms == 'off_duty' else 'Reserved for this booking; still free for earlier time slots' }}">{{ mech_labels[_ms] }}</span></div>
+                      {% else %}
                       {% set _ms = mech_status.get(b.assigned_mechanic_name, 'available') %}
                       <div style="font-size:0.7rem;color:var(--muted);margin-top:0.15rem;">Mechanic: {{ b.assigned_mechanic_name }} <span class="mpill {{ _ms }}" data-mech-pill="{{ b.assigned_mechanic_name }}">{{ mech_labels[_ms] }}</span></div>
+                      {% endif %}
                     {% else %}
                       <div style="font-size:0.7rem;color:var(--muted);margin-top:0.15rem;">Mechanic: not assigned yet</div>
                     {% endif %}

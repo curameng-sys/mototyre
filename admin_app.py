@@ -1518,6 +1518,7 @@ def admin_dashboard():
         _rows = sorted(_by_day[_d], key=lambda b: (1 if b.status == 'cancelled' else 0, b.time, b.id))
         _live_total = sum(1 for b in _rows if b.status != 'cancelled')
         _booking_days.append({'date': _d, 'label': _d.strftime('%A, %b ').upper() + str(_d.day), 'count': _live_total, 'rows': _rows})
+    _row_mech = _row_mechanic_status(_all_bookings_list)
     _q_booking_ids = [b.id for b in _all_bookings_list]
     _latest_quotations = {}
     if _q_booking_ids:
@@ -1552,6 +1553,7 @@ def admin_dashboard():
         all_bookings=_all_bookings_list,
         booking_days=_booking_days,
         queue_nums=_qnums,
+        row_mech=_row_mech,
         bk_unseen=_sync_booking_tab_badges(),
         all_orders=all_orders,
         all_products=Product.query.all(),
@@ -1935,6 +1937,18 @@ def _mechanic_effective(m, jobs_map=None):
     if j['reserved']:
         return 'reserved'
     return 'busy' if m.status == 'busy' else 'available'
+
+
+def _row_mechanic_status(bookings):
+    """{booking id: status} for the mechanic tag on a Manage Bookings row that hasn't started yet. The tag is about THAT
+    booking: the mechanic is Reserved for it until it starts (Off Duty if they're off), even while they're working on a
+    different booking. Busy shows only on the row of the job that is actually in progress."""
+    waiting = [b for b in bookings if b.assigned_mechanic_name and b.status in ('pending', 'confirmed')]
+    if not waiting:
+        return {}
+    off = {m.name for m in Mechanic.query.filter(Mechanic.name.in_({b.assigned_mechanic_name for b in waiting}),
+                                                 Mechanic.status == 'off_duty').all()}
+    return {b.id: 'off_duty' if b.assigned_mechanic_name in off else 'reserved' for b in waiting}
 
 
 def mechanic_status_map():
