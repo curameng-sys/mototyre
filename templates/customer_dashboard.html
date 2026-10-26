@@ -328,6 +328,31 @@
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
     .moto-field-wrap { position: relative; }
     /* My Motorcycles cards + the booking form's motorcycle picker */
+    /* "I'll Choose": the mechanic dropdown */
+    .cmp { position: relative; }
+    .cmp-box { width: 100%; display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.75rem; border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg-page); cursor: pointer; text-align: left; font-family: inherit; color: var(--fg-1); min-height: 48px; }
+    .cmp.open .cmp-box, .cmp-box:focus { outline: none; border-color: var(--brand-red); box-shadow: 0 0 0 3px var(--brand-red-soft); }
+    .cmp-av { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-subtle); border: 1px solid var(--line-2); color: var(--fg-2); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.66rem; }
+    .cmp-av.picked { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+    .cmp-txt { flex: 1; min-width: 0; line-height: 1.25; }
+    .cmp-txt b { display: block; font-family: 'Syne', sans-serif; font-size: 0.84rem; color: var(--fg-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cmp-txt small { display: block; font-size: 0.71rem; color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cmp-txt .cmp-line { display: block; font-size: 0.7rem; color: var(--fg-3); margin-top: 0.1rem; white-space: normal; }
+    .cmp-list { display: none; position: absolute; z-index: 45; left: 0; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid var(--line-2); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.13); padding: 0.35rem; max-height: 340px; overflow-y: auto; }
+    .cmp.open .cmp-list { display: block; }
+    .cmp-group { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.55rem 0.25rem; font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+    .cmp-group i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .cmp-opt { width: 100%; display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.55rem; border: none; background: none; border-radius: 9px; cursor: pointer; text-align: left; font-family: inherit; color: var(--fg-1); }
+    .cmp-opt.hl, .cmp-opt:not(.dis):hover { background: var(--bg-subtle); }
+    .cmp-opt.sel { background: var(--brand-red-soft); }
+    .cmp-opt.dis { cursor: not-allowed; }
+    .cmp-opt.dis .cmp-av, .cmp-opt.dis .cmp-txt b, .cmp-opt.dis .cmp-txt small { opacity: 0.55; }
+    .cmp-tag { flex-shrink: 0; font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700; padding: 0.15em 0.6em; border-radius: 99px; white-space: nowrap; }
+    .cmp-tag.online { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .cmp-tag.walkin { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .cmp-tag.own { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .cmp-tag.off { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+    .cmp-sep { border-top: 1px solid var(--line-1); margin: 0.3rem 0; }
     .mm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.6rem; }
     .mm-card { display: flex; gap: 0.65rem; align-items: flex-start; padding: 0.75rem 0.85rem; border: 1px solid var(--line-2); border-radius: 10px; background: #fff; min-width: 0; }
     .mm-ico { flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px; background: var(--bg-subtle); border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; color: var(--fg-2); }
@@ -1316,7 +1341,11 @@
             <!-- "I'll Choose" panel — recommendation + full on-duty picker -->
             <div id="mech-panel-choose" style="display:none;">
               <div id="mech-unselect-notice" class="amber-notice" style="display:none;"></div>
-              <select id="mech-select" onchange="onMechSelectChange()"></select>
+              <div class="cmp" id="cmp">
+                <button type="button" class="cmp-box" id="cmp-box" onclick="toggleCustMech(event)" onkeydown="custMechKey(event)" aria-haspopup="listbox" aria-expanded="false"></button>
+                <div class="cmp-list" id="cmp-list" role="listbox" onkeydown="custMechKey(event)"></div>
+              </div>
+              <select id="mech-select" hidden onchange="onMechSelectChange()"></select>
               <!-- the old card picker stays in the page (other code still fills it) but is not shown -->
               <div style="display:none;">
               <div id="mech-recommend-panel" class="mech-recommend-panel" style="display:none;"></div>
@@ -4572,7 +4601,7 @@ function selectDate(dateStr, day, cell) {
   refreshBookingLimits();
   renderTimeSlots(dateStr);
   updateServiceSummary();
-  loadMechanics();
+  loadMechanics(dateStr);
 }
 
 // Estimated length of the job currently being configured — computed server-side
@@ -8525,15 +8554,102 @@ function renderMechSelect() {
     const o = document.createElement('option');
     o.value = String(m.id);
     o.textContent = `${m.name} — ${m.specialization}` + (m.busy ? ` (busy at ${startLabel})` : '');
-    o.disabled = !!m.busy;
+    o.disabled = !!m.busy || !!m.absent_today;
     sel.appendChild(o);
   });
   sel.value = String(selectedMechanicId || '');
+  renderCustMechPicker();
 }
 
 function onMechSelectChange() {
   chooseMechanic(document.getElementById('mech-select').value);
 }
+
+// ── "I'll Choose": the mechanic dropdown (checks the picked date, time and services) ──
+const _cmEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const _cmInit = n => String(n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+let _cmHl = -1;
+function _cmState(m) { return m.absent_today ? 'absent' : (m.busy ? 'busy' : (m.off_duty ? 'break' : 'free')); }
+function renderCustMechPicker() {
+  const box = document.getElementById('cmp-box'), list = document.getElementById('cmp-list');
+  if (!box || !list) return;
+  const t = selectedTime ? minutesToAmpmJS(hhmmToMinutes(selectedTime)) : '';
+  const svcs = selectedServiceNames || [];
+  const svcLabel = !svcs.length ? 'your service' : (svcs.length === 1 ? svcs[0] : `${svcs[0]} + ${svcs.length - 1} more`);
+  const roster = mechanicsRoster || [];
+  const free = roster.filter(m => _cmState(m) === 'free');
+  const rec = free.filter(m => specializationMatches(m, svcs).length);
+  const avail = free.filter(m => !rec.includes(m));
+  const busy = roster.filter(m => ['busy', 'break'].includes(_cmState(m)));
+  const absent = roster.filter(m => _cmState(m) === 'absent');
+  const bOnline = busy.filter(m => m.busy && m.busy_kind !== 'walkin').length, bWalk = busy.filter(m => m.busy && m.busy_kind === 'walkin').length;
+  const summary = t ? `${free.length} available at ${t} · ${bOnline} busy with online bookings · ${bWalk} with walk-ins`
+                    : `${free.length} available · pick a time to see who's free then`;
+  const picked = selectedMechanicId ? roster.find(m => String(m.id) === String(selectedMechanicId)) : null;
+  const chev = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--fg-3);"><polyline points="6 9 12 15 18 9"/></svg>';
+  const wrench = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+  box.innerHTML = picked
+    ? `<span class="cmp-av picked">${_cmEsc(_cmInit(picked.name))}</span><span class="cmp-txt"><b>${_cmEsc(picked.name)}</b><small>${_cmEsc(picked.specialization)}</small></span>${chev}`
+    : `<span class="cmp-av">${wrench}</span><span class="cmp-txt"><b>No one in particular</b><small>${_cmEsc(summary)}</small></span>${chev}`;
+  const row = (m, kind) => {
+    const dis = kind !== 'free';
+    let tag = '', line = '';
+    if (kind === 'busy') {
+      const k = m.busy_kind || 'online';
+      tag = `<span class="cmp-tag ${k}">${k === 'walkin' ? 'Walk-in' : (k === 'own' ? 'Your booking' : 'Online booking')}</span>`;
+      line = m.busy_until_exact ? `Busy until ${m.busy_until_exact}` : 'Busy then';
+    } else if (kind === 'break') { tag = '<span class="cmp-tag off">On a break</span>'; line = 'Back soon'; }
+    else if (kind === 'absent') { tag = '<span class="cmp-tag off">Not available today</span>'; }
+    else if (m.free_until_label) line = `Free until ${m.free_until_label}`;
+    return `<button type="button" role="option" class="cmp-opt${dis ? ' dis' : ''}${String(m.id) === String(selectedMechanicId) ? ' sel' : ''}" data-id="${m.id}" ${dis ? 'aria-disabled="true" tabindex="-1"' : ''}>
+      <span class="cmp-av">${_cmEsc(_cmInit(m.name))}</span>
+      <span class="cmp-txt"><b>${_cmEsc(m.name)}</b><small>${_cmEsc(kind === 'busy' || kind === 'break' ? line : m.specialization)}</small>${kind === 'free' && line ? `<span class="cmp-line">${_cmEsc(line)}</span>` : ''}</span>${tag}</button>`;
+  };
+  const group = (title, dot, rows, kind) => rows.length
+    ? `<div class="cmp-group"><i style="background:${dot};"></i>${_cmEsc(title)}${kind === 'busy' ? ` (${rows.length})` : ''}</div>` + rows.map(m => row(m, kind === 'busy' ? _cmState(m) : kind)).join('') : '';
+  list.innerHTML = `<button type="button" role="option" class="cmp-opt${!selectedMechanicId ? ' sel' : ''}" data-id="">
+      <span class="cmp-av">${wrench}</span><span class="cmp-txt"><b>No one in particular</b><small>The shop picks whoever is free</small></span></button><div class="cmp-sep"></div>`
+    + group(`Recommended for ${svcLabel}`, '#16a34a', rec, 'free')
+    + group(t ? `Available at ${t}` : 'Available', '#16a34a', avail, 'free')
+    + group(t ? `Busy at ${t}` : 'Busy', '#dc2626', busy, 'busy')
+    + group('Not available today', '#9ca3af', absent, 'absent');
+  list.querySelectorAll('.cmp-opt').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    if (b.classList.contains('dis')) return;
+    pickCustMech(b.dataset.id || '');
+  }));
+}
+function _cmOpts() { return Array.from(document.querySelectorAll('#cmp-list .cmp-opt:not(.dis)')); }
+function _cmPaint() { const o = _cmOpts(); o.forEach((b, i) => b.classList.toggle('hl', i === _cmHl)); if (o[_cmHl]) o[_cmHl].scrollIntoView({ block: 'nearest' }); }
+function toggleCustMech(e) {
+  if (e) e.stopPropagation();
+  const c = document.getElementById('cmp');
+  const open = !c.classList.contains('open');
+  c.classList.toggle('open', open);
+  document.getElementById('cmp-box').setAttribute('aria-expanded', String(open));
+  if (open) { renderCustMechPicker(); _cmHl = Math.max(0, _cmOpts().findIndex(b => b.classList.contains('sel'))); _cmPaint(); }
+}
+function closeCustMech() { const c = document.getElementById('cmp'); if (c) { c.classList.remove('open'); document.getElementById('cmp-box').setAttribute('aria-expanded', 'false'); } }
+function pickCustMech(id) {
+  closeCustMech();
+  document.getElementById('mech-select').value = id;
+  chooseMechanic(id);
+  document.getElementById('cmp-box').focus();
+}
+function custMechKey(e) {
+  const c = document.getElementById('cmp'), open = c.classList.contains('open');
+  if (e.key === 'Escape' && open) { e.preventDefault(); e.stopPropagation(); closeCustMech(); document.getElementById('cmp-box').focus(); return; }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!open) { toggleCustMech(); return; }
+    const n = _cmOpts().length; if (!n) return;
+    _cmHl = (_cmHl + (e.key === 'ArrowDown' ? 1 : -1) + n) % n; _cmPaint();
+  } else if (e.key === 'Enter' && open) {
+    e.preventDefault();
+    const b = _cmOpts()[_cmHl]; if (b) pickCustMech(b.dataset.id || '');
+  }
+}
+document.addEventListener('click', e => { const c = document.getElementById('cmp'); if (c && !c.contains(e.target)) closeCustMech(); });
 
 // The gray note under the mechanic choice.
 function updateMechNote() {
@@ -8808,13 +8924,16 @@ async function loadMechanics(date, time, duration) {
   try {
     const qs = (date && time)
       ? `?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}&duration=${duration || currentJobDuration || 60}`
-      : '';
+      : (date ? `?date=${encodeURIComponent(date)}` : '');      // a date alone still says who is absent that day
     const res = await fetch('/api/mechanics' + qs);
     mechanicsRoster = await res.json();
 
     if (selectedMechanicId) {
       const picked = mechanicsRoster.find(m => String(m.id) === String(selectedMechanicId));
       if (!picked) {
+        selectedMechanicId = '';
+      } else if (date && picked.absent_today) {
+        showAmberNotice('mech-unselect-notice', `${picked.name} is not available today. Please pick someone else.`);
         selectedMechanicId = '';
       } else if (date && time && picked.busy) {
         // The customer had this mechanic selected, but the slot now being

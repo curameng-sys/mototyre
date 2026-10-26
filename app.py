@@ -569,6 +569,29 @@ class BlockedSlot(db.Model):
     __table_args__ = (db.UniqueConstraint('date', 'time', name='uq_blocked_slot'),)
 
 
+class MechanicAttendance(db.Model):
+    """Mirrors admin_app.py's MechanicAttendance (read here only): a mechanic the admin marked Absent today can't be
+    picked by customers for today. Not timed in yet doesn't count; they may still come in."""
+    id          = db.Column(db.Integer, primary_key=True)
+    mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanic.id'), nullable=False)
+    date        = db.Column(db.Date, nullable=False)
+    time_in     = db.Column(db.Time, nullable=True)
+    time_out    = db.Column(db.Time, nullable=True)
+    is_absent   = db.Column(db.Boolean, default=False)
+    __table_args__ = (db.UniqueConstraint('mechanic_id', 'date', name='uq_mechanic_attendance_day'),)
+
+
+def _absent_mechanic_ids(d):
+    """Mechanics marked Absent on d. Only today is ever marked, so future dates are never affected."""
+    if d != ph_now().date():
+        return set()
+    try:
+        return {r.mechanic_id for r in MechanicAttendance.query.filter_by(date=d, is_absent=True).all()}
+    except Exception:
+        db.session.rollback()
+        return set()
+
+
 class Mechanic(db.Model):
     id             = db.Column(db.Integer, primary_key=True)
     name           = db.Column(db.String(100), nullable=False)
@@ -2091,6 +2114,8 @@ def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_mi
         mechanic = Mechanic.query.get(int(mechanic_id)) if str(mechanic_id).isdigit() else None
         if not mechanic:
             return None, 'That mechanic could not be found. Please choose someone else.'
+        if mechanic.id in _absent_mechanic_ids(booking_date):
+            return None, f'{mechanic.name} is not available today. Choose another mechanic, or let the shop assign one.'
         # On the roster AND individually available — a mechanic dialed out by
         # today's capacity slider reads the same as one marked off duty.
         mechanic_status = 'available' if any(m.name == mechanic.name for m in on_duty) else 'off duty'
@@ -3581,28 +3606,42 @@ def get_mechanics():
     # the whole crew and why someone isn't available right now.
     busy_names = set()
     busy_until = {}  # name -> minute-of-day they're free again, chained across back-to-back jobs
+    busy_kind = {}   # name -> 'own' (this customer's booking) / 'online' / 'walkin'
+    free_until = {}  # name -> start of their next job after the picked slot
+    absent_ids = _absent_mechanic_ids(roster_date) if roster_date else set()
     if date_str and time_str:
         try:
             slot_date  = datetime.strptime(date_str, '%Y-%m-%d').date()
             start_min  = hhmm_to_minutes(time_str)
             end_min    = compute_finish_minutes(start_min, duration)
             by_name = {}
+            kinds = {}
             for b in Booking.query.filter(
                 Booking.assigned_mechanic_name.isnot(None),
                 Booking.date == slot_date,
-                Booking.status != 'cancelled'
+                Booking.status.notin_(['cancelled', 'completed', 'ready_for_pickup'])
             ).all():
                 b_start = b.time.hour * 60 + b.time.minute
                 b_end   = _mech_job_end(b)                  # extra time recorded by staff, or still on it past its end
                 by_name.setdefault(b.assigned_mechanic_name, []).append((b_start, b_end))
+                kinds.setdefault(b.assigned_mechanic_name, []).append(
+                    (b_start, b_end, 'own' if b.user_id == current_user.id and not b.walkin_customer_id else
+                     ('walkin' if b.walkin_customer_id else 'online')))
             for w in _walkin_windows(slot_date):          # walk-in jobs tie up a mechanic too
                 by_name.setdefault(w['mechanic'], []).append((w['start'], w['end']))
+                kinds.setdefault(w['mechanic'], []).append((w['start'], w['end'], 'walkin'))
 
+            for name, jobs in kinds.items():
+                later = sorted(bs for bs, be, _k in jobs if bs >= end_min)
+                if later:
+                    free_until[name] = later[0]
             for name, intervals in by_name.items():
                 blocking = [be for bs, be in intervals if mechanic_overlaps(start_min, end_min, bs, be)]
                 if not blocking:
                     continue
                 busy_names.add(name)
+                hit = [k for bs, be, k in kinds.get(name, []) if mechanic_overlaps(start_min, end_min, bs, be)]
+                busy_kind[name] = 'own' if 'own' in hit else ('walkin' if 'walkin' in hit else 'online')
                 # Chain forward through back-to-back jobs (within the turnover
                 # gap) so "done at" reflects when they're ACTUALLY free again,
                 # not just the end of the one job that happened to overlap.
@@ -3628,6 +3667,11 @@ def get_mechanics():
             free_at = -(-busy_until[m.name] // 30) * 30
             row['busy_until_closing'] = free_at >= SHOP_CLOSE_MIN
             row['busy_until_label']   = minutes_to_ampm(min(free_at, SHOP_CLOSE_MIN))
+            row['busy_until_exact']   = minutes_to_ampm(min(busy_until[m.name], SHOP_CLOSE_MIN))
+            row['busy_kind']          = busy_kind.get(m.name, 'online')
+        if m.name in free_until and m.name not in busy_names:
+            row['free_until_label'] = minutes_to_ampm(free_until[m.name])
+        row['absent_today'] = m.id in absent_ids
         result.append(row)
     return jsonify(result)
 

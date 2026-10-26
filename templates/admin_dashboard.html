@@ -284,7 +284,18 @@
     .att-pill.att-off { background:#E5E7EB; color:#4b5563; }
     .mpill { display:inline-block; border-radius:999px; padding:0.1rem 0.5rem; font-size:0.62rem; font-weight:700; vertical-align:middle; white-space:nowrap; }
     .mpill.available { background:#F0FDF4; color:#15803D; } .mpill.reserved { background:#F5F3FF; color:#6D28D9; }
-    .mpill.busy { background:#FEFCE8; color:#B45309; }     .mpill.off_duty { background:#F3F4F6; color:#4b5563; }
+    .mpill.busy { background:#FEFCE8; color:#B45309; }     .mpill.off_duty { background:#EFF6FF; color:#1D4ED8; }
+    .mpill.unavailable { background:#fff; color:#6b7280; border:1px solid var(--border); }
+    .mech-card .s { font-size:0.68rem; margin-top:0.15rem; opacity:0.85; }
+    .brk-switch { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; padding:0.65rem 0.8rem; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .brk-switch.locked { background:#f9fafb; opacity:0.7; }
+    .brk-toggle { position:relative; width:40px; height:22px; flex-shrink:0; }
+    .brk-toggle input { opacity:0; width:0; height:0; }
+    .brk-toggle span { position:absolute; inset:0; background:#d1d5db; border-radius:99px; cursor:pointer; transition:background .15s; }
+    .brk-toggle span::before { content:''; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .15s; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+    .brk-toggle input:checked + span { background:#1D4ED8; }
+    .brk-toggle input:checked + span::before { transform:translateX(18px); }
+    .brk-toggle input:disabled + span { cursor:not-allowed; }
     .ship-link { font-size:0.68rem; font-weight:700; color:var(--blue); cursor:pointer; text-decoration:underline; }
     .badge-delivered       { background: #f0fdf4; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-admin           { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
@@ -2066,18 +2077,20 @@
   </div>
 
   <div id="mech-view-roster">
-  <div style="display:flex;gap:0.5rem;margin-bottom:0.7rem;flex-wrap:wrap;">
-    <span class="mpill-lg" style="background:#F0FDF4;color:#15803D;border:1px solid #bbf7d0;">✓ Available · <b id="mech-stat-available">0</b></span>
-    <span class="mpill-lg" style="background:#F5F3FF;color:#6D28D9;border:1px solid #ddd6fe;">Reserved · <b id="mech-stat-reserved">0</b></span>
-    <span class="mpill-lg" style="background:#FEFCE8;color:#B45309;border:1px solid #fde68a;">Busy · <b id="mech-stat-busy">0</b></span>
-    <span class="mpill-lg" style="background:#F3F4F6;color:#4b5563;border:1px solid #d1d5db;">Off Duty · <b id="mech-stat-offduty">0</b></span>
+  <div style="display:flex;gap:1rem;margin-bottom:0.8rem;flex-wrap:wrap;">
+    <div class="att-card mech-card" style="background:#F0FDF4;border-color:#bbf7d0;color:#15803D;"><div class="n" id="mech-stat-available">0</div><div class="l">Available</div><div class="s">Timed in and free</div></div>
+    <div class="att-card mech-card" style="background:#F5F3FF;border-color:#ddd6fe;color:#6D28D9;"><div class="n" id="mech-stat-reserved">0</div><div class="l">Reserved</div><div class="s">Has a Confirmed booking</div></div>
+    <div class="att-card mech-card" style="background:#FEFCE8;border-color:#fde68a;color:#B45309;"><div class="n" id="mech-stat-busy">0</div><div class="l">Busy</div><div class="s">Working on a job</div></div>
+    <div class="att-card mech-card" style="background:#EFF6FF;border-color:#bfdbfe;color:#1D4ED8;"><div class="n" id="mech-stat-offduty">0</div><div class="l">Off Duty</div><div class="s">On a break</div></div>
+    <div class="att-card mech-card" style="background:#fff;border-color:var(--border);color:var(--muted);"><div class="n" id="mech-stat-unavailable" style="color:var(--text);">0</div><div class="l">Unavailable</div><div class="s">Not timed in, timed out or absent</div></div>
   </div>
-  <div style="font-size:0.76rem;color:#374151;line-height:1.6;margin-bottom:1rem;max-width:980px;">
-    <strong>Reserved:</strong> has a Confirmed booking that hasn't been started yet (automatic).
-    <strong>Busy:</strong> the admin pressed Start, so the booking is in Inspection &amp; Estimation or In Progress (automatic), or a walk-in job entered manually.
-    <strong>Off Duty:</strong> can't be booked or assigned.
-    <strong>Available:</strong> free.
-    A real booking always wins over what's set manually in Edit.
+  <div style="font-size:0.76rem;color:#374151;line-height:1.6;margin-bottom:1rem;max-width:1100px;">
+    <strong>Unavailable:</strong> hasn't timed in yet, already timed out, or absent.
+    <strong>Available:</strong> timed in and free.
+    <strong>Reserved:</strong> has a Confirmed booking that hasn't started.
+    <strong>Busy:</strong> the admin pressed Start, so the booking is in Inspection &amp; Estimation or In Progress.
+    These are all automatic.
+    <strong>Off Duty:</strong> on a short break, set in Edit. It doesn't mean absent.
   </div>
 
   <div class="card">
@@ -2108,8 +2121,8 @@
     <div class="card">
       <div style="overflow-x:auto;">
         <table class="table">
-          <thead><tr><th>Mechanic</th><th>Time in</th><th>Time out</th><th>Hours worked</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="att-list"><tr><td colspan="6"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
+          <thead><tr><th>Mechanic</th><th>Time in</th><th>Time out</th><th>Hours worked</th><th>Attendance</th><th>Mechanic status</th><th>Actions</th></tr></thead>
+          <tbody id="att-list"><tr><td colspan="7"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2340,17 +2353,18 @@
               {% set rpt_prod_max = rpt.top_products[0].units %}
               {% for p in rpt.top_products %}
                 {% set ppct = ((p.units / rpt_prod_max * 100)|int) if rpt_prod_max > 0 else 0 %}
-                <div class="chart-bar-item">
-                  <span class="bar-label" style="width:180px;">{{ p.name }}</span>
-                  <div class="chart-bar-track"><div class="chart-bar-fill" style="background:#f97316;" data-width="{{ ppct }}"></div></div>
-                  <span class="bar-val" style="width:auto;min-width:78px;white-space:nowrap;text-align:right;line-height:1.25;">₱{{ '{:,.2f}'.format(p.revenue) }}<span style="display:block;font-size:0.64rem;font-weight:500;color:var(--muted);">{{ p.units|int }} sold</span></span>
+                <div style="display:grid;grid-template-columns:18px minmax(0,200px) 1fr 82px;align-items:center;gap:0.75rem;padding:0.45rem 0;">
+                  <span style="font-size:0.72rem;color:var(--muted);text-align:right;">{{ loop.index }}</span>
+                  <span title="{{ p.name|readable_item }}" style="font-size:0.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name|readable_item }}</span>
+                  <div class="chart-bar-track" style="height:7px;"><div class="chart-bar-fill" style="background:#f97316;" data-width="{{ ppct }}"></div></div>
+                  <span style="text-align:right;line-height:1.25;white-space:nowrap;"><span style="display:block;font-size:0.76rem;font-weight:700;color:var(--text);">{{ p.units|int }} sold</span><span style="display:block;font-size:0.68rem;color:var(--muted);">₱{{ '{:,.2f}'.format(p.revenue) }}</span></span>
                 </div>
               {% endfor %}
             {% else %}
               <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No product sales in this period.</p></div>
             {% endif %}
           </div>
-          <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Includes online orders, in-store sales, and parts used in bookings and job orders. Refunded items are excluded.</div>
+          <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Includes online orders, in-store sales, and parts used in bookings and job orders. Refunded items are excluded. Sales of the same product are added together, even if the product was renamed.</div>
         </div>
       </div>
     </section>
@@ -2727,9 +2741,8 @@
         <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Mechanic</div>
         <div style="font-size:0.82rem;color:var(--text);font-weight:600;" id="bd-mechanic"></div>
         <div id="bd-mechanic-edit" style="display:flex;gap:0.35rem;margin-top:0.4rem;">
-          <select id="bd-mechanic-reassign" style="flex:1;font-size:0.72rem;padding:0.25rem;">
-            <option value="">Shop decides</option>
-          </select>
+          <div id="bd-mechanic-picker" style="flex:1;min-width:0;"></div>
+          <input type="hidden" id="bd-mechanic-reassign" value="">
           <button type="button" onclick="saveMechanicReassign()" style="font-size:0.72rem;padding:0.25rem 0.5rem;background:#1f2937;color:#fff;border:none;border-radius:5px;cursor:pointer;">Save</button>
         </div>
         <div id="bd-mechanic-locked" style="display:none;margin-top:0.35rem;font-size:0.68rem;color:var(--muted);">Can't be changed · the job is finished</div>
@@ -3339,9 +3352,18 @@
       </div>
       <div class="form-group">
         <label>Status</label>
-        <select id="em-status" onchange="mechStatusHint('em')"></select>
-        <div id="em-status-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem;line-height:1.45;"></div>
-        <div id="em-status-warn" style="display:none;margin-top:0.5rem;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.55rem 0.75rem;font-size:0.76rem;color:#713f12;line-height:1.5;"></div>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.55rem;">
+          <span id="em-status-pill"></span>
+          <span id="em-status-why" style="font-size:0.74rem;color:var(--muted);"></span>
+        </div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.55rem;line-height:1.45;">Set automatically: Attendance decides Available or Unavailable, and bookings decide Reserved or Busy.</div>
+        <div class="brk-switch" id="em-break-box">
+          <div>
+            <div style="font-size:0.84rem;font-weight:700;color:var(--text);">Off Duty: on a break</div>
+            <div id="em-break-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;line-height:1.4;">Can't be booked or assigned while on a break.</div>
+          </div>
+          <label class="brk-toggle"><input type="checkbox" id="em-break"><span></span></label>
+        </div>
       </div>
 
       <div style="margin-bottom:0.9rem;padding:0.7rem 0.8rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
@@ -3649,7 +3671,8 @@
     <div id="ss-mech-note" style="display:none;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.55rem 0.75rem;font-size:0.76rem;color:#713f12;line-height:1.5;margin-bottom:0.9rem;text-align:left;"></div>
     <div id="ss-mech-pick" style="display:none;text-align:left;margin-bottom:0.9rem;">
       <label style="display:block;font-size:0.72rem;font-weight:600;color:var(--muted);margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.06em;">Mechanic for this job</label>
-      <select id="ss-mech-select" onchange="this.classList.remove('so-err-field');document.getElementById('ss-mech-err').style.display='none'" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.85rem;"></select>
+      <div id="ss-mech-picker"></div>
+      <select id="ss-mech-select" hidden onchange="this.classList.remove('so-err-field');document.getElementById('ss-mech-err').style.display='none'" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.85rem;"></select>
     </div>
     <div id="ss-mech-err" style="display:none;color:#b91c1c;font-size:0.78rem;font-weight:600;margin-bottom:0.9rem;text-align:left;"></div>
     <div class="modal-actions" style="justify-content:center;">
@@ -3852,13 +3875,13 @@
       ['present', 'late', 'absent', 'not_in'].forEach(k => { document.getElementById('att-count-' + k).textContent = data.counts[k]; });
       renderAttendance();
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Could not load attendance.</p></div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Could not load attendance.</p></div></td></tr>';
     }
   }
 
   function renderAttendance() {
     const tbody = document.getElementById('att-list');
-    if (!_attRows.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No mechanics yet.</p></div></td></tr>'; return; }
+    if (!_attRows.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No mechanics yet.</p></div></td></tr>'; return; }
     const none = '<span style="color:var(--muted);">None</span>';
     tbody.innerHTML = _attRows.map(r => {
       let actions = '';
@@ -3873,6 +3896,7 @@
         <td><div style="font-weight:600;color:var(--text);">${r.name}</div><div style="font-size:0.7rem;color:var(--muted);">${r.specialization}</div></td>
         <td>${r.time_in || none}</td><td>${r.time_out || none}</td><td>${hours}</td>
         <td><span class="att-pill att-${r.status}">${r.status_label}</span></td>
+        <td>${r.mechanic_status ? `<span class="mpill ${r.mechanic_status}" style="font-size:0.7rem;padding:0.2rem 0.65rem;">${r.mechanic_status_label}</span>` : '<span style="color:var(--muted);">—</span>'}</td>
         <td style="white-space:nowrap;">${actions}</td>
       </tr>`;
     }).join('');
@@ -3950,6 +3974,7 @@
     document.getElementById('mech-stat-reserved').textContent = cnt('reserved');
     document.getElementById('mech-stat-busy').textContent = cnt('busy');
     document.getElementById('mech-stat-offduty').textContent = cnt('off_duty');
+    document.getElementById('mech-stat-unavailable').textContent = cnt('unavailable');
 
     if (!_mechanicsRoster.length) {
       tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></div><p>No mechanics yet. Add one!</p></div></td></tr>';
@@ -3958,10 +3983,17 @@
     tbody.innerHTML = _mechanicsRoster.map(mechanicRowHTML).join('');
   }
 
+  // "Online booking" (blue) or "Walk-in" (orange)
+  function jobSourceTag(src, short) {
+    const w = src === 'walkin';
+    return `<span style="display:inline-block;font-size:0.62rem;font-weight:700;padding:0.08rem 0.45rem;border-radius:4px;white-space:nowrap;${w ? 'background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;' : 'background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;'}">${w ? 'Walk-in' : (short ? 'Online' : 'Online booking')}</span>`;
+  }
   function mechanicActiveJobsPillHTML(m) {
     const n = m.active_jobs_count;
     if (!n) return `<span style="background:#F3F4F6;color:var(--muted);border-radius:999px;padding:0.25rem 0.65rem;font-size:0.74rem;font-weight:600;">0 jobs</span>`;
-    return `<span style="background:#FEE2E2;color:#991b1b;border-radius:999px;padding:0.25rem 0.65rem;font-size:0.74rem;font-weight:600;">${n} job${n !== 1 ? 's' : ''}</span>`;
+    const split = [m.online_jobs ? `${m.online_jobs} online` : '', m.walkin_jobs ? `${m.walkin_jobs} walk-in` : ''].filter(Boolean).join(' · ');
+    return `<span style="background:#FEE2E2;color:#991b1b;border-radius:999px;padding:0.25rem 0.65rem;font-size:0.74rem;font-weight:600;">${n} job${n !== 1 ? 's' : ''}</span>`
+      + (split ? `<div style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem;white-space:nowrap;">${split}</div>` : '');
   }
 
   function mechanicAssignedCustomerHTML(m) {
@@ -3972,8 +4004,9 @@
     }
     const when = a.is_today ? a.start_label : `${a.date_label}, ${a.start_label}`;
     const more = m.more_count > 0 ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem;">+${m.more_count} more</div>` : '';
-    const line = a.state === 'started' ? `${a.status_label} · started` : `Confirmed · not started · ${when}`;
-    return `<div style="color:var(--text);font-weight:600;">${a.customer} / #${a.ref}</div><div style="font-size:0.72rem;color:${a.state === 'started' ? '#B45309' : 'var(--muted)'};">${line}</div>${more}`;
+    const line = a.state === 'started' ? `${a.status_label} · started ${a.start_label}` : `Confirmed · not started · ${when}`;
+    return `<div style="margin-bottom:0.2rem;">${jobSourceTag(a.source)}</div>`
+      + `<div style="color:var(--text);font-weight:600;">${a.customer} / ${a.ref}</div><div style="font-size:0.72rem;color:${a.state === 'started' ? '#B45309' : 'var(--muted)'};">${line}</div>${more}`;
   }
 
   function mechanicAssignedServiceHTML(m) {
@@ -3985,26 +4018,44 @@
   }
 
   const MECH_STATUS_PILLS = {
-    available: { label: 'Available', bg: '#F0FDF4', color: '#15803D' },
-    reserved:  { label: 'Reserved',  bg: '#F5F3FF', color: '#6D28D9' },
-    busy:      { label: 'Busy',      bg: '#FEFCE8', color: '#B45309' },
-    off_duty:  { label: 'Off Duty',  bg: '#F3F4F6', color: '#4b5563' },
+    available:   { label: 'Available',   bg: '#F0FDF4', color: '#15803D', border: '#bbf7d0' },
+    reserved:    { label: 'Reserved',    bg: '#F5F3FF', color: '#6D28D9', border: '#ddd6fe' },
+    busy:        { label: 'Busy',        bg: '#FEFCE8', color: '#B45309', border: '#fde68a' },
+    off_duty:    { label: 'Off Duty',    bg: '#EFF6FF', color: '#1D4ED8', border: '#bfdbfe' },
+    unavailable: { label: 'Unavailable', bg: '#FFFFFF', color: '#6b7280', border: '#e5e7eb' },
   };
 
+  // The short line under the status pill: why the mechanic has that status.
+  function mechanicStatusReason(m) {
+    const a = m.attendance || {};
+    switch (m.effective_status) {
+      case 'available': return 'Timed in and free';
+      case 'reserved':  return m.assigned && m.assigned.ref && !m.assigned_is_manual ? `#${m.assigned.ref} waiting` : 'Has a Confirmed booking';
+      case 'busy':      return m.assigned && m.assigned.ref && !m.assigned_is_manual ? `#${m.assigned.ref} started` : 'Working on a job';
+      case 'off_duty':  return 'On a break';
+      default:          return a.status === 'absent' ? 'Absent' : (a.time_out ? 'Timed out' : 'Not timed in yet');
+    }
+  }
   function mechanicStatusHTML(m) {
-    const p = MECH_STATUS_PILLS[m.effective_status] || MECH_STATUS_PILLS.off_duty;
+    const p = MECH_STATUS_PILLS[m.effective_status] || MECH_STATUS_PILLS.unavailable;
     const notRostered = m.not_rostered_today
       ? '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem;">not rostered today</div>' : '';
-    return `<span style="background:${p.bg};color:${p.color};border-radius:999px;padding:0.3rem 0.75rem;font-size:0.76rem;font-weight:700;">${p.label}</span>${notRostered}`;
+    const a = m.assigned;
+    const jobLine = (['busy', 'reserved'].includes(m.effective_status) && a && a.ref && !m.assigned_is_manual)
+      ? `<div style="display:flex;align-items:center;gap:0.3rem;flex-wrap:wrap;font-size:0.66rem;color:var(--muted);margin-top:0.3rem;">${jobSourceTag(a.source, true)}<span>${a.ref}</span><span>${a.service || ''}</span></div>`
+      : `<div style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem;">${mechanicStatusReason(m)}</div>`;
+    return `<span style="background:${p.bg};color:${p.color};border:1px solid ${p.border};border-radius:999px;padding:0.3rem 0.75rem;font-size:0.76rem;font-weight:700;">${p.label}</span>`
+      + jobLine + notRostered;
   }
 
   function mechanicRowHTML(m) {
-    const off = m.effective_status === 'off_duty';
+    const off = m.effective_status === 'off_duty' || m.effective_status === 'unavailable';
+    const why = m.effective_status === 'off_duty' ? "Off Duty mechanics (on a break) can't be assigned" : "Unavailable mechanics (not timed in) can't be assigned";
     return `
-      <tr${off ? ' style="opacity:0.6;"' : ''}>
+      <tr>
         <td>
           <div style="font-weight:600;color:var(--text);">${m.name}</div>
-          ${off ? '<div style="margin-top:0.2rem;"><span class="att-pill att-off">Off today</span></div>' : m.attendance ? `<div style="margin-top:0.2rem;"><span class="att-pill att-${m.attendance.status}">${m.attendance.status_label}</span>${m.attendance.time_in ? `<span style="font-size:0.68rem;color:var(--muted);margin-left:0.4rem;">in ${m.attendance.time_in}${m.attendance.time_out ? ' · out ' + m.attendance.time_out : ''}</span>` : ''}</div>` : ''}
+          ${m.attendance ? `<div style="margin-top:0.2rem;"><span class="att-pill att-${m.attendance.status}">${m.attendance.status_label}</span>${m.attendance.time_in ? `<span style="font-size:0.68rem;color:var(--muted);margin-left:0.4rem;">in ${m.attendance.time_in}${m.attendance.time_out ? ' · out ' + m.attendance.time_out : ''}</span>` : ''}</div>` : ''}
           ${m.note ? `<div style="font-size:0.72rem;color:var(--muted);">${m.note}</div>` : ''}
         </td>
         <td>${m.phone || '<span style="color:var(--muted);">—</span>'}</td>
@@ -4014,7 +4065,7 @@
         <td>${mechanicAssignedServiceHTML(m)}</td>
         <td>${mechanicStatusHTML(m)}</td>
         <td style="white-space:nowrap;">
-          <button type="button" class="btn-action-edit" ${off ? 'disabled title="Off Duty mechanics can\'t be assigned" style="opacity:0.45;cursor:not-allowed;"' : ''} onclick="openAssignPicker(${m.id})">Assign</button>
+          <button type="button" class="btn-action-edit" ${off ? `disabled title="${why}" style="opacity:0.45;cursor:not-allowed;"` : ''} onclick="openAssignPicker(${m.id})">Assign</button>
           <button type="button" class="btn-action-edit" onclick='openEditMechanic(${JSON.stringify(m).replace(/'/g, "&#39;")})'>Edit</button>
           <button type="button" class="btn-action-delete" onclick="deleteMechanicJS(${m.id}, '${m.name.replace(/'/g, "\\'")}', ${m.active_jobs_count})">Delete</button>
         </td>
@@ -4114,22 +4165,18 @@
     document.getElementById('em-specialization').value = m.specialization;
     document.getElementById('em-note').value = m.note || '';
     _editLock = m.lock || null;
-    const sel = document.getElementById('em-status');
-    if (_editLock && _editLock.kind === 'started') {
-      sel.innerHTML = `<option value="busy">Busy · booking ${_editLock.ref} started</option>`;
-      sel.value = 'busy'; sel.disabled = true;
-    } else if (_editLock && _editLock.kind === 'reserved') {
-      const more = _editLock.refs.length > 1 ? ` +${_editLock.refs.length - 1} more` : '';
-      sel.innerHTML = `<option value="reserved">Reserved · booking ${_editLock.refs[0]}${more}</option>
-        <option value="available" disabled>Available (has a booking)</option>
-        <option value="busy" disabled>Busy (has a booking)</option>
-        <option value="off_duty">Off Duty</option>`;
-      sel.value = 'reserved'; sel.disabled = false;
-    } else {
-      sel.innerHTML = `<option value="available">Available</option><option value="busy">Busy</option><option value="off_duty">Off Duty</option>`;
-      sel.value = m.status === 'busy' || m.status === 'off_duty' ? m.status : 'available'; sel.disabled = false;
-    }
-    mechStatusHint('em');
+    // The current status (read-only) and the one thing that can be set here: the Off Duty break switch.
+    const p = MECH_STATUS_PILLS[m.effective_status] || MECH_STATUS_PILLS.unavailable;
+    document.getElementById('em-status-pill').innerHTML = `<span style="background:${p.bg};color:${p.color};border:1px solid ${p.border};border-radius:999px;padding:0.25rem 0.7rem;font-size:0.74rem;font-weight:700;">${p.label}</span>`;
+    document.getElementById('em-status-why').textContent = mechanicStatusReason(m);
+    const brk = document.getElementById('em-break'), box = document.getElementById('em-break-box'), hint = document.getElementById('em-break-hint');
+    brk.checked = !!m.on_break;
+    const busy = m.effective_status === 'busy', notIn = !m.on_shift;
+    brk.disabled = !m.on_break && (busy || notIn);
+    box.classList.toggle('locked', brk.disabled);
+    hint.textContent = brk.disabled
+      ? (notIn ? "Not available until they time in on the Attendance tab." : "Not available while they're busy on a job.")
+      : "Can't be booked or assigned while on a break.";
     document.getElementById('em-manual-customer').value = m.manual_customer || '';
     setMultiSelectValues(document.getElementById('em-manual-service'), m.manual_service || '');
     document.getElementById('em-error').style.display = 'none';
@@ -4153,7 +4200,7 @@
       manual_customer: document.getElementById('em-manual-customer').value.trim(),
       manual_service: selectedMultiValues(document.getElementById('em-manual-service')).join(','),
       note: document.getElementById('em-note').value.trim(),
-      status: (() => { const v = document.getElementById('em-status').value; return v === 'reserved' ? 'available' : v; })(),
+      on_break: document.getElementById('em-break').checked,
     };
     try {
       const res = await fetch(`/mechanic/${id}/edit`, {
@@ -4246,20 +4293,21 @@
 
   let _currentBookingGroupIds = [];
 
+  // The shared mechanic dropdown, checked against this booking's own time.
   async function populateMechanicReassign(currentName) {
-    const sel = document.getElementById('bd-mechanic-reassign');
-    sel.innerHTML = '<option value="">Shop decides</option>';
-    try {
-      const res = await fetch('/api/mechanics');
-      const mechanics = await res.json();
-      mechanics.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = m.name + ' — ' + m.specialization;
-        if (m.name === currentName) opt.selected = true;
-        sel.appendChild(opt);
-      });
-    } catch (e) { /* leave just "Shop decides" if this fails */ }
+    const hidden = document.getElementById('bd-mechanic-reassign');
+    hidden.value = '';
+    const bid = _currentBookingGroupIds[0];
+    if (!bid) return;
+    const p = new MechPicker(document.getElementById('bd-mechanic-picker'), {
+      url: () => `/api/mechanic-availability?mode=booking&booking_id=${bid}`,
+      none: { label: 'Shop decides', sub: 'No mechanic on this booking' },
+      keepCurrent: true,
+      onChange: id => { hidden.value = id || ''; },
+    });
+    await p.load();
+    const cur = p.rows().find(r => r.name === currentName);
+    if (cur) { p.value = String(cur.id); hidden.value = String(cur.id); p.renderBox(); p.renderList(); }
   }
 
   async function saveMechanicReassign() {
@@ -4648,7 +4696,7 @@
     const body = document.getElementById('day-schedule-body');
     body.innerHTML =
       renderDayPanelHeader(data) +
-      renderBayStrip(data.bay) +
+      renderBayStrip(data.bay, data.bay_now || []) +
       renderClashesPanel(data.clashes) +
       renderMechanicTimeline(data) +
       renderTimeSlotsPanel(data) +
@@ -4676,11 +4724,27 @@
       </div>`;
   }
 
-  function renderBayStrip(bay) {
+  function renderBayStrip(bay, now) {
+    const tag = src => src === 'walkin'
+      ? '<span style="font-size:0.6rem;font-weight:700;padding:0.08rem 0.45rem;border-radius:99px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">Walk-in</span>'
+      : '<span style="font-size:0.6rem;font-weight:700;padding:0.08rem 0.45rem;border-radius:99px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">Online</span>';
+    const rows = now.length ? `
+        <div style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:${bay.length ? '0.7rem' : '0'};">
+          ${now.map(j => `
+            <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;border:1px solid var(--border);border-radius:8px;padding:0.5rem 0.75rem;background:#fff;font-size:0.8rem;">
+              <span style="font-weight:700;min-width:130px;">${j.mechanic}</span>
+              ${tag(j.source)}
+              <span style="font-weight:600;color:var(--text);">${j.ref}</span>
+              <span style="color:var(--muted);">${j.service}</span>
+              <span style="color:var(--muted);">· ${j.customer}</span>
+              <span style="margin-left:auto;font-weight:600;color:#b45309;white-space:nowrap;">until ${j.until}</span>
+            </div>`).join('')}
+        </div>` : '';
     return `
       <div style="margin-bottom:1.3rem;">
         <div style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">In the Bay</div>
-        ${!bay.length ? '<div style="font-size:0.82rem;color:var(--muted);">Nothing open right now.</div>' : `
+        ${rows}
+        ${!bay.length ? (now.length ? '' : '<div style="font-size:0.82rem;color:var(--muted);">Nothing open right now.</div>') : `
         <div style="display:flex;gap:0.7rem;overflow-x:auto;padding-bottom:0.3rem;">
           ${bay.map(b => `
             <div style="flex:0 0 auto;min-width:210px;border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.85rem;background:#fafafa;">
@@ -4735,6 +4799,11 @@
           ${renderFixButton(2, 'move_time', c)}
           ${renderFixButton(3, 'any_free', c)}
           ${c.fixes.delay_notice ? renderFixButton(4, 'delay_notice', c) : ''}
+        </div>
+        <div style="font-size:0.66rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin:0.7rem 0 0.3rem;">Or pick a mechanic</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+          <div id="clash-mech-${c.id}" style="flex:1;min-width:240px;"></div>
+          <button type="button" id="clash-mech-btn-${c.id}" class="btn-primary-custom" disabled style="padding:0.55rem 1rem;font-size:0.76rem;" onclick="assignNeedsMechanic(${c.id}, true)">Assign</button>
         </div>
         <div id="clash-result-${c.id}" style="margin-top:0.5rem;font-size:0.78rem;"></div>
       </div>`;
@@ -4946,8 +5015,10 @@
       ? `${c.mechanic}${c.specialization ? ` — ${c.specialization}` : ''}`
       : '<strong style="color:#92400e;">No mechanic yet</strong>';
     const lenLabel = c.is_multiday ? 'Drop-off (30m intake)' : c.duration_label;
-    const runningLate = c.overrun_minutes > 0
-      ? ` &middot; <span style="color:#c2410c;font-weight:600;">running ${c.overrun_minutes} min long</span>` : '';
+    const runningLate = (c.quote_extra_minutes > 0
+      ? ` &middot; <span style="color:#6d28d9;font-weight:600;">extended +${c.quote_extra_minutes} min (quotation)</span>` : '')
+      + (c.overrun_minutes > 0
+      ? ` &middot; <span style="color:#c2410c;font-weight:600;">running ${c.overrun_minutes} min long</span>` : '');
     const serviceLine = c.is_backjob
       ? `Back job — ${c.customer_service}${c.rma_ref ? ` &middot; ${c.rma_ref}` : ''} <span style="display:inline-block;font-size:0.58rem;font-weight:700;letter-spacing:0.04em;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;border-radius:4px;padding:0 0.35rem;vertical-align:middle;">FREE · ₱0</span>`
       : c.services;
@@ -4991,15 +5062,13 @@
     const backOnTimeOn = started && c.overrun_minutes > 0;
     const moveOff = confirmedOnly ? '' : off;
     const hint = confirmedOnly
-      ? '+30m, +1h and Back on time unlock once Start is clicked in Bookings.'
+      ? '+15m, +30m, +1h and Back on time unlock once Start is clicked in Bookings.'
       : (started ? "Reschedule and Cancel aren't available once work has started." : '');
     const assignPanel = (c.needs_mechanic && canAct) ? `
       <div style="margin-top:0.7rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0.65rem 0.8rem;">
         <div style="font-size:0.78rem;font-weight:700;color:#92400e;margin-bottom:0.4rem;">Assign a mechanic to this booking</div>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-          <select id="card-assign-${c.id}" onchange="document.getElementById('card-assign-btn-${c.id}').disabled = !this.value" style="flex:1;min-width:200px;font-size:0.76rem;padding:0.4rem;border:1px solid #fde68a;border-radius:6px;background:#fff;">
-            <option value="">Choose a mechanic…</option>
-          </select>
+          <div id="card-assign-${c.id}" style="flex:1;min-width:240px;"></div>
           <button type="button" id="card-assign-btn-${c.id}" class="btn-primary-custom" disabled style="padding:0.4rem 0.9rem;font-size:0.76rem;" onclick="assignNeedsMechanic(${c.id})">Assign &amp; Notify Customer</button>
         </div>
         <div style="font-size:0.68rem;color:#92400e;margin-top:0.4rem;">${(c.customer || '').split(' ')[0]} sees "The shop will assign your mechanic" until you do. They're notified in the portal and by email once assigned.</div>
@@ -5028,9 +5097,8 @@
         ${assignPanel}
         ${canAct ? `
         <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.65rem;align-items:center;">
-          ${c.needs_mechanic ? '' : `<select id="card-mech-${c.id}" style="font-size:0.73rem;padding:0.3rem;border:1px solid var(--border);border-radius:6px;" onchange="if(this.value!=='__noop__')assignCardMechanic(${c.id}, this.value)">
-            <option value="__noop__">Assign mechanic…</option>
-          </select>`}
+          ${c.needs_mechanic ? '' : `<div id="card-mech-${c.id}" style="flex:1 1 240px;min-width:220px;max-width:340px;"></div>`}
+          <button type="button" class="btn-cancel" ${confirmedOnly ? 'disabled' : ''} style="padding:0.3rem 0.55rem;font-size:0.71rem;${lateOff}" onclick="runningLong(${c.id}, 'add15')">+15m</button>
           <button type="button" class="btn-cancel" ${confirmedOnly ? 'disabled' : ''} style="padding:0.3rem 0.55rem;font-size:0.71rem;${lateOff}" onclick="runningLong(${c.id}, 'add30')">+30m</button>
           <button type="button" class="btn-cancel" ${confirmedOnly ? 'disabled' : ''} style="padding:0.3rem 0.55rem;font-size:0.71rem;${lateOff}" onclick="runningLong(${c.id}, 'add60')">+1h</button>
           <button type="button" class="btn-cancel" ${backOnTimeOn ? '' : 'disabled'} style="padding:0.3rem 0.55rem;font-size:0.71rem;${backOnTimeOn ? '' : off}" onclick="runningLong(${c.id}, 'reset')">Back on time</button>
@@ -5161,43 +5229,55 @@
     finally { btn.disabled = false; }
   }
 
+  // Every mechanic control on the Day Schedule is the shared dropdown, checked against that booking's own time.
+  const _dsPickers = {};
   function populateCardMechanicSelects(data) {
+    const specOf = {};
+    (data.timeline || []).forEach(t => { specOf[t.mechanic] = { id: t.mechanic_id, spec: t.specialization }; });
+    const url = id => () => `/api/mechanic-availability?mode=booking&booking_id=${id}`;
     data.slots.forEach(sl => {
       sl.cards.forEach(c => {
-        const sel = document.getElementById(`card-mech-${c.id}`);
-        const assignSel = document.getElementById(`card-assign-${c.id}`);
-        [sel, assignSel].filter(Boolean).forEach(target => {
-          data.timeline.forEach(t => {
-            const busy = t.bars.some(bar => bar.id !== c.id && bar.start < c.end && c.start < bar.end);
-            const opt = document.createElement('option');
-            opt.value = String(t.mechanic_id);
-            opt.textContent = t.mechanic + ' — ' + t.specialization + (busy ? ' (busy then)' : '');
-            opt.disabled = busy;
-            if (target === sel && t.mechanic === c.mechanic) opt.selected = true;
-            target.appendChild(opt);
+        const el = document.getElementById(`card-mech-${c.id}`);
+        if (el) {
+          const known = c.mechanic ? specOf[c.mechanic] : null;
+          new MechPicker(el, {
+            url: url(c.id), lazy: true, keepCurrent: true,
+            placeholder: 'Assign mechanic…',
+            none: c.mechanic ? { label: 'Unassign', sub: 'Take the mechanic off this booking' } : null,
+            value: known ? String(known.id) : null,
+            initial: c.mechanic ? { name: c.mechanic, specialization: (known && known.spec) || c.specialization || '' } : null,
+            onChange: id => assignCardMechanic(c.id, id || ''),
           });
-        });
-        if (sel) {
-          const unassignOpt = document.createElement('option');
-          unassignOpt.value = '';
-          unassignOpt.textContent = 'Unassign';
-          sel.appendChild(unassignOpt);
         }
+        const pick = document.getElementById(`card-assign-${c.id}`);
+        if (pick) {
+          _dsPickers[c.id] = new MechPicker(pick, {
+            url: url(c.id), placeholder: 'Assign mechanic…',
+            onChange: id => { const b = document.getElementById(`card-assign-btn-${c.id}`); if (b) b.disabled = !id; },
+          });
+        }
+      });
+    });
+    (data.clashes || []).forEach(c => {
+      const el = document.getElementById(`clash-mech-${c.id}`);
+      if (el) _dsPickers['clash' + c.id] = new MechPicker(el, {
+        url: url(c.id), placeholder: 'Pick a mechanic…',
+        onChange: id => { const b = document.getElementById(`clash-mech-btn-${c.id}`); if (b) b.disabled = !id; },
       });
     });
   }
 
   // The shop's first pick for a "Let the Shop Assign" booking: saves it and tells the customer.
-  async function assignNeedsMechanic(bid) {
-    const sel = document.getElementById(`card-assign-${bid}`);
-    if (!sel || !sel.value) return;
-    const btn = document.getElementById(`card-assign-btn-${bid}`);
+  async function assignNeedsMechanic(bid, fromClash) {
+    const pk = _dsPickers[fromClash ? 'clash' + bid : bid];
+    if (!pk || !pk.value) return;
+    const btn = document.getElementById(fromClash ? `clash-mech-btn-${bid}` : `card-assign-btn-${bid}`);
     btn.disabled = true;
     try {
       const res = await fetch(`/booking/${bid}/assign-mechanic`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-        body: `mechanic_id=${encodeURIComponent(sel.value)}`,
+        body: `mechanic_id=${encodeURIComponent(pk.value)}`,
       });
       const data = await res.json();
       if (data.success) { showToast('Mechanic assigned — customer notified in the portal and by email.', 'success'); loadDaySchedule(); }
@@ -7007,7 +7087,13 @@
         const sel = document.getElementById('ss-mech-select');
         sel.classList.remove('so-err-field');
         sel.innerHTML = '<option value="">Choose a mechanic</option>' + info.options.map(o =>
-          `<option value="${o.name.replace(/"/g, '&quot;')}" ${o.disabled || o.name === info.mechanic ? 'disabled' : ''}>${o.name} · ${o.specialization} · ${o.label}</option>`).join('');
+          `<option value="${o.name.replace(/"/g, '&quot;')}">${o.name}</option>`).join('');
+        sel.value = '';
+        new MechPicker(document.getElementById('ss-mech-picker'), {
+          url: () => `/api/mechanic-availability?mode=start&booking_id=${bookingId}`,
+          placeholder: 'Choose a mechanic',
+          onChange: (id, row) => { sel.value = row ? row.name : ''; document.getElementById('ss-mech-err').style.display = 'none'; },
+        });
         pick.style.display = 'block';
       }
     } catch (e) { /* the server checks again when Start is pressed */ }
@@ -9643,5 +9729,6 @@ function downloadReportPdf() {
 }
 </script>
 
+{% include 'partials/mech_picker.html' %}
 </body>
 </html>

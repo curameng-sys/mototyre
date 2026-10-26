@@ -698,14 +698,9 @@
         <div class="field-row">
           <div class="field-wrap">
             <label class="field-label">Assign Mechanic</label>
-            <select class="field-select" id="mechanic-select" onchange="updateMechanicNote(); updateShopTime()">
-              <option value="">— No Mechanic Assigned —</option>
-              {% for m in mechanics %}
-              <option value="{{ m.id }}" data-status="{{ m.status }}">
-                {{ m.name }} — {{ m.specialization }}{% if m.status != 'available' %} ({{ m.status }}){% endif %}
-              </option>
-              {% endfor %}
-            </select>
+            <div id="mechanic-picker"></div>
+            <input type="hidden" id="mechanic-select" value="">
+            <div id="mech-job-note" style="font-size:0.72rem;color:#6b7280;margin-top:0.4rem;line-height:1.45;">Add services to see how long this job takes.</div>
             <div id="mech-note" style="display:none;"></div>
           </div>
         </div>
@@ -838,6 +833,7 @@
 
 <div class="toast-wrap" id="toasts"></div>
 
+{% include 'partials/mech_picker.html' %}
 <script>
 const cart = [];
 let activeCat  = 'all';
@@ -913,42 +909,42 @@ function updateShopTime() {
   _mechTimer = setTimeout(refreshMechanicStatus, 250);
 }
 
-// Who's free for that window: other walk-ins grey a mechanic out; an online booking only warns.
-async function refreshMechanicStatus() {
-  const mins = cartMinutes() || 30;
-  try {
-    const res = await fetch(`/walk-in/mechanic-status?minutes=${mins}`);
-    _mechStatus = await res.json();
-  } catch (e) { _mechStatus = null; }
-  const sel = document.getElementById('mechanic-select');
-  Array.from(sel.options).forEach(opt => {
-    if (!opt.value) return;
-    if (!opt.dataset.label) opt.dataset.label = opt.textContent.trim().replace(/\s+/g, ' ');
-    const name = opt.dataset.label.split('—')[0].trim();
-    const st = _mechStatus && _mechStatus.mechanics[name];
-    opt.disabled = !!(st && st.walkin);
-    opt.textContent = opt.dataset.label + (st && st.walkin ? ` (on ${st.walkin.ref} until ${st.walkin.until})` : '');
+// One schedule for every mechanic: the dropdown checks from now until this walk-in would finish (online bookings,
+// other walk-ins, Attendance and breaks all count), so only someone free for that whole time can be picked.
+let mechPicker = null;
+function initMechPicker() {
+  mechPicker = new MechPicker(document.getElementById('mechanic-picker'), {
+    url: () => `/api/mechanic-availability?mode=walkin&minutes=${cartMinutes() || 30}`,
+    none: { label: '— No Mechanic Assigned —', sub: 'Assign one later' },
+    onChange: id => { document.getElementById('mechanic-select').value = id || ''; updateMechanicNote(); updateShopTime(); },
+    onCleared: r => toast(`${r.name} is busy for that long, so the pick was cleared.`, true),
   });
-  const picked = sel.options[sel.selectedIndex];
-  if (picked && picked.disabled) { sel.value = ''; toast('That mechanic is on another walk-in for this time — pick someone else.', true); }
+}
+async function refreshMechanicStatus() {
+  if (mechPicker) await mechPicker.load();
   updateMechanicNote();
 }
 
 function mechanicNoteHTML() {
-  const sel = document.getElementById('mechanic-select');
-  if (!sel.value) return { html: '', warn: false };
-  const name = sel.options[sel.selectedIndex].text.split('—')[0].trim();
-  const first = name.split(' ')[0];
+  const id = document.getElementById('mechanic-select').value;
+  if (!id || !mechPicker) return { html: '', warn: false };
+  const first = (mechPicker.name() || '').split(' ')[0];
   const mins = cartMinutes() || 30;
   const start = new Date(), end = new Date(start.getTime() + mins * 60000);
-  const st = _mechStatus && _mechStatus.mechanics[name];
-  if (st && st.online && st.online.length) {
-    const b = st.online[0];
-    return { warn: true, html: `<strong>${first} has an online booking during this time:</strong> ${b.ref} · ${b.customer} (${b.time}). You can still assign them.` };
-  }
-  return { warn: false, html: `${first} will show as busy in online booking from ${clock12(start)} – ${clock12(end)}, or until you mark the job done.` };
+  return { warn: false, html: `${first} will show as Busy (Walk-in) from ${clock12(start)} – ${clock12(end)}, or until you mark the job done.` };
 }
 function updateMechanicNote() {
+  const job = document.getElementById('mech-job-note');
+  const services = cart.some(c => c.type === 'service' || (c.type === 'finding' && c.minutes));
+  const mins = cartMinutes();
+  if (!services || !mins) job.textContent = 'Add services to see how long this job takes.';
+  else {
+    // the shop's clock (from the server) when the dropdown last checked; the device clock otherwise
+    const start = new Date(), end = new Date(start.getTime() + mins * 60000);
+    const when = (mechPicker && mechPicker.data && mechPicker.data.when) || `${clock12(start)} – ${clock12(end)}`;
+    const len = mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)} hr${mins % 60 ? ' ' + (mins % 60) + ' min' : ''}`;
+    job.textContent = `This job: ${when} (${len}). Only mechanics free for that whole time can be picked.`;
+  }
   const note = document.getElementById('mech-note');
   const n = mechanicNoteHTML();
   note.style.display = n.html ? 'block' : 'none';
@@ -979,6 +975,7 @@ function _loadServices() {
     });
 }
 _loadServices();
+initMechPicker();
 refreshMechanicStatus();
 
 // ── CLOCK ─────────────────────────────────────────────────────────────────────
@@ -1279,8 +1276,7 @@ function openConfirm() {
   if (!cart.length) { toast('Cart is empty', true); return; }
 
   const total    = cart.reduce((s, c) => s + c.price * c.qty, 0);
-  const mechSel  = document.getElementById('mechanic-select');
-  const mechName = mechSel.value ? mechSel.options[mechSel.selectedIndex].text.split('—')[0].trim() : 'Not assigned';
+  const mechName = (document.getElementById('mechanic-select').value && mechPicker && mechPicker.name()) || 'Not assigned';
   const motoModel = document.getElementById('cust-moto-model').value.trim();
   const motoPlate = document.getElementById('cust-moto-plate').value.trim();
 
@@ -1415,6 +1411,7 @@ function newTransaction() {
   document.getElementById('cust-moto-model').value = '';
   document.getElementById('cust-moto-plate').value = '';
   document.getElementById('mechanic-select').value = '';
+  if (mechPicker) { mechPicker.clear(); refreshMechanicStatus(); }
   document.getElementById('returning-badge').classList.remove('show');
   walkinCustomerId = null;
   document.getElementById('btn-save').disabled = false;

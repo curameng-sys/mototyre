@@ -1,0 +1,165 @@
+{# One mechanic dropdown for the whole admin side (Walk-In page, Day Schedule, Manage Bookings, Start Service).
+   It reads /api/mechanic-availability, which puts online bookings, walk-in job orders, Attendance and breaks
+   into one schedule, and sorts every mechanic into Free / Busy / On a break / Not working now. #}
+<style>
+  .mp { position:relative; font-family:inherit; }
+  .mp-box { width:100%; display:flex; align-items:center; gap:0.6rem; padding:0.45rem 0.7rem; background:#fff; border:1px solid #d1d5db; border-radius:9px; cursor:pointer; text-align:left; font-family:inherit; color:#111827; min-height:46px; }
+  .mp-box:focus, .mp.open .mp-box { outline:none; border-color:#111827; box-shadow:0 0 0 3px rgba(17,24,39,.08); }
+  .mp-av { flex-shrink:0; width:30px; height:30px; border-radius:50%; background:#f3f4f6; border:1px solid #e5e7eb; color:#374151; display:flex; align-items:center; justify-content:center; font-size:0.66rem; font-weight:700; letter-spacing:0.02em; }
+  .mp-av.none { background:#fee2e2; border-color:#fecaca; color:#b91c1c; }
+  .mp-av.picked { background:#111827; border-color:#111827; color:#fff; }
+  .mp-txt { flex:1; min-width:0; line-height:1.25; }
+  .mp-txt b { display:block; font-size:0.82rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mp-txt small { display:block; font-size:0.68rem; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mp-chev { flex-shrink:0; color:#6b7280; transition:transform .15s; }
+  .mp.open .mp-chev { transform:rotate(180deg); }
+  .mp-list { display:none; position:absolute; z-index:1200; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid #e5e7eb; border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,.14); padding:0.3rem; max-height:330px; overflow-y:auto; }
+  .mp.open .mp-list { display:block; }
+  .mp.up .mp-list { top:auto; bottom:calc(100% + 4px); }
+  .mp-group { display:flex; align-items:center; gap:0.4rem; padding:0.5rem 0.55rem 0.25rem; font-size:0.6rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280; }
+  .mp-group i { width:7px; height:7px; border-radius:50%; display:inline-block; }
+  .mp-opt { width:100%; display:flex; align-items:center; gap:0.6rem; padding:0.45rem 0.55rem; border:none; background:none; border-radius:8px; text-align:left; font-family:inherit; color:#111827; cursor:pointer; }
+  .mp-opt.hl, .mp-opt:not(.dis):hover { background:#f3f4f6; }
+  .mp-opt.sel { background:#fef2f2; }
+  .mp-opt.dis { cursor:not-allowed; color:#9ca3af; }
+  .mp-opt.dis .mp-av { opacity:0.6; }
+  .mp-opt .mp-txt b { font-size:0.8rem; }
+  .mp-opt.dis .mp-txt b { color:#9ca3af; }
+  .mp-line { display:block; font-size:0.66rem; color:#92400e; margin-top:0.1rem; white-space:normal; }
+  .mp-opt.dis .mp-line { color:#9ca3af; }
+  .mp-tag { flex-shrink:0; font-size:0.6rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:99px; white-space:nowrap; }
+  .mp-tag.online { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+  .mp-tag.walkin { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+  .mp-tag.brk { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+  .mp-tag.off { background:#f3f4f6; color:#4b5563; border:1px solid #e5e7eb; }
+  .mp-sep { border-top:1px solid #f3f4f6; margin:0.25rem 0; }
+  .mp-empty { padding:0.6rem; font-size:0.76rem; color:#6b7280; }
+</style>
+<script>
+(function () {
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const WRENCH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+  const CHEV = '<svg class="mp-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+  const initials = n => String(n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const all = [];
+
+  // new MechPicker(el, { url: () => '/api/mechanic-availability?…', none: {label, sub} | null, placeholder,
+  //                      value: mechanic id | null, initial: {name, specialization}, lazy, onChange(id, row), onCleared(row) })
+  function MechPicker(el, opts) {
+    this.el = el; this.o = opts || {}; this.data = null; this.value = this.o.value || null;
+    this.initial = this.o.initial || null; this.hl = -1;
+    el.classList.add('mp');
+    el.innerHTML = `<button type="button" class="mp-box" aria-haspopup="listbox" aria-expanded="false"></button><div class="mp-list" role="listbox"></div>`;
+    this.box = el.querySelector('.mp-box'); this.list = el.querySelector('.mp-list');
+    this.box.addEventListener('click', e => { e.stopPropagation(); this.toggle(); });
+    this.box.addEventListener('keydown', e => this.key(e));
+    this.list.addEventListener('keydown', e => this.key(e));
+    for (let i = all.length - 1; i >= 0; i--) if (!document.body.contains(all[i].el)) all.splice(i, 1);   // re-rendered away
+    all.push(this);
+    this.renderBox();
+    if (!this.o.lazy) this.load();
+  }
+  MechPicker.prototype.rows = function () { return (this.data && this.data.mechanics) || []; };
+  MechPicker.prototype.row = function (id) { return this.rows().find(r => String(r.id) === String(id)) || null; };
+  MechPicker.prototype.load = async function () {
+    try {
+      const res = await fetch(this.o.url(), { credentials: 'same-origin' });
+      this.data = await res.json();
+    } catch (e) { this.data = { mechanics: [], summary: 'Could not load mechanics', free_title: 'Free' }; }
+    // The pick no longer fits (more services added, someone timed out…): clear it and say so.
+    const cur = this.value ? this.row(this.value) : null;
+    if (this.value && cur && cur.group !== 'free' && !this.o.keepCurrent) {
+      this.value = null; this.initial = null;
+      if (this.o.onCleared) this.o.onCleared(cur);
+      if (this.o.onChange) this.o.onChange(null, null);
+    }
+    this.renderBox(); this.renderList();
+  };
+  MechPicker.prototype.renderBox = function () {
+    const r = this.value ? (this.row(this.value) || this.initial) : this.initial;
+    let av, name, sub;
+    if (r) { av = `<span class="mp-av picked">${esc(r.initials || initials(r.name))}</span>`; name = r.name; sub = r.specialization || ''; }
+    else {
+      av = `<span class="mp-av${this.o.none ? ' none' : ''}">${this.o.none ? '—' : WRENCH}</span>`;
+      name = this.o.none ? this.o.none.label : (this.o.placeholder || 'Assign mechanic…');
+      sub = this.data ? this.data.summary : (this.o.lazy ? 'Open to see who is free' : 'Loading…');
+    }
+    this.box.innerHTML = `${av}<span class="mp-txt"><b>${esc(name)}</b><small>${esc(sub)}</small></span>${CHEV}`;
+  };
+  MechPicker.prototype.renderList = function () {
+    const rows = this.rows(), groups = [
+      ['free', this.data ? this.data.free_title : 'Free', '#16a34a'],
+      ['busy', `${this.data && this.data.free_title === 'Free now' ? 'Busy now' : 'Busy at that time'} · online or walk-in`, '#dc2626'],
+      ['break', 'On a break', '#2563eb'],
+      ['off', 'Not working now', '#9ca3af'],
+    ];
+    let html = '';
+    if (this.o.none) {
+      html += `<button type="button" class="mp-opt${!this.value ? ' sel' : ''}" data-id=""><span class="mp-av none">—</span><span class="mp-txt"><b>${esc(this.o.none.label)}</b><small>${esc(this.o.none.sub || '')}</small></span></button><div class="mp-sep"></div>`;
+    }
+    groups.forEach(([g, title, dot]) => {
+      const list = rows.filter(r => r.group === g);
+      if (!list.length) return;
+      html += `<div class="mp-group"><i style="background:${dot};"></i>${esc(title)}${g === 'busy' ? ` (${list.length})` : ''}</div>`;
+      html += list.map(r => {
+        const dis = g !== 'free';
+        const tag = g === 'busy' ? `<span class="mp-tag ${r.tag}">${r.tag === 'walkin' ? 'Walk-in' : 'Online'}</span>`
+          : g === 'break' ? '<span class="mp-tag brk">On break</span>'
+          : g === 'off' ? `<span class="mp-tag off">${esc(r.off_label)}</span>` : '';
+        const line = g === 'busy' ? `<span class="mp-line">${esc(r.line)}</span>` : (r.line ? `<span class="mp-line">${esc(r.line)}</span>` : '');
+        return `<button type="button" class="mp-opt${dis ? ' dis' : ''}${String(r.id) === String(this.value) ? ' sel' : ''}" data-id="${r.id}" ${dis ? 'aria-disabled="true" tabindex="-1"' : ''}>
+          <span class="mp-av">${esc(r.initials || initials(r.name))}</span>
+          <span class="mp-txt"><b>${esc(r.name)}</b><small>${esc(r.specialization)}</small>${line}</span>${tag}</button>`;
+      }).join('');
+    });
+    if (!rows.length && this.data) html += '<div class="mp-empty">No mechanics yet.</div>';
+    if (!this.data) html += '<div class="mp-empty">Loading…</div>';
+    this.list.innerHTML = html;
+    this.list.querySelectorAll('.mp-opt').forEach(b => b.addEventListener('click', e => {
+      e.stopPropagation();
+      if (b.classList.contains('dis')) return;
+      this.pick(b.dataset.id || null);
+    }));
+  };
+  MechPicker.prototype.opts = function () { return Array.from(this.list.querySelectorAll('.mp-opt:not(.dis)')); };
+  MechPicker.prototype.open = async function () {
+    all.forEach(p => { if (p !== this) p.close(); });
+    this.el.classList.add('open'); this.box.setAttribute('aria-expanded', 'true');
+    const r = this.el.getBoundingClientRect();
+    this.el.classList.toggle('up', window.innerHeight - r.bottom < 300 && r.top > 340);
+    if (this.o.lazy || !this.data) { this.renderList(); await this.load(); }
+    this.hl = Math.max(0, this.opts().findIndex(b => b.classList.contains('sel')));
+    this.paint();
+  };
+  MechPicker.prototype.close = function () { this.el.classList.remove('open'); this.box.setAttribute('aria-expanded', 'false'); };
+  MechPicker.prototype.toggle = function () { this.el.classList.contains('open') ? this.close() : this.open(); };
+  MechPicker.prototype.paint = function () {
+    const o = this.opts();
+    o.forEach((b, i) => b.classList.toggle('hl', i === this.hl));
+    if (o[this.hl]) o[this.hl].scrollIntoView({ block: 'nearest' });
+  };
+  MechPicker.prototype.key = function (e) {
+    const open = this.el.classList.contains('open');
+    if (e.key === 'Escape') { if (open) { e.preventDefault(); e.stopPropagation(); this.close(); this.box.focus(); } return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!open) { this.open(); return; }
+      const n = this.opts().length; if (!n) return;
+      this.hl = (this.hl + (e.key === 'ArrowDown' ? 1 : -1) + n) % n; this.paint();
+    } else if (e.key === 'Enter' && open) {
+      e.preventDefault();
+      const b = this.opts()[this.hl]; if (b) this.pick(b.dataset.id || null);
+    }
+  };
+  MechPicker.prototype.pick = function (id) {
+    this.value = id ? id : null;
+    this.initial = null;
+    this.close(); this.renderBox(); this.renderList(); this.box.focus();
+    if (this.o.onChange) this.o.onChange(this.value, this.value ? this.row(this.value) : null);
+  };
+  MechPicker.prototype.clear = function () { this.value = null; this.initial = null; this.renderBox(); this.renderList(); };
+  MechPicker.prototype.name = function () { const r = this.value ? (this.row(this.value) || this.initial) : null; return r ? r.name : ''; };
+  document.addEventListener('click', e => { all.forEach(p => { if (!p.el.contains(e.target)) p.close(); }); });
+  window.MechPicker = MechPicker;
+})();
+</script>

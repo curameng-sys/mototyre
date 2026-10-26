@@ -135,6 +135,37 @@
     .qty-val{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;min-width:18px;text-align:center;color:var(--text);}
     .btn-del{width:22px;height:22px;border-radius:5px;background:transparent;border:1px solid transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;}
     .btn-del:hover{border-color:rgba(208,0,25,.3);color:var(--red);}
+    /* grouped quotation items */
+    .q-group-title{display:flex;align-items:center;gap:.35rem;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6b7280;margin:.7rem 0 .05rem;}
+    .q-group-title:first-child{margin-top:.1rem;}
+    .ci-icon.orig{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
+    .ci-icon.extra{background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;}
+    .ci-icon.material{background:#fdf4e7;color:#92400e;border:1px solid #f3dfc1;}
+    .ci-sub{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;font-size:.68rem;color:var(--muted);margin-top:.15rem;}
+    .ci-amt{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#111827;min-width:62px;text-align:right;white-space:nowrap;}
+    .time-pill{display:inline-flex;align-items:center;gap:.25rem;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;color:#6d28d9;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:99px;padding:.06rem .45rem;white-space:nowrap;}
+    .lock-ico{width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:#9ca3af;flex-shrink:0;}
+    .total-row .tl{display:flex;align-items:center;gap:.35rem;}
+    .total-row .zero{color:#9ca3af;}
+    .btime{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:.65rem .8rem;margin-top:.75rem;}
+    .btime-title{display:flex;align-items:center;gap:.35rem;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5b21b6;margin-bottom:.35rem;}
+    .btime-row{display:flex;justify-content:space-between;gap:.6rem;font-size:.76rem;color:#374151;margin-top:.2rem;}
+    .btime-row b{color:#111827;}
+    .btime-end{font-weight:800;color:#6d28d9 !important;}
+    .btime-note{font-size:.7rem;color:#6b7280;margin-top:.45rem;line-height:1.45;}
+    .svc-add{width:26px;height:26px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .service-item.added{border-color:#bbf7d0;background:#f0fdf4;}
+    .service-item.added .svc-add{background:#16a34a;border-color:#16a34a;color:#fff;}
+    .service-item.is-booked{cursor:default;background:#f9fafb;}
+    .service-item.is-booked:hover{border-color:var(--border);background:#f9fafb;}
+    .svc-booked{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.04em;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:.15rem .45rem;white-space:nowrap;}
+    .svc-inp.err,.svc-sel.err{border-color:var(--red) !important;box-shadow:0 0 0 3px rgba(208,0,25,.08);}
+    .svc-sel{padding:.5rem .6rem;background:#fff;border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.83rem;outline:none;}
+    .svc-sel:focus{border-color:var(--red);}
+    .custom-err{display:none;font-size:.72rem;color:var(--red);margin-top:.45rem;font-weight:600;}
+    .sent-msg{display:none;margin-top:.55rem;padding:.5rem .7rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:.76rem;color:#15803d;font-weight:600;line-height:1.4;}
+    .booking-ref-time{display:flex;align-items:center;gap:.3rem;font-size:.74rem;color:var(--muted);margin-top:.3rem;}
+    .booking-ref-time .ext{color:#6d28d9;font-weight:700;}
     .locked-tag{font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:.1rem .4rem;margin-left:.4rem;white-space:nowrap;}
 
     /* Footer */
@@ -269,23 +300,42 @@
       <div class="custom-svc-box">
         <label>Custom Service / Labor</label>
         <div class="custom-svc-row">
-          <input class="svc-inp" id="svc-name" placeholder="Service name">
-          <input class="svc-inp" id="svc-price" type="number" min="0" placeholder="Price" style="max-width:110px;">
+          <input class="svc-inp" id="svc-name" placeholder="Service name" oninput="this.classList.remove('err')">
+          <input class="svc-inp" id="svc-price" type="number" min="0" placeholder="Price" style="max-width:110px;" oninput="this.classList.remove('err')">
+          <select class="svc-sel" id="svc-time" onchange="this.classList.remove('err')" aria-label="Time needed">
+            <option value="">Time needed</option>
+            <option value="0">No extra time</option>
+            <option value="10">10 min</option>
+            <option value="15">15 min</option>
+            <option value="20">20 min</option>
+            <option value="30">30 min</option>
+            <option value="45">45 min</option>
+            <option value="60">1 hr</option>
+            <option value="90">1 hr 30 min</option>
+            <option value="120">2 hr</option>
+          </select>
           <button class="btn-add-svc" onclick="addCustomService()">+ Add</button>
         </div>
+        <div class="custom-err" id="custom-err"></div>
       </div>
       <div id="service-list-container">
+        {% set booked_names = (booking.booked_services if booking else []) %}
         {% for s in services %}
-        <div class="service-item" onclick="addService({{ (s.name)|tojson|forceescape }}, {{ s.price }})">
+        {% set is_booked = s.name in booked_names %}
+        <div class="service-item{{ ' is-booked' if is_booked }}" data-name="{{ s.name|e }}" data-price="{{ s.price }}" data-minutes="{{ 0 if s.is_multiday else (s.duration_minutes or 0) }}"
+             {% if not is_booked %}onclick="toggleService(this)"{% endif %}>
           <div>
             <div class="svc-name">{{ s.name }}</div>
             {% if s.description %}<div class="svc-desc">{{ s.description }}</div>{% endif %}
           </div>
           <div style="display:flex;align-items:center;gap:.6rem;">
+            <span class="time-pill"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ s.duration_label if (s.is_multiday and s.duration_label) else fmt_duration(s.duration_minutes or 0) }}</span>
             <span class="svc-price">₱{{ '%.0f'|format(s.price) }}</span>
-            <div style="width:26px;height:26px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </div>
+            {% if is_booked %}
+            <span class="svc-booked">Booked service</span>
+            {% else %}
+            <div class="svc-add"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+            {% endif %}
           </div>
         </div>
         {% endfor %}
@@ -373,6 +423,7 @@
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
               <span id="booking-ref-mech-text">{{ ('Mechanic: ' + booking.assigned_mechanic_name) if booking.assigned_mechanic_name else 'No mechanic assigned yet' }}</span>
             </div>
+            <div class="booking-ref-time"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="booking-ref-time-text"></span></div>
           </div>
           <a href="{{ url_for('quotation_new') }}" class="booking-ref-change">Change</a>
         </div>
@@ -407,12 +458,23 @@
 
     <div class="quote-footer">
       {% if booking %}
-        <div class="total-row"><span>Original service</span><span id="original-total">₱0.00</span></div>
-        <div class="total-row"><span>Extra work</span><span id="extra-total">₱0.00</span></div>
+        <div class="total-row"><span class="tl"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Original service</span><span id="original-total">₱0.00</span></div>
+        <div class="total-row"><span class="tl"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Materials used</span><span id="materials-total">₱0.00</span></div>
+        <div class="total-row"><span class="tl"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Extra work</span><span id="extra-total">₱0.00</span></div>
       {% else %}
         <div class="total-row"><span>Subtotal</span><span id="subtotal">₱0.00</span></div>
       {% endif %}
       <div class="total-row grand"><span>Estimated Total</span><span id="grand-total">₱0.00</span></div>
+      {% if booking %}
+      <div class="btime" id="btime">
+        <div class="btime-title"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Booking time</div>
+        <div class="btime-row"><span>Booked</span><b id="bt-booked"></b></div>
+        <div class="btime-row" id="bt-staff-row" style="display:none;"><span>Already extended</span><b id="bt-staff"></b></div>
+        <div class="btime-row"><span>Extra work</span><b id="bt-extra"></b></div>
+        <div class="btime-row"><span>New end time</span><b class="btime-end" id="bt-end"></b></div>
+        <div class="btime-note" id="bt-note"></div>
+      </div>
+      {% endif %}
       <div class="notes-box">
         <label class="field-label">Notes</label>
         <textarea class="notes-inp" id="notes" placeholder="Additional notes or remarks..."></textarea>
@@ -434,6 +496,7 @@
       <button class="btn-save" id="save-btn" onclick="saveQuotation()" disabled>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> {% if booking %}Save &amp; Send Quotation{% else %}Save Quotation{% endif %}
       </button>
+      <div class="sent-msg" id="sent-msg"></div>
       <button class="btn-clear" id="clear-btn" onclick="clearAll()">× Clear All</button>
     </div>
   </div>
@@ -492,8 +555,11 @@
   const BACKJOB_REGULAR_PRICE = {{ (booking.regular_price if booking else 0) or 0 }};
   let items = [];
   {% if booking %}
-  items.push({ item_type: 'service', name: {{ booking.service_name|tojson }}, unit_price: {{ booking.service_price }}, quantity: 1, locked: true });
+  items.push({ item_type: 'service', name: {{ booking.service_name|tojson }}, unit_price: {{ booking.service_price }}, quantity: 1, locked: true, minutes: {{ booking.duration_min }} });
   {% endif %}
+  // The booking's time: what was booked, what the counter already added (+30m / +1h), and the day label.
+  const BT = {{ ({'day': booking.date_label, 'start': booking.start_min, 'dur': booking.duration_min, 'end': booking.booked_end_min,
+                  'staff': booking.staff_extra_min, 'sent_extra': booking.quote_extra_min} if booking else none)|tojson }};
   // Back job only: the mechanic's "not covered" finding (reason + photos)
   const notCovered = { on: false, photos: [] };
   function toggleNotCovered(on) {
@@ -554,21 +620,48 @@
     });
   }
 
-  function addService(name, price) {
-    addItem({ item_type: 'service', name, unit_price: parseFloat(price), quantity: 1 });
-    const el = event.currentTarget;
-    el.style.borderColor = 'rgba(37,99,235,.7)';
-    el.style.background  = 'rgba(37,99,235,.12)';
-    setTimeout(() => { el.style.borderColor = ''; el.style.background = ''; }, 400);
+  // Services tab: + adds it (and turns into a green ✓); pressing it again takes it off.
+  function toggleService(el) {
+    const name = el.dataset.name;
+    const at = items.findIndex(i => i.item_type === 'service' && !i.locked && i.source === 'tab' && i.name === name);
+    if (at >= 0) { items.splice(at, 1); renderItems(); toast(`${name} removed.`); return; }
+    items.push({ item_type: 'service', source: 'tab', name, unit_price: parseFloat(el.dataset.price), quantity: 1, minutes: parseInt(el.dataset.minutes || '0', 10) });
+    renderItems();
+    toast(`${name} added.`);
+  }
+  function syncServiceButtons() {
+    document.querySelectorAll('#service-list-container .service-item[data-name]').forEach(el => {
+      if (el.classList.contains('is-booked')) return;
+      const on = items.some(i => i.item_type === 'service' && !i.locked && i.source === 'tab' && i.name === el.dataset.name);
+      el.classList.toggle('added', on);
+      const b = el.querySelector('.svc-add');
+      if (b) b.innerHTML = on
+        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+        : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+    });
   }
 
   function addCustomService() {
-    const name  = document.getElementById('svc-name').value.trim();
-    const price = parseFloat(document.getElementById('svc-price').value);
-    if (!name || isNaN(price) || price < 0) { toast('Enter a valid name and price.', 'error'); return; }
-    addItem({ item_type: 'service', name, unit_price: price, quantity: 1 });
-    document.getElementById('svc-name').value  = '';
-    document.getElementById('svc-price').value = '';
+    const nameEl = document.getElementById('svc-name'), priceEl = document.getElementById('svc-price'), timeEl = document.getElementById('svc-time');
+    const name  = nameEl.value.trim();
+    const price = parseFloat(priceEl.value);
+    const missing = [];
+    [nameEl, priceEl, timeEl].forEach(e => e.classList.remove('err'));
+    if (!name) { missing.push('service name'); nameEl.classList.add('err'); }
+    if (priceEl.value === '' || isNaN(price) || price < 0) { missing.push('price'); priceEl.classList.add('err'); }
+    if (timeEl.value === '') { missing.push('time needed'); timeEl.classList.add('err'); }
+    const err = document.getElementById('custom-err');
+    if (missing.length) {
+      const list = missing.length === 1 ? missing[0] : missing.slice(0, -1).join(', ') + ' and ' + missing[missing.length - 1];
+      err.textContent = `Fill in the ${list}.`; err.style.display = 'block';
+      return;
+    }
+    err.style.display = 'none';
+    if (items.some(i => i.item_type === 'service' && !i.locked && i.name.toLowerCase() === name.toLowerCase())) { toast(`${name} is already in the quotation.`, 'error'); return; }
+    items.push({ item_type: 'service', source: 'custom', name, unit_price: price, quantity: 1, minutes: parseInt(timeEl.value, 10) });
+    renderItems();
+    toast(`${name} added.`);
+    nameEl.value = ''; priceEl.value = ''; timeEl.value = '';
   }
 
   function addFinding() {
@@ -614,60 +707,129 @@
     btn.disabled = items.filter(i => !i.locked).length === 0;
   }
 
-  function renderItems() {
-    const container = document.getElementById('quote-items');
-    const empty     = document.getElementById('q-empty');
-    document.getElementById('item-count').textContent = items.reduce((s,i)=>s+i.quantity, 0);
+  const ICON_WRENCH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+  const ICON_BOX = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
+  const ICON_CLOCK = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  const ICON_LOCK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+  const ICON_X = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  const peso = n => `₱${Number(n || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const escH = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  // 15 -> "15 min", 60 -> "1 hr", 90 -> "1 hr 30 min"
+  function fmtMin(m) {
+    m = Math.max(0, Math.round(m || 0));
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60), r = m % 60;
+    return `${h} hr` + (r ? ` ${r} min` : '');
+  }
+  function minToAmpm(m) {
+    m = ((m % 1440) + 1440) % 1440;
+    let h = Math.floor(m / 60); const mm = m % 60, ap = h < 12 ? 'AM' : 'PM';
+    h = h % 12 || 12;
+    return `${h}:${String(mm).padStart(2, '0')} ${ap}`;
+  }
+  const groupOf = it => it.locked ? 'orig' : (it.item_type === 'product' ? 'mat' : 'extra');
+  function extraMinutes() {
+    return items.filter(i => !i.locked && i.item_type === 'service').reduce((sum, i) => sum + (i.minutes || 0) * (i.quantity || 1), 0);
+  }
 
-    if (items.length === 0) {
-      if (!container.contains(empty)) container.appendChild(empty);
-      empty.style.display = 'flex';
-      updateTotals(); validateForm(); renderFindings(); updateClearBtnState(); return;
-    }
-    empty.style.display = 'none';
-
-    const existing = container.querySelectorAll('.q-item');
-    existing.forEach(e => e.remove());
-
-    items.forEach((item, idx) => {
-      const div = document.createElement('div');
-      div.className = 'q-item';
-      if (item.locked) {
-        div.innerHTML = `
-          <div class="ci-icon service"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
-          <div class="ci-info">
-            <div class="ci-name">${item.name}<span class="locked-tag">${IS_BACKJOB ? (notCovered.on ? 'Not covered · normal price' : 'Back job · Free') : 'Booked · Locked'}</span></div>
-            <div class="ci-unit">₱${Number(item.unit_price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} each</div>
-          </div>
-          <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#111827;min-width:60px;text-align:right;">
-            ₱${Number((item.unit_price * item.quantity)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-          </div>`;
-        container.appendChild(div);
-        return;
-      }
-      const iconSvg = item.item_type === 'product'
-        ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'
-        : item.item_type === 'finding'
-        ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
-        : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
-      div.innerHTML = `
-        <div class="ci-icon ${item.item_type}">${iconSvg}</div>
+  function itemRow(item, idx) {
+    const g = groupOf(item);
+    if (g === 'orig') {
+      const tag = IS_BACKJOB ? (notCovered.on ? 'Not covered · normal price' : 'Back job · Free') : 'Booked by the customer';
+      return `<div class="q-item">
+        <div class="ci-icon orig">${ICON_WRENCH}</div>
         <div class="ci-info">
-          <div class="ci-name">${item.name}</div>
-          <div class="ci-unit">₱${Number(item.unit_price).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} each</div>
+          <div class="ci-name">${escH(item.name)}</div>
+          <div class="ci-sub">${item.minutes ? `<span class="time-pill">${ICON_CLOCK}${fmtMin(item.minutes)}</span>` : ''}<span>${tag}</span></div>
+        </div>
+        <div class="ci-amt">${peso(item.unit_price * item.quantity)}</div>
+        <div class="lock-ico" title="The booked service can't be removed">${ICON_LOCK}</div>
+      </div>`;
+    }
+    if (g === 'mat') {
+      return `<div class="q-item">
+        <div class="ci-icon material">${ICON_BOX}</div>
+        <div class="ci-info">
+          <div class="ci-name">${escH(item.name)}</div>
+          <div class="ci-unit">${peso(item.unit_price)} each</div>
         </div>
         <div class="ci-controls">
           <div class="qty-btn" onclick="changeQty(${idx},-1)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
           <span class="qty-val">${item.quantity}</span>
           <div class="qty-btn" onclick="changeQty(${idx},1)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
-          <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#111827;min-width:60px;text-align:right;">
-            ₱${Number((item.unit_price * item.quantity)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-          </div>
-          <div class="btn-del" onclick="removeItem(${idx})"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
-        </div>`;
-      container.appendChild(div);
-    });
-    updateTotals(); validateForm(); renderFindings(); updateClearBtnState();
+          <div class="ci-amt">${peso(item.unit_price * item.quantity)}</div>
+        </div>
+      </div>`;
+    }
+    // extra work: an added service, custom labor, or an inspection finding
+    let name = escH(item.name), sub;
+    if (item.item_type === 'finding') {
+      name = 'Finding: ' + name;
+      sub = '<span>From the mechanic\'s inspection</span>';
+    } else {
+      const t = item.minutes ? `<span class="time-pill">${ICON_CLOCK}+${fmtMin(item.minutes)}</span>` : '';
+      sub = t + `<span>${item.source === 'custom' ? 'Custom labor' : 'Added service'}</span>`;
+    }
+    return `<div class="q-item">
+      <div class="ci-icon extra">${ICON_WRENCH}</div>
+      <div class="ci-info">
+        <div class="ci-name" title="${name}">${name}</div>
+        <div class="ci-sub">${sub}</div>
+      </div>
+      <div class="ci-amt">${peso(item.unit_price * item.quantity)}</div>
+      <div class="btn-del" onclick="removeItem(${idx})" title="Remove">${ICON_X}</div>
+    </div>`;
+  }
+
+  function renderItems() {
+    const container = document.getElementById('quote-items');
+    const empty     = document.getElementById('q-empty');
+    document.getElementById('item-count').textContent = items.length;   // every line, the original service too
+
+    container.querySelectorAll('.q-item, .q-group-title').forEach(e => e.remove());
+    if (items.length === 0) {
+      if (!container.contains(empty)) container.appendChild(empty);
+      empty.style.display = 'flex';
+    } else {
+      empty.style.display = 'none';
+      const groups = [
+        ['orig', 'Original service', ICON_WRENCH],
+        ['mat', 'Materials used', ICON_BOX],
+        ['extra', 'Extra work', ICON_WRENCH],
+      ];
+      let html = '';
+      groups.forEach(([key, title, icon]) => {
+        const rows = items.map((it, idx) => [it, idx]).filter(([it]) => groupOf(it) === key);
+        if (!rows.length) return;          // a group shows only when it has items (the original service always has one)
+        html += `<div class="q-group-title">${icon.replace(/width="13" height="13"/, 'width="11" height="11"')}${title}</div>`;
+        html += rows.map(([it, idx]) => itemRow(it, idx)).join('');
+      });
+      container.insertAdjacentHTML('beforeend', html);
+    }
+    updateTotals(); validateForm(); renderFindings(); updateClearBtnState(); syncServiceButtons(); renderBookingTime();
+  }
+
+  // Booking time box (and the time line on the booking card)
+  function renderBookingTime() {
+    if (!BT) return;
+    const extra = extraMinutes();
+    const staff = BT.staff || 0;
+    const newEnd = BT.end + staff + extra;          // never earlier than the booked end
+    document.getElementById('bt-booked').textContent = `${minToAmpm(BT.start)} – ${minToAmpm(BT.end)} (${fmtMin(BT.dur)})`;
+    document.getElementById('bt-staff-row').style.display = staff ? '' : 'none';
+    document.getElementById('bt-staff').textContent = `+${fmtMin(staff)}`;
+    document.getElementById('bt-extra').textContent = extra ? `+${fmtMin(extra)}` : 'None yet';
+    document.getElementById('bt-end').textContent = minToAmpm(newEnd);
+    document.getElementById('bt-note').textContent = extra
+      ? `When you send this, the booking extends to ${minToAmpm(newEnd)} and the customer sees the new time.`
+      : 'Adding a service will extend the booking. Findings and products don\'t add time.';
+  }
+  function renderBookingCardTime(extraSent) {
+    if (!BT) return;
+    const ext = (BT.staff || 0) + (extraSent || 0);
+    const el = document.getElementById('booking-ref-time-text');
+    el.innerHTML = `${escH(BT.day)}, ${minToAmpm(BT.start)} – ${minToAmpm(BT.end + ext)}`
+      + (ext ? ` · <span class="ext">extended +${fmtMin(ext)}</span>` : '');
   }
 
   function changeQty(idx, delta) {
@@ -684,11 +846,15 @@
   }
 
   function updateTotals() {
-    const total = items.reduce((s,i) => s + i.unit_price * i.quantity, 0);
+    const sumOf = key => items.filter(i => groupOf(i) === key).reduce((s,i) => s + i.unit_price * i.quantity, 0);
+    const original = sumOf('orig'), materials = sumOf('mat'), extra = sumOf('extra');
+    const total = original + materials + extra;
     if (HAS_BOOKING) {
-      const original = items.filter(i => i.locked).reduce((s,i) => s + i.unit_price * i.quantity, 0);
-      document.getElementById('original-total').textContent = `₱${Number(original).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-      document.getElementById('extra-total').textContent    = `₱${Number((total - original)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      [['original-total', original], ['materials-total', materials], ['extra-total', extra]].forEach(([id, v]) => {
+        const el = document.getElementById(id);
+        el.textContent = peso(v);
+        el.classList.toggle('zero', !v);
+      });
     } else {
       document.getElementById('subtotal').textContent = `₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     }
@@ -725,7 +891,7 @@
     items = items.filter(i => i.locked);
     document.getElementById('notes').value = '';
     closeClearModal();
-    renderItems();
+    renderItems();                 // the Booking time box goes back to "None yet"
     toast('Cleared. The booked service stays.');
   }
 
@@ -757,7 +923,8 @@
       motorcycle_model: document.getElementById('moto-model').value.trim(),
       motorcycle_plate: (document.getElementById('moto-plate') || {}).value || '',
       notes:            document.getElementById('notes').value.trim(),
-      items:            items.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price, locked: !!i.locked, product_id: i.product_id ? parseInt(i.product_id, 10) : null })),
+      items:            items.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price, locked: !!i.locked, product_id: i.product_id ? parseInt(i.product_id, 10) : null,
+                                          source: i.source || null, minutes: i.item_type === 'service' && !i.locked ? (i.minutes || 0) : 0 })),
     };
     if (HAS_BOOKING) {
       payload.booking_id   = {{ booking.id if booking else 'null' }};
@@ -775,6 +942,16 @@
         document.getElementById('modal-moto').textContent     = document.getElementById('moto-model').value.trim() || '—';
         document.getElementById('modal-items').textContent    = items.reduce((s,i)=>s+i.quantity,0) + ' item(s)';
         document.getElementById('modal-total').textContent    = `₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        if (HAS_BOOKING && data.time) {
+          BT.sent_extra = data.time.extra_minutes || 0;
+          renderBookingCardTime(BT.sent_extra);
+          const fn = (data.customer_first_name || name.split(' ')[0] || '').trim();
+          const sm = document.getElementById('sent-msg');
+          sm.textContent = `Sent to ${fn}. The booking is now ${data.time.start_label} – ${data.time.end_label}.`;
+          sm.style.display = 'block';
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> ${saveLabel()}`;
+        }
         if (HAS_BOOKING) {
           const firstName = (data.customer_first_name || name.split(' ')[0] || '').trim();
           const inspBy    = data.inspected_by || document.getElementById('inspected-by').value.trim();
@@ -994,6 +1171,7 @@
 
   // Initial render
   renderItems();
+  renderBookingCardTime(BT ? BT.sent_extra : 0);
 </script>
 </body>
 </html>

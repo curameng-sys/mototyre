@@ -26,7 +26,7 @@ from security import (clean_str, clean_int, clean_float, is_valid_email, is_vali
 from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_on_the_way_email, booking_receipt_email
 from delivery_zones import format_delivery_address
 from cloud_storage import upload_image
-from service_duration import queue_numbers, ordinal, BREAK_START_MIN, BREAK_END_MIN
+from service_duration import queue_numbers, ordinal, BREAK_START_MIN, BREAK_END_MIN, MECHANIC_TURNOVER_MIN
 from service_duration import (split_service_names, DEFAULT_DURATION_MIN, MULTIDAY_INTAKE_MIN,
     compute_finish_time, mechanic_origin_note, compute_finish_minutes, all_slot_starts,
     SHOP_CLOSE_MIN, mechanic_overlaps, minutes_to_ampm, hhmm_to_minutes, minutes_to_hhmm,
@@ -256,6 +256,7 @@ class Booking(db.Model):
     walkin_customer_id = db.Column(db.Integer, nullable=True)
     booking_batch   = db.Column(db.String(36), nullable=True)
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
+    quote_extra_minutes = db.Column(db.Integer, default=0)  # time the latest quotation's extra work adds (also inside overrun_minutes)
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
     overrun_minutes  = db.Column(db.Integer, default=0)  # counter-staff-recorded extra time on top of duration_minutes
@@ -506,6 +507,7 @@ class Quotation(db.Model):
     inspected_by     = db.Column(db.String(100), nullable=True)  # mechanic name from the Inspection tab
     created_by       = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    extra_minutes    = db.Column(db.Integer, default=0)   # time the extra work adds to the booking
     decided_at       = db.Column(db.DateTime, nullable=True)  # when approved/declined — set once, never on conversion
     decided_in_person = db.Column(db.Boolean, default=False)   # the staff recorded the customer's answer at the shop
     decided_by_staff  = db.Column(db.String(100), nullable=True)  # which staff member recorded it
@@ -802,6 +804,21 @@ def booking_finish_time(b):
 
 
 admin_app.jinja_env.globals['booking_finish_time'] = booking_finish_time
+
+
+@admin_app.template_filter('readable_item')
+def readable_item(name):
+    """'BEAST TIRE, TIRE, 110/70-14' -> 'Beast Tire 110/70-14' (same rule as the customer side's readable_item)."""
+    raw = (name or '').strip()
+    if not raw or (',' not in raw and not raw.isupper()):
+        return raw
+    kept = []
+    for part in [x.strip() for x in raw.split(',') if x.strip()]:
+        words = part.lower().split()
+        if any(all(w in k.lower().split() for w in words) for k in kept):
+            continue
+        kept.append(part)
+    return ' '.join((w if any(ch.isdigit() for ch in w) else w.capitalize()) for part in kept for w in part.split())
 
 
 def is_booking_overdue(b, now):
@@ -1342,7 +1359,11 @@ def _reports_summary(date_from=None, date_to=None):
         return sum(i.unit_price * i.quantity for i in _relevant_quotation_items(q) if i.item_type != 'product')
 
     mechanic_tally = {}   # name -> [completed, back_jobs, labor_income]
-    product_sales = {}    # name -> [units, revenue]
+    product_sales = {}    # ('p', product id) or ('n', name) -> [units, revenue, name seen]
+
+    def _prow(pid, name):
+        key = ('p', int(pid)) if pid else ('n', (name or 'Unknown Product').strip().lower())
+        return product_sales.setdefault(key, [0, 0.0, name or 'Unknown Product'])
     for b in completed_bookings:
         q = _mp_latest_quotations.get(b.id)
         if b.assigned_mechanic_name:
@@ -1354,7 +1375,7 @@ def _reports_summary(date_from=None, date_to=None):
         if q:
             for i in _relevant_quotation_items(q):
                 if i.item_type == 'product':
-                    prow = product_sales.setdefault(i.name, [0, 0.0])
+                    prow = _prow(getattr(i, 'product_id', None), i.name)
                     prow[0] += i.quantity
                     prow[1] += i.quantity * i.unit_price
 
@@ -1388,7 +1409,7 @@ def _reports_summary(date_from=None, date_to=None):
             if qty <= 0:
                 continue
             pname = item.product.name if item.product else 'Unknown Product'
-            prow = product_sales.setdefault(pname, [0, 0.0])
+            prow = _prow(item.product_id, pname)
             prow[0] += qty
             prow[1] += qty * item.unit_price
     for jo in JobOrder.query.filter(JobOrder.status != 'cancelled').all():
@@ -1396,12 +1417,15 @@ def _reports_summary(date_from=None, date_to=None):
             continue
         for item in jo.items:
             if item.item_type == 'product':
-                prow = product_sales.setdefault(item.name, [0, 0.0])
+                prow = _prow(getattr(item, 'product_id', None), item.name)
                 prow[0] += item.quantity
                 prow[1] += item.quantity * item.unit_price
+    _pids = [k[1] for k in product_sales if k[0] == 'p']
+    _now_names = {p.id: p.name for p in Product.query.filter(Product.id.in_(_pids)).all()} if _pids else {}
     top_products_list = sorted(
-        [{'name': name, 'units': u, 'revenue': rev} for name, (u, rev) in product_sales.items()],
-        key=lambda r: r['units'], reverse=True)[:10]
+        [{'name': _now_names.get(k[1], seen) if k[0] == 'p' else seen, 'units': u, 'revenue': rev}
+         for k, (u, rev, seen) in product_sales.items()],
+        key=lambda r: (-r['units'], -r['revenue']))[:10]
 
     return {
         'transactions': txns,
@@ -1662,6 +1686,9 @@ def api_live_signature():
                                ReturnRequest.awaiting_customer_info, ReturnRequest.refund_receipt,
                                ReturnRequest.cash_ready_at, ReturnRequest.customer_at_shop).order_by(ReturnRequest.id).all()
     quotes = db.session.query(Quotation.id, Quotation.status).order_by(Quotation.id).all()
+    # Walk-in job orders hold mechanics too: a new one (or one marked done) refreshes the Day Schedule and Mechanics page.
+    bookings = list(bookings) + db.session.query(JobOrder.id, JobOrder.status, JobOrder.mechanic_name, JobOrder.mechanic_done_at,
+                                                 JobOrder.est_minutes).order_by(JobOrder.id).all()
     # A job running past its time starts clashing with the next one just by the clock reaching it (no row changes),
     # so today's clash list is part of the bookings fingerprint too.
     try:
@@ -1920,7 +1947,7 @@ def booking_start_eligibility(bid):
 # ═══════════════ MECHANIC STATUS: Available / Reserved / Busy / Off Duty ═══════════════
 STARTED_STATUSES = ('inspection', 'in_progress', 'inprogress')
 STARTED_LABELS = {'inspection': 'Inspection & Estimation', 'in_progress': 'In Progress', 'inprogress': 'In Progress'}
-MECH_LABELS = {'available': 'Available', 'reserved': 'Reserved', 'busy': 'Busy', 'off_duty': 'Off Duty'}
+MECH_LABELS = {'available': 'Available', 'reserved': 'Reserved', 'busy': 'Busy', 'off_duty': 'Off Duty', 'unavailable': 'Unavailable'}
 _NO_JOBS = {'started': [], 'reserved': []}
 
 
@@ -1937,17 +1964,155 @@ def _mechanic_jobs_map():
     return jobs
 
 
-def _mechanic_effective(m, jobs_map=None):
-    """Which status shows, in this order: a started booking = Busy, Off Duty, a waiting Confirmed booking = Reserved,
-    and with no booking at all, whatever the admin chose in Edit (Available or Busy). A real booking beats anything manual."""
+def _open_walkin_jobs(d=None):
+    """{mechanic name: [JobOrder]} for walk-in job orders still holding them today (pending / in progress, not marked done)."""
+    d = d or ph_now().date()
+    day_start = datetime.combine(d, datetime.min.time())
+    out = {}
+    for jo in JobOrder.query.filter(
+            JobOrder.mechanic_name.isnot(None), JobOrder.start_at.isnot(None),
+            JobOrder.start_at >= day_start, JobOrder.start_at < day_start + timedelta(days=1),
+            JobOrder.mechanic_done_at.is_(None), JobOrder.status.in_(['pending', 'in_progress'])).order_by(JobOrder.start_at).all():
+        out.setdefault(jo.mechanic_name, []).append(jo)
+    return out
+
+
+def _mechanic_effective(m, jobs_map=None, on_ids=None, walkins=None):
+    """Which status shows, in this order: a started booking = Busy; not timed in today (or timed out / absent) =
+    Unavailable; on a break = Off Duty; a waiting Confirmed booking = Reserved; otherwise Available. Attendance decides
+    Available / Unavailable, bookings decide Reserved / Busy, and the Off Duty switch in Edit is a short break only."""
     j = (jobs_map if jobs_map is not None else _mechanic_jobs_map()).get(m.name) or _NO_JOBS
-    if j['started']:
+    if j['started'] or (walkins if walkins is not None else _open_walkin_jobs()).get(m.name):
         return 'busy'
+    if m.id not in (on_ids if on_ids is not None else _on_shift_ids()):
+        return 'unavailable'
     if m.status == 'off_duty':
         return 'off_duty'
     if j['reserved']:
         return 'reserved'
-    return 'busy' if m.status == 'busy' else 'available'
+    return 'available'
+
+
+def _on_shift_ids(d=None):
+    """Mechanic ids timed in on that day (today by default) and not yet timed out or marked absent."""
+    d = d or ph_now().date()
+    return {r.mechanic_id for r in MechanicAttendance.query.filter_by(date=d).all()
+            if r.time_in and not r.time_out and not r.is_absent}
+
+
+def _assignable_on(m, d, on_ids=None, start_min=None):
+    """(ok, reason) for giving this mechanic a job on date d. Today needs them timed in (attendance is only known for
+    today). A break only blocks a job that starts now (start_min not given, or already reached)."""
+    now = ph_now()
+    is_today = d == now.date()
+    if is_today and m.id not in (on_ids if on_ids is not None else _on_shift_ids()):
+        return False, f"{m.name} is Unavailable: not timed in today (or already timed out / absent)."
+    starts_now = is_today and (start_min is None or start_min <= now.hour * 60 + now.minute)
+    if m.status == 'off_duty' and starts_now:
+        return False, f'{m.name} is Off Duty (on a break).'
+    return True, None
+
+
+# ── One schedule for every mechanic: online bookings + walk-in job orders + Attendance ─────────────────────────
+def _mech_availability(the_date, start_min, end_min, exclude_booking_id=None, starts_now=False):
+    """Every mechanic sorted into free / busy / break / off for the window [start_min, end_min) on the_date.
+    Online bookings count for their booked time plus any extension (quotation or +15m/+30m/+1h), and a started job
+    running past its time holds the mechanic until now. Walk-in job orders count from when they were made for the
+    total time of their services. Completed and cancelled jobs don't count. Two online jobs need the usual 15-minute
+    turnover between them (the same rule assigning enforces); a walk-in only needs not to overlap."""
+    now = ph_now()
+    now_min = now.hour * 60 + now.minute
+    is_today = the_date == now.date()
+    recs = {r.mechanic_id: r for r in MechanicAttendance.query.filter_by(date=the_date).all()} if is_today else {}
+    q = Booking.query.filter(Booking.date == the_date, Booking.assigned_mechanic_name.isnot(None),
+                             Booking.status.notin_(['cancelled', 'completed', 'ready_for_pickup']))
+    if exclude_booking_id:
+        q = q.filter(Booking.id != exclude_booking_id)
+    jobs_by = {}
+    for b in q.all():
+        bs = b.time.hour * 60 + b.time.minute
+        be, _ = _live_end_minutes(b) if not b.is_multiday else (bs + MULTIDAY_INTAKE_MIN, False)
+        jobs_by.setdefault(b.assigned_mechanic_name, []).append(
+            {'start': bs, 'end': be, 'kind': 'online', 'ref': f'BKG-{b.id:03d}', 'service': b.service})
+    wins = _walkin_windows(the_date)
+    svc_of = {}
+    if wins:
+        for it in JobOrderItem.query.filter(JobOrderItem.job_order_id.in_([w['jo_id'] for w in wins])).all():
+            if it.item_type == 'service':
+                svc_of.setdefault(it.job_order_id, []).append(it.name)
+    for w in wins:
+        jobs_by.setdefault(w['mechanic'], []).append(
+            {'start': w['start'], 'end': w['end'], 'kind': 'walkin', 'ref': w['ref'],
+             'service': ', '.join(svc_of.get(w['jo_id'], [])) or 'Walk-in job'})
+
+    def hits(j):
+        if j['kind'] == 'online':
+            return mechanic_overlaps(start_min, end_min, j['start'], j['end'])
+        return start_min < j['end'] and j['start'] < end_min
+
+    out = []
+    for m in Mechanic.query.order_by(Mechanic.name).all():
+        jobs = sorted(jobs_by.get(m.name, []), key=lambda j: j['start'])
+        conflicts = [j for j in jobs if hits(j)]
+        row = {'id': m.id, 'name': m.name, 'specialization': m.specialization,
+               'initials': _mechanic_initials(m.name), 'group': 'free', 'tag': None, 'line': '', 'off_label': ''}
+        rec = recs.get(m.id)
+        if is_today and not (rec and rec.time_in and not rec.time_out and not rec.is_absent):
+            row['group'] = 'off'
+            row['off_label'] = 'Absent today' if (rec and rec.is_absent) else ('Timed out' if (rec and rec.time_out) else 'Not timed in yet')
+        elif conflicts:
+            c = conflicts[0]
+            row.update(group='busy', tag=c['kind'],
+                       line=f"{c['ref']} · {c['service']} · free from {minutes_to_ampm(max(x['end'] for x in conflicts))}")
+        elif m.status == 'off_duty' and (starts_now or (is_today and start_min <= now_min)):
+            row['group'] = 'break'
+        else:
+            if m.status == 'off_duty':
+                row['line'] = 'On a break right now'
+            else:
+                before = [j for j in jobs if j['end'] <= start_min and (not is_today or j['end'] > now_min)]
+                after = [j for j in jobs if j['start'] >= end_min]
+                if before and not starts_now:
+                    j = before[-1]
+                    row['line'] = f"Free by then · {'walk-in' if j['kind'] == 'walkin' else 'online booking'} {j['ref']} ends {minutes_to_ampm(j['end'])}"
+                elif after:
+                    j = after[0]
+                    row['line'] = f"Free until {minutes_to_ampm(j['start'])} · {'walk-in' if j['kind'] == 'walkin' else 'online booking'} {j['ref']}"
+        out.append(row)
+    return out
+
+
+def _mech_availability_payload(rows, title, when_label):
+    busy_on = sum(1 for r in rows if r['group'] == 'busy' and r['tag'] == 'online')
+    busy_wk = sum(1 for r in rows if r['group'] == 'busy' and r['tag'] == 'walkin')
+    free = sum(1 for r in rows if r['group'] == 'free')
+    return {'mechanics': rows, 'free_title': title, 'when': when_label,
+            'summary': f"{free} free{' now' if title == 'Free now' else ''} · {busy_on} busy online · {busy_wk} busy walk-in"}
+
+
+@admin_app.route('/api/mechanic-availability')
+@login_required
+@require_admin_or_staff
+def api_mechanic_availability():
+    """The mechanic dropdown's data. mode=walkin: from now for `minutes` (the walk-in job being built).
+    mode=booking: the online booking's own time. mode=start: from now for the booking's length (Start Service)."""
+    mode = request.args.get('mode', 'walkin')
+    now = ph_now()
+    now_min = now.hour * 60 + now.minute
+    if mode == 'walkin':
+        minutes = max(1, request.args.get('minutes', type=int) or 30)
+        rows = _mech_availability(now.date(), now_min, now_min + minutes, starts_now=True)
+        return jsonify(_mech_availability_payload(rows, 'Free now', f'{minutes_to_ampm(now_min)} – {minutes_to_ampm(now_min + minutes)}'))
+    b = Booking.query.get_or_404(request.args.get('booking_id', type=int))
+    dur = MULTIDAY_INTAKE_MIN if b.is_multiday else (b.duration_minutes or DEFAULT_DURATION_MIN)
+    if mode == 'start':
+        rows = _mech_availability(now.date(), now_min, now_min + dur, exclude_booking_id=b.id, starts_now=True)
+        return jsonify(_mech_availability_payload(rows, 'Free now', f'{minutes_to_ampm(now_min)} – {minutes_to_ampm(now_min + dur)}'))
+    start = b.time.hour * 60 + b.time.minute
+    end = real_end_minutes(start, dur, b.overrun_minutes or 0)
+    label = f'{minutes_to_ampm(start)} – {minutes_to_ampm(end)}'
+    rows = _mech_availability(b.date, start, end, exclude_booking_id=b.id)
+    return jsonify(_mech_availability_payload(rows, f'Free {label}', label))
 
 
 def _row_mechanic_status(bookings):
@@ -1957,14 +2122,22 @@ def _row_mechanic_status(bookings):
     waiting = [b for b in bookings if b.assigned_mechanic_name and b.status in ('pending', 'confirmed')]
     if not waiting:
         return {}
-    off = {m.name for m in Mechanic.query.filter(Mechanic.name.in_({b.assigned_mechanic_name for b in waiting}),
-                                                 Mechanic.status == 'off_duty').all()}
-    return {b.id: 'off_duty' if b.assigned_mechanic_name in off else 'reserved' for b in waiting}
+    mechs = {m.name: m for m in Mechanic.query.filter(Mechanic.name.in_({b.assigned_mechanic_name for b in waiting})).all()}
+    off = {n for n, m in mechs.items() if m.status == 'off_duty'}
+    today, on_ids = ph_now().date(), _on_shift_ids()
+    out = {}
+    for b in waiting:
+        m = mechs.get(b.assigned_mechanic_name)
+        if b.date == today and m and m.id not in on_ids:
+            out[b.id] = 'unavailable'
+        else:
+            out[b.id] = 'off_duty' if b.assigned_mechanic_name in off else 'reserved'
+    return out
 
 
 def mechanic_status_map():
-    jobs = _mechanic_jobs_map()
-    return {m.name: _mechanic_effective(m, jobs) for m in Mechanic.query.all()}
+    jobs, on_ids, walkins = _mechanic_jobs_map(), _on_shift_ids(), _open_walkin_jobs()
+    return {m.name: _mechanic_effective(m, jobs, on_ids, walkins) for m in Mechanic.query.all()}
 
 
 def _mech_now_text(name):
@@ -1988,7 +2161,10 @@ def _prepare_mechanic_for_start(booking, chosen_name):
         return None, (f"{m.name} is still working on booking #{other[0].id}. "
                       f"Choose another mechanic, or finish #{other[0].id} first.")
     if m.status == 'off_duty':
-        return None, f'{m.name} is Off Duty. Choose another mechanic.'
+        return None, f'{m.name} is Off Duty (on a break). Choose another mechanic.'
+    if m.id not in _on_shift_ids():
+        return None, (f"{m.name} is Unavailable: not timed in today. Time them in on the Attendance tab, "
+                      f"or choose another mechanic.")
     if chosen and chosen != booking.assigned_mechanic_name and _mechanic_effective(m) == 'busy':
         return None, f'{m.name} is Busy. Choose another mechanic.'
     return m, None
@@ -2002,7 +2178,8 @@ def api_booking_start_info(bid):
     b = Booking.query.get_or_404(bid)
     jobs = _mechanic_jobs_map()
     mechs = Mechanic.query.order_by(Mechanic.name).all()
-    status_of = {m.name: _mechanic_effective(m, jobs) for m in mechs}
+    _on = _on_shift_ids()
+    status_of = {m.name: _mechanic_effective(m, jobs, _on) for m in mechs}
     cur = b.assigned_mechanic_name
     note, need_pick = None, False
     if not cur:
@@ -2016,11 +2193,14 @@ def api_booking_start_info(bid):
             note = f"{cur} is still working on booking #{other[0].id}. Choose another mechanic, or finish #{other[0].id} first."
         elif m and m.status == 'off_duty':
             need_pick = True
-            note = f'{cur} is Off Duty. Choose another mechanic.'
+            note = f'{cur} is Off Duty (on a break). Choose another mechanic.'
+        elif m and m.id not in _on:
+            need_pick = True
+            note = f'{cur} is Unavailable: not timed in today. Time them in on the Attendance tab, or choose another mechanic.'
         else:
             note = f'{cur} will change from {MECH_LABELS.get(status_of.get(cur), "Reserved")} to Busy until this job is completed or cancelled.'
     options = [{'name': m.name, 'specialization': m.specialization, 'status': status_of[m.name], 'label': MECH_LABELS[status_of[m.name]],
-                'disabled': status_of[m.name] in ('busy', 'off_duty') and m.name != cur} for m in mechs]
+                'disabled': status_of[m.name] in ('busy', 'off_duty', 'unavailable') and m.name != cur} for m in mechs]
     return jsonify({'mechanic': cur, 'status': status_of.get(cur), 'note': note, 'need_pick': need_pick, 'options': options})
 
 
@@ -2501,8 +2681,14 @@ def assign_booking_mechanic(bid):
         mechanic = Mechanic.query.get(int(mechanic_id)) if mechanic_id.isdigit() else None
         if not mechanic:
             return fail('Mechanic not found.')
-        if mechanic.status == 'off_duty':
-            return fail(f'{mechanic.name} is Off Duty and can\'t be assigned.')
+        _bs = booking.time.hour * 60 + booking.time.minute
+        ok_now, why_not = _assignable_on(mechanic, booking.date, start_min=_bs)
+        if not ok_now:
+            return fail(why_not + " They can't be assigned.")
+        _be = real_end_minutes(_bs, booking.duration_minutes or DEFAULT_DURATION_MIN, booking.overrun_minutes or 0)
+        for w in _walkin_windows(booking.date):
+            if w['mechanic'] == mechanic.name and _bs < w['end'] and w['start'] < _be:
+                return fail(f"{mechanic.name} is on walk-in {w['ref']} until {minutes_to_ampm(w['end'])}. Pick someone else.")
         start_min = booking.time.hour * 60 + booking.time.minute
         duration  = booking.duration_minutes or DEFAULT_DURATION_MIN
         # The booking's own date/time isn't changing, so the shop-queue slot
@@ -2510,7 +2696,7 @@ def assign_booking_mechanic(bid):
         # the mechanic dimension is new information here.
         ok, error = _check_admin_booking_request(
             booking.date, start_min, duration, exclude_id=booking.id,
-            mechanic_name=mechanic.name, require_slot_grid=False, check_shop_queue=False,
+            mechanic_name=mechanic.name, require_slot_grid=False, check_shop_queue=False, allow_break=True,
         )
         if not ok:
             return fail(error)
@@ -2613,7 +2799,7 @@ def _gather_blocked_intervals(booking_date):
 
 
 def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, exclude_id=None,
-                                  mechanic_name=None, require_slot_grid=True, check_shop_queue=True):
+                                  mechanic_name=None, require_slot_grid=True, check_shop_queue=True, allow_break=False):
     """THE call every admin-side action that touches a booking's schedule makes
     before committing — a reschedule (date/time change) and a mechanic
     reassignment (mechanic change) alike. This gathers what
@@ -2642,6 +2828,11 @@ def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, 
     mechanic_intervals = None
     if mechanic_name:
         mechanic_status = 'available' if any(m.name == mechanic_name for m in on_duty) else 'off duty'
+        if allow_break and mechanic_status != 'available':
+            # A short break (Off Duty) only blocks a job that starts now; the caller already checked that.
+            _, _rostered, _ = get_on_duty_mechanics(booking_date)
+            if any(m.name == mechanic_name and m.status == 'off_duty' for m in _rostered):
+                mechanic_status = 'available'
         mq = Booking.query.filter(
             Booking.assigned_mechanic_name == mechanic_name,
             Booking.date == booking_date,
@@ -2649,8 +2840,11 @@ def _check_admin_booking_request(booking_date, start_minutes, duration_minutes, 
         )
         if exclude_id:
             mq = mq.filter(Booking.id != exclude_id)
+        # A walk-in only needs not to overlap (no 15-minute turnover), so its window is narrowed by the turnover
+        # that validate_booking adds on both sides: a < end and start < b, the plain overlap.
         mechanic_intervals = _gather_intervals(mq) + [
-            (w['start'], w['end']) for w in _walkin_windows(booking_date) if w['mechanic'] == mechanic_name]
+            (w['start'] + MECHANIC_TURNOVER_MIN, w['end'] - MECHANIC_TURNOVER_MIN)
+            for w in _walkin_windows(booking_date) if w['mechanic'] == mechanic_name]
 
     return validate_booking(
         start_minutes, duration_minutes, shop_intervals, daily_count,
@@ -2882,6 +3076,7 @@ def _mechanic_overlap_causes(bookings):
             if hit:
                 running_long = (prev.overrun_minutes or 0) > 0 or auto_late
                 suffix = (' (running past its scheduled time)' if auto_late and not (prev.overrun_minutes or 0)
+                          else ' (extended by the quotation)' if (prev.quote_extra_minutes or 0) >= (prev.overrun_minutes or 0) > 0
                           else ' (running long)') if running_long else ''
                 if auto_late == 'late_start':
                     _now = ph_now()
@@ -2931,6 +3126,9 @@ def _fix1_preview(booking, on_duty_names):
         return None
     if preferred not in on_duty_names:
         return {'available': False, 'mechanic': preferred, 'reason': f'{preferred} is not on duty.'}
+    _pm = Mechanic.query.filter_by(name=preferred).first()
+    if _pm and not _assignable_on(_pm, booking.date)[0]:
+        return {'available': False, 'mechanic': preferred, 'reason': _assignable_on(_pm, booking.date)[1]}
     start_min = booking.time.hour * 60 + booking.time.minute
     duration = booking.duration_minutes or DEFAULT_DURATION_MIN
     end_min = real_end_minutes(start_min, duration, 0)
@@ -3008,9 +3206,14 @@ def _fix3_preview(booking, on_duty):
     start_min = booking.time.hour * 60 + booking.time.minute
     duration = booking.duration_minutes or DEFAULT_DURATION_MIN
     end_min = real_end_minutes(start_min, duration, 0)
+    _on = _on_shift_ids() if booking.date == ph_now().date() else None
     for m in on_duty:
         if m.name == booking.assigned_mechanic_name:
             continue
+        if _on is not None and m.id not in _on:          # not timed in today
+            continue
+        if any(w['mechanic'] == m.name and start_min < w['end'] and w['start'] < end_min for w in _walkin_windows(booking.date)):
+            continue                                       # on a walk-in job then
         if _mechanic_free_at(m.name, booking.date, start_min, end_min, booking.id):
             return {'available': True, 'mechanic': m.name, 'specialization': m.specialization}
     return {'available': False}
@@ -3042,11 +3245,28 @@ def _compute_day_clash_ids(the_date, bookings=None):
     for blist in by_mechanic.values():
         overlap_causes.update(_mechanic_overlap_causes(blist))
 
+    absent = _absent_names(the_date)
+    working = on_duty_names | _on_break_names(the_date)
     clash_ids = set()
     for b in bookings:
-        if b.id in overlap_causes or not b.assigned_mechanic_name or b.assigned_mechanic_name not in on_duty_names:
+        if (b.id in overlap_causes or not b.assigned_mechanic_name or b.assigned_mechanic_name not in working
+                or b.assigned_mechanic_name in absent):
             clash_ids.add(b.id)
     return clash_ids
+
+
+def _absent_names(d):
+    """Mechanics marked Absent on d (only today is ever marked)."""
+    if d != ph_now().date():
+        return set()
+    ids = {r.mechanic_id for r in MechanicAttendance.query.filter_by(date=d, is_absent=True).all()}
+    return {m.name for m in Mechanic.query.filter(Mechanic.id.in_(ids)).all()} if ids else set()
+
+
+def _on_break_names(d):
+    """Rostered mechanics on a short break (Off Duty): their bookings aren't clashes just because of the break."""
+    _, rostered, _ = get_on_duty_mechanics(d)
+    return {m.name for m in rostered if m.status == 'off_duty'}
 
 
 def _compute_day_clashes(the_date, bookings=None):
@@ -3071,14 +3291,17 @@ def _compute_day_clashes(the_date, bookings=None):
     for blist in by_mechanic.values():
         overlap_causes.update(_mechanic_overlap_causes(blist))
 
+    _absent, _breaking = _absent_names(the_date), _on_break_names(the_date)
     clashes = []
     for b in sorted(bookings, key=lambda x: (x.time, x.id)):
         cause = None
-        if b.id in overlap_causes:
+        if b.assigned_mechanic_name and b.assigned_mechanic_name in _absent:
+            cause = {'text': f'{b.assigned_mechanic_name} is absent today', 'type': 'off_duty'}
+        elif b.id in overlap_causes:
             cause = overlap_causes[b.id]
         elif not b.assigned_mechanic_name:
             cause = {'text': 'No mechanic assigned', 'type': 'unassigned'}
-        elif b.assigned_mechanic_name not in on_duty_names:
+        elif b.assigned_mechanic_name not in on_duty_names and b.assigned_mechanic_name not in _breaking:
             cause = {'text': f'{b.assigned_mechanic_name} is not on duty', 'type': 'off_duty'}
         if not cause:
             continue
@@ -3333,7 +3556,9 @@ def booking_running_long(bid):
     old_overrun = booking.overrun_minutes or 0
     old_end = real_end_minutes(_start_min, _dur, old_overrun)
     if action == 'reset':
-        booking.overrun_minutes = 0
+        booking.overrun_minutes = booking.quote_extra_minutes or 0     # the quotation's extra work still takes its time
+    elif action == 'add15':
+        booking.overrun_minutes = old_overrun + 15
     elif action == 'add30':
         booking.overrun_minutes = old_overrun + 30
     elif action == 'add60':
@@ -3346,8 +3571,8 @@ def booking_running_long(bid):
     # only says anything if they'd actually been told it was running late.
     new_end = real_end_minutes(_start_min, _dur, booking.overrun_minutes or 0)
     notified = None
-    if action in ('add30', 'add60'):
-        notified = {'emailed': _send_running_late_notice(booking, old_end, new_end, 30 if action == 'add30' else 60)}
+    if action in ('add15', 'add30', 'add60'):
+        notified = {'emailed': _send_running_late_notice(booking, old_end, new_end, {'add15': 15, 'add30': 30, 'add60': 60}[action])}
     elif old_overrun > 0:
         notified = {'emailed': _send_running_late_notice(booking, old_end, new_end, 0)}
 
@@ -3590,6 +3815,25 @@ def api_day_panel():
 
     walkin_w = _walkin_windows(the_date)
 
+    # ── In the bay right now (today only): started online jobs and open walk-in job orders, one row per job ──
+    bay_now = []
+    if the_date == ph_now().date():
+        for b in active:
+            if b.status in STARTED_STATUSES and not b.is_multiday:
+                bay_now.append({'mechanic': b.assigned_mechanic_name or 'No mechanic', 'source': 'walkin' if b.walkin_customer_id else 'online',
+                                'ref': f'BKG-{b.id:03d}', 'service': b.service, 'customer': _booking_customer_name(b),
+                                'until': minutes_to_ampm(_live_end_minutes(b)[0]), 'start': b.time.hour * 60 + b.time.minute})
+        _jo_svcs = {}
+        if walkin_w:
+            for it in JobOrderItem.query.filter(JobOrderItem.job_order_id.in_([w['jo_id'] for w in walkin_w])).all():
+                if it.item_type == 'service':
+                    _jo_svcs.setdefault(it.job_order_id, []).append(it.name)
+        for w in walkin_w:
+            bay_now.append({'mechanic': w['mechanic'], 'source': 'walkin', 'ref': w['ref'],
+                            'service': ', '.join(_jo_svcs.get(w['jo_id'], [])) or 'Walk-in job',
+                            'customer': w['customer'] or 'Walk-in customer', 'until': minutes_to_ampm(w['end']), 'start': w['start']})
+        bay_now.sort(key=lambda x: x['start'])
+
     # ── Mechanic timeline ──
     timeline = []
     free_all_day = []
@@ -3706,7 +3950,8 @@ def api_day_panel():
                 'services': b.service,
                 'status': b.status,
                 'tags': tags,
-                'overrun_minutes': b.overrun_minutes or 0,
+                'overrun_minutes': max(0, (b.overrun_minutes or 0) - (b.quote_extra_minutes or 0)),
+                'quote_extra_minutes': b.quote_extra_minutes or 0,
                 'is_multiday': bool(b.is_multiday),
                 'can_reschedule': b.status not in ('completed', 'cancelled'),
                 'status_key': _norm_status(b.status),
@@ -3763,6 +4008,7 @@ def api_day_panel():
         'is_full': is_full,
         'has_clash': bool(clashes),
         'bay': bay,
+        'bay_now': bay_now,
         'clashes': clashes,
         'timeline': timeline,
         'unassigned_bars': unassigned_bars,
@@ -5865,9 +6111,13 @@ def api_attendance():
     if err:
         return err
     info = _attendance_for_date(d)
+    is_today = d == ph_now().date()
+    jobs, on_ids = (_mechanic_jobs_map(), _on_shift_ids()) if is_today else (None, None)
     rows = []
     for m in Mechanic.query.order_by(Mechanic.name).all():
-        rows.append({'mechanic_id': m.id, 'name': m.name, 'specialization': m.specialization, **info[m.id]})
+        eff = _mechanic_effective(m, jobs, on_ids) if is_today else None
+        rows.append({'mechanic_id': m.id, 'name': m.name, 'specialization': m.specialization, **info[m.id],
+                     'mechanic_status': eff, 'mechanic_status_label': MECH_LABELS.get(eff) if eff else None})
     counts = {k: sum(1 for r in rows if r['status'] == k) for k in ('present', 'late', 'absent', 'not_in')}
     return jsonify({'date': d.isoformat(), 'is_today': d == ph_now().date(), 'rows': rows, 'counts': counts,
                     'today': ph_now().date().isoformat()})
@@ -5923,6 +6173,10 @@ def api_attendance_action(mid, action):
     else:
         db.session.rollback()
         return jsonify({'success': False, 'error': 'Unknown action.'}), 404
+    if d == now.date() and (rec.is_absent or rec.time_out or not rec.time_in):
+        m = db.session.get(Mechanic, mid)
+        if m and m.status == 'off_duty':
+            m.status = 'available'           # a break ends with the shift; they're Unavailable now anyway
     db.session.commit()
     return jsonify({'success': True})
 
@@ -5956,7 +6210,18 @@ def api_mechanics_roster():
 
     jobs_map = _mechanic_jobs_map()
     attendance_today = _attendance_for_date(today)
+    on_ids = _on_shift_ids(today)
+    walkins = _open_walkin_jobs(today)
     result = []
+
+    def jo_dict(jo):
+        start = jo.start_at.hour * 60 + jo.start_at.minute
+        svcs = [i.name for i in JobOrderItem.query.filter_by(job_order_id=jo.id).all() if i.item_type == 'service']
+        return {'booking_id': None, 'ref': f'JO-{jo.id:03d}', 'customer': jo.customer_name or 'Walk-in customer',
+                'service': ', '.join(svcs) or 'Walk-in job', 'date_label': today.strftime('%b %d'),
+                'start_label': minutes_to_ampm(start), 'end_label': minutes_to_ampm(start + (jo.est_minutes or 30)),
+                'is_today': True, 'state': 'started', 'status_label': 'In Progress',
+                'when_full': jo.start_at.strftime('%b %d, %Y %I:%M %p'), 'source': 'walkin'}
 
     def job_dict(b):
         b_start = b.time.hour * 60 + b.time.minute
@@ -5967,13 +6232,17 @@ def api_mechanics_roster():
             'date_label': b.date.strftime('%b %d'), 'start_label': minutes_to_ampm(b_start), 'end_label': minutes_to_ampm(b_end),
             'is_today': b.date == today, 'state': 'started' if started else 'confirmed',
             'status_label': STARTED_LABELS.get(b.status, ''), 'when_full': b.date.strftime('%b %d, %Y ') + b.time.strftime('%I:%M %p'),
+            'source': 'walkin' if b.walkin_customer_id else 'online',
         }
 
     for m in mechanics:
         j = jobs_map.get(m.name) or _NO_JOBS
         all_jobs = j['started'] + j['reserved']
-        assigned = job_dict(all_jobs[0]) if all_jobs else None
-        more_count = max(0, len(all_jobs) - 1)
+        job_list = [jo_dict(jo) for jo in walkins.get(m.name, [])] + [job_dict(b) for b in all_jobs]
+        assigned = job_list[0] if job_list else None
+        more_count = max(0, len(job_list) - 1)
+        online_n = sum(1 for x in job_list if x['source'] == 'online')
+        walkin_n = len(job_list) - online_n
 
         # What was typed in Edit only shows when there is no booking at all, and is always labelled.
         assigned_is_manual = False
@@ -5995,8 +6264,10 @@ def api_mechanics_roster():
             'phone': m.phone, 'note': m.note,
             'attendance': attendance_today.get(m.id),
             'not_rostered_today': m.name not in rostered_names,
-            'effective_status': _mechanic_effective(m, jobs_map),
-            'active_jobs_count': len(all_jobs), 'lock': lock,
+            'effective_status': _mechanic_effective(m, jobs_map, on_ids, walkins),
+            'online_jobs': online_n, 'walkin_jobs': walkin_n,
+            'on_shift': m.id in on_ids, 'on_break': m.status == 'off_duty',
+            'active_jobs_count': len(job_list), 'lock': lock,
             'assigned': assigned, 'more_count': more_count, 'assigned_is_manual': assigned_is_manual,
             'manual_customer': m.manual_customer, 'manual_service': m.manual_service,
         })
@@ -6027,8 +6298,9 @@ def api_mechanic_assignable_bookings(mid):
     for b in bookings:
         start_min = b.time.hour * 60 + b.time.minute
         duration = b.duration_minutes or DEFAULT_DURATION_MIN
-        if mechanic.status == 'off_duty':
-            ok, reason = False, 'Off Duty'
+        ok_now, why_not = _assignable_on(mechanic, b.date, start_min=start_min)
+        if not ok_now:
+            ok, reason = False, 'Off Duty (on a break)' if mechanic.status == 'off_duty' else 'Unavailable (not timed in)'
         elif (b.date, b.time) in taken:
             ok, reason = False, 'already booked then'
         else:
@@ -6085,28 +6357,26 @@ def edit_mechanic(mid):
     note = clean_str(data.get('note', ''), max_len=500)
     manual_customer = clean_str(data.get('manual_customer', ''), max_len=200)
     manual_service = clean_str(data.get('manual_service', ''), max_len=300)
-    status = data.get('status') if data.get('status') in ('available', 'busy', 'off_duty') else m.status
     if not name or specialization not in MECHANIC_SPECIALIZATIONS:
         return jsonify({'success': False, 'error': 'Name is required and specialization must be one of the six.'}), 400
     if phone and not is_valid_phone(phone):
         return jsonify({'success': False, 'error': 'That phone number does not look right — use a Philippine mobile number.'}), 400
+    # Status is automatic now (Attendance + bookings). The only thing set here is the Off Duty break switch.
+    status = m.status if m.status in ('available', 'off_duty') else 'available'
+    if 'on_break' in data:
+        want_break = bool(data.get('on_break'))
+        if want_break and status != 'off_duty':
+            if m.id not in _on_shift_ids():
+                return jsonify({'success': False, 'error': f"{m.name} hasn't timed in yet, so they can't go on a break."}), 400
+            if (_mechanic_jobs_map().get(m.name) or _NO_JOBS)['started']:
+                return jsonify({'success': False, 'error': f'{m.name} is busy on a job, so they can\'t go on a break until it is done.'}), 400
+        status = 'off_duty' if want_break else 'available'
     # Bookings store the mechanic's name as plain text (assigned/preferred
     # mechanic fields), not a foreign key — a rename here does not rewrite
     # today's or past bookings, so a profile rename mid-shift can briefly
     # detach a mechanic from jobs already on the board under their old name.
     old_name = m.name
-    jobs = _mechanic_jobs_map().get(old_name) or _NO_JOBS
-    removed = 0
-    if jobs['started']:
-        status = m.status                    # locked: it changes on its own when the booking is completed or cancelled
-    elif jobs['reserved']:
-        if status == 'off_duty':
-            for bk in jobs['reserved']:      # their waiting bookings go back to "not assigned yet"
-                bk.assigned_mechanic_name = None
-                bk.assigned_mechanic_specialization = None
-                removed += 1
-        else:
-            status = 'available'             # Reserved is automatic; Available / Busy can't be picked while booked
+    removed = 0                              # a short break keeps the mechanic's bookings; nothing is unassigned
     m.name = name
     m.specialization = specialization
     m.phone = phone or None
@@ -6117,7 +6387,8 @@ def edit_mechanic(mid):
     db.session.commit()
     msg = 'Mechanic updated.'
     if status == 'off_duty' and old_name:
-        msg = f'{name} is now Off Duty' + (f' · {removed} booking{"s" if removed != 1 else ""} need{"s" if removed == 1 else ""} another mechanic' if removed else '')
+        msg = f'{name} is now Off Duty (on a break)'
+
     return jsonify({'success': True, 'message': msg, 'toast': msg})
 
 
@@ -6447,9 +6718,56 @@ def quotation_new():
                 'assigned_mechanic_specialization': b.assigned_mechanic_specialization,
                 'assigned_mechanic_initials': _mechanic_initials(b.assigned_mechanic_name),
                 'mechanic_is_customer_choice': bool(b.preferred_mechanic_name) and b.preferred_mechanic_name == b.assigned_mechanic_name,
+                **_quote_time_facts(b),
             }
     return render_template('quotation.html', products=products, services=services,
-                            mechanics=mechanics, booking=booking)
+                            mechanics=mechanics, booking=booking, fmt_duration=format_duration)
+
+
+QUOTE_LABOR_MINUTES = (0, 10, 15, 20, 30, 45, 60, 90, 120)   # the Custom Service / Labor "Time needed" choices
+
+
+def _quote_day_label(d):
+    today = ph_now().date()
+    if d == today:
+        return 'Today'
+    if d == today + timedelta(days=1):
+        return 'Tomorrow'
+    return f"{d.strftime('%a, %b')} {d.day}"
+
+
+def _quote_time_facts(b):
+    """The booking's booked window and what a quotation has already added, for the Booking time box."""
+    start = b.time.hour * 60 + b.time.minute
+    duration = b.duration_minutes or DEFAULT_DURATION_MIN
+    booked_end = compute_finish_minutes(start, duration)
+    quote_extra = b.quote_extra_minutes or 0
+    staff_extra = max(0, (b.overrun_minutes or 0) - quote_extra)       # +30m / +1h the counter recorded
+    return {'date_label': _quote_day_label(b.date), 'start_min': start, 'duration_min': duration,
+            'booked_end_min': booked_end, 'staff_extra_min': staff_extra, 'quote_extra_min': quote_extra,
+            'booked_services': split_service_names(b.service)}
+
+
+def _quote_extra_minutes(items):
+    """Extra time from the quotation's extra work: services from the Services tab use their booking-form time, custom
+    labor uses the time picked. Findings and products add none, and the booked service is already counted."""
+    names = {i.get('name') for i in items if i.get('item_type') == 'service' and not i.get('locked')}
+    durations = {sv.name: (sv.duration_minutes or 0) for sv in Service.query.filter(Service.name.in_(names)).all()} if names else {}
+    total = 0
+    for i in items:
+        if i.get('item_type') != 'service' or i.get('locked'):
+            continue
+        qty = max(1, int(i.get('quantity') or 1))
+        if i.get('source') == 'custom' or i.get('name') not in durations:
+            try:
+                mins = int(i.get('minutes') or 0)
+            except (TypeError, ValueError):
+                mins = 0
+            mins = mins if mins in QUOTE_LABOR_MINUTES else 0
+        else:
+            mins = durations[i['name']]
+        total += mins * qty
+    return total
 
 
 @admin_app.route('/api/quotation/evidence', methods=['POST'])
@@ -6521,7 +6839,9 @@ def save_quotation():
         if not nc_reason or not nc_photos:
             return jsonify({'success': False, 'error': "A problem that isn't covered needs a reason and at least one photo from the Inspection tab."}), 400
 
+    extra_min = _quote_extra_minutes(items) if booking else 0
     q = Quotation(
+        extra_minutes    = extra_min,
         not_covered      = bool(nc),
         not_covered_reason = nc_reason,
         not_covered_photos = ','.join(nc_photos) or None,
@@ -6548,13 +6868,24 @@ def save_quotation():
             locked       = bool(i.get('locked')),
             product_id   = int(i['product_id']) if (i.get('item_type') == 'product' and i.get('product_id')) else None,
         ))
+    time_info = None
+    if booking:
+        facts = _quote_time_facts(booking)
+        booking.overrun_minutes = facts['staff_extra_min'] + extra_min    # replaces the previous quotation's time
+        booking.quote_extra_minutes = extra_min
+        new_end = facts['booked_end_min'] + facts['staff_extra_min'] + extra_min
+        from datetime import time as _dtime
+        booking.end_time = _dtime(min(new_end, 24 * 60 - 1) // 60, min(new_end, 24 * 60 - 1) % 60)
+        time_info = {'date_label': facts['date_label'], 'start_label': minutes_to_ampm(facts['start_min']),
+                     'end_label': minutes_to_ampm(new_end), 'extra_minutes': extra_min, 'end_min': new_end}
     db.session.commit()
 
     in_person = clean_str(str(data.get('in_person') or ''), max_len=10)
     if booking and in_person in ('approve', 'decline'):
         verb = _record_in_person_decision(q, booking, in_person)
         return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}', 'inspected_by': inspected_by,
-                        'customer_first_name': (q.customer_name or '').split(' ')[0] or None, 'in_person': verb})
+                        'customer_first_name': (q.customer_name or '').split(' ')[0] or None, 'in_person': verb,
+                        'time': time_info})
 
     if booking:
         ref = f'BKG-{booking.id:03d}'
@@ -6565,6 +6896,9 @@ def save_quotation():
         if nc_reason:
             message = (f'During inspection of your {booking.service} ({ref}), the mechanic found the problem is not covered '
                        f'by the back job: {nc_reason}')
+        if time_info and time_info['extra_minutes']:
+            message += (f" The extra work adds {format_duration(time_info['extra_minutes'])}, so your booking now runs "
+                        f"{time_info['start_label']} – {time_info['end_label']}.")
         send_notification(booking.user_id, title, message, type='quotation', status='awaiting_customer',
                            booking_id=booking.id, priority=True)
 
@@ -6592,7 +6926,7 @@ def save_quotation():
 
     customer_first_name = (q.customer_name or '').split(' ')[0] or None
     return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}',
-                     'inspected_by': inspected_by, 'customer_first_name': customer_first_name})
+                     'inspected_by': inspected_by, 'customer_first_name': customer_first_name, 'time': time_info})
 
 
 @admin_app.route('/quotations')
@@ -7645,9 +7979,12 @@ def walkin_create_job_order():
         est_minutes = 30
     if mechanic_name:
         start_min = now.hour * 60 + now.minute
-        for w in _walkin_windows(now.date()):
-            if w['mechanic'] == mechanic_name and mechanic_overlaps(start_min, start_min + est_minutes, w['start'], w['end']):
-                return jsonify({'success': False, 'error': f"{mechanic_name} is on {w['ref']} until {minutes_to_ampm(w['end'])}. Pick someone else."}), 409
+        row = next((r for r in _mech_availability(now.date(), start_min, start_min + (est_minutes or 30), starts_now=True)
+                    if r['name'] == mechanic_name), None)
+        if row and row['group'] != 'free':
+            why = {'busy': f"is busy ({row['line']})", 'break': 'is on a break',
+                   'off': f"isn't working now ({row['off_label'].lower()})"}[row['group']]
+            return jsonify({'success': False, 'error': f"{mechanic_name} {why}. Pick someone else, or leave it unassigned."}), 409
 
     try:
         jo = JobOrder(
@@ -9187,6 +9524,8 @@ with admin_app.app_context():
         "ALTER TABLE product ADD COLUMN image_mime VARCHAR(40) DEFAULT NULL",
         "ALTER TABLE product ADD COLUMN motor_model VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN cancelled_at DATETIME DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN quote_extra_minutes INT DEFAULT 0",
+        "ALTER TABLE quotation ADD COLUMN extra_minutes INT DEFAULT 0",
         "ALTER TABLE quotation_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE notification ADD COLUMN order_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN lalamove_link VARCHAR(500)",
