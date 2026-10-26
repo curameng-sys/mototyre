@@ -305,6 +305,9 @@
     }
     .bk-tab:hover { background: var(--ink) !important; color: var(--text) !important; }
     .bk-tab.active { background: var(--text) !important; border-color: var(--text) !important; color: #fff !important; font-weight: 600; }
+    .btn-export-pdf { display:inline-flex; align-items:center; gap:0.45rem; background:#111827; color:#fff; border:1px solid #111827; border-radius:8px; padding:0.55rem 0.95rem; font-family:inherit; font-size:0.82rem; font-weight:700; cursor:pointer; }
+    .btn-export-pdf:hover { background:#1f2937; }
+    .btn-export-pdf:disabled, #xp-download-btn:disabled { opacity:0.45; cursor:not-allowed; }
     /* Queue numbers (Manage Bookings) */
     .queue-note { display:flex; gap:0.55rem; align-items:flex-start; background:#f5f0ff; border:1px solid #e2d6fb; color:#4c3a86; border-radius:10px; padding:0.65rem 0.9rem; font-size:0.78rem; line-height:1.5; margin-bottom:1rem; }
     .queue-note b { color:#3b2a75; }
@@ -989,6 +992,12 @@
           <div class="page-title">Manage <span class="accent">Bookings</span></div>
           <div class="page-sub">View, confirm, complete, or cancel service appointments.</div>
         </div>
+        <div class="page-actions">
+          <button type="button" class="btn-export-pdf" onclick="openExportPdf()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+            Export PDF
+          </button>
+        </div>
       </div>
 
       <!-- Status Tabs -->
@@ -1387,6 +1396,39 @@
     </section>
 
     <!-- RESCHEDULE MODAL -->
+    <div class="modal-overlay" id="modal-export-pdf" onclick="if(event.target===this) closeModal('modal-export-pdf')">
+      <div class="modal-box" id="xp-box" style="max-width:460px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <h5 style="margin:0;display:flex;align-items:center;gap:0.5rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Export Bookings PDF</h5>
+          <button type="button" onclick="closeModal('modal-export-pdf')" style="background:none;border:none;font-size:1.15rem;color:var(--muted);cursor:pointer;line-height:1;" aria-label="Close">&times;</button>
+        </div>
+        <div id="xp-form">
+          <label for="xp-month" style="display:block;font-size:0.68rem;font-weight:700;letter-spacing:0.07em;color:var(--muted);text-transform:uppercase;margin-bottom:0.35rem;">Month</label>
+          <select id="xp-month" onchange="refreshExportPdf()" style="width:100%;padding:0.55rem 0.7rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.86rem;background:#fff;"></select>
+          <div style="font-size:0.72rem;color:var(--muted);margin:0.35rem 0 0.85rem;">Only months that are over can be exported, so the record is final.</div>
+          <label style="display:flex;align-items:center;gap:0.55rem;border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.75rem;font-size:0.84rem;cursor:pointer;">
+            <input type="checkbox" id="xp-cancelled" checked onchange="refreshExportPdf()" style="width:15px;height:15px;accent-color:#d0021b;">
+            <span style="flex:1;">Include cancelled bookings</span>
+            <span id="xp-cancelled-count" style="font-size:0.74rem;color:var(--muted);"></span>
+          </label>
+          <div id="xp-info" style="margin-top:0.85rem;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;line-height:1.5;">Loading&hellip;</div>
+          <div id="xp-warn" style="display:none;margin-top:0.65rem;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.78rem;line-height:1.5;"></div>
+          <div class="modal-actions" style="margin-top:1.1rem;">
+            <button type="button" class="btn-cancel" onclick="closeModal('modal-export-pdf')">Cancel</button>
+            <button type="button" id="xp-preview-btn" class="btn-export-pdf" onclick="previewExportPdf()" disabled>Preview</button>
+            <button type="button" id="xp-download-btn" class="btn-primary-custom" onclick="downloadExportPdf()" disabled>Download PDF</button>
+          </div>
+        </div>
+        <div id="xp-preview" style="display:none;">
+          <iframe id="xp-frame" title="PDF preview" style="width:100%;height:68vh;border:1px solid var(--border);border-radius:8px;background:#f3f4f6;"></iframe>
+          <div class="modal-actions" style="margin-top:0.8rem;">
+            <button type="button" class="btn-cancel" onclick="backFromExportPreview()">Back</button>
+            <button type="button" class="btn-primary-custom" onclick="downloadExportPdf()">Download PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-overlay" id="modal-reschedule">
       <div class="modal-box">
         <h5>Reschedule Appointment</h5>
@@ -7338,6 +7380,77 @@
   // ─────────────────────────────────────────────────────────────────────────
 
   let _activeBookingTab = 'confirmed';
+
+  // ── Export PDF (one finished month of bookings) ──
+  const _peso2 = n => 'Php ' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const _xpEsc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function _xpUrl(inline) {
+    const m = document.getElementById('xp-month').value;
+    const c = document.getElementById('xp-cancelled').checked ? '1' : '0';
+    return `/bookings/export.pdf?month=${encodeURIComponent(m)}&cancelled=${c}${inline ? '&inline=1' : ''}`;
+  }
+  async function openExportPdf() {
+    backFromExportPreview();
+    document.getElementById('xp-month').innerHTML = '';
+    document.getElementById('xp-cancelled').checked = true;
+    openModal('modal-export-pdf');
+    await refreshExportPdf(true);
+  }
+  async function refreshExportPdf(first) {
+    const sel = document.getElementById('xp-month');
+    const info = document.getElementById('xp-info'), warn = document.getElementById('xp-warn');
+    const pv = document.getElementById('xp-preview-btn'), dl = document.getElementById('xp-download-btn');
+    pv.disabled = dl.disabled = true;
+    info.textContent = 'Loading…';
+    const q = new URLSearchParams({ cancelled: document.getElementById('xp-cancelled').checked ? '1' : '0' });
+    if (!first && sel.value) q.set('month', sel.value);
+    try {
+      const res = await fetch('/api/bookings-export?' + q.toString(), { credentials: 'same-origin' });
+      const d = await res.json();
+      if (first || !sel.options.length) {
+        sel.innerHTML = d.months.map(m => `<option value="${m.value}"${m.disabled ? ' disabled' : ''}>${_xpEsc(m.label)}${m.disabled ? ' (not over yet)' : ''}</option>`).join('');
+        sel.value = d.month;
+      }
+      if (!res.ok) { info.textContent = d.error || 'Could not load that month.'; warn.style.display = 'none'; return; }
+      document.getElementById('xp-cancelled-count').textContent = d.cancelled_count;
+      if (d.empty) {
+        info.innerHTML = `<b>${_xpEsc(d.month_label)}:</b> there are no completed${document.getElementById('xp-cancelled').checked ? ' or cancelled' : ''} bookings to export for this month.`;
+      } else {
+        info.innerHTML = `<b>${_xpEsc(d.month_label)}: ${d.in_pdf} booking${d.in_pdf === 1 ? '' : 's'}</b> will be in the PDF<br>`
+          + `Completed ${d.completed} &middot; Cancelled ${d.cancelled_in_pdf} &middot; Paid ${_peso2(d.paid)}`
+          + (d.unpaid_completed ? `<br><span style="color:#92400e;">${d.unpaid_completed} completed booking${d.unpaid_completed === 1 ? ' is' : 's are'} not paid yet: listed as Unpaid, not counted in Paid.</span>` : '');
+        pv.disabled = dl.disabled = false;
+      }
+      if (d.unfinished && d.unfinished.length) {
+        const n = d.unfinished.length;
+        warn.innerHTML = `<b>${n} booking${n === 1 ? '' : 's'} from ${_xpEsc(d.month_label)} ${n === 1 ? 'is' : 'are'} still not finished</b> and won't be in the report:`
+          + `<ul style="margin:0.35rem 0 0.35rem 1.1rem;padding:0;">${d.unfinished.map(u => `<li>${_xpEsc(u.ref)} &middot; ${_xpEsc(u.customer)} &middot; ${_xpEsc(u.date)} &middot; still ${_xpEsc(u.status)}</li>`).join('')}</ul>`
+          + 'Complete or cancel them in Manage Bookings first, then export again.';
+        warn.style.display = '';
+      } else {
+        warn.style.display = 'none';
+      }
+    } catch (e) {
+      info.textContent = 'Network error, please try again.';
+    }
+  }
+  function previewExportPdf() {
+    document.getElementById('xp-frame').src = _xpUrl(true);
+    document.getElementById('xp-form').style.display = 'none';
+    document.getElementById('xp-preview').style.display = '';
+    document.getElementById('xp-box').style.maxWidth = '980px';
+  }
+  function backFromExportPreview() {
+    document.getElementById('xp-preview').style.display = 'none';
+    document.getElementById('xp-form').style.display = '';
+    document.getElementById('xp-box').style.maxWidth = '460px';
+    document.getElementById('xp-frame').removeAttribute('src');
+  }
+  function downloadExportPdf() {
+    const a = document.createElement('a');
+    a.href = _xpUrl(false);
+    document.body.appendChild(a); a.click(); a.remove();
+  }
 
   function applyBkBadges(map) {
     document.querySelectorAll('#sec-bookings .bk-new').forEach(b => {

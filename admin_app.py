@@ -2795,6 +2795,8 @@ def _notify_queue_moved(day, before):
 # is running long — the system now notices that by itself instead of waiting for someone to press +30m. Nobody knows how much
 # longer it will take, so it is assumed to need a further quarter hour from now until staff records something else.
 _STARTED_STATES = ('inspection', 'in_progress', 'inprogress')
+AUTO_LATE_WARNING = False    # OFF: the system no longer flags a still-in-progress job by itself; staff records delays with +30m / +1h.
+                             # Set to True to bring the automatic warning back.
 AUTO_LATE_GRACE_MIN = 5      # not flagged for a few minutes of normal slack
 AUTO_LATE_ASSUME_MIN = 15    # how much longer an unrecorded overrun is assumed to need
 
@@ -2804,7 +2806,7 @@ def _live_end_minutes(b):
     in progress, and already past that end by more than the grace period."""
     start = b.time.hour * 60 + b.time.minute
     end = real_end_minutes(start, b.duration_minutes or DEFAULT_DURATION_MIN, b.overrun_minutes or 0)
-    if b.status in _STARTED_STATES and b.date == ph_now().date():
+    if AUTO_LATE_WARNING and b.status in _STARTED_STATES and b.date == ph_now().date():
         now = ph_now()
         now_min = now.hour * 60 + now.minute
         if now_min >= end + AUTO_LATE_GRACE_MIN:
@@ -8010,6 +8012,192 @@ def api_reports_data():
         'transactions': txns_json,
         'transaction_count': len(rpt['transactions']),
     })
+
+
+# ── Manage Bookings → Export PDF: one finished month of bookings as a PDF record ──────────────────────────────
+# Read-only. Everything comes from what is already saved: the booking, its quotation and its billing.
+from booking_report import build_booking_report_pdf
+
+_UNFINISHED_STATUS = {'confirmed': 'Confirmed', 'pending': 'Pending', 'inspection': 'Inspection & Estimation',
+                      'in_progress': 'In Progress', 'inprogress': 'In Progress', 'ready_for_pickup': 'Ready for Pickup'}
+
+
+def _month_first(d):
+    return date(d.year, d.month, 1)
+
+
+def _month_after(first):
+    return date(first.year + (first.month == 12), first.month % 12 + 1, 1)
+
+
+def _parse_export_month(raw):
+    """'2026-09' -> (first day, last day) of a month that is already over, else None."""
+    try:
+        y, m = (int(x) for x in (raw or '').split('-'))
+        first = date(y, m, 1)
+    except (ValueError, TypeError):
+        return None
+    if first >= _month_first(ph_now().date()):
+        return None
+    return first, _month_after(first) - timedelta(days=1)
+
+
+def _export_month_options():
+    """Every month from the first booking up to this month, newest first. This month is listed but can't be picked."""
+    this_month = _month_first(ph_now().date())
+    earliest = db.session.query(func.min(Booking.date)).scalar()
+    start = _month_first(earliest) if earliest else this_month
+    last_month = _month_first(this_month - timedelta(days=1))
+    start = min(start, last_month)
+    out, m = [], start
+    while m <= this_month:
+        out.append({'value': m.strftime('%Y-%m'), 'label': m.strftime('%B %Y'), 'disabled': m == this_month})
+        m = _month_after(m)
+    return list(reversed(out)), last_month.strftime('%Y-%m')
+
+
+def _short_date(d):
+    return f'{d.strftime("%b")} {d.day}, {d.year}'
+
+
+def _booking_report_data(first, last, include_cancelled):
+    bookings = Booking.query.filter(Booking.date >= first, Booking.date <= last).order_by(Booking.date, Booking.time, Booking.id).all()
+    completed = [b for b in bookings if b.status == 'completed']
+    cancelled = [b for b in bookings if b.status == 'cancelled']
+    unfinished = [b for b in bookings if b.status in _UNFINISHED_STATUS]
+
+    ids = [b.id for b in completed]
+    invoiced = {r[0] for r in db.session.query(Notification.booking_id).filter(
+        Notification.type == 'invoice', Notification.booking_id.in_(ids)).all()} if ids else set()
+    quotes = {}
+    if ids:
+        for q in Quotation.query.filter(Quotation.booking_id.in_(ids)).order_by(Quotation.created_at.asc()).all():
+            quotes[q.booking_id] = q                                  # the latest one wins
+
+    rows, mats = [], {}
+    by_service, by_mechanic = {}, {}
+    sums = {'booked': 0.0, 'extra': 0.0, 'materials': 0.0, 'total': 0.0}
+    paid = {'cash': 0.0, 'gcash': 0.0}
+    unpaid_completed = 0
+    shown = sorted(completed + (cancelled if include_cancelled else []), key=lambda b: (b.date, b.time, b.id))
+    for b in shown:
+        base = {'ref': f'#{b.id}', 'date': _short_date(b.date), 'time': minutes_to_ampm(b.time.hour * 60 + b.time.minute),
+                'customer': _booking_customer_name(b), 'motorcycle': b.motorcycle_model or '',
+                'service': b.service, 'mechanic': b.assigned_mechanic_name or ''}
+        if b.status == 'cancelled':
+            rows.append({**base, 'status': 'Cancelled', 'payment': '', 'extra_note': '',
+                         'booked': 0, 'extra': 0, 'materials': 0, 'total': 0})
+            continue
+        q = quotes.get(b.id)
+        is_back = (b.service or '').startswith(BACKJOB_PREFIX)
+        booked = extra = materials = 0.0
+        used, extra_names, note = [], [], ''
+        if q and q.items:
+            approved = q.status == 'approved'
+            for i in q.items:
+                amt = _line_amount(i)
+                if i.locked:
+                    booked += amt
+                elif i.item_type == 'product':
+                    if approved or not is_back:                       # a part already fitted is billed even on a decline
+                        materials += amt
+                        used.append(i)
+                elif approved:
+                    extra += amt
+                    extra_names.append(_line_name(i))
+            if extra_names:
+                note = '+ ' + ', '.join(extra_names)
+            elif q.status == 'declined' and any(not i.locked and i.item_type != 'product' for i in q.items):
+                note = 'Extra work declined'
+            saved = float(b.total_amount or 0)
+            if saved > 0 and abs((booked + extra + materials) - saved) > 0.01:
+                # what was actually billed is the record: the booked-service column takes the difference
+                booked = saved - extra - materials
+                if booked < 0:
+                    booked, extra, materials, used, note = saved, 0.0, 0.0, [], ''
+        else:
+            booked = float(b.total_amount or 0)
+        booked, extra, materials = round(booked, 2), round(extra, 2), round(materials, 2)
+        total = round(booked + extra + materials, 2)
+
+        is_paid = bool(b.invoice_paid) or b.id not in invoiced
+        method = (b.invoice_payment_method or b.payment_method or 'cash').lower()
+        if is_paid:
+            paid['gcash' if method == 'gcash' else 'cash'] += total
+        else:
+            unpaid_completed += 1
+        rows.append({**base, 'status': 'Completed',
+                     'payment': ('GCash' if method == 'gcash' else 'Cash') if is_paid else 'Unpaid',
+                     'extra_note': note, 'booked': booked, 'extra': extra, 'materials': materials, 'total': total})
+        for k, v in (('booked', booked), ('extra', extra), ('materials', materials), ('total', total)):
+            sums[k] += v
+        for name in split_service_names((b.service or '')[len(BACKJOB_PREFIX):] if is_back else (b.service or '')):
+            by_service[name] = by_service.get(name, 0) + 1
+        mech = b.assigned_mechanic_name or 'Not assigned'
+        by_mechanic[mech] = by_mechanic.get(mech, 0) + 1
+        for i in used:
+            m = mats.setdefault(i.name, [0, 0.0])
+            m[0] += int(i.quantity or 1)
+            m[1] += _line_amount(i)
+
+    now = ph_now()
+    data = {
+        'month_label': first.strftime('%B %Y'),
+        'range_label': f'{first.strftime("%b")} 1 – {last.day}, {first.year}',
+        'generated': f'{_short_date(now)}, {minutes_to_ampm(now.hour * 60 + now.minute)}',
+        'admin': getattr(current_user, 'fullname', '') or 'Admin',
+        'summary': {'total': len(rows), 'completed': len(completed), 'cancelled': len(cancelled) if include_cancelled else 0,
+                    'paid': round(paid['cash'] + paid['gcash'], 2), 'cash': round(paid['cash'], 2), 'gcash': round(paid['gcash'], 2),
+                    'unpaid_completed': unpaid_completed},
+        'rows': rows,
+        'totals': {k: round(v, 2) for k, v in sums.items()},
+        'by_service': sorted(by_service.items(), key=lambda kv: (-kv[1], kv[0])),
+        'by_mechanic': sorted(by_mechanic.items(), key=lambda kv: (-kv[1], kv[0])),
+        'materials': sorted(((n, q, round(a, 2)) for n, (q, a) in mats.items()), key=lambda r: -r[2]),
+        'materials_total': round(sum(a for _q, a in mats.values()), 2),
+    }
+    unfinished_list = [{'ref': f'#{b.id}', 'customer': _booking_customer_name(b), 'date': _short_date(b.date),
+                        'status': _UNFINISHED_STATUS[b.status]} for b in unfinished]
+    return data, len(cancelled), unfinished_list
+
+
+@admin_app.route('/api/bookings-export')
+@login_required
+@require_admin_or_staff
+def api_bookings_export():
+    """What the Export PDF pop-up shows for one month: the months that can be picked, how many bookings the PDF will hold,
+    the total paid, and any booking from that month that is not finished yet (those are left out)."""
+    months, default = _export_month_options()
+    month = request.args.get('month') or default
+    rng = _parse_export_month(month)
+    if not rng:
+        return jsonify({'months': months, 'month': default, 'error': 'Pick a month that is already over.'}), 400
+    include_cancelled = request.args.get('cancelled', '1') == '1'
+    data, cancelled_count, unfinished = _booking_report_data(rng[0], rng[1], include_cancelled)
+    s = data['summary']
+    return jsonify({'months': months, 'month': month, 'month_label': data['month_label'],
+                    'cancelled_count': cancelled_count, 'in_pdf': s['total'], 'completed': s['completed'],
+                    'cancelled_in_pdf': s['cancelled'], 'paid': s['paid'], 'unpaid_completed': s['unpaid_completed'],
+                    'unfinished': unfinished, 'empty': s['total'] == 0})
+
+
+@admin_app.route('/bookings/export.pdf')
+@login_required
+@require_admin_or_staff
+def bookings_export_pdf():
+    rng = _parse_export_month(request.args.get('month'))
+    if not rng:
+        return jsonify({'success': False, 'error': 'Pick a month that is already over.'}), 400
+    data, _c, _u = _booking_report_data(rng[0], rng[1], request.args.get('cancelled', '1') == '1')
+    if not data['rows']:
+        return jsonify({'success': False, 'error': 'There are no completed or cancelled bookings to export for that month.'}), 400
+    pdf = build_booking_report_pdf(data)
+    name = f"MotoTyres-Bookings-{rng[0].strftime('%B')}-{rng[0].year}.pdf"
+    resp = make_response(pdf)
+    resp.headers['Content-Type'] = 'application/pdf'
+    disp = 'inline' if request.args.get('inline') == '1' else 'attachment'
+    resp.headers['Content-Disposition'] = f'{disp}; filename="{name}"'
+    return resp
 
 
 @admin_app.route('/report/generate', methods=['POST'])
