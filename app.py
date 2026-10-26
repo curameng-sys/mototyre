@@ -1863,6 +1863,20 @@ def get_on_duty_mechanics(query_date=None):
 
 
 _MECH_STARTED = ('inspection', 'in_progress', 'inprogress')
+
+
+def _mech_job_end(b):
+    """When a mechanic's job ends, for 'is this mechanic free at that time?'. A mechanic is held only by what is known:
+      * the job's scheduled end (from its time, which staff may have moved, and its length);
+      * plus any extra time the staff recorded with +30m / +1h;
+      * and, only once that end has PASSED while the job is still not finished today, up to the present minute: he is
+        plainly still on it. Nothing is assumed about how much longer, and nothing changes before the end time passes."""
+    start = b.time.hour * 60 + b.time.minute
+    end = compute_finish_minutes(start, b.duration_minutes or DEFAULT_DURATION_MIN) + (b.overrun_minutes or 0)
+    if b.status in _MECH_STARTED and b.date == ph_now().date():
+        now = ph_now()
+        end = max(end, now.hour * 60 + now.minute)
+    return end
 _MECH_LABELS = {'available': 'Available', 'reserved': 'Reserved', 'busy': 'Busy', 'off_duty': 'Off Duty'}
 
 
@@ -2007,7 +2021,7 @@ def _check_booking_request(mechanic_id, booking_date, start_minutes, duration_mi
         mechanic_intervals = []
         for b in mq.all():
             b_start = b.time.hour * 60 + b.time.minute
-            mechanic_intervals.append((b_start, compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)))
+            mechanic_intervals.append((b_start, _mech_job_end(b)))
         # …and any walk-in job they're on right now.
         mechanic_intervals += [(w['start'], w['end']) for w in _walkin_windows(booking_date) if w['mechanic'] == mechanic.name]
 
@@ -3496,7 +3510,7 @@ def get_mechanics():
                 Booking.status != 'cancelled'
             ).all():
                 b_start = b.time.hour * 60 + b.time.minute
-                b_end   = compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)
+                b_end   = _mech_job_end(b)                  # extra time recorded by staff, or still on it past its end
                 by_name.setdefault(b.assigned_mechanic_name, []).append((b_start, b_end))
             for w in _walkin_windows(slot_date):          # walk-in jobs tie up a mechanic too
                 by_name.setdefault(w['mechanic'], []).append((w['start'], w['end']))

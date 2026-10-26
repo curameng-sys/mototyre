@@ -8626,7 +8626,9 @@ function renderMechanicPickerList() {
     list.appendChild(buildMechanicPickerItem({
       id: m.id, name: `${m.name} — ${m.specialization}`, note, noteClass, disabled: m.busy || off,
       selected: String(selectedMechanicId) === String(m.id), recommended: isRecommended,
-      status: m.status, statusLabel: m.status_label, matches: !off && specializationMatches(m, selectedServiceNames).length > 0,
+      // the tag answers the question the customer is asking: is this mechanic free at the time I picked? (not what they are doing right now)
+      status: off ? 'off_duty' : (m.busy ? 'busy' : 'available'), statusLabel: off ? 'Off Duty' : (m.busy ? 'Busy' : 'Available'),
+      matches: !off && specializationMatches(m, selectedServiceNames).length > 0,
     }));
   });
 }
