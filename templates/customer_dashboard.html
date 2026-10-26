@@ -416,7 +416,7 @@
     .cal-day.past { background: var(--bg-subtle); border-color: var(--line-1); color: #9ca3af !important; font-weight: 600; }
     .cal-day.fully-booked { background: #fecaca; border-color: #f87171; color: #7f1d1d !important; font-weight: 700; }
     .cal-day.selected { background: var(--brand-red) !important; border-color: var(--brand-red) !important; color: #ffffff !important; font-weight: 800; }
-    .time-slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 0.55rem; align-content: start; min-height: 60px; max-height: 300px; overflow-y: auto; margin-bottom: 0.25rem; padding-right: 0.2rem; scroll-behavior: smooth; }
+    .time-slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 0.55rem; align-content: start; min-height: 60px; margin-bottom: 0.25rem; }
     .amber-notice { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.78rem; line-height: 1.4; margin-bottom: 0.6rem; }
     .time-slot-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; background: var(--bg-subtle); border: 1.5px solid var(--line-2); color: var(--fg-1); border-radius: 10px; padding: 0.65rem 0.4rem; min-height: 58px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: center; }
     .time-slot-btn:hover:not(:disabled) { background: var(--brand-red-soft); border-color: var(--brand-red-border); color: var(--brand-red); }
@@ -4573,10 +4573,6 @@ async function renderTimeSlots(dateStr) {
       selectedTime = null; selectedEndLabel = '';
       document.getElementById('selected-time-value').value = '';
     }
-    // Scroll the (possibly long) list to the first bookable card so the
-    // customer isn't staring at a wall of greyed-out early-morning slots.
-    const firstPick = built.find(b => b.classList.contains('selected-slot')) || built.find(b => !b.disabled);
-    if (firstPick) firstPick.scrollIntoView({ block: 'nearest' });
   }
 
   checkBookingReady();
