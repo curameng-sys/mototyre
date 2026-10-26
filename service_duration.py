@@ -346,35 +346,28 @@ def validate_booking(start_minutes, duration_minutes, shop_intervals, daily_coun
 
 
 def queue_numbers(bookings):
-    """Each day's queue: {booking_id: {'n': position, 'total': how many numbered bookings that day, 'moved_up': bool}}.
+    """Queue numbers for bookings made together: {booking_id: {'n': position, 'total': how many in that batch that day,
+    'moved_up': bool}}.
 
     Computed from the bookings themselves every time (nothing is stored), so the admin side and the customer side can never
     show different numbers. Rules:
-      * every day starts again at 1;
-      * earlier booked TIME gets the lower number;
-      * same time: whoever booked first gets the lower number; a customer who booked several at once (same booking_batch)
-        keeps their own queue order (Queue 1 of 2 before Queue 2 of 2) and stays together;
-      * a cancelled booking has no number, so the ones after it move up by themselves;
+      * only a customer who booked 2 or more at once (same booking_batch) gets numbers; a solo booking has none;
+      * numbering is inside that batch, and starts again at 1 on each day;
+      * earlier booked TIME gets the lower number; same time: the one entered first (lower id);
+      * a cancelled booking has no number, so the ones after it in the batch move up by themselves;
       * status never matters (Confirmed, Inspection & Estimation, In Progress, Completed all keep their place);
       * archived bookings still count, so archiving never renumbers anyone.
-    moved_up is True when a booking that sits ahead of this one in the day's order was cancelled AFTER this one was made
+    moved_up is True when a booking ahead of this one in its batch was cancelled AFTER this one was made
     (it only counts if cancelled_at was recorded, so an old cancellation never shows a false "You moved up").
-    Pass bookings from any number of days; they are grouped by date here."""
-    by_day = {}
+    Pass bookings from any number of days; they are grouped by date and batch here."""
+    groups = {}
     for b in bookings:
-        by_day.setdefault(b.date, []).append(b)
+        if b.booking_batch:
+            groups.setdefault((b.date, b.booking_batch), []).append(b)
     out = {}
-    for day, rows in by_day.items():
-        first_made = {}                         # earliest booking time in each batch, so a batch stays together on a tie
-        for b in rows:
-            key = b.booking_batch or ('single-%s' % b.id)
-            made = b.created_at or datetime.max
-            if key not in first_made or made < first_made[key]:
-                first_made[key] = made
-
+    for rows in groups.values():
         def order(b):
-            key = b.booking_batch or ('single-%s' % b.id)
-            return (b.time, first_made[key], b.id)
+            return (b.time, b.id)
 
         live = sorted((b for b in rows if b.status != 'cancelled'), key=order)
         cancelled = sorted((b for b in rows if b.status == 'cancelled'), key=order)

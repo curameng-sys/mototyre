@@ -1029,7 +1029,7 @@
   <span style="flex-shrink:0;width:34px;height:34px;border-radius:9px;background:#f3eefe;border:1px solid #ddd0fb;color:#6d28d9;font-family:'Bebas Neue',sans-serif;font-size:1.25rem;line-height:34px;text-align:center;">{{ q.n }}</span>
   <div style="line-height:1.25;">
     <div style="font-size:0.74rem;font-weight:700;color:#6d28d9;">{{ ordinal(q.n) }} in line</div>
-    <div style="font-size:0.7rem;color:var(--fg-3);">of {{ q.total }} bookings that day</div>
+    <div style="font-size:0.7rem;color:var(--fg-3);">of {{ q.total }} in your booking</div>
     {%- if q.moved_up %}<div style="font-size:0.7rem;font-weight:700;color:#15803d;">&#9650; You moved up</div>{% endif %}
   </div>
 </div>
@@ -4990,7 +4990,7 @@ function renderNotifications() {
           <span style="flex-shrink:0;width:30px;height:30px;border-radius:8px;background:#f3eefe;border:1px solid #ddd0fb;color:#6d28d9;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;line-height:30px;text-align:center;">${c.n}</span>
           <div style="min-width:0;line-height:1.3;">
             <div style="font-size:0.78rem;color:var(--fg-1);overflow-wrap:anywhere;">${c.service}${c.motorcycle ? ' &middot; ' + c.motorcycle : ''}</div>
-            <div style="font-size:0.74rem;color:var(--fg-3);"><b style="color:#6d28d9;">${c.ord} of ${c.total}</b> bookings that day</div>
+            <div style="font-size:0.74rem;color:var(--fg-3);"><b style="color:#6d28d9;">${c.ord} of ${c.total}</b> in your booking</div>
           </div>
         </div>`).join('');
       qd.innerHTML = `
@@ -8795,7 +8795,7 @@ function showToast(msg, type) {
         <span style="flex-shrink:0;width:34px;height:34px;border-radius:9px;background:#f3eefe;border:1px solid #ddd0fb;color:#6d28d9;font-family:'Bebas Neue',sans-serif;font-size:1.25rem;line-height:34px;text-align:center;">${q.n}</span>
         <div style="line-height:1.25;">
           <div style="font-size:0.74rem;font-weight:700;color:#6d28d9;">${_ordinal(q.n)} in line</div>
-          <div style="font-size:0.7rem;color:var(--fg-3);">of ${q.total} bookings that day</div>
+          <div style="font-size:0.7rem;color:var(--fg-3);">of ${q.total} in your booking</div>
           ${q.moved_up ? '<div style="font-size:0.7rem;font-weight:700;color:#15803d;">&#9650; You moved up</div>' : ''}
         </div></div>`;
     }

@@ -1515,8 +1515,8 @@ def admin_dashboard():
     _days = sorted(d for d in _by_day if d >= _today) + sorted((d for d in _by_day if d < _today), reverse=True)
     _booking_days = []
     for _d in _days:
-        _rows = sorted(_by_day[_d], key=lambda b: (0 if b.id in _qnums else 1, _qnums[b.id]['n'] if b.id in _qnums else 0, b.time, b.id))
-        _live_total = next((_qnums[b.id]['total'] for b in _rows if b.id in _qnums), 0)
+        _rows = sorted(_by_day[_d], key=lambda b: (1 if b.status == 'cancelled' else 0, b.time, b.id))
+        _live_total = sum(1 for b in _rows if b.status != 'cancelled')
         _booking_days.append({'date': _d, 'label': _d.strftime('%A, %b ').upper() + str(_d.day), 'count': _live_total, 'rows': _rows})
     _q_booking_ids = [b.id for b in _all_bookings_list]
     _latest_quotations = {}
@@ -8042,10 +8042,14 @@ def _parse_export_month(raw):
     return first, _month_after(first) - timedelta(days=1)
 
 
-def _export_month_options():
-    """Every month from the first booking up to this month, newest first. This month is listed but can't be picked."""
+def _export_month_options(earliest=None):
+    """Every month from the first record (the first booking unless told otherwise) up to this month, newest first.
+    This month is listed but can't be picked."""
     this_month = _month_first(ph_now().date())
-    earliest = db.session.query(func.min(Booking.date)).scalar()
+    if earliest is None:
+        earliest = db.session.query(func.min(Booking.date)).scalar()
+    if isinstance(earliest, datetime):
+        earliest = earliest.date()
     start = _month_first(earliest) if earliest else this_month
     last_month = _month_first(this_month - timedelta(days=1))
     start = min(start, last_month)
@@ -8193,6 +8197,410 @@ def bookings_export_pdf():
         return jsonify({'success': False, 'error': 'There are no completed or cancelled bookings to export for that month.'}), 400
     pdf = build_booking_report_pdf(data)
     name = f"MotoTyres-Bookings-{rng[0].strftime('%B')}-{rng[0].year}.pdf"
+    resp = make_response(pdf)
+    resp.headers['Content-Type'] = 'application/pdf'
+    disp = 'inline' if request.args.get('inline') == '1' else 'attachment'
+    resp.headers['Content-Disposition'] = f'{disp}; filename="{name}"'
+    return resp
+
+
+# ── Manage Orders → Export PDF: one finished month of orders (online + in-store) as a PDF record ────────────────
+# Read-only. Uses what is already saved on each order: items, shipping fee and the courier rider the admin booked.
+from order_report import build_order_report_pdf
+
+_ORDER_UNFINISHED = {'pending': 'Pending', 'awaiting_payment': 'Awaiting Payment', 'confirmed': 'Confirmed',
+                     'in_progress': 'In Progress', 'processing': 'Processing', 'done_packaging': 'Done Packaging',
+                     'shipping': 'Shipping', 'shipped': 'Ready to Pick Up', 'delivered': 'Delivered'}
+_ORDER_CANCELLED = ('cancelled', 'refunded')
+_ORDER_TYPE_LABEL = {'ship': 'Ship to Address', 'pickup': 'Shop Pickup', 'instore': 'In-Store'}
+
+
+def _order_kind(o):
+    if o.is_instore or o.walkin_customer_id:
+        return 'instore'
+    return 'ship' if o.delivery_method == 'ship' else 'pickup'
+
+
+def _order_ref(o):
+    return f'#{o.id}'                      # the same number Manage Orders shows in its Order # column
+
+
+def _when(dt):
+    return f'{_short_date(dt)}, {minutes_to_ampm(dt.hour * 60 + dt.minute)}' if dt else ''
+
+
+def _order_items_text(o):
+    return ', '.join(f"{(i.product.name if i.product else 'Product')} ×{i.quantity}" for i in o.items)
+
+
+def _ship_address_line(o):
+    """The saved delivery address is 'name / mobile / address'; the report shows only the address."""
+    lines = [l.strip() for l in (o.ship_address or '').split('\n') if l.strip()]
+    return ', '.join(lines[2:]) if len(lines) > 2 else (lines[-1] if lines else '')
+
+
+def _order_report_data(first, last, include_cancelled):
+    start, end = datetime.combine(first, datetime.min.time()), datetime.combine(_month_after(first), datetime.min.time())
+    orders = (Order.query.filter(Order.created_at >= start, Order.created_at < end).filter(Order.items.any())
+              .order_by(Order.created_at, Order.id).all())
+    walkin_names = {}
+    wids = {o.walkin_customer_id for o in orders if o.walkin_customer_id}
+    if wids:
+        walkin_names = {w.id: w.name for w in WalkInCustomer.query.filter(WalkInCustomer.id.in_(wids)).all()}
+
+    def customer(o):
+        if _order_kind(o) == 'instore':
+            return o.contact_name or walkin_names.get(o.walkin_customer_id) or 'Walk-in customer'
+        return o.customer.fullname if o.customer else 'Unknown customer'
+
+    ship, pickup, instore, unfinished = [], [], [], []
+    ship_tot = {'items': 0.0, 'shipping': 0.0, 'total': 0.0}
+    pickup_total = instore_total = 0.0
+    counts = {'ship': 0, 'pickup': 0, 'instore': 0}
+    sales = {'ship': 0.0, 'pickup': 0.0, 'instore': 0.0}
+    pay = {'GCash': 0.0, 'Cash': 0.0}
+    pay_n = {'GCash': 0, 'Cash': 0}
+    items = {}
+    completed_n = cancelled_n = cancelled_all = 0
+    for o in orders:
+        kind = _order_kind(o)
+        done = o.status == 'completed'
+        cancelled = o.status in _ORDER_CANCELLED
+        if cancelled:
+            cancelled_all += 1
+        if not done and not cancelled:
+            if kind != 'instore' and o.status in _ORDER_UNFINISHED:
+                st = 'Ready to Pick Up' if (o.status == 'shipped' and kind == 'pickup') else _ORDER_UNFINISHED[o.status]
+                unfinished.append({'ref': _order_ref(o), 'customer': customer(o), 'type': _ORDER_TYPE_LABEL[kind],
+                                   'date': _short_date(o.created_at), 'status': st})
+            continue
+        if cancelled and not include_cancelled:
+            continue
+        status = 'Completed' if done else 'Cancelled'
+        items_total = round(float(o.total_amount or 0), 2)
+        method = 'GCash' if (o.payment_method or '').lower() == 'gcash' or kind == 'ship' else 'Cash'
+        if done:
+            completed_n += 1
+            counts[kind] += 1
+            sales[kind] += items_total
+            for i in o.items:
+                name = i.product.name if i.product else 'Product'
+                rec = items.setdefault(name, [0, 0.0])
+                rec[0] += int(i.quantity or 0)
+                rec[1] += float(i.unit_price or 0) * int(i.quantity or 0)
+        else:
+            cancelled_n += 1
+            counts[kind] += 0
+        if kind == 'ship':
+            fee = round(float(o.shipping_fee or 0), 2)
+            rider = '\n'.join(x for x in (o.rider_name, ' · '.join(y for y in (o.rider_model, o.rider_plate) if y)) if x)
+            ship.append({'ref': _order_ref(o), 'ordered': _when(o.created_at), 'customer': customer(o), 'address': _ship_address_line(o),
+                         'items': _order_items_text(o), 'delivered': _when(o.delivered_at or o.received_at),
+                         'rider': rider, 'status': status, 'items_total': items_total, 'shipping': fee, 'total': round(items_total + fee, 2)})
+            if done:
+                ship_tot['items'] += items_total
+                ship_tot['shipping'] += fee
+                ship_tot['total'] += items_total + fee
+                pay['GCash'] += items_total + fee
+                pay_n['GCash'] += 1
+        elif kind == 'pickup':
+            pickup.append({'ref': _order_ref(o), 'ordered': _when(o.created_at), 'customer': customer(o), 'items': _order_items_text(o),
+                           'picked_up': _when(o.delivered_at), 'status': status, 'payment': method, 'items_total': items_total})
+            if done:
+                pickup_total += items_total
+                pay[method] += items_total
+                pay_n[method] += 1
+        else:
+            instore.append({'ref': _order_ref(o), 'when': _when(o.created_at), 'customer': customer(o), 'items': _order_items_text(o),
+                            'payment': method, 'amount': items_total, 'status': status})
+            if done:
+                instore_total += items_total
+                pay[method] += items_total
+                pay_n[method] += 1
+
+    now = ph_now()
+    online_sales = sales['ship'] + sales['pickup']
+    rows_in_pdf = len(ship) + len(pickup) + len(instore)
+    data = {
+        'month_label': first.strftime('%B %Y'),
+        'range_label': f'{first.strftime("%b")} 1 – {last.day}, {first.year}',
+        'generated': f'{_short_date(now)}, {minutes_to_ampm(now.hour * 60 + now.minute)}',
+        'admin': getattr(current_user, 'fullname', '') or 'Admin',
+        'summary': {'total': rows_in_pdf, 'online': len(ship) + len(pickup), 'instore': len(instore),
+                    'completed': completed_n, 'cancelled': cancelled_n,
+                    'item_sales': round(online_sales + sales['instore'], 2), 'item_sales_online': round(online_sales, 2),
+                    'item_sales_instore': round(sales['instore'], 2),
+                    'shipping': round(ship_tot['shipping'], 2), 'deliveries': counts['ship']},
+        'ship': ship, 'pickup': pickup, 'instore': instore,
+        'ship_totals': {k: round(v, 2) for k, v in ship_tot.items()},
+        'pickup_total': round(pickup_total, 2), 'instore_total': round(instore_total, 2),
+        'by_type': [(_ORDER_TYPE_LABEL[k], counts[k], round(sales[k], 2)) for k in ('ship', 'pickup', 'instore')],
+        'payments': [('GCash', pay_n['GCash'], round(pay['GCash'], 2)), ('Cash', pay_n['Cash'], round(pay['Cash'], 2))],
+        'top_items': [(n, q, round(a, 2)) for n, (q, a) in sorted(items.items(), key=lambda kv: (-kv[1][0], -kv[1][1], kv[0]))[:8]],
+    }
+    type_counts = {'ship': len(ship), 'pickup': len(pickup), 'instore': len(instore)}
+    return data, cancelled_all, unfinished, type_counts
+
+
+@admin_app.route('/api/orders-export')
+@login_required
+@require_admin_or_staff
+def api_orders_export():
+    """What the orders Export PDF pop-up shows for one month."""
+    months, default = _export_month_options(db.session.query(func.min(Order.created_at)).scalar())
+    month = request.args.get('month') or default
+    rng = _parse_export_month(month)
+    if not rng:
+        return jsonify({'months': months, 'month': default, 'error': 'Pick a month that is already over.'}), 400
+    data, cancelled_count, unfinished, types = _order_report_data(rng[0], rng[1], request.args.get('cancelled', '1') == '1')
+    s = data['summary']
+    return jsonify({'months': months, 'month': month, 'month_label': data['month_label'], 'cancelled_count': cancelled_count,
+                    'in_pdf': s['total'], 'ship': types['ship'], 'pickup': types['pickup'], 'instore': types['instore'],
+                    'item_sales': s['item_sales'], 'shipping': s['shipping'], 'unfinished': unfinished, 'empty': s['total'] == 0})
+
+
+@admin_app.route('/orders/export.pdf')
+@login_required
+@require_admin_or_staff
+def orders_export_pdf():
+    rng = _parse_export_month(request.args.get('month'))
+    if not rng:
+        return jsonify({'success': False, 'error': 'Pick a month that is already over.'}), 400
+    data, _c, _u, _t = _order_report_data(rng[0], rng[1], request.args.get('cancelled', '1') == '1')
+    if not data['summary']['total']:
+        return jsonify({'success': False, 'error': 'There are no completed or cancelled orders to export for that month.'}), 400
+    pdf = build_order_report_pdf(data)
+    name = f"MotoTyres-Orders-{rng[0].strftime('%B')}-{rng[0].year}.pdf"
+    resp = make_response(pdf)
+    resp.headers['Content-Type'] = 'application/pdf'
+    disp = 'inline' if request.args.get('inline') == '1' else 'attachment'
+    resp.headers['Content-Disposition'] = f'{disp}; filename="{name}"'
+    return resp
+
+
+# ── Returns & Warranty → Export PDF: the RMAs that were finished in one month, as a PDF record ─────────────────
+# Read-only. A claim belongs to the month it was CLOSED in (replacement handed over and completed, back job done,
+# refund released, or rejected). Claims still open are listed in the pop-up and left out of the PDF.
+from rma_report import build_rma_report_pdf
+
+_RMA_OPEN = ('submitted', 'under_review', 'approved', 'replacement_shipped', 'replacement_arrived')
+RMA_CATEGORIES = ('replacements', 'back_jobs', 'refunds', 'rejected')
+
+
+def _rma_category(r):
+    """Which part of the report a CLOSED claim goes in, with the moment it closed; (None, None) if it isn't closed."""
+    if r.status == 'completed' and r.resolution == 'replacement':
+        return 'replacements', r.completed_at or r.resolved_at
+    if r.status == 'resolved' and r.resolution == 'redo_service':
+        return 'back_jobs', r.resolved_at
+    if r.status == 'resolved' and r.resolution == 'refund':
+        return 'refunds', r.resolved_at
+    if r.status == 'denied':
+        return 'rejected', r.decided_at or r.resolved_at
+    if r.status == 'resolved' and r.resolution == 'replacement':      # the returned item failed the check at the counter
+        return 'rejected', r.resolved_at or r.decided_at
+    return None, None
+
+
+def _rma_open_label(r):
+    if r.awaiting_customer_info:
+        return 'Waiting on the customer'
+    if r.status in ('submitted', 'under_review'):
+        return 'Needs review'
+    if r.status == 'approved':
+        if r.kind == 'product' and not r.item_returned:
+            return 'Waiting for the part back'
+        if r.resolution == 'redo_service':
+            return 'Back job booked' if r.redo_date else 'Back job not yet booked'
+        if r.resolution == 'refund':
+            return 'Refund not yet released'
+        if r.resolution == 'replacement':
+            return 'Waiting for stock'
+        return 'Approved'
+    if r.status == 'replacement_shipped':
+        return 'Ready for pickup'
+    if r.status == 'replacement_arrived':
+        return 'Given, waiting for the customer'
+    return r.status.replace('_', ' ').capitalize()
+
+
+def _rma_month_options():
+    """From the first claim up to this month, newest first. This month can be picked too (a partial report)."""
+    months, default = _export_month_options(db.session.query(func.min(ReturnRequest.created_at)).scalar())
+    for m in months:
+        m['partial'] = m['disabled']
+        m['disabled'] = False
+    return months, months[0]['value']
+
+
+def _parse_rma_month(raw):
+    """'2026-10' -> (first, last, partial). The current month is allowed and runs to today."""
+    try:
+        y, m = (int(x) for x in (raw or '').split('-'))
+        first = date(y, m, 1)
+    except (ValueError, TypeError):
+        return None
+    today = ph_now().date()
+    if first > _month_first(today):
+        return None
+    last = _month_after(first) - timedelta(days=1)
+    partial = first == _month_first(today)
+    return first, (today if partial else last), partial
+
+
+def _rma_report_data(first, last, partial, include):
+    start, end = datetime.combine(first, datetime.min.time()), datetime.combine(last + timedelta(days=1), datetime.min.time())
+    claims = ReturnRequest.query.all()
+    closed, open_rows = {c: [] for c in RMA_CATEGORIES}, []
+    for r in claims:
+        cat, when = _rma_category(r)
+        if cat and when and start <= when < end:
+            closed[cat].append((when, r))
+        elif r.status in _RMA_OPEN and start <= r.created_at < end:
+            open_rows.append(r)
+
+    users = {u.id: u for u in User.query.filter(User.id.in_({r.user_id for r in claims})).all()} if claims else {}
+    bids = {r.booking_id for r in claims if r.booking_id} | {r.redo_booking_id for r in claims if r.redo_booking_id}
+    bookings = {b.id: b for b in Booking.query.filter(Booking.id.in_(bids)).all()} if bids else {}
+
+    def who(r):
+        u = users.get(r.user_id)
+        return (u.fullname if u else 'Unknown customer'), (u.phone if u else '')
+
+    def reasons(r):
+        labels = [RETURN_REASON_LABELS.get(r.kind, {}).get(c, c) for c in (r.reasons or '').split(',') if c and c != 'other']
+        if r.other_reason_text:
+            labels.append(r.other_reason_text)
+        return '; '.join(labels) or '—'
+
+    def subject(r):
+        """(what the claim covers, where it came from)."""
+        if r.kind == 'product':
+            items = _return_line_items(r)
+            name = ', '.join(f"{i['name']} ×{i['quantity']}" for i in items) or (f'Order #{r.order_id}' if r.order_id else 'An order')
+            return name, (f'Order #{r.order_id}' if r.order_id else ''), sum(i['subtotal'] for i in items)
+        b = bookings.get(r.booking_id)
+        if not b:
+            return 'A service', '', 0.0
+        return b.service, f"BKG-{b.id:03d}, {b.date.strftime('%b')} {b.date.day}", float(b.total_amount or 0)
+
+    sd = lambda dt: f"{dt.strftime('%b')} {dt.day}" if dt else '—'
+    out = {c: [] for c in RMA_CATEGORIES}
+    by_mech, items_count = {}, {}
+    for cat in RMA_CATEGORIES:
+        for when, r in sorted(closed[cat], key=lambda t: (t[0], t[1].id)):
+            name, phone = who(r)
+            item, origin, value = subject(r)
+            base = {'ref': _return_ref(r), 'filed': sd(r.created_at), 'customer': name}
+            if cat == 'replacements':
+                out[cat].append({**base, 'phone': phone, 'item': item, 'origin': origin, 'reason': reasons(r), 'decided': sd(r.decided_at),
+                                 'replaced': sd(r.replacement_arrived_at or r.completed_at), 'status': 'Replaced', 'value': round(value, 2)})
+            elif cat == 'back_jobs':
+                ob = bookings.get(r.booking_id)
+                rb = bookings.get(r.redo_booking_id)
+                mech = ob.assigned_mechanic_name if ob else ''
+                out[cat].append({**base, 'motorcycle': (ob.motorcycle_model if ob else '') or '', 'service': item, 'origin': origin,
+                                 'original_mechanic': mech, 'reason': reasons(r),
+                                 'back_job': f'BKG-{rb.id:03d}' if rb else '—', 'back_job_date': sd(rb.date) if rb else sd(r.redo_date),
+                                 'done_by': (rb.assigned_mechanic_name if rb else None) or r.redo_mechanic_name or '',
+                                 'status': 'Back job done', 'charged': round(_redo_extra_total(r), 2)})
+                if mech:
+                    by_mech[mech] = by_mech.get(mech, 0) + 1
+            elif cat == 'refunds':
+                out[cat].append({**base, 'phone': phone, 'item': item, 'origin': origin, 'type': 'Part' if r.kind == 'product' else 'Service',
+                                 'reason': reasons(r), 'method': 'GCash' if r.refund_method == 'gcash' else 'Cash',
+                                 'released': sd(r.resolved_at), 'status': 'Refunded', 'amount': round(float(r.refund_amount or 0), 2)})
+            else:
+                out[cat].append({**base, 'type': 'Part' if r.kind == 'product' else 'Service', 'item': item, 'origin': origin,
+                                 'asked': reasons(r), 'why': r.decision_reason or '—', 'decided': sd(when),
+                                 'status': 'Rejected' if r.status == 'denied' else 'Closed'})
+            if include.get(cat) and (r.kind == 'service' or _return_line_items(r)):
+                for one in (item.split(', ') if r.kind == 'product' else [item]):
+                    key = one.rsplit(' ×', 1)[0]
+                    items_count[key] = items_count.get(key, 0) + 1
+
+    shown = [r for c in RMA_CATEGORIES if include.get(c) for r in out[c]]
+    refunds = out['refunds'] if include.get('refunds') else []
+    repl = out['replacements'] if include.get('replacements') else []
+    backs = out['back_jobs'] if include.get('back_jobs') else []
+    rej = out['rejected'] if include.get('rejected') else []
+    kinds = [r for c in RMA_CATEGORIES if include.get(c) for _w, r in closed[c]]
+    now = ph_now()
+    rv = round(sum(x['value'] for x in repl), 2)
+    rt = round(sum(x['amount'] for x in refunds), 2)
+    charged = round(sum(x['charged'] for x in backs), 2)
+    data = {
+        'month_label': first.strftime('%B %Y'),
+        'range_label': f'{first.strftime("%b")} 1 – {last.day}, {first.year}',
+        'generated': f'{_short_date(now)}, {minutes_to_ampm(now.hour * 60 + now.minute)}',
+        'admin': getattr(current_user, 'fullname', '') or 'Admin',
+        'partial_note': (f"Partial report, as of {_short_date(now)}. {first.strftime('%B')} isn't over yet. "
+                         f"Claims closed after this date are not included.") if partial else '',
+        'summary': {'claims': len(shown), 'parts': sum(1 for r in kinds if r.kind == 'product'),
+                    'services': sum(1 for r in kinds if r.kind == 'service'),
+                    'replacements': len(repl), 'replacement_value': rv, 'back_jobs': len(backs),
+                    'refunds': len(refunds), 'refund_total': rt,
+                    'refund_gcash': round(sum(x['amount'] for x in refunds if x['method'] == 'GCash'), 2),
+                    'refund_cash': round(sum(x['amount'] for x in refunds if x['method'] == 'Cash'), 2),
+                    'rejected': len(rej)},
+        'replacements': repl, 'back_jobs': backs, 'refunds': refunds, 'rejected': rej,
+        'included': {c: bool(include.get(c)) for c in RMA_CATEGORIES},
+        'by_outcome': [(label, n, amt) for label, n, amt, on in (
+            ('Part replacement', len(repl), php_text(rv), include.get('replacements')),
+            ('Back job', len(backs), 'Free' if not charged else php_text(charged), include.get('back_jobs')),
+            ('Refund', len(refunds), php_text(rt), include.get('refunds')),
+            ('Rejected', len(rej), '—', include.get('rejected'))) if on],
+        'by_mechanic': sorted(by_mech.items(), key=lambda kv: (-kv[1], kv[0])) if include.get('back_jobs') else [],
+        'top_items': sorted(items_count.items(), key=lambda kv: (-kv[1], kv[0]))[:8],
+    }
+    counts = {c: len(out[c]) for c in RMA_CATEGORIES}
+    open_list = []
+    for r in sorted(open_rows, key=lambda x: x.created_at):
+        name, _p = who(r)
+        open_list.append({'ref': _return_ref(r), 'customer': name, 'type': 'Part' if r.kind == 'product' else 'Service',
+                          'filed': sd(r.created_at), 'status': _rma_open_label(r)})
+    return data, counts, open_list
+
+
+def php_text(n):
+    return f'Php {float(n or 0):,.2f}'
+
+
+def _rma_include_from_args():
+    return {c: request.args.get(c, '1') == '1' for c in RMA_CATEGORIES}
+
+
+@admin_app.route('/api/rma-export')
+@login_required
+@require_admin_or_staff
+def api_rma_export():
+    """What the Returns & Warranty Export PDF pop-up shows for one month."""
+    months, default = _rma_month_options()
+    month = request.args.get('month') or default
+    rng = _parse_rma_month(month)
+    if not rng:
+        return jsonify({'months': months, 'month': default, 'error': 'Pick a month.'}), 400
+    data, counts, open_list = _rma_report_data(rng[0], rng[1], rng[2], _rma_include_from_args())
+    s = data['summary']
+    return jsonify({'months': months, 'month': month, 'month_label': data['month_label'], 'counts': counts,
+                    'in_pdf': s['claims'], 'replacements': s['replacements'], 'back_jobs': s['back_jobs'], 'refunds': s['refunds'],
+                    'rejected': s['rejected'], 'refund_total': s['refund_total'], 'open': open_list, 'empty': s['claims'] == 0,
+                    'partial': rng[2], 'as_of': _short_date(ph_now()), 'month_name': rng[0].strftime('%B'),
+                    'file_name': f"MotoTyres-RMA-{rng[0].strftime('%B')}-{rng[0].year}.pdf"})
+
+
+@admin_app.route('/returns/export.pdf')
+@login_required
+@require_admin_or_staff
+def rma_export_pdf():
+    rng = _parse_rma_month(request.args.get('month'))
+    if not rng:
+        return jsonify({'success': False, 'error': 'Pick a month.'}), 400
+    data, _c, _o = _rma_report_data(rng[0], rng[1], rng[2], _rma_include_from_args())
+    if not data['summary']['claims']:
+        return jsonify({'success': False, 'error': 'There are no finished claims to export for that month.'}), 400
+    pdf = build_rma_report_pdf(data)
+    name = f"MotoTyres-RMA-{rng[0].strftime('%B')}-{rng[0].year}.pdf"
     resp = make_response(pdf)
     resp.headers['Content-Type'] = 'application/pdf'
     disp = 'inline' if request.args.get('inline') == '1' else 'attachment'

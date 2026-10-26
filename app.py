@@ -394,11 +394,11 @@ def send_booking_confirmation_email(booking):
         f = _booking_confirmation_facts(booking)
         queue_row = ''
         try:                                    # this booking's place in the day's queue (same numbers the app shows)
-            q = _queue_day_numbers(booking.date).get(booking.id)
+            q = _queue_day_numbers(booking.date).get(booking.id) if booking.booking_batch else None
             if q:
                 queue_row = ('<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Queue number</td>'
                              f'<td style="padding:6px 0;color:#6d28d9;font-size:13px;font-weight:700;text-align:right;">'
-                             f'{ordinal(q["n"])} of {q["total"]} bookings that day</td></tr>')
+                             f'{ordinal(q["n"])} of {q["total"]} in your booking</td></tr>')
         except Exception:
             queue_row = ''
 
@@ -888,7 +888,7 @@ def _queue_cards(user_id, day, numbers=None):
     numbers = numbers if numbers is not None else _queue_day_numbers(day)
     cards = []
     for b in Booking.query.filter(Booking.user_id == user_id, Booking.date == day, Booking.status != 'cancelled').all():
-        q = numbers.get(b.id)
+        q = numbers.get(b.id) if b.booking_batch else None
         if q:
             cards.append({'id': b.id, 'ref': f'BKG-{b.id:03d}', 'n': q['n'], 'ord': ordinal(q['n']), 'total': q['total'],
                           'service': b.service, 'motorcycle': b.motorcycle_model or '', 'moved_up': q['moved_up']})
@@ -901,7 +901,18 @@ def _queue_info_for(bookings):
     if not days:
         return {}
     nums = queue_numbers(Booking.query.filter(Booking.date.in_(days)).all())
-    return {b.id: nums[b.id] for b in bookings if b.id in nums}
+    return {b.id: nums[b.id] for b in bookings if b.id in nums and b.booking_batch}   # only bookings made together show one
+
+
+def _hidden_queue_unread(user_id):
+    """Unread queue notifications about a solo booking: the bell no longer shows them, so they don't count either."""
+    n = Notification.query.filter(Notification.user_id == user_id, Notification.is_read == False,  # noqa: E712
+                                  Notification.type == 'queue').all()
+    if not n:
+        return 0
+    batch = {b.id for b in Booking.query.filter(Booking.id.in_({x.booking_id for x in n if x.booking_id}),
+                                                 Booking.booking_batch.isnot(None)).all()}
+    return sum(1 for x in n if x.booking_id not in batch)
 
 
 def _queue_day_label(day):
@@ -909,12 +920,16 @@ def _queue_day_label(day):
 
 
 def _notify_queue_confirmed(user_id, bookings):
-    """'Your queue numbers for Sat, Oct 24' — one notification per day the customer just booked."""
+    """'Your queue numbers for Sat, Oct 24' — one notification per day the customer just booked. Only for bookings made
+    together in one batch; a solo booking gets no queue number."""
+    if len(bookings) < 2:
+        return
     try:
         for day in sorted({b.date for b in bookings}):
             first = next(b for b in bookings if b.date == day)
-            send_notification(user_id, f'Your queue numbers for {_queue_day_label(day)}',
-                              'Bookings are numbered by booked time, then by who booked first.',
+            many = sum(1 for b in bookings if b.date == day) > 1
+            send_notification(user_id, f"Your queue number{'s' if many else ''} for {_queue_day_label(day)}",
+                              'Your motorcycles booked together are numbered by booked time.',
                               type='queue', status='queue', booking_id=first.id)
     except Exception:
         db.session.rollback()
@@ -928,7 +943,7 @@ def _notify_queue_moved(day, before):
         after = _queue_day_numbers(day)
         moved = {}
         for b in Booking.query.filter(Booking.date == day, Booking.status != 'cancelled').all():
-            if getattr(b, 'walkin_customer_id', None):
+            if getattr(b, 'walkin_customer_id', None) or not b.booking_batch:
                 continue
             old, new = before.get(b.id), after.get(b.id)
             if old and new and new['n'] < old['n']:
@@ -3650,18 +3665,27 @@ def get_notifications():
     _day_numbers = {}
 
     def queue_payload(n):
-        """The small cards of a queue notification: this customer's bookings that day with their CURRENT place in the queue,
-        so the bell always agrees with the dashboard and the admin side."""
+        """The small cards of a queue notification: the booking(s) this notification is about (one booking, or the whole
+        batch if they were booked together) with their CURRENT place in the queue, so the bell always agrees with the
+        dashboard and the admin side."""
         b = bookings_by_id.get(n.booking_id)
         if not b:
             return None
         if b.date not in _day_numbers:
             _day_numbers[b.date] = _queue_day_numbers(b.date)
         cards = _queue_cards(n.user_id, b.date, _day_numbers[b.date])
+        if n.status == 'queue':                 # "Your queue numbers": only what was booked in that one go
+            if b.booking_batch:
+                same = {x.id for x in Booking.query.filter(Booking.booking_batch == b.booking_batch).all()}
+            else:
+                same = {b.id}
+            cards = [c for c in cards if c['id'] in same]
         return {'date_label': _queue_day_label(b.date), 'cards': cards} if cards else None
 
     results = []
     for n in notifs:
+        if n.type == 'queue' and not queue_payload(n):
+            continue
         title, message = n.title, n.message
         quotation = None
         invoice = None
@@ -3715,7 +3739,7 @@ def customer_poll():
     orders = Order.query.filter_by(user_id=current_user.id)\
         .order_by(Order.created_at.desc()).all()
     unread_count = Notification.query.filter_by(
-        user_id=current_user.id, is_read=False).count()
+        user_id=current_user.id, is_read=False).count() - _hidden_queue_unread(current_user.id)
     # One short fingerprint of every claim, so the page can tell "the shop moved my claim along" without
     # shipping the whole claim: any change to what the customer sees on it changes this string.
     import hashlib

@@ -307,7 +307,15 @@
     .bk-tab.active { background: var(--text) !important; border-color: var(--text) !important; color: #fff !important; font-weight: 600; }
     .btn-export-pdf { display:inline-flex; align-items:center; gap:0.45rem; background:#111827; color:#fff; border:1px solid #111827; border-radius:8px; padding:0.55rem 0.95rem; font-family:inherit; font-size:0.82rem; font-weight:700; cursor:pointer; }
     .btn-export-pdf:hover { background:#1f2937; }
-    .btn-export-pdf:disabled, #xp-download-btn:disabled { opacity:0.45; cursor:not-allowed; }
+    .btn-export-pdf:disabled, #xp-download-btn:disabled, #xo-download-btn:disabled, #xr-download-btn:disabled { opacity:0.45; cursor:not-allowed; }
+    .btn-export-red { background:#d0021b; border-color:#d0021b; }
+    .btn-export-red:hover { background:#b00217; }
+    .xr-label { display:block; font-size:0.68rem; font-weight:700; letter-spacing:0.07em; color:var(--muted); text-transform:uppercase; margin-bottom:0.35rem; }
+    .xr-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; }
+    .xr-check { display:flex; align-items:center; gap:0.5rem; border:1px solid var(--border); border-radius:8px; padding:0.5rem 0.7rem; font-size:0.83rem; cursor:pointer; }
+    .xr-check input { width:15px; height:15px; accent-color:#d0021b; }
+    .xr-check span { flex:1; }
+    .xr-check b { font-size:0.74rem; color:var(--muted); font-weight:700; }
     /* Queue numbers (Manage Bookings) */
     .queue-note { display:flex; gap:0.55rem; align-items:flex-start; background:#f5f0ff; border:1px solid #e2d6fb; color:#4c3a86; border-radius:10px; padding:0.65rem 0.9rem; font-size:0.78rem; line-height:1.5; margin-bottom:1rem; }
     .queue-note b { color:#3b2a75; }
@@ -1020,7 +1028,7 @@
       </div>
 
       <div class="queue-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <div><b>Queue numbers:</b> each day's bookings are numbered by <b>booked time</b> first. If two bookings have the same time, <b>whoever booked first</b> gets the lower number. The number stays the same in every tab, and moves up if an earlier booking is cancelled.</div></div>
+        <div><b>Queue numbers</b> show only when a customer booked <b>2 or more at once</b>; a solo booking has none. Each batch is numbered on its own (1st, 2nd…) by <b>booked time</b>. The number stays the same in every tab, and moves up if an earlier booking in the batch is cancelled.</div></div>
       <div class="filter-bar">
         <input type="text" placeholder="Search customer or service..." oninput="filterBookingsSearch(this.value)">
       </div>
@@ -1048,7 +1056,7 @@
               {% for day in booking_days %}
               <tr class="bk-day-row"><td colspan="8"><span class="bk-day-name">{{ day.label }}</span><span class="bk-day-count">{{ day.count }} booking{{ '' if day.count == 1 else 's' }} that day</span></td></tr>
               {% for b in day.rows %}
-                {% set q = queue_nums.get(b.id) %}
+                {% set q = queue_nums.get(b.id) if b.booking_batch else none %}
                 {% set group_bookings = [b] %}
                 {% set queue_sibs = ((all_bookings | selectattr('booking_batch', 'equalto', b.booking_batch) | sort(attribute='id') | list) if b.booking_batch else []) %}
                 {% set queue_pos = (queue_sibs | map(attribute='id') | list).index(b.id) + 1 if queue_sibs else 0 %}
@@ -1101,7 +1109,7 @@
                     {% if q %}
                       <div class="qcell"><span class="qbox{{ ' qbox-first' if q.n == 1 }}">{{ q.n }}</span><span class="qord">{{ ordinal(q.n) }}</span><span class="qref">BKG-{{ '%03d'|format(b.id) }}</span></div>
                     {% else %}
-                      <div class="qcell"><span class="qbox qbox-none">&mdash;</span><span class="qref">BKG-{{ '%03d'|format(b.id) }}</span></div>
+                      <div class="qcell"><span class="qref">BKG-{{ '%03d'|format(b.id) }}</span></div>
                     {% endif %}
                   </td>
                   <td>
@@ -1396,6 +1404,77 @@
     </section>
 
     <!-- RESCHEDULE MODAL -->
+    <div class="modal-overlay" id="modal-rma-export" onclick="if(event.target===this) closeModal('modal-rma-export')">
+      <div class="modal-box" id="xr-box" style="max-width:480px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem;">
+          <div>
+            <h5 style="margin:0;">Export Returns &amp; Warranty</h5>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">Save one month of claims as a PDF record.</div>
+          </div>
+          <button type="button" onclick="closeModal('modal-rma-export')" style="background:none;border:none;font-size:1.15rem;color:var(--muted);cursor:pointer;line-height:1;" aria-label="Close">&times;</button>
+        </div>
+        <div id="xr-form">
+          <label for="xr-month" class="xr-label">Month</label>
+          <select id="xr-month" onchange="refreshRmaExport()" style="width:100%;padding:0.55rem 0.7rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.86rem;background:#fff;"></select>
+          <div class="xr-label" style="margin-top:0.9rem;">Include</div>
+          <div class="xr-grid">
+            <label class="xr-check"><input type="checkbox" id="xr-replacements" checked onchange="refreshRmaExport()"><span>Part Replacements</span><b id="xr-replacements-count">0</b></label>
+            <label class="xr-check"><input type="checkbox" id="xr-back_jobs" checked onchange="refreshRmaExport()"><span>Back Jobs</span><b id="xr-back_jobs-count">0</b></label>
+            <label class="xr-check"><input type="checkbox" id="xr-refunds" checked onchange="refreshRmaExport()"><span>Refunds</span><b id="xr-refunds-count">0</b></label>
+            <label class="xr-check"><input type="checkbox" id="xr-rejected" checked onchange="refreshRmaExport()"><span>Rejected</span><b id="xr-rejected-count">0</b></label>
+          </div>
+          <div id="xr-info" style="margin-top:0.85rem;background:#f9fafb;border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;line-height:1.5;">Loading&hellip;</div>
+          <div id="xr-partial" style="display:none;margin-top:0.65rem;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:8px;padding:0.6rem 0.8rem;font-size:0.78rem;line-height:1.5;"></div>
+          <div id="xr-warn" style="display:none;margin-top:0.65rem;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.78rem;line-height:1.5;"></div>
+          <div class="modal-actions" style="margin-top:1.1rem;">
+            <button type="button" class="btn-cancel" onclick="closeModal('modal-rma-export')">Cancel</button>
+            <button type="button" id="xr-preview-btn" class="btn-export-pdf" onclick="previewRmaExport()" disabled>Preview</button>
+            <button type="button" id="xr-download-btn" class="btn-primary-custom" onclick="downloadRmaExport()" disabled>Download PDF</button>
+          </div>
+        </div>
+        <div id="xr-preview" style="display:none;">
+          <iframe id="xr-frame" title="PDF preview" style="width:100%;height:68vh;border:1px solid var(--border);border-radius:8px;background:#f3f4f6;"></iframe>
+          <div class="modal-actions" style="margin-top:0.8rem;">
+            <button type="button" class="btn-cancel" onclick="backFromRmaPreview()">Back</button>
+            <button type="button" class="btn-primary-custom" onclick="downloadRmaExport()">Download PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-orders-export" onclick="if(event.target===this) closeModal('modal-orders-export')">
+      <div class="modal-box" id="xo-box" style="max-width:460px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <h5 style="margin:0;display:flex;align-items:center;gap:0.5rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Export Orders PDF</h5>
+          <button type="button" onclick="closeModal('modal-orders-export')" style="background:none;border:none;font-size:1.15rem;color:var(--muted);cursor:pointer;line-height:1;" aria-label="Close">&times;</button>
+        </div>
+        <div id="xo-form">
+          <label for="xo-month" style="display:block;font-size:0.68rem;font-weight:700;letter-spacing:0.07em;color:var(--muted);text-transform:uppercase;margin-bottom:0.35rem;">Month</label>
+          <select id="xo-month" onchange="refreshOrdersExport()" style="width:100%;padding:0.55rem 0.7rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.86rem;background:#fff;"></select>
+          <div style="font-size:0.72rem;color:var(--muted);margin:0.35rem 0 0.85rem;">Only months that are over can be exported, so the record is final.</div>
+          <label style="display:flex;align-items:center;gap:0.55rem;border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.75rem;font-size:0.84rem;cursor:pointer;">
+            <input type="checkbox" id="xo-cancelled" checked onchange="refreshOrdersExport()" style="width:15px;height:15px;accent-color:#d0021b;">
+            <span style="flex:1;">Include cancelled orders</span>
+            <span id="xo-cancelled-count" style="font-size:0.74rem;color:var(--muted);"></span>
+          </label>
+          <div id="xo-info" style="margin-top:0.85rem;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;line-height:1.5;">Loading&hellip;</div>
+          <div id="xo-warn" style="display:none;margin-top:0.65rem;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.78rem;line-height:1.5;"></div>
+          <div class="modal-actions" style="margin-top:1.1rem;">
+            <button type="button" class="btn-cancel" onclick="closeModal('modal-orders-export')">Cancel</button>
+            <button type="button" id="xo-preview-btn" class="btn-export-pdf" onclick="previewOrdersExport()" disabled>Preview</button>
+            <button type="button" id="xo-download-btn" class="btn-primary-custom" onclick="downloadOrdersExport()" disabled>Download PDF</button>
+          </div>
+        </div>
+        <div id="xo-preview" style="display:none;">
+          <iframe id="xo-frame" title="PDF preview" style="width:100%;height:68vh;border:1px solid var(--border);border-radius:8px;background:#f3f4f6;"></iframe>
+          <div class="modal-actions" style="margin-top:0.8rem;">
+            <button type="button" class="btn-cancel" onclick="backFromOrdersPreview()">Back</button>
+            <button type="button" class="btn-primary-custom" onclick="downloadOrdersExport()">Download PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-overlay" id="modal-export-pdf" onclick="if(event.target===this) closeModal('modal-export-pdf')">
       <div class="modal-box" id="xp-box" style="max-width:460px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
@@ -1498,6 +1577,12 @@
           <div class="page-title">Returns &amp; <span class="accent">Warranty</span></div>
           <div class="page-sub">Look at the evidence, decide, and carry it out — a part that arrived wrong, or a service that didn't hold. Every claim is one mutually exclusive choice: put it right, or give the money back — never both. Part replacements are done in-store only.</div>
         </div>
+        <div class="page-actions">
+          <button type="button" class="btn-export-pdf btn-export-red" onclick="openRmaExport()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+            Export PDF
+          </button>
+        </div>
       </div>
 
       <div class="stats-grid">
@@ -1536,6 +1621,12 @@
         <div class="page-header-left">
           <div class="page-title">Manage <span class="accent">Orders</span></div>
           <div class="page-sub">Track and update parts and accessories orders.</div>
+        </div>
+        <div class="page-actions">
+          <button type="button" class="btn-export-pdf" onclick="openOrdersExport()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+            Export PDF
+          </button>
         </div>
       </div>
       {% set ord_online = all_orders|rejectattr('is_instore')|list|length %}
@@ -1598,7 +1689,7 @@
               {% set sh_sent = sh and o.shipping_options_sent_at %}
               <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if o.paid_at else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ o.paid_at|when if o.paid_at else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
                 <td style="white-space:nowrap;">
-                  <a href="#" onclick="viewOrder({{ o.id }}, {{ (o_display_name)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.email)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.phone)|tojson|forceescape }}, {{ (o.customer.motorcycle_model or '' if not o.is_instore)|tojson|forceescape }}, {{ (o.customer.motorcycle_plate or '' if not o.is_instore)|tojson|forceescape }}, {{ o.total_amount }}, {{ (o.status)|tojson|forceescape }}, {{ (o.payment_method)|tojson|forceescape }}, {{ (o.created_at.strftime('%b %d, %Y — %I:%M %p'))|tojson|forceescape }}, {{ o.items|length }}); return false;"
+                  <a href="#" onclick="viewOrder({{ o.id }}, {{ (o_display_name)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.email)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.phone)|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_model or ''))|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_plate or ''))|tojson|forceescape }}, {{ o.total_amount }}, {{ (o.status)|tojson|forceescape }}, {{ (o.payment_method)|tojson|forceescape }}, {{ (o.created_at.strftime('%b %d, %Y — %I:%M %p'))|tojson|forceescape }}, {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
                     {{ o_display_ref }}
                   </a>
@@ -7449,6 +7540,164 @@
   function downloadExportPdf() {
     const a = document.createElement('a');
     a.href = _xpUrl(false);
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  // ── Export PDF (Returns & Warranty: the claims closed in one month) ──
+  const XR_KEYS = ['replacements', 'back_jobs', 'refunds', 'rejected'];
+  function _xrQuery() {
+    const q = new URLSearchParams();
+    const m = document.getElementById('xr-month').value;
+    if (m) q.set('month', m);
+    XR_KEYS.forEach(k => q.set(k, document.getElementById('xr-' + k).checked ? '1' : '0'));
+    return q;
+  }
+  function _xrUrl(inline) {
+    const q = _xrQuery();
+    if (inline) q.set('inline', '1');
+    return '/returns/export.pdf?' + q.toString();
+  }
+  async function openRmaExport() {
+    backFromRmaPreview();
+    document.getElementById('xr-month').innerHTML = '';
+    XR_KEYS.forEach(k => { document.getElementById('xr-' + k).checked = true; });
+    openModal('modal-rma-export');
+    await refreshRmaExport();
+  }
+  async function refreshRmaExport() {
+    const sel = document.getElementById('xr-month');
+    const info = document.getElementById('xr-info'), warn = document.getElementById('xr-warn'), part = document.getElementById('xr-partial');
+    const pv = document.getElementById('xr-preview-btn'), dl = document.getElementById('xr-download-btn');
+    pv.disabled = dl.disabled = true;
+    info.textContent = 'Loading…';
+    try {
+      const res = await fetch('/api/rma-export?' + _xrQuery().toString(), { credentials: 'same-origin' });
+      const d = await res.json();
+      if (!sel.options.length) {
+        sel.innerHTML = d.months.map(m => `<option value="${m.value}">${_xpEsc(m.label)}${m.partial ? ' (not over yet)' : ''}</option>`).join('');
+        sel.value = d.month;
+      }
+      if (!res.ok) { info.textContent = d.error || 'Could not load that month.'; warn.style.display = part.style.display = 'none'; return; }
+      XR_KEYS.forEach(k => { document.getElementById('xr-' + k + '-count').textContent = d.counts[k]; });
+      const anyOn = XR_KEYS.some(k => document.getElementById('xr-' + k).checked);
+      if (!anyOn) {
+        info.innerHTML = 'Tick at least one kind of claim to put in the PDF.';
+      } else if (d.empty) {
+        info.innerHTML = `<b>${_xpEsc(d.month_label)}:</b> there are no finished claims of the kinds ticked for this month.`;
+      } else {
+        const bits = [];
+        if (document.getElementById('xr-replacements').checked) bits.push(`${d.replacements} part replacement(s)`);
+        if (document.getElementById('xr-back_jobs').checked) bits.push(`${d.back_jobs} back job(s)`);
+        if (document.getElementById('xr-refunds').checked) bits.push(`${d.refunds} refund(s)`);
+        if (document.getElementById('xr-rejected').checked) bits.push(`${d.rejected} rejected`);
+        info.innerHTML = `<b>${d.in_pdf} claim${d.in_pdf === 1 ? '' : 's'}</b> will be in the PDF: ${bits.join(', ')}.`
+          + (document.getElementById('xr-refunds').checked ? `<br>Money refunded: <b>${_peso2(d.refund_total)}</b>` : '');
+        pv.disabled = dl.disabled = false;
+      }
+      if (d.partial) {
+        part.innerHTML = `${_xpEsc(d.month_name)} isn't over yet, so the PDF will say <b>"Partial report, as of ${_xpEsc(d.as_of)}"</b>.`;
+        part.style.display = '';
+      } else {
+        part.style.display = 'none';
+      }
+      if (d.open && d.open.length) {
+        const n = d.open.length;
+        warn.innerHTML = `<b>${n} claim${n === 1 ? ' is' : 's are'} still open</b> and won't be in the report:`
+          + `<ul style="margin:0.35rem 0 0.35rem 1.1rem;padding:0;">${d.open.map(o => `<li>${_xpEsc(o.ref)} &middot; ${_xpEsc(o.customer)} &middot; ${_xpEsc(o.type)} &middot; filed ${_xpEsc(o.filed)} &middot; ${_xpEsc(o.status)}</li>`).join('')}</ul>`
+          + 'Finish them in Returns &amp; Warranty first, then export again.';
+        warn.style.display = '';
+      } else {
+        warn.style.display = 'none';
+      }
+    } catch (e) {
+      info.textContent = 'Network error, please try again.';
+    }
+  }
+  function previewRmaExport() {
+    document.getElementById('xr-frame').src = _xrUrl(true);
+    document.getElementById('xr-form').style.display = 'none';
+    document.getElementById('xr-preview').style.display = '';
+    document.getElementById('xr-box').style.maxWidth = '980px';
+  }
+  function backFromRmaPreview() {
+    document.getElementById('xr-preview').style.display = 'none';
+    document.getElementById('xr-form').style.display = '';
+    document.getElementById('xr-box').style.maxWidth = '480px';
+    document.getElementById('xr-frame').removeAttribute('src');
+  }
+  function downloadRmaExport() {
+    const a = document.createElement('a');
+    a.href = _xrUrl(false);
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  // ── Export PDF (one finished month of orders: online + in-store) ──
+  function _xoUrl(inline) {
+    const m = document.getElementById('xo-month').value;
+    const c = document.getElementById('xo-cancelled').checked ? '1' : '0';
+    return `/orders/export.pdf?month=${encodeURIComponent(m)}&cancelled=${c}${inline ? '&inline=1' : ''}`;
+  }
+  async function openOrdersExport() {
+    backFromOrdersPreview();
+    document.getElementById('xo-month').innerHTML = '';
+    document.getElementById('xo-cancelled').checked = true;
+    openModal('modal-orders-export');
+    await refreshOrdersExport(true);
+  }
+  async function refreshOrdersExport(first) {
+    const sel = document.getElementById('xo-month');
+    const info = document.getElementById('xo-info'), warn = document.getElementById('xo-warn');
+    const pv = document.getElementById('xo-preview-btn'), dl = document.getElementById('xo-download-btn');
+    pv.disabled = dl.disabled = true;
+    info.textContent = 'Loading…';
+    const withCancelled = document.getElementById('xo-cancelled').checked;
+    const q = new URLSearchParams({ cancelled: withCancelled ? '1' : '0' });
+    if (!first && sel.value) q.set('month', sel.value);
+    try {
+      const res = await fetch('/api/orders-export?' + q.toString(), { credentials: 'same-origin' });
+      const d = await res.json();
+      if (first || !sel.options.length) {
+        sel.innerHTML = d.months.map(m => `<option value="${m.value}"${m.disabled ? ' disabled' : ''}>${_xpEsc(m.label)}${m.disabled ? ' (not over yet)' : ''}</option>`).join('');
+        sel.value = d.month;
+      }
+      if (!res.ok) { info.textContent = d.error || 'Could not load that month.'; warn.style.display = 'none'; return; }
+      document.getElementById('xo-cancelled-count').textContent = d.cancelled_count;
+      if (d.empty) {
+        info.innerHTML = `<b>${_xpEsc(d.month_label)}:</b> there are no completed${withCancelled ? ' or cancelled' : ''} orders to export for this month.`;
+      } else {
+        info.innerHTML = `<b>${_xpEsc(d.month_label)}: ${d.in_pdf} order${d.in_pdf === 1 ? '' : 's'}</b> will be in the PDF<br>`
+          + `Ship to Address ${d.ship} &middot; Shop Pickup ${d.pickup} &middot; In-Store ${d.instore}<br>`
+          + `Item sales ${_peso2(d.item_sales)} &middot; Shipping fees ${_peso2(d.shipping)}`;
+        pv.disabled = dl.disabled = false;
+      }
+      if (d.unfinished && d.unfinished.length) {
+        const n = d.unfinished.length;
+        warn.innerHTML = `<b>${n} order${n === 1 ? '' : 's'} from ${_xpEsc(d.month_label)} ${n === 1 ? 'is' : 'are'} still not finished</b> and won't be in the report:`
+          + `<ul style="margin:0.35rem 0 0.35rem 1.1rem;padding:0;">${d.unfinished.map(u => `<li>${_xpEsc(u.ref)} &middot; ${_xpEsc(u.customer)} &middot; ${_xpEsc(u.type)} &middot; ${_xpEsc(u.date)} &middot; still ${_xpEsc(u.status)}</li>`).join('')}</ul>`
+          + 'Complete or cancel them in Manage Orders first, then export again.';
+        warn.style.display = '';
+      } else {
+        warn.style.display = 'none';
+      }
+    } catch (e) {
+      info.textContent = 'Network error, please try again.';
+    }
+  }
+  function previewOrdersExport() {
+    document.getElementById('xo-frame').src = _xoUrl(true);
+    document.getElementById('xo-form').style.display = 'none';
+    document.getElementById('xo-preview').style.display = '';
+    document.getElementById('xo-box').style.maxWidth = '980px';
+  }
+  function backFromOrdersPreview() {
+    document.getElementById('xo-preview').style.display = 'none';
+    document.getElementById('xo-form').style.display = '';
+    document.getElementById('xo-box').style.maxWidth = '460px';
+    document.getElementById('xo-frame').removeAttribute('src');
+  }
+  function downloadOrdersExport() {
+    const a = document.createElement('a');
+    a.href = _xoUrl(false);
     document.body.appendChild(a); a.click(); a.remove();
   }
 
