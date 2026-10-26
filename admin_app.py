@@ -1662,6 +1662,12 @@ def api_live_signature():
                                ReturnRequest.awaiting_customer_info, ReturnRequest.refund_receipt,
                                ReturnRequest.cash_ready_at, ReturnRequest.customer_at_shop).order_by(ReturnRequest.id).all()
     quotes = db.session.query(Quotation.id, Quotation.status).order_by(Quotation.id).all()
+    # A job running past its time starts clashing with the next one just by the clock reaching it (no row changes),
+    # so today's clash list is part of the bookings fingerprint too.
+    try:
+        bookings = list(bookings) + [('clash',) + tuple(sorted(_compute_day_clash_ids(ph_now().date())))]
+    except Exception:
+        pass
     return jsonify({'bookings': fp(bookings), 'orders': fp(orders), 'returns': fp(returns), 'quotes': fp(quotes),
                     'bk_unseen': _sync_booking_tab_badges()})
 
@@ -2816,15 +2822,18 @@ AUTO_LATE_ASSUME_MIN = 15    # how much longer an unrecorded overrun is assumed 
 
 
 def _live_end_minutes(b):
-    """-> (end minute of day, auto_late). The booking's scheduled / recorded end, pushed out to 'now + 15 min' when it is today,
-    in progress, and already past that end by more than the grace period."""
+    """-> (end minute of day, auto_late). The booking's scheduled / recorded end. When it is today, started, and still not
+    done after that end, it really is still holding the mechanic: the end becomes NOW (nothing assumed beyond that), or
+    'now + 15 min' if AUTO_LATE_WARNING is on."""
     start = b.time.hour * 60 + b.time.minute
     end = real_end_minutes(start, b.duration_minutes or DEFAULT_DURATION_MIN, b.overrun_minutes or 0)
-    if AUTO_LATE_WARNING and b.status in _STARTED_STATES and b.date == ph_now().date():
+    if b.status in _STARTED_STATES and b.date == ph_now().date():
         now = ph_now()
         now_min = now.hour * 60 + now.minute
-        if now_min >= end + AUTO_LATE_GRACE_MIN:
+        if AUTO_LATE_WARNING and now_min >= end + AUTO_LATE_GRACE_MIN:
             return now_min + AUTO_LATE_ASSUME_MIN, True
+        if now_min > end:
+            return now_min, True
     return end, False
 
 
@@ -2844,7 +2853,12 @@ def _mechanic_overlap_causes(bookings):
             prev = ordered[j]
             prev_start = prev.time.hour * 60 + prev.time.minute
             prev_end, auto_late = _live_end_minutes(prev)
-            if mechanic_overlaps(cur_start, cur_end, prev_start, prev_end):
+            if auto_late and not AUTO_LATE_WARNING:
+                # running past its time with no extension recorded: a clash only once the next job's start has actually come
+                hit = prev_end >= cur_start and prev_start < cur_end
+            else:
+                hit = mechanic_overlaps(cur_start, cur_end, prev_start, prev_end)
+            if hit:
                 running_long = (prev.overrun_minutes or 0) > 0 or auto_late
                 suffix = (' (running past its scheduled time)' if auto_late and not (prev.overrun_minutes or 0)
                           else ' (running long)') if running_long else ''
@@ -5089,7 +5103,13 @@ def api_set_capacity():
 # ═══════════════ SHIP TO ADDRESS (Courier) — the shop's side of the flow ═══════════════
 SHIP_OPTION_LABELS = {'priority': 'Priority', 'regular': 'Regular', 'pooling': 'Pooling'}
 SHIP_ACTIVE = ('confirmed', 'in_progress', 'done_packaging', 'shipping')
-SHIP_VEHICLES = ('Motorcycle', 'Sedan', 'Subcompact SUV')
+SHIP_VEHICLES = ('Motorcycle', 'Sedan', 'Small Crossover SUV', '7-seater SUV / Minivan', 'Pickup', 'L300 / Cargo Van')
+
+
+@admin_app.template_filter('ship_lines')
+def _ship_lines_filter(items):
+    """[[item name, quantity], ...] for the Shipping Options pop-up."""
+    return [[(i.product.name if i.product else 'Item'), i.quantity] for i in items]
 
 
 def _ship_prices(o):
@@ -5240,7 +5260,7 @@ def ship_send_options(oid):
         raw = str(d.get(key) if d.get(key) is not None else '').replace(',', '').replace('\u20b1', '').strip()
         if not raw:
             return None, False
-        if not raw.isdigit() or not (1 <= int(raw) <= 2000):
+        if not raw.isdigit() or not (1 <= int(raw) <= 20000):
             return None, True
         return int(raw), False
     prices, price_bad = {}, False
@@ -5250,11 +5270,11 @@ def ship_send_options(oid):
         if v is None:
             price_bad = True; fields.append(key)
     if price_bad:
-        errors.append('Type the Courier price for Priority and Regular, from \u20b11 to \u20b12,000. Pooling can be left blank.')
+        errors.append('Type the courier price for Priority and Regular, from \u20b11 to \u20b120,000. Pooling can be left blank.')
     v, bad = peso('pooling')
     prices['pooling'] = v
     if bad:
-        errors.append('Pooling must be from \u20b11 to \u20b12,000, or leave it blank.'); fields.append('pooling')
+        errors.append('Pooling must be from \u20b11 to \u20b120,000, or leave it blank.'); fields.append('pooling')
     if errors:
         return jsonify({'success': False, 'error': errors[0], 'errors': errors, 'fields': fields}), 400
     first = not order.shipping_options_sent_at
@@ -8548,6 +8568,7 @@ def _rma_report_data(first, last, partial, include):
         'range_label': f'{first.strftime("%b")} 1 – {last.day}, {first.year}',
         'generated': f'{_short_date(now)}, {minutes_to_ampm(now.hour * 60 + now.minute)}',
         'admin': getattr(current_user, 'fullname', '') or 'Admin',
+        'admin_role': 'Administrator' if getattr(current_user, 'role', '') == 'admin' else 'Staff',
         'partial_note': (f"Partial report, as of {_short_date(now)}. {first.strftime('%B')} isn't over yet. "
                          f"Claims closed after this date are not included.") if partial else '',
         'summary': {'claims': len(shown), 'parts': sum(1 for r in kinds if r.kind == 'product'),

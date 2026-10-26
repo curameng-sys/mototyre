@@ -1196,9 +1196,6 @@
                       </div>
                     {% elif all_same_status %}
                       <span class="badge badge-{{ b.status|replace('_','') }}">{{ b.status|replace('_',' ')|title }}</span>
-                      {% if is_booking_overdue(b, now) %}
-                      <span class="badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;margin-left:0.3rem;" title="The scheduled time has passed without this being marked completed or cancelled.">Overdue</span>
-                      {% endif %}
                     {% else %}
                       <span style="font-size:0.7rem;color:var(--muted);">Mixed statuses</span>
                     {% endif %}
@@ -1437,6 +1434,7 @@
             <button type="button" id="xr-preview-btn" class="btn-export-pdf" onclick="previewRmaExport()" disabled>Preview</button>
             <button type="button" id="xr-download-btn" class="btn-primary-custom" onclick="downloadRmaExport()" disabled>Download PDF</button>
           </div>
+          <div id="xr-file" style="text-align:right;font-size:0.7rem;color:var(--muted);margin-top:0.45rem;"></div>
         </div>
         <div id="xr-preview" style="display:none;">
           <iframe id="xr-frame" title="PDF preview" style="width:100%;height:68vh;border:1px solid var(--border);border-radius:8px;background:#f3f4f6;"></iframe>
@@ -1693,7 +1691,7 @@
               {% set sp = (o|ship_prices) if sh else {} %}
               {% set sh_grand = (o.total_amount or 0) + (o.shipping_fee or 0) %}
               {% set sh_sent = sh and o.shipping_options_sent_at %}
-              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if o.paid_at else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ o.paid_at|when if o.paid_at else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
+              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if o.paid_at else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ o.paid_at|when if o.paid_at else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-lines="{{ o.items|ship_lines|tojson|forceescape }}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
                 <td style="white-space:nowrap;">
                   <a href="#" onclick="viewOrder({{ o.id }}, {{ (o_display_name)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.email)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.phone)|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_model or ''))|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_plate or ''))|tojson|forceescape }}, {{ o.total_amount }}, {{ (o.status)|tojson|forceescape }}, {{ (o.payment_method)|tojson|forceescape }}, {{ (o.created_at.strftime('%b %d, %Y — %I:%M %p'))|tojson|forceescape }}, {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
@@ -3013,42 +3011,50 @@
 
 <!-- ORDER DETAIL MODAL -->
 <!-- Ship to Address: shop-side steps -->
-<div class="modal-overlay" id="modal-ship-options">
+<div class="modal-overlay" id="modal-ship-options" onclick="if(event.target===this) shipCloseOptions()">
   <div class="modal-box" style="width:540px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--text);letter-spacing:0.04em;line-height:1;">Shipping options</div>
-    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;" id="so-sub"></div>
-    <input type="hidden" id="so-oid">
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:0.6rem;">
-      <div class="form-group"><label>Item ordered</label><input type="text" id="so-item" readonly style="background:#f3f4f6;font-weight:600;"></div>
-      <div class="form-group"><label>Quantity</label><input type="text" id="so-qty" readonly style="background:#f3f4f6;font-weight:600;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--text);letter-spacing:0.04em;line-height:1;">Shipping Options</div>
+        <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;" id="so-sub"></div>
+      </div>
+      <button type="button" onclick="shipCloseOptions()" aria-label="Close" style="background:none;border:none;font-size:1.3rem;color:var(--muted);cursor:pointer;line-height:1;padding:0.1rem 0.2rem;">&times;</button>
     </div>
+    <input type="hidden" id="so-oid">
+    <div class="form-group" style="display:grid;grid-template-columns:1fr 90px;gap:0.6rem;margin-bottom:0;">
+      <label>Item ordered</label>
+      <label>Quantity</label>
+    </div>
+    <div id="so-lines" style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1rem;"></div>
     <div class="form-group"><label>Vehicle <span class="lbl-sub">(based on the item and quantity)</span></label>
       <select id="so-vehicle" onchange="shipVehicleChanged()">
         <option value="">Choose a vehicle</option>
-        <option value="Motorcycle">Motorcycle · up to 50 × 40 × 50 cm, 20 kg</option>
-        <option value="Sedan">Sedan · up to 100 × 60 × 70 cm, 200 kg</option>
-        <option value="Subcompact SUV">Subcompact SUV · up to 150 × 120 × 100 cm, 300 kg</option>
+        <option value="Motorcycle">Motorcycle · up to 20 kg</option>
+        <option value="Sedan">Sedan · up to 200 kg</option>
+        <option value="Small Crossover SUV">Small Crossover SUV · up to 300 kg</option>
+        <option value="7-seater SUV / Minivan">7-seater SUV / Minivan · up to 600 kg</option>
+        <option value="Pickup">Pickup · up to 800 kg</option>
+        <option value="L300 / Cargo Van">L300 / Cargo Van · up to 1,000 kg</option>
       </select></div>
     <div class="form-group"><label>Reason <span class="lbl-sub">(the customer will see this)</span></label>
       <select id="so-reason" onchange="shipReasonChanged()" disabled>
         <option value="">Choose a vehicle first</option>
-      </select>
-      <input type="text" id="so-reason-custom" maxlength="120" placeholder="Type the reason (up to 120 characters)" style="display:none;margin-top:0.4rem;" oninput="shipPreview()"></div>
-    <div id="so-preview" style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.8rem;color:#374151;margin-bottom:1rem;display:none;"></div>
+      </select></div>
 
     <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">Check the prices in the courier app</div>
     <div class="so-addr" style="display:flex;gap:0.7rem;align-items:flex-start;"><span class="so-ab" style="background:#111827;">A</span>
-      <div style="flex:1;min-width:0;"><div class="so-addr-h" style="margin-bottom:0.15rem;"><span>Pickup · the shop</span></div>
+      <div style="flex:1;min-width:0;"><div class="so-addr-h" style="margin-bottom:0.15rem;"><span>Pickup · The shop</span></div>
       <div id="so-addr-a" style="font-size:0.84rem;color:var(--text);white-space:pre-line;">MotoTyres North Caloocan, {{ SHOP_ADDRESS }}</div></div>
       <button type="button" class="so-copy" onclick="shipCopy('so-addr-a', this)">Copy</button></div>
     <div class="so-addr" style="display:flex;gap:0.7rem;align-items:flex-start;"><span class="so-ab" style="background:#dc2626;">B</span>
-      <div style="flex:1;min-width:0;"><div class="so-addr-h" style="margin-bottom:0.15rem;"><span>Drop-off · the customer</span></div>
+      <div style="flex:1;min-width:0;"><div class="so-addr-h" style="margin-bottom:0.15rem;"><span>Drop-off · The customer</span></div>
       <div id="so-addr-b" style="font-size:0.84rem;color:var(--text);white-space:pre-line;"></div></div>
       <button type="button" class="so-copy" onclick="shipCopy('so-addr-b', this)">Copy</button></div>
     <ol style="font-size:0.8rem;color:#374151;padding-left:1.2rem;margin:0.7rem 0 1rem;line-height:1.6;">
       <li>Open your courier app and choose <strong id="so-step-vehicle">the vehicle you picked</strong>.</li>
       <li>Set A as the pickup and B as the drop-off.</li>
-      <li>Type the prices Courier shows below. Don't book yet. Book only after the customer pays.</li>
+      <li>Type the prices the courier app shows into the boxes below.</li>
+      <li><strong>Don't book the rider yet.</strong> Book only after the customer pays.</li>
     </ol>
 
     <div class="so-price"><div><b>Priority</b><small>Highest fee · fastest, goes straight to the customer</small></div>
@@ -3062,7 +3068,7 @@
       <strong>If the courier's price changes:</strong> the customer pays the price you send here, and it won't change after they pay. If the courier charges more or less when you book, the shop covers or keeps the difference. If the price changes a lot before the customer pays, press <strong>Edit options</strong> to send the new prices.</div>
     <div id="so-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
     <div style="display:flex;gap:0.6rem;">
-      <button type="button" class="btn-secondary-custom" style="flex:1;" onclick="closeModal('modal-ship-options')">Cancel</button>
+      <button type="button" class="btn-secondary-custom" style="flex:1;" onclick="shipCloseOptions()">Back</button>
       <button type="button" class="btn-primary-custom" style="flex:1.4;" id="so-go" onclick="shipSubmitOptions()">Send to customer</button>
     </div>
   </div>
@@ -5722,9 +5728,7 @@
       ? `<div style="display:flex;gap:0.25rem;">${r.photos.slice(0,3).map(p =>
           `<img src="${returnPhotoUrl(p)}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">`).join('')}${r.photos.length > 3 ? `<span style="font-size:0.7rem;color:var(--muted);align-self:center;">+${r.photos.length - 3}</span>` : ''}</div>`
       : '<span style="color:var(--muted);">—</span>';
-    const ageHTML = r.overdue
-      ? `<span style="color:#b91c1c;font-weight:700;">${returnAgeLabel(r)} — overdue</span>`
-      : `<span style="color:var(--muted);">${returnAgeLabel(r)}</span>`;
+    const ageHTML = `<span style="color:var(--muted);">${returnAgeLabel(r)}</span>`;
 
     const act = returnNextAction(r);
     return `
@@ -7585,6 +7589,7 @@
       }
       if (!res.ok) { info.textContent = d.error || 'Could not load that month.'; warn.style.display = part.style.display = 'none'; return; }
       XR_KEYS.forEach(k => { document.getElementById('xr-' + k + '-count').textContent = d.counts[k]; });
+      document.getElementById('xr-file').textContent = 'File name: ' + d.file_name;
       const anyOn = XR_KEYS.some(k => document.getElementById('xr-' + k).checked);
       if (!anyOn) {
         info.innerHTML = 'Tick at least one kind of claim to put in the PDF.';
@@ -7609,7 +7614,7 @@
       if (d.open && d.open.length) {
         const n = d.open.length;
         warn.innerHTML = `<b>${n} claim${n === 1 ? ' is' : 's are'} still open</b> and won't be in the report:`
-          + `<ul style="margin:0.35rem 0 0.35rem 1.1rem;padding:0;">${d.open.map(o => `<li>${_xpEsc(o.ref)} &middot; ${_xpEsc(o.customer)} &middot; ${_xpEsc(o.type)} &middot; filed ${_xpEsc(o.filed)} &middot; ${_xpEsc(o.status)}</li>`).join('')}</ul>`
+          + `<ul style="margin:0.35rem 0 0.35rem 1.1rem;padding:0;">${d.open.map(o => `<li>${_xpEsc(o.ref)} &middot; ${_xpEsc(o.customer)} &middot; ${_xpEsc(o.type)} &middot; filed ${_xpEsc(o.filed)} &middot; <b>${_xpEsc(o.status)}</b></li>`).join('')}</ul>`
           + 'Finish them in Returns &amp; Warranty first, then export again.';
         warn.style.display = '';
       } else {
@@ -8542,41 +8547,52 @@ async function shipSave(btn) {
     }
   }
 }
-const SHIP_REASONS = ['The item is too big for a motorcycle', 'The order is too heavy for a motorcycle', 'There are too many items for a motorcycle'];
+// Shipping Options: each vehicle and the reasons the customer can be shown for it
+const SHIP_REASONS = {
+  'Motorcycle': ['Small and light order, fits on a motorcycle'],
+  'Sedan': ['Too big or heavy for a motorcycle', 'Too many items for a motorcycle', 'Keeps your items dry from the rain'],
+  'Small Crossover SUV': ['Too big for a sedan', 'Too many items for a sedan'],
+  '7-seater SUV / Minivan': ['Large order, like several tires', 'Too big or heavy for a smaller car'],
+  'Pickup': ['Bulky or heavy items, like a full set of tires', 'Items too long or tall for a car'],
+  'L300 / Cargo Van': ['Very large or bulk order', 'Too big or heavy for a pickup'],
+};
+const _soEsc = t => String(t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 function shipVehicleChanged() {
   const v = document.getElementById('so-vehicle').value, r = document.getElementById('so-reason');
-  const custom = document.getElementById('so-reason-custom');
-  custom.style.display = 'none'; custom.value = '';
+  const list = SHIP_REASONS[v] || [];
   if (!v) { r.innerHTML = '<option value="">Choose a vehicle first</option>'; r.disabled = true; }
-  else if (v === 'Motorcycle') { r.innerHTML = '<option value="">Not needed for Motorcycle</option>'; r.disabled = true; }
-  else {
-    r.innerHTML = '<option value="">Choose a reason</option>' + SHIP_REASONS.map(t => '<option>' + t + '</option>').join('') + '<option value="__other">Other (type the reason)</option>';
-    r.disabled = false;
-  }
+  else if (list.length === 1) { r.innerHTML = '<option>' + _soEsc(list[0]) + '</option>'; r.value = list[0]; r.disabled = false; }
+  else { r.innerHTML = '<option value="">Choose a reason</option>' + list.map(t => '<option>' + _soEsc(t) + '</option>').join(''); r.disabled = false; }
+  document.getElementById('so-vehicle').classList.remove('so-err-field');
   r.classList.remove('so-err-field');
   document.getElementById('so-step-vehicle').textContent = v || 'the vehicle you picked';
-  shipPreview();
+  shipCheck(true);
 }
-function shipReasonChanged() {
-  const r = document.getElementById('so-reason'), custom = document.getElementById('so-reason-custom');
-  custom.style.display = r.value === '__other' ? '' : 'none';
-  if (r.value === '__other') custom.focus();
-  shipPreview();
+function shipReasonChanged() { document.getElementById('so-reason').classList.remove('so-err-field'); shipCheck(true); }
+function shipPriceInput(el) { el.value = el.value.replace(/[^0-9]/g, ''); el.classList.remove('so-err-field'); shipCheck(true); }
+// The checks before sending, in order. quiet=true only re-checks a message already showing (so it disappears once fixed).
+function shipCheck(quiet) {
+  const e = document.getElementById('so-err');
+  if (quiet && e.style.display === 'none') return true;
+  const val = id => document.getElementById(id).value.trim();
+  const fails = [
+    [!val('so-vehicle'), 'so-vehicle', 'Choose a vehicle first.'],
+    [!val('so-reason'), 'so-reason', 'Choose the reason the customer will see.'],
+    [!(Number(val('so-priority')) > 0), 'so-priority', 'Type the Priority price from the courier app.'],
+    [!(Number(val('so-regular')) > 0), 'so-regular', 'Type the Regular price from the courier app.'],
+    [val('so-pooling') !== '' && !(Number(val('so-pooling')) > 0), 'so-pooling', 'Pooling must be more than ₱0, or leave it blank.'],
+  ];
+  document.querySelectorAll('#modal-ship-options .so-err-field').forEach(x => x.classList.remove('so-err-field'));
+  const bad = fails.find(f => f[0]);
+  if (!bad) { e.style.display = 'none'; e.textContent = ''; return true; }
+  document.getElementById(bad[1]).classList.add('so-err-field');
+  e.textContent = bad[2]; e.style.display = 'block';
+  return false;
 }
-function shipReasonText() {
-  const r = document.getElementById('so-reason');
-  return r.value === '__other' ? document.getElementById('so-reason-custom').value.trim() : r.value;
-}
-function shipPreview() {
-  const v = document.getElementById('so-vehicle').value, box = document.getElementById('so-preview');
-  const esc = t => String(t).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
-  if (!v) { box.style.display = 'none'; return; }
-  box.style.display = 'block';
-  if (v === 'Motorcycle') { box.innerHTML = 'The customer will see: “Your order goes by <strong>Courier Motorcycle</strong>.”'; return; }
-  const why = esc(shipReasonText() || '[reason]');
-  box.innerHTML = 'The customer will see: “Your order goes by <strong>Courier ' + esc(v) + '</strong>. Reason: ' + why + '. A ' + esc(v) + ' costs more than a motorcycle, so the shipping fee is higher.”';
-}
-function shipPriceInput(el) { el.value = el.value.replace(/[^0-9]/g, ''); el.classList.remove('so-err-field'); }
+function shipCloseOptions() { closeModal('modal-ship-options'); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('modal-ship-options').classList.contains('open')) shipCloseOptions();
+});
 function shipCopy(id, btn) {
   const text = document.getElementById(id).textContent.trim();
   const done = () => { const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => btn.textContent = t, 1400); };
@@ -8586,43 +8602,36 @@ function shipCopy(id, btn) {
 function shipOpenOptions(el) {
   const row = shipRow(el), oid = row.dataset.oid, editing = row.dataset.sent === '1';
   let pr = {}; try { pr = JSON.parse(row.dataset.prices || '{}'); } catch (e) {}
+  let lines = []; try { lines = JSON.parse(row.dataset.lines || '[]'); } catch (e) {}
   shipErr('so-err', '');
   document.querySelectorAll('#modal-ship-options .so-err-field').forEach(x => x.classList.remove('so-err-field'));
   document.getElementById('so-oid').value = oid;
   document.getElementById('so-sub').textContent = row.dataset.ref + ' · ' + row.dataset.customer;
-  document.getElementById('so-item').value = row.dataset.item || '';
-  document.getElementById('so-qty').value = row.dataset.qty || '';
+  const box = 'background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.75rem;font-size:0.86rem;font-weight:600;color:var(--text);';
+  document.getElementById('so-lines').innerHTML = lines.map(l =>
+    `<div style="display:grid;grid-template-columns:1fr 90px;gap:0.6rem;"><div style="${box}">${_soEsc(l[0])}</div><div style="${box}text-align:center;">${_soEsc(l[1])}</div></div>`).join('');
   const name = row.dataset.shipname || row.dataset.customer, mobile = row.dataset.shipmobile || '';
   const pretty = mobile.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3');
   document.getElementById('so-addr-b').textContent = [row.dataset.shipaddr, name + (pretty ? ', ' + pretty : '')].filter(Boolean).join(' · ');
-  document.getElementById('so-vehicle').value = editing ? (row.dataset.vehicle || '') : '';
+  const vSel = document.getElementById('so-vehicle');
+  vSel.value = editing && SHIP_REASONS[row.dataset.vehicle] ? row.dataset.vehicle : '';
   shipVehicleChanged();
-  if (editing && row.dataset.vehicle && row.dataset.vehicle !== 'Motorcycle' && row.dataset.reason) {
-    const r = document.getElementById('so-reason');
-    if (SHIP_REASONS.includes(row.dataset.reason)) r.value = row.dataset.reason;
-    else { r.value = '__other'; document.getElementById('so-reason-custom').value = row.dataset.reason; }
-    shipReasonChanged();
-  }
+  if (editing && vSel.value && (SHIP_REASONS[vSel.value] || []).includes(row.dataset.reason)) document.getElementById('so-reason').value = row.dataset.reason;
   ['priority','regular','pooling'].forEach(k => document.getElementById('so-' + k).value = editing && pr[k] ? pr[k] : '');
   document.getElementById('so-go').textContent = editing ? 'Update and resend' : 'Send to customer';
   openModal('modal-ship-options');
 }
 async function shipSubmitOptions() {
+  if (!shipCheck(false)) return;
   const btn = document.getElementById('so-go'); btn.disabled = true;
-  document.querySelectorAll('#modal-ship-options .so-err-field').forEach(x => x.classList.remove('so-err-field'));
-  const isOther = document.getElementById('so-reason').value === '__other';
   const r = await shipPost(document.getElementById('so-oid').value, 'options', {
-    vehicle: document.getElementById('so-vehicle').value, reason: shipReasonText(), reason_custom: isOther,
+    vehicle: document.getElementById('so-vehicle').value, reason: document.getElementById('so-reason').value, reason_custom: false,
     priority: document.getElementById('so-priority').value, regular: document.getElementById('so-regular').value,
     pooling: document.getElementById('so-pooling').value
   });
   btn.disabled = false;
   if (r.ok) { closeModal('modal-ship-options'); shipReload(r.data.first ? 'Shipping options sent to the customer.' : 'Shipping options updated and resent.'); return; }
-  const fields = r.data.fields || [];
-  fields.forEach(f => {
-    const el = f === 'reason' ? (isOther ? document.getElementById('so-reason-custom') : document.getElementById('so-reason')) : document.getElementById('so-' + f);
-    if (el) el.classList.add('so-err-field');
-  });
+  (r.data.fields || []).forEach(f => { const el = document.getElementById('so-' + f); if (el) el.classList.add('so-err-field'); });
   const msgs = r.data.errors || (r.data.error ? [r.data.error] : ['Could not send the options.']);
   const e = document.getElementById('so-err'); e.innerHTML = msgs.map(m => '<div>' + m.replace(/</g, '&lt;') + '</div>').join(''); e.style.display = 'block';
 }

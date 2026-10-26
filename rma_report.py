@@ -184,7 +184,9 @@ def build_rma_report_pdf(data):
                               ('TOPPADDING', (0, 0), (-1, -1), 0), ('BOTTOMPADDING', (0, 0), (-1, -1), 0)]))
 
     sw = (WIDTH - 80) / 2
-    sig = Table([['', '', ''], [_p(f"Prepared by: <b>{escape(data['admin'])}</b>", fontSize=8), '', _p('Noted by: Branch Owner', fontSize=8)]],
+    role = escape(data.get('admin_role') or 'Administrator')
+    sig = Table([['', '', ''], [_p(f"Prepared by: <b>{escape(data['admin'])}</b><br/><font size='7' color='#6b7280'>{role}</font>", fontSize=8), '',
+                                _p("Noted by:<br/><font size='7' color='#6b7280'>Branch Owner</font>", fontSize=8)]],
                 colWidths=[sw, 80, sw], rowHeights=[28, None])
     sig.setStyle(TableStyle([('LINEABOVE', (0, 1), (0, 1), 0.8, DARK), ('LINEABOVE', (2, 1), (2, 1), 0.8, DARK),
                              ('LEFTPADDING', (0, 0), (-1, -1), 0), ('TOPPADDING', (0, 1), (-1, 1), 3)]))
