@@ -361,6 +361,32 @@
     @media (max-width: 860px) { .about-img-wrap { aspect-ratio: auto; height: min(70vw, 42vh); } }
     /* Very short windows (phone on its side): do not force snapping, just let it scroll normally */
     @media (max-height: 520px) { html { scroll-snap-type: none; } .hero, .section { min-height: 0; } }
+
+    /* Roomy screens: bigger Services / Products cards so the section is not mostly empty space */
+    @media (min-width: 1100px) and (min-height: 700px) {
+      #services .inner, #products .inner { max-width: min(1560px, 94vw); }
+      #services .services-grid { grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 2.4vh, 28px); }
+      #services .service-card { padding: clamp(20px, 3.2vh, 40px); gap: clamp(8px, 1.4vh, 16px); border-radius: 20px; justify-content: center; }
+      #services .svc-icon { width: clamp(44px, 6.4vh, 64px); height: clamp(44px, 6.4vh, 64px); border-radius: 14px; }
+      #services .svc-icon svg { width: clamp(22px, 3.2vh, 32px); height: clamp(22px, 3.2vh, 32px); }
+      #services .svc-name { font-size: clamp(22px, 3.4vh, 32px); }
+      #services .svc-desc { font-size: clamp(14px, 1.9vh, 17px); }
+      #services .pagination { margin-top: clamp(14px, 3vh, 36px); }
+      #services .page-btn { height: clamp(40px, 5vh, 48px); min-width: clamp(40px, 5vh, 48px); font-size: 15px; }
+      #products .products-grid { grid-template-columns: repeat(5, 1fr); gap: clamp(16px, 2.4vh, 28px); }
+      #products .product-card { padding: clamp(16px, 2.6vh, 28px); gap: clamp(8px, 1.3vh, 14px); border-radius: 20px; }
+      #products .product-img { height: clamp(130px, 27vh, 300px); }
+      #products .product-img svg { width: 56px; height: 56px; }
+      #products .product-cat { font-size: clamp(10px, 1.4vh, 12px); }
+      #products .product-name { font-size: clamp(15px, 2.1vh, 19px); }
+      #products .product-price { font-size: clamp(24px, 3.6vh, 34px); }
+    }
+    @media (min-width: 1100px) and (min-height: 700px) and (max-height: 860px) {
+      #services .service-card { padding: 16px 22px; gap: 6px; }
+      #services .svc-icon { width: 40px; height: 40px; margin-bottom: 0; }
+      #services .svc-name { font-size: 24px; }
+      #services .pagination { margin-top: 14px; }
+    }
   </style>
 </head>
 <body>
@@ -500,108 +526,25 @@
       </div>
     </div>
 
-    <!-- Full service list (paginated) -->
+    <!-- Full service list (paginated), straight from the shop's service list -->
+    {% if services %}
     <div class="services-grid" id="allServices">
+      {% for sv in services %}
       <div class="service-card">
-        <div class="svc-icon"><i data-lucide="zap" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">FI CLEANING</div>
-        <p class="svc-desc">Fuel injector cleaning for better throttle response, fuel efficiency, and smoother acceleration.</p>
+        <div class="svc-icon"><i data-lucide="{{ sv.name|service_icon }}" style="width:22px;height:22px"></i></div>
+        <div class="svc-name">{{ sv.name|upper }}</div>
+        {% if sv.description %}<p class="svc-desc">{{ sv.description }}</p>{% endif %}
       </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="rotate-cw" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">THROTTLE BODY CLEANING</div>
-        <p class="svc-desc">Remove carbon buildup from the throttle body to restore smooth idle and engine performance.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="settings-2" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">TUNE-UP</div>
-        <p class="svc-desc">Spark plug replacement, air filter check, and full engine performance tuning for optimal ride.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="anchor" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">BALL RACE INSTALLATION</div>
-        <p class="svc-desc">Proper installation of steering head ball bearings for stable and smooth handlebar control.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="git-branch" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">GENERAL REWIRING</div>
-        <p class="svc-desc">Full electrical system inspection and rewiring to fix shorts, faulty connections, and lighting issues.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="gauge" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">CVT UPGRADE</div>
-        <p class="svc-desc">Upgrade your CVT components for improved acceleration, top speed, and overall scooter performance.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="wind" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">CVT CLEANING</div>
-        <p class="svc-desc">Deep cleaning of the CVT belt and pulley system to prevent slipping and extend component life.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="cpu" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">DIAGNOSTIC SERVICES</div>
-        <p class="svc-desc">Advanced ECU scanning using API Tech / MST tools to accurately identify and resolve error codes.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="sliders-vertical" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">SUSPENSION TUNING</div>
-        <p class="svc-desc">Front fork and rear shock adjustment or replacement for a smoother, more controlled ride.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="wrench" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">FULL OVERHAUL</div>
-        <p class="svc-desc">Complete engine disassembly, inspection, and rebuild — restoring your motorcycle to peak condition.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="layers" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">TOP OVERHAUL</div>
-        <p class="svc-desc">Cylinder head reconditioning including valve lapping, piston ring replacement, and gasket renewal.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="octagon-alert" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">BRAKE CLEANING</div>
-        <p class="svc-desc">Thorough cleaning of brake calipers, discs, and drums to maintain safe and consistent stopping power.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="cpu" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">ECU REMAPPING</div>
-        <p class="svc-desc">Custom ECU tune to optimize fuel maps, ignition timing, and throttle response for your setup.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="droplet" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">OIL CHANGE</div>
-        <p class="svc-desc">Fresh engine oil and filter replacement to keep your engine smooth, cool, and well-protected.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="volume-2" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">HORN INSTALLATION</div>
-        <p class="svc-desc">Quick and clean installation of aftermarket or OEM horns with full electrical testing.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="link-2" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">RUBBER LINK STOPPER INSTALLATION</div>
-        <p class="svc-desc">Installation of rubber link stoppers to reduce chain noise and protect your swingarm from wear.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="disc" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">BRAKE PAD REPLACEMENT</div>
-        <p class="svc-desc">High-quality brake pad replacement for both front and rear to ensure maximum stopping power.</p>
-      </div>
-      <div class="service-card">
-        <div class="svc-icon"><i data-lucide="bike" style="width:22px;height:22px"></i></div>
-        <div class="svc-name">FULL MAINTENANCE PACKAGE</div>
-        <p class="svc-desc">All-in-one maintenance package covering oil, brakes, chain, filters, and a full mechanical inspection.</p>
-      </div>
+      {% endfor %}
     </div>
 
-    <div class="pagination">
+    <div class="pagination" id="svcPagination">
       <button class="page-btn" id="prevPage">←</button>
-      <button class="page-btn active" data-page="1">1</button>
-      <button class="page-btn" data-page="2">2</button>
-      <button class="page-btn" data-page="3">3</button>
-      <button class="page-btn" data-page="4">4</button>
       <button class="page-btn" id="nextPage">→</button>
     </div>
+    {% else %}
+    <p style="color:var(--fg-3);">Our service list is being updated. Please check back soon.</p>
+    {% endif %}
   </div>
 </section>
 
@@ -764,11 +707,9 @@
           <label class="form-label">Service Used</label>
           <select class="form-select" id="fb-service">
             <option value="" disabled selected>Select a service...</option>
-            <option>Oil Change</option>
-            <option>Tire Fitting</option>
-            <option>Tune-Up</option>
-            <option>Brake Service</option>
-            <option>General Checkup</option>
+            {% for sv in services %}<option>{{ sv.name }}</option>
+            {% endfor %}
+            <option>Other / General</option>
           </select>
         </div>
         <div class="form-field">
@@ -957,29 +898,46 @@
   });
 
   // Services pagination
-  const SERVICES_PER_PAGE = 5;
   const svcCards = document.querySelectorAll('#allServices .service-card');
-  const pageBtns = document.querySelectorAll('.page-btn[data-page]');
   const prevBtn = document.getElementById('prevPage');
   const nextBtn = document.getElementById('nextPage');
-  const totalPages = Math.ceil(svcCards.length / SERVICES_PER_PAGE);
+  const roomy = window.matchMedia('(min-width: 1100px) and (min-height: 700px)');
+  let perPage = roomy.matches ? 6 : 5;
   let currentPage = 1;
 
+  function totalPages() { return Math.max(1, Math.ceil(svcCards.length / perPage)); }
+
+  // The numbered buttons follow however many services the shop really has.
+  function buildButtons() {
+    document.querySelectorAll('.page-btn[data-page]').forEach(b => b.remove());
+    for (let i = 1; i <= totalPages(); i++) {
+      const b = document.createElement('button');
+      b.className = 'page-btn'; b.dataset.page = i; b.textContent = i;
+      b.addEventListener('click', () => showPage(i, true));
+      nextBtn.parentNode.insertBefore(b, nextBtn);
+    }
+    const bar = document.getElementById('svcPagination');
+    if (bar) bar.style.display = totalPages() <= 1 ? 'none' : '';
+  }
+
   function showPage(page, scroll) {
-    currentPage = page;
-    const start = (page - 1) * SERVICES_PER_PAGE;
-    const end = start + SERVICES_PER_PAGE;
+    currentPage = Math.min(Math.max(1, page), totalPages());
+    const start = (currentPage - 1) * perPage;
+    const end = start + perPage;
     svcCards.forEach((c, i) => c.classList.toggle('hidden', i < start || i >= end));
-    pageBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.page) === page));
-    prevBtn.disabled = page === 1;
-    nextBtn.disabled = page === totalPages;
+    document.querySelectorAll('.page-btn[data-page]').forEach(b => b.classList.toggle('active', parseInt(b.dataset.page) === currentPage));
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === totalPages();
     if (scroll) document.getElementById('services').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  pageBtns.forEach(b => b.addEventListener('click', () => showPage(parseInt(b.dataset.page), true)));
-  prevBtn.addEventListener('click', () => { if (currentPage > 1) showPage(currentPage - 1, true); });
-  nextBtn.addEventListener('click', () => { if (currentPage < totalPages) showPage(currentPage + 1, true); });
-  showPage(1, false);
+  if (svcCards.length && prevBtn && nextBtn) {
+    prevBtn.addEventListener('click', () => { if (currentPage > 1) showPage(currentPage - 1, true); });
+    nextBtn.addEventListener('click', () => { if (currentPage < totalPages()) showPage(currentPage + 1, true); });
+    buildButtons(); showPage(1, false);
+    // resizing the window (or turning the phone) can change how many cards fit a page
+    roomy.addEventListener('change', () => { perPage = roomy.matches ? 6 : 5; buildButtons(); showPage(1, false); });
+  }
 
   // Fade-in on scroll
   const io = new IntersectionObserver(entries => {

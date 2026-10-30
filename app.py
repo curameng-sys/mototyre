@@ -1231,6 +1231,27 @@ def cleanup_abandoned_gcash_orders():
 
 # ── Auth routes ───────────────────────────────────────────────────────────────
 
+_SERVICE_ICONS = [            # first keyword found in a service's name picks its icon
+    (('oil',), 'droplet'), (('brake pad', 'brake'), 'disc'), (('tune',), 'settings-2'),
+    (('cvt',), 'gauge'), (('ecu', 'diagnos', 'scan'), 'cpu'), (('wiring', 'electrical', 'battery', 'light'), 'zap'),
+    (('horn',), 'volume-2'), (('suspension', 'shock', 'fork'), 'sliders-vertical'), (('overhaul', 'rebuild', 'engine'), 'wrench'),
+    (('tire', 'tyre', 'wheel'), 'circle-dot'), (('chain', 'link', 'sprocket'), 'link-2'), (('bearing', 'ball race'), 'anchor'),
+    (('clean', 'wash'), 'wind'), (('maintenance', 'package', 'checkup', 'check-up'), 'bike'),
+]
+
+
+def service_icon(name):
+    """The lucide icon shown for a service on the landing page, picked from its name (wrench when nothing matches)."""
+    n = (name or '').lower()
+    for words, icon in _SERVICE_ICONS:
+        if any(w in n for w in words):
+            return icon
+    return 'wrench'
+
+
+app.jinja_env.filters['service_icon'] = service_icon
+
+
 def _landing_products(limit=5):
     """The few products the landing page shows off: in stock, newest first, one per category before any repeats,
     so the strip shows variety instead of five tires."""
@@ -1250,7 +1271,8 @@ def home():
     return render_template('landing.html', FACEBOOK_PAGE_URL=FACEBOOK_PAGE_URL,
                            SHOP_ADDRESS=SHOP_ADDRESS, SHOP_PHONE=SHOP_PHONE, SHOP_PHONE_DISPLAY=SHOP_PHONE_DISPLAY,
                            SHOP_MAP_EMBED_URL=SHOP_MAP_EMBED_URL, SHOP_DIRECTIONS_URL=SHOP_DIRECTIONS_URL,
-                           SHOP_MAPS_URL=SHOP_MAPS_URL, featured_products=_landing_products())
+                           SHOP_MAPS_URL=SHOP_MAPS_URL, featured_products=_landing_products(),
+                           services=Service.query.filter_by(is_active=True).order_by(Service.name).all())
 
 @app.route('/products')
 def products():
