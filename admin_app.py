@@ -201,6 +201,7 @@ class User(db.Model, UserMixin):
     billing_seen_at  = db.Column(db.DateTime, nullable=True)  # admin: when Billing History was last opened — anything paid after this is NEW
     address          = db.Column(db.String(255))
     motorcycle_model = db.Column(db.String(100))
+    motorcycle_year  = db.Column(db.String(4))
     profile_pic      = db.Column(db.String(255))
     profile_pic_blob = db.Column(db.LargeBinary(length=2**24 - 1), nullable=True)  # the picture itself, when no cloud storage is configured — disk files are lost on redeploy
     profile_pic_mime = db.Column(db.String(40), nullable=True)

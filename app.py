@@ -473,6 +473,7 @@ class User(db.Model, UserMixin):
     billing_seen_at  = db.Column(db.DateTime, nullable=True)  # admin: when Billing History was last opened — anything paid after this is NEW
     address          = db.Column(db.String(255))
     motorcycle_model = db.Column(db.String(100))
+    motorcycle_year  = db.Column(db.String(4))            # model year, e.g. "2021" (optional)
     profile_pic      = db.Column(db.String(255))
     profile_pic_blob = db.Column(db.LargeBinary(length=2**24 - 1), nullable=True)  # the picture itself when no cloud storage is configured — disk files are lost on every redeploy, the database is not
     profile_pic_mime = db.Column(db.String(40), nullable=True)
@@ -1303,6 +1304,14 @@ GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo'
 
 
+def _clean_year(raw):
+    """A motorcycle model year as '2021', or None if it is blank or not a believable year."""
+    raw = (raw or '').strip()
+    if raw.isdigit() and len(raw) == 4 and 1970 <= int(raw) <= ph_now().year + 1:
+        return raw
+    return None
+
+
 def _google_enabled():
     return bool(os.getenv('GOOGLE_CLIENT_ID') and os.getenv('GOOGLE_CLIENT_SECRET'))
 
@@ -1387,7 +1396,8 @@ def google_complete():
             return redirect(url_for('login'))
         import secrets as _secrets
         user = User(fullname=pending['name'], email=pending['email'], phone=phone,
-                    motorcycle_model=clean_str(request.form.get('model', ''), max_len=100), email_verified=True)
+                    motorcycle_model=clean_str(request.form.get('model', ''), max_len=100),
+                    motorcycle_year=_clean_year(request.form.get('model_year')), email_verified=True)
         user.set_password(_secrets.token_urlsafe(32))        # no password to remember: they sign in with Google (or reset one later)
         db.session.add(user)
         db.session.commit()
@@ -1498,6 +1508,7 @@ def register():
             fullname=fullname, email=email, phone=phone,
             address=(f'{d_street}, Brgy. {d_brgy}, {d_city} {d_zip}' if has_address else None),
             motorcycle_model=clean_str(request.form.get('model', ''), max_len=100),
+            motorcycle_year=_clean_year(request.form.get('model_year')),
             email_verified=False
         )
         if has_address:     # saved as the default delivery address, with the account's own name and number
@@ -3087,11 +3098,13 @@ def customer_profile():
         current_user.fullname         = fullname
         current_user.phone            = phone
         current_user.motorcycle_model = moto
+        current_user.motorcycle_year  = _clean_year(data.get('motorcycle_year'))
         if not _wants_json() and 'address' in request.form:      # the address now lives under Default Delivery Address
             current_user.address = clean_str(request.form.get('address', ''), max_len=255)
         db.session.commit()
         if _wants_json():
-            return jsonify({'success': True, 'fullname': fullname, 'first_name': fullname.split()[0], 'phone': phone, 'motorcycle_model': moto})
+            return jsonify({'success': True, 'fullname': fullname, 'first_name': fullname.split()[0], 'phone': phone, 'motorcycle_model': moto,
+                            'motorcycle_year': current_user.motorcycle_year or ''})
         flash('Profile updated successfully!', 'success')
     return redirect(url_for('customer_dashboard'))
 
@@ -4812,6 +4825,7 @@ with app.app_context():
         "ALTER TABLE booking ADD COLUMN odometer INT DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN address VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN motorcycle_model VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE `user` ADD COLUMN motorcycle_year VARCHAR(4) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN profile_pic VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN profile_pic_blob MEDIUMBLOB DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN profile_pic_mime VARCHAR(40) DEFAULT NULL",

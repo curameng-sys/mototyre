@@ -889,21 +889,31 @@
           <div class="wstep" data-step="2">
           <div class="section-divider">Your Motorcycle <span style="opacity:.7;">· Optional</span></div>
           <p class="step-note">Tell us what you ride so it is ready when you book. You can skip this and add motorcycles later in your account.</p>
-          <div class="field">
-            <label>Motorcycle Model <span class="opt">(Optional)</span></label>
-            <div class="input-wrap">
-              <span class="input-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/>
-                  <path d="M15 6h-2L8 10l3 3.5L15 17l2-3 3 .5V10z"/>
-                </svg>
-              </span>
-              <input type="text" name="model" id="motorcycle-model-input" placeholder="Honda Click 125i" maxlength="100"
-                autocomplete="off" oninput="filterMotorcycleModels()" onfocus="filterMotorcycleModels()">
-              <div id="motorcycle-model-dropdown" class="moto-dropdown"></div>
+          <div class="field-row" style="grid-template-columns: 1fr 130px;">
+            <div class="field">
+              <label>Motorcycle Model <span class="opt">(Optional)</span></label>
+              <div class="input-wrap">
+                <span class="input-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/>
+                    <path d="M15 6h-2L8 10l3 3.5L15 17l2-3 3 .5V10z"/>
+                  </svg>
+                </span>
+                <input type="text" name="model" id="motorcycle-model-input" placeholder="Honda Click 125i" maxlength="100"
+                  autocomplete="off" oninput="filterMotorcycleModels()" onfocus="filterMotorcycleModels()">
+                <div id="motorcycle-model-dropdown" class="moto-dropdown"></div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Year <span class="opt">(Optional)</span></label>
+              <div class="select-wrap">
+                <select name="model_year" id="motorcycle-year-input" class="no-icon">
+                  <option value="">Year</option>
+                  {% for y in range(current_year + 1, 1979, -1) %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+                </select>
+              </div>
             </div>
           </div>
-
           </div><!-- /step 2 -->
 
           <!-- STEP 3 -->

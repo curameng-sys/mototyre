@@ -2016,7 +2016,7 @@
                 <td>{{ u.fullname }}</td>
                 <td>{{ u.email }}</td>
                 <td>{{ u.phone }}</td>
-                <td>{{ u.motorcycle_model or '—' }}</td>
+                <td>{{ ((u.motorcycle_model or '') ~ (' (' ~ u.motorcycle_year ~ ')' if u.motorcycle_year else '')) or '—' }}</td>
                 <td>
                   <span class="badge badge-{{ u.role }}">{{ u.role|title }}</span>
                   {% if u.account_status == 'banned' %}

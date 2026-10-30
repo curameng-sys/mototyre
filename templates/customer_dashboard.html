@@ -1816,7 +1816,15 @@
                 <div class="profile-field-hint" id="acct-phone-hint">11 digits starting with 09.</div>
               </div>
             </div>
-            <div class="form-group"><label>Motorcycle Model</label><input type="text" id="acct-moto" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i" maxlength="100" oninput="acctCheck()"></div>
+            <div class="form-grid" style="grid-template-columns:1fr 140px;">
+              <div class="form-group"><label>Motorcycle Model</label><input type="text" id="acct-moto" value="{{ current_user.motorcycle_model or '' }}" placeholder="Honda Click 125i" maxlength="100" oninput="acctCheck()"></div>
+              <div class="form-group"><label>Year</label>
+                <select id="acct-year" onchange="acctCheck()">
+                  <option value="">—</option>
+                  {% for y in range(current_year + 1, 1979, -1) %}<option value="{{ y }}" {{ 'selected' if current_user.motorcycle_year == y|string }}>{{ y }}</option>{% endfor %}
+                </select>
+              </div>
+            </div>
             <div class="form-group">
               <label>Email <span style="color:var(--fg-3);font-weight:400;text-transform:none;letter-spacing:0;">(cannot change)</span></label>
               <div style="position:relative;">
@@ -9660,7 +9668,7 @@ async function removePicture() {
 }
 
 // ── Account Information ──
-const ACCT_INIT = { name: document.getElementById('acct-name').value, phone: document.getElementById('acct-phone').value, moto: document.getElementById('acct-moto').value };
+const ACCT_INIT = { name: document.getElementById('acct-name').value, phone: document.getElementById('acct-phone').value, moto: document.getElementById('acct-moto').value, year: document.getElementById('acct-year').value };
 const NAME_OK = v => /^[A-Za-zÑñ][A-Za-zÑñ .'\-]*$/.test(v.trim());
 const PHONE_OK = v => /^09\d{9}$/.test(v);
 function acctCheck() {
@@ -9669,18 +9677,18 @@ function acctCheck() {
   const nh = document.getElementById('acct-name-hint'), ph2 = document.getElementById('acct-phone-hint');
   nh.className = 'profile-field-hint' + (nOk ? '' : ' bad'); nh.textContent = nOk ? 'Letters only — no numbers.' : (n.value.trim() ? 'Use letters only — no numbers.' : 'Enter your full name.');
   ph2.className = 'profile-field-hint' + (pOk ? '' : ' bad'); ph2.textContent = pOk ? '11 digits starting with 09.' : 'Enter 11 digits starting with 09.';
-  const changed = n.value !== ACCT_INIT.name || ph.value !== ACCT_INIT.phone || m.value !== ACCT_INIT.moto;
+  const changed = n.value !== ACCT_INIT.name || ph.value !== ACCT_INIT.phone || m.value !== ACCT_INIT.moto || document.getElementById('acct-year').value !== ACCT_INIT.year;
   document.getElementById('acct-save-btn').disabled = !(changed && nOk && pOk);
 }
 async function saveAccount() {
   const btn = document.getElementById('acct-save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
-  const body = { fullname: document.getElementById('acct-name').value.trim(), phone: document.getElementById('acct-phone').value, motorcycle_model: document.getElementById('acct-moto').value.trim() };
+  const body = { fullname: document.getElementById('acct-name').value.trim(), phone: document.getElementById('acct-phone').value, motorcycle_model: document.getElementById('acct-moto').value.trim(), motorcycle_year: document.getElementById('acct-year').value };
   try {
     const res = await fetch('/customer/profile', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: JSON.stringify(body) });
     const data = await res.json();
     if (data.success) {
-      ACCT_INIT.name = data.fullname; ACCT_INIT.phone = data.phone; ACCT_INIT.moto = data.motorcycle_model;
+      ACCT_INIT.name = data.fullname; ACCT_INIT.phone = data.phone; ACCT_INIT.moto = data.motorcycle_model; ACCT_INIT.year = data.motorcycle_year || '';
       document.getElementById('acct-name').value = data.fullname;
       ACCOUNT_PROFILE.name = data.fullname; ACCOUNT_PROFILE.mobile = data.phone; ACCOUNT_PROFILE.moto = data.motorcycle_model;
       document.querySelectorAll('.nav-username').forEach(el => { el.textContent = data.first_name; });
