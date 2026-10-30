@@ -349,8 +349,9 @@
     #cmp-list { padding: 0 0.35rem 0.35rem; border-radius: 12px; box-shadow: 0 14px 36px rgba(28,24,20,0.22); scrollbar-width: thin; }
     #cmp-list > .cmp-opt:first-child { margin-top: 0.35rem; }
     #cmp-list .cmp-sep { margin: 0.2rem 0 0; }
-    #cmp-list .cmp-group { position: sticky; top: 0; z-index: 2; background: #fff; margin: 0 -0.35rem; padding: 0.7rem 0.7rem 0.35rem 1.05rem; font-size: 0.64rem; letter-spacing: 0.12em; box-shadow: 0 1px 0 var(--line-1); }
-    #cmp-list .cmp-opt { padding: 0.6rem 0.75rem; margin: 1px 0; border-radius: 8px; transition: background .1s; }
+    #cmp-list .cmp-group { position: sticky; top: 0; z-index: 2; background: #fff; margin: 0 -0.35rem; padding: 0.55rem 0.7rem 0.3rem 1.05rem; font-size: 0.64rem; letter-spacing: 0.12em; box-shadow: 0 1px 0 var(--line-1); }
+    #cmp-list .cmp-opt { padding: 0.42rem 0.7rem; margin: 1px 0; border-radius: 8px; transition: background .1s; }
+    #cmp-list .cmp-av { width: 30px; height: 30px; }
     #cmp-list .cmp-opt.hl, #cmp-list .cmp-opt:not(.dis):hover { background: var(--brand-red-soft); }
     #cmp-list .cmp-opt:not(.dis):hover .cmp-txt b, #cmp-list .cmp-opt.hl .cmp-txt b, #cmp-list .cmp-opt.sel .cmp-txt b { color: var(--brand-red); }
     #cmp-list .cmp-opt.sel { background: var(--brand-red-soft); }
@@ -1094,7 +1095,7 @@
     .bw-pane[data-bstep="5"].unchosen #mech-note { display: none; }
     /* Step 5: two big choices */
     .bw-pane[data-bstep="5"] .bw-main > .form-group { margin: 0; }
-    .bw-pane[data-bstep="5"] .mech-toggle-card { padding: 1.3rem 1.25rem; min-height: clamp(104px, 24vh, 240px); border-radius: 14px; justify-content: center; }
+    .bw-pane[data-bstep="5"] .mech-toggle-card { padding: 0.8rem 1.25rem; min-height: clamp(84px, 13vh, 170px); border-radius: 14px; justify-content: center; align-items: center; text-align: center; }
     .bw-pane[data-bstep="5"] .mech-card-title { font-size: clamp(1.05rem, 2.3vh, 1.5rem); }
     .bw-pane[data-bstep="5"] .mech-card-sub { font-size: clamp(0.82rem, 1.7vh, 1.05rem); }
     .bw-pane[data-bstep="5"] #mech-note { font-size: clamp(0.82rem, 1.7vh, 1rem) !important; padding: 0.9rem 1rem !important; }
