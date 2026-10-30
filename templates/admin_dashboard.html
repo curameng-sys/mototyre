@@ -327,17 +327,11 @@
     .xr-check input { width:15px; height:15px; accent-color:#d0021b; }
     .xr-check span { flex:1; }
     .xr-check b { font-size:0.74rem; color:var(--muted); font-weight:700; }
-    /* Queue numbers (Manage Bookings) */
-    .queue-note { display:flex; gap:0.55rem; align-items:flex-start; background:#f5f0ff; border:1px solid #e2d6fb; color:#4c3a86; border-radius:10px; padding:0.65rem 0.9rem; font-size:0.78rem; line-height:1.5; margin-bottom:1rem; }
-    .queue-note b { color:#3b2a75; }
+    /* Booking number (Manage Bookings) */
     .bk-day-row td { background:#faf8ff; border-top:1px solid #ece4fb; border-bottom:1px solid #ece4fb; padding:0.5rem 0.9rem !important; }
     .bk-day-name { font-family:'Syne',sans-serif; font-weight:700; font-size:0.7rem; letter-spacing:0.07em; color:#6d28d9; }
     .bk-day-count { font-size:0.68rem; color:var(--muted); margin-left:0.55rem; }
     .qcell { display:flex; flex-direction:column; align-items:center; width:46px; line-height:1.15; }
-    .qbox { width:30px; height:30px; border-radius:8px; border:1.5px solid #7c3aed; color:#6d28d9; background:#fff; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:1.15rem; }
-    .qbox.qbox-first { background:#7c3aed; color:#fff; }
-    .qbox.qbox-none { border-color:var(--border); color:var(--muted); background:#f9fafb; font-family:inherit; font-size:0.9rem; }
-    .qord { font-size:0.58rem; color:#6d28d9; font-weight:700; margin-top:0.2rem; }
     .qref { font-size:0.56rem; color:var(--muted); margin-top:0.1rem; white-space:nowrap; }
     .booked-on { font-size:0.66rem; color:#7c3aed; margin-top:0.2rem; }
     .bk-tab-count { position: relative; }
@@ -1038,8 +1032,6 @@
         </button>
       </div>
 
-      <div class="queue-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <div><b>Queue numbers</b> show only when a customer booked <b>2 or more at once</b>; a solo booking has none. Each batch is numbered on its own (1st, 2nd…) by <b>booked time</b>. The number stays the same in every tab, and moves up if an earlier booking in the batch is cancelled.</div></div>
       <div class="filter-bar">
         <input type="text" placeholder="Search customer or service..." oninput="filterBookingsSearch(this.value)">
       </div>
@@ -1062,16 +1054,11 @@
             </thead>
             <tbody>
               {# One row per booking, so every row has its own status, time, mechanic and action buttons
-                 (one motor can finish before the other). Bookings submitted together through the queue
-                 share a booking_batch and are tagged "Queue 1 of 2" instead of being merged. #}
+                 (one motor can finish before the other). #}
               {% for day in booking_days %}
               <tr class="bk-day-row"><td colspan="8"><span class="bk-day-name">{{ day.label }}</span><span class="bk-day-count">{{ day.count }} booking{{ '' if day.count == 1 else 's' }} that day</span></td></tr>
               {% for b in day.rows %}
-                {% set q = queue_nums.get(b.id) if b.booking_batch else none %}
                 {% set group_bookings = [b] %}
-                {% set queue_sibs = ((all_bookings | selectattr('booking_batch', 'equalto', b.booking_batch) | sort(attribute='id') | list) if b.booking_batch else []) %}
-                {% set queue_pos = (queue_sibs | map(attribute='id') | list).index(b.id) + 1 if queue_sibs else 0 %}
-                {% set queue_done = queue_sibs | selectattr('status', 'equalto', 'completed') | list | length %}
                 {% set b_wait       = group_bookings[0].id in awaiting_pay %}
                 {% set is_done      = (group_bookings | selectattr('status','equalto','completed') | list | length == group_bookings | length) and not b_wait %}
                 {% set is_cancelled = group_bookings | selectattr('status','equalto','cancelled') | list | length == group_bookings | length %}
@@ -1116,12 +1103,8 @@
                     data-total-amount="{{ group_bookings | sum(attribute='total_amount') }}"
                     data-created="{{ b.created_at.strftime('%b %d, %Y %I:%M %p') }}"
                     data-walkin="{{ '1' if b.walkin_customer_id else '' }}">
-                  <td{% if q %} style="box-shadow:inset 3px 0 0 #7c3aed;"{% endif %}>
-                    {% if q %}
-                      <div class="qcell"><span class="qbox{{ ' qbox-first' if q.n == 1 }}">{{ q.n }}</span><span class="qord">{{ ordinal(q.n) }}</span><span class="qref">BKG-{{ '%03d'|format(b.id) }}</span></div>
-                    {% else %}
-                      <div class="qcell"><span class="qref">BKG-{{ '%03d'|format(b.id) }}</span></div>
-                    {% endif %}
+                  <td>
+                    <div class="qcell"><span class="qref">BKG-{{ '%03d'|format(b.id) }}</span></div>
                   </td>
                   <td>
                     <div class="bk-name" style="font-weight:600;color:var(--text);">
@@ -1134,9 +1117,6 @@
                     </div>
                     {% if b.motorcycle_model or b.motorcycle_plate %}
                       <div style="font-size:0.7rem;color:var(--muted);">{{ [b.motorcycle_model, b.motorcycle_plate]|select|join(' · ') }}</div>
-                    {% endif %}
-                    {% if queue_sibs|length > 1 %}
-                      <div style="margin-top:0.25rem;"><span title="Booked together in one queue submission (BKG-{{ queue_sibs | map(attribute='id') | map('string') | join(', BKG-') }})" style="font-size:0.63rem;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;padding:0.12rem 0.45rem;border-radius:4px;font-weight:700;white-space:nowrap;">Queue {{ queue_pos }} of {{ queue_sibs|length }}{% if queue_done %} · {{ queue_done }} done{% endif %}</span></div>
                     {% endif %}
                   </td>
                   <td>

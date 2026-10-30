@@ -1532,11 +1532,8 @@ def admin_dashboard():
     )
 
     _all_bookings_list = Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all()
-    # Manage Bookings is grouped by day and numbered by the shared queue rules. Archived bookings still count in the numbering
-    # (so archiving never renumbers anyone) but are not listed. Days from today on come first, soonest first; older days after.
+    # Manage Bookings is grouped by day (archived bookings are not listed). Days from today on come first, soonest first; older days after.
     _today = ph_now().date()
-    _qdates = {b.date for b in _all_bookings_list}
-    _qnums = queue_numbers(Booking.query.filter(Booking.date.in_(_qdates)).all()) if _qdates else {}
     _by_day = {}
     for _b in _all_bookings_list:
         _by_day.setdefault(_b.date, []).append(_b)
@@ -1580,7 +1577,6 @@ def admin_dashboard():
         awaiting_quotation_count=_awaiting_quotation_count,
         all_bookings=_all_bookings_list,
         booking_days=_booking_days,
-        queue_nums=_qnums,
         row_mech=_row_mech,
         bk_unseen=_sync_booking_tab_badges(),
         all_orders=all_orders,

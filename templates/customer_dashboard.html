@@ -903,6 +903,9 @@
 
     /* ── STEP-BY-STEP BOOKING (Appointments): one piece of information per step, and the browser page does not scroll ── */
     body.book-lock { overflow: hidden; }
+    #queue-badge-wrap, #queue-select-all { display: none !important; }                                   /* no queue any more: one booking at a time */
+    #booking-queue-list input[type="checkbox"] { display: none; }
+    #booking-queue-list { max-height: none !important; }
     /* the small messages ("Added to queue") go to the top here, so they never cover the Back / Next buttons */
     body.book-lock #cart-toast { bottom: auto !important; top: 84px !important; right: 1.5rem !important; left: auto !important; max-width: min(420px, calc(100vw - 2rem)) !important; }
     body.book-lock .page-wrap { padding-bottom: 0; }
@@ -1640,11 +1643,11 @@
           <div id="queue-missing" role="alert" style="display:none;margin-bottom:0.6rem;padding:0.55rem 0.8rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.8rem;color:#b91c1c;line-height:1.4;"></div>
           <div class="appt-btn-row">
             <div style="font-size:0.76rem;color:var(--fg-3);line-height:1.5;margin-bottom:0.6rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;padding:0.6rem 0.8rem;">When you choose a mechanic, they're reserved for you right away, so no one else can book them at the same time. They become busy once the shop starts your service.</div>
-            <button type="button" class="btn-submit" id="btn-add-queue" onclick="addToBookingQueue()"
+            <button type="button" class="btn-submit" id="btn-add-queue" onclick="bwReview()"
               style="background:rgba(29,78,216,0.88);flex-direction:column;gap:0.15rem;padding-top:0.6rem;padding-bottom:0.6rem;">
               <span style="display:flex;align-items:center;gap:0.4rem;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span id="btn-add-queue-title">Add to Queue</span>
+                <span id="btn-add-queue-title">Review booking</span>
               </span>
               <span id="btn-add-queue-sub" style="font-size:0.68rem;font-weight:600;opacity:0.85;display:none;"></span>
             </button>
@@ -1659,7 +1662,7 @@
         <div class="bw-narrow">
         <!-- Booking Queue Panel -->
         <div id="booking-queue-panel" style="display:block;margin-top:1.5rem;">
-          <div class="appt-section-label" style="margin-top:0;">Booking Queue</div>
+          <div class="appt-section-label" style="margin-top:0;">Your booking</div>
           <label id="queue-select-all" style="display:none;align-items:center;gap:0.55rem;padding:0.5rem 0.75rem;margin-bottom:0.5rem;border:1px solid var(--line-2);border-radius:10px;background:#fff;font-size:0.8rem;font-weight:600;color:var(--fg-1);cursor:pointer;">
             <input type="checkbox" id="queue-all-check" onclick="toggleQueueAll(this.checked)" style="width:16px;height:16px;accent-color:#1d4ed8;margin:0;">
             <span style="flex:1;">Select all</span>
@@ -1693,7 +1696,7 @@
           <button type="button" onclick="submitAllBookings()" id="btn-confirm-all-bottom"
             style="width:100%;margin-top:1rem;background:var(--brand-red);color:#fff;border:none;padding:0.75rem 1rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.875rem;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:0.4rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            Confirm All Bookings
+            Confirm Booking
           </button>
           <div id="policy-hint" style="display:none;margin-top:0.45rem;font-size:0.72rem;color:var(--fg-3);text-align:center;"></div>
         </div>
@@ -1705,7 +1708,7 @@
       <button type="button" class="bw-btn ghost" id="bw-back" onclick="bwBack()">&larr; Back</button>
       <div id="bw-msg" role="alert"></div>
       <button type="button" class="bw-btn primary" id="bw-next" onclick="bwNext()">Next &rarr;</button>
-      <button type="button" class="bw-btn primary" id="bw-another" onclick="bwAnother()" style="display:none;">+ Book another service</button>
+      <button type="button" class="bw-btn ghost" id="bw-another" onclick="bwAnother()" style="display:none;">&larr; Change booking</button>
       </div>
     </div>
   </div>
@@ -4283,9 +4286,7 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
   bookingQueue.push(entry);
   renderBookingQueue();
   resetBookingForm(true);
-  showCartToast(mergeMsg || (rule.merge === 'booking'
-    ? `${serviceDisplay} will be added to your existing booking BKG-${String(rule.target.id).padStart(3, '0')} for that motorcycle.`
-    : 'Added to queue'));
+  if (mergeMsg || rule.merge === 'booking') showCartToast(mergeMsg || `${serviceDisplay} will be added to your existing booking BKG-${String(rule.target.id).padStart(3, '0')} for that motorcycle.`);
 }
 
 // The 3 steps at the top: Date & Time first, Details once a date and time are picked,
@@ -4321,7 +4322,7 @@ function renderBookingQueue() {
     panel.style.display  = 'block';
     badge.style.display  = 'block';
     chip.textContent     = '0 in queue';
-    list.innerHTML       = '<div style="font-size:0.8rem;color:var(--fg-3);">No bookings in your queue yet.</div>';
+    list.innerHTML       = '<div style="font-size:0.85rem;color:var(--fg-3);">No booking yet. Use the button below to choose your date, services and time.</div>';
     btnBot.style.display = 'flex';
     updateConfirmAll();
     return;
@@ -4360,7 +4361,7 @@ function renderBookingQueue() {
       <div style="border:${two ? '1.5px solid #3b82f6' : '1px solid #bfdbfe'};border-radius:12px;overflow:hidden;background:#fff;${two ? 'box-shadow:0 0 0 2px rgba(59,130,246,0.10);' : ''}">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;padding:0.55rem 0.85rem;background:${two ? '#dbeafe' : '#eff6ff'};color:#1d4ed8;">
           <div style="display:flex;align-items:center;gap:0.45rem;font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;letter-spacing:0.04em;">${calIcon}${title}</div>
-          ${tag(pill, '#fff', '#1d4ed8', `border:1px solid ${two ? '#3b82f6' : '#bfdbfe'};`)}
+          ${n > 1 ? tag(pill, '#fff', '#1d4ed8', `border:1px solid ${two ? '#3b82f6' : '#bfdbfe'};`) : ''}
         </div>
         ${rows.map(r => {
           const q = r.q;
@@ -4483,9 +4484,7 @@ function updateConfirmAll() {
     document.getElementById('queue-picked-count').textContent = `${picked} of ${total} selected`;
   }
   if (btn.dataset.busy !== '1') {
-    const label = !picked ? 'Confirm Bookings'
-      : (picked === total && total > 1) ? `Confirm All ${total} Bookings`
-      : `Confirm ${picked} Booking${picked === 1 ? '' : 's'}`;
+    const label = 'Confirm Booking';
     btn.innerHTML = CONFIRM_ICON + ' ' + label;
   }
   btn.disabled = !has || !picked || !check.checked || btn.dataset.busy === '1';
@@ -4566,7 +4565,7 @@ function issueResolved(i) {
   const q = bookingQueue[i];
   delete q._mechIssue; delete q._opts;
   renderBookingQueue();
-  showCartToast('Updated. Press Confirm All Bookings to send it.');
+  showCartToast('Updated. Press Confirm Booking to send it.');
 }
 function issuePickMechanic(i, val) {
   const q = bookingQueue[i];
@@ -5131,15 +5130,15 @@ function updateConfirmButtonText() {
   if (!titleEl || !subEl) return;
 
   if (!selectedDate || !selectedTime || !selectedServiceNames.length) {
-    titleEl.textContent = 'Add to Queue';
+    titleEl.textContent = 'Review booking';
     subEl.style.display = 'none';
     return;
   }
 
   const startLabel = minutesToAmpmJS(hhmmToMinutes(selectedTime));
   titleEl.textContent = currentJobIsMultiday
-    ? `Confirm ${startLabel} Drop-off`
-    : (selectedEndLabel ? `Confirm ${startLabel} – ${selectedEndLabel}` : `Confirm ${startLabel}`);
+    ? `Review ${startLabel} Drop-off`
+    : (selectedEndLabel ? `Review ${startLabel} – ${selectedEndLabel}` : `Review ${startLabel}`);
 
   // Only a mechanic the customer picked is named here. When the shop assigns, nobody is promised in advance:
   // the customer is notified once the shop picks someone.
@@ -10444,7 +10443,7 @@ updateMechNote();
     dots.forEach(d => { const i = +d.dataset.s; d.classList.toggle('active', i === n); d.classList.toggle('done', i < n && i < 7); });
     msg.textContent = '';
     document.getElementById('bw-back').style.visibility = (n > 1 && n < 7) ? 'visible' : 'hidden';
-    document.getElementById('bw-next').style.display    = n < 6 ? '' : 'none';      // step 6 has its own "Add to Queue"; 7 has Confirm
+    document.getElementById('bw-next').style.display    = n < 6 ? '' : 'none';      // step 6 has its own "Review booking"; 7 has Confirm
     document.getElementById('bw-another').style.display = n === 7 ? '' : 'none';
     const pane = panes[n - 1]; if (pane) pane.scrollTop = 0;
   }
@@ -10463,7 +10462,9 @@ updateMechNote();
     if (cur < 7) show(cur + 1);
   };
   window.bwBack = function () { if (cur > 1 && cur < 7) show(cur - 1); };
-  window.bwAnother = function () { show(1); };           // the date stays selected; everything else was cleared after adding
+  // One booking at a time: reviewing replaces whatever was staged before, and "Change booking" clears it and starts again.
+  window.bwReview = function () { bookingQueue = []; if (typeof _queueOpen !== 'undefined') _queueOpen.clear(); renderBookingQueue(); addToBookingQueue(); };
+  window.bwAnother = function () { bookingQueue = []; if (typeof _queueOpen !== 'undefined') _queueOpen.clear(); renderBookingQueue(); show(1); };
   dots.forEach(d => d.addEventListener('click', () => { const i = +d.dataset.s; if (i < cur && i < 7) show(i); }));
 
   // Time slots arrive as one flat list (label, buttons, lunch line, label, buttons). Regroup them so the lunch line
