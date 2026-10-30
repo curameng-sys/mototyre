@@ -113,7 +113,7 @@
     /* ── PAGE WRAP ── */
     .page-main {
       min-height: 100vh;
-      padding: calc(64px + 2.5rem) 1.5rem 3rem;
+      padding: 2.5rem 1.5rem 3rem;
       display: flex;
       align-items: flex-start;
       justify-content: center;
@@ -122,7 +122,7 @@
     /* ── BIG CARD ── */
     .reg-card {
       width: 100%;
-      max-width: 960px;
+      max-width: 1120px;
       background: var(--bg-page);
       border-radius: var(--radius-xl);
       border: 1px solid var(--line-1);
@@ -496,14 +496,15 @@
     .wstep[data-step="2"] { min-height: 340px; }
     .wstep[data-step="2"] .moto-dropdown { max-height: 190px; }
     .wstep[data-step="2"].active ~ .wnav { margin-top: 0; }
+    @media (max-height: 720px) { .wstep[data-step="2"] { min-height: 235px; } .wstep[data-step="2"] .moto-dropdown { max-height: 100px; } }
     /* On a computer the whole registration fits the screen: no page scroll, each step is short */
     @media (min-width: 861px) {
       html, body { height: 100%; overflow: hidden; }
-      .page-main { height: 100vh; min-height: 0; padding: calc(64px + 1rem) 1.5rem 1rem; align-items: center; }
-      .reg-card { max-height: 100%; grid-template-rows: minmax(0, 1fr); }
-      .info-side { padding: 2rem 2.25rem; overflow: hidden; }
-      .info-img { max-height: 24vh; width: 100%; object-fit: cover; }
-      .form-side { padding: 1.5rem 2.5rem; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
+      .page-main { height: 100vh; min-height: 0; padding: 1rem 1.5rem; align-items: center; }
+      .reg-card { max-height: 100%; min-height: min(700px, 92vh); grid-template-rows: minmax(0, 1fr); }
+      .info-side { padding: 2.25rem 2.75rem; overflow: hidden; }
+      .info-img { max-height: 28vh; width: 100%; object-fit: cover; }
+      .form-side { padding: 1.5rem 3.5rem; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
       .form-sub { margin-bottom: 0.6rem; }
       .form-title { font-size: 1.9rem; }
       .form-title-underline { margin-bottom: 0.4rem; }
@@ -516,6 +517,16 @@
       .pass-checklist { display: grid; grid-template-columns: 1fr 1fr; column-gap: 0.75rem; }
       .terms-wrap { margin-top: 0.5rem; padding: 0.5rem 0.7rem; }
       .wstep[data-step="3"] > div[style*="eff6ff"] { margin-bottom: 0.6rem !important; padding: 0.55rem 0.75rem !important; }
+    }
+    /* Roomy screens: use the space instead of leaving it empty */
+    @media (min-width: 1500px) and (min-height: 860px) {
+      .reg-card { max-width: 1240px; min-height: min(820px, 90vh); }
+      .form-side { padding: 2rem 4rem; }
+      .form-title { font-size: 2.3rem; }
+      .field input, .field select { padding-top: 1.05rem; padding-bottom: 1.05rem; font-size: 1rem; }
+      .wnav .btn-next, .wnav .btn-submit, .wnav .btn-back { padding-top: 1.05rem; padding-bottom: 1.05rem; font-size: 1rem; }
+      .info-img { max-height: 32vh; }
+      .info-side { padding: 2.75rem 3.25rem; }
     }
     @media (min-width: 861px) and (max-height: 720px) {
       .info-img { display: none; }
@@ -701,18 +712,6 @@
 </head>
 <body>
 
-<!-- ── NAVBAR ── -->
-<nav class="nav-bar">
-  <span class="nav-logo">MOTO<span class="accent">TYRES</span></span>
-  <ul class="nav-links">
-    <li><a href="{{ url_for('home') }}">Home</a></li>
-    <li><a href="{{ url_for('home') }}#about">About</a></li>
-    <li><a href="{{ url_for('home') }}#services">Services</a></li>
-    <li><a href="{{ url_for('home') }}#products">Products</a></li>
-    <li><a href="{{ url_for('home') }}#contact">Contact</a></li>
-  </ul>
-  <a href="{{ url_for('login') }}" class="nav-cta">Sign In</a>
-</nav>
 
 <!-- ── MAIN ── -->
 <main class="page-main">
