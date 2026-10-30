@@ -387,6 +387,18 @@
       #services .svc-name { font-size: 24px; }
       #services .pagination { margin-top: 14px; }
     }
+    @media (min-width: 1100px) and (min-height: 700px) {
+      #how .inner { max-width: min(1560px, 94vw); }
+      #how .steps-line { display: none; }
+      #how .steps-grid { grid-template-columns: repeat(4, 1fr); gap: clamp(16px, 2.4vh, 28px); }
+      #how .step { background: var(--bg-panel); border: 1px solid var(--line-1); border-radius: 20px; box-shadow: var(--shadow-2);
+                   padding: clamp(22px, 4vh, 48px) clamp(20px, 2.2vw, 36px); gap: clamp(8px, 1.6vh, 18px); min-height: clamp(240px, 40vh, 460px); justify-content: center; }
+      #how .step-circle { width: clamp(56px, 9vh, 88px); height: clamp(56px, 9vh, 88px); }
+      #how .step-circle svg { width: clamp(24px, 4vh, 38px); height: clamp(24px, 4vh, 38px); }
+      #how .step-num { font-size: clamp(11px, 1.5vh, 14px); }
+      #how .step-title { font-size: clamp(24px, 3.6vh, 36px); }
+      #how .step-desc { font-size: clamp(14px, 2vh, 18px); }
+    }
   </style>
 </head>
 <body>

@@ -161,6 +161,36 @@
     @media(max-width:360px){
       .products-grid{grid-template-columns:1fr}
     }
+
+    /* ── FIXED SCREEN LAYOUT: the page itself never scrolls; only the product cards do ── */
+    html, body { height: 100%; overflow: hidden; }
+    body { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+    .page-hero { flex: 0 0 auto; padding: 16px clamp(20px,4vw,48px); box-shadow: 0 4px 16px rgba(28,24,20,0.14); }
+    .page-hero .eyebrow { margin-bottom: 4px; }
+    .page-hero h1 { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 4px; }
+    .page-hero p { font-size: 13px; line-height: 1.5; max-width: 640px; }
+    .filters-bar { flex: 0 0 auto; padding-top: 10px; padding-bottom: 10px; position: relative; z-index: 20; }
+    .products-section { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px clamp(20px,4vw,48px) 96px; box-shadow: none; border-top: none; }
+    .footer { flex: 0 0 auto; padding: 10px clamp(20px,4vw,48px); gap: 12px; border-top-width: 1px; }
+    .footer-logo { font-size: 18px; }
+    .pagination { display: none; }
+
+    /* Same number of cards in every row (fixed columns for each screen width), every row the same height */
+    .products-grid { --cols: 2; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); grid-auto-rows: 1fr; gap: clamp(12px, 1.4vw, 20px); }
+    @media (min-width: 700px)  { .products-grid { --cols: 3; } }
+    @media (min-width: 1000px) { .products-grid { --cols: 4; } }
+    @media (min-width: 1300px) { .products-grid { --cols: 5; } }
+    @media (min-width: 1700px) { .products-grid { --cols: 6; } }
+    @media (max-width: 340px)  { .products-grid { --cols: 1; } }
+    .product-card { min-width: 0; padding: 14px; gap: 6px; }
+    .product-img { height: clamp(72px, 13vh, 120px); margin-bottom: 2px; }
+    .product-name { overflow-wrap: anywhere; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .product-price { font-size: 20px; }
+    .add-cart { padding: 9px; margin-top: 2px; }
+
+    /* Small screens / short windows: even more compact so the cards get the room */
+    @media (max-width: 640px) { .page-hero p, .page-hero .eyebrow, .footer-links { display: none; } .footer { justify-content: center; } }
+    @media (max-height: 640px) { .page-hero p, .page-hero .eyebrow { display: none; } .footer { display: none; } }
   </style>
 </head>
 <body>
@@ -228,7 +258,7 @@
         {% else %}<i data-lucide="package" style="width:40px;height:40px"></i>{% endif %}
       </div>
       <div class="product-cat">{{ p.category }}</div>
-      <div class="product-name">{{ p.name }}</div>
+      <div class="product-name" title="{{ p.name }}">{{ p.name }}</div>
       {% if p.motor_model %}<div class="product-fit">Fits: {{ p.motor_model }}</div>{% endif %}
       <div class="product-price">₱{{ '{:,.2f}'.format(p.price) }}</div>
       {% if p.stock and p.stock > 0 %}
@@ -391,6 +421,7 @@
   }
   function filterProducts(cat, label) {
     activeFilter = cat;
+    document.querySelector('.products-section').scrollTop = 0;
     document.querySelectorAll('#catList li').forEach(function (li) { li.classList.toggle('sel', li.dataset.filter === cat); });
     document.getElementById('catLabel').textContent = label;
     prodGo(1);
@@ -405,7 +436,7 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setCatOpen(false); });
 
   // Pagination
-  var PROD_PER_PAGE = 10;
+  var PROD_PER_PAGE = 100000;          // everything in one scrolling list
   var prodPage = 1;
 
   function getFilteredCards() {
