@@ -967,9 +967,9 @@
     .bw-split { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(250px, 1fr); gap: clamp(1rem, 2.2vw, 2rem); flex: 1 0 auto; min-height: 0; width: 100%; }
     .bw-main { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
     .bw-main > .appt-section-label { margin-top: 0; }
-    .bw-recap { align-self: start; position: sticky; top: 0; border: 1px solid var(--line-2); border-radius: 14px; background: var(--bg-subtle); padding: 1rem 1.15rem 0.5rem; }
+    .bw-recap { align-self: stretch; display: flex; flex-direction: column; border: 1px solid var(--line-2); border-radius: 14px; background: var(--bg-subtle); padding: 1.1rem 1.25rem 0.4rem; }
     .bw-recap h4 { margin: 0 0 0.4rem; font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-2); }
-    .bw-recap .rc { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.7rem 0; border-top: 1px solid var(--line-1); }
+    .bw-recap .rc { flex: 1 1 0; min-height: 52px; display: flex; gap: 0.85rem; align-items: center; padding: 0.5rem 0; border-top: 1px solid var(--line-1); }          /* the rows share the whole height, so the spacing grows with the box */
     .bw-recap h4 + .rc { border-top: none; }
     .bw-recap .ic { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 9px; background: #fff; border: 1px solid var(--line-2); color: var(--fg-3); display: flex; align-items: center; justify-content: center; }
     .bw-recap .rc.set .ic { background: #dcfce7; border-color: #bbf7d0; color: #15803d; }
@@ -980,9 +980,16 @@
     .bw-recap .rc:not(.set) .tx span { color: var(--fg-3); font-weight: 400; font-style: italic; }
 
     /* Step 2: services as cards you tick, in two columns */
+    .bw-pane[data-bstep="2"] { overflow: hidden; }
+    .bw-pane[data-bstep="2"] .bw-split { flex: 1 1 auto; min-height: 0; }
     .bw-pane[data-bstep="2"] .bw-main > .form-group { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0; }
+    .bw-off { display: none !important; }
+    #bw-svc-pager { flex: 0 0 auto; min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 0.5rem; font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--fg-2); }
+    #bw-svc-pager button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line-2); background: #fff; color: var(--fg-1); cursor: pointer; font-size: 1rem; line-height: 1; }
+    #bw-svc-pager button:hover:not(:disabled) { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+    #bw-svc-pager button:disabled { opacity: .35; cursor: not-allowed; }
     .bw-pane[data-bstep="2"] #service-search { padding: 0.85rem 1rem; font-size: 0.98rem; margin-bottom: 0.7rem !important; }
-    .bw-pane[data-bstep="2"] #service-checklist { flex: 1; min-height: 140px; max-height: none !important; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.6rem; align-content: start; border: none !important; background: transparent !important; padding: 0.1rem 0.25rem 0.1rem 0; }
+    .bw-pane[data-bstep="2"] #service-checklist { flex: 1; min-height: 140px; max-height: none !important; overflow: hidden; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.6rem; align-content: start; border: none !important; background: transparent !important; padding: 0.1rem 0.25rem 0.1rem 0; }
     .bw-pane[data-bstep="2"] #service-checklist > div:not(.svc-row) { grid-column: 1 / -1; }
     .bw-pane[data-bstep="2"] .form-group .svc-row { margin: 0; padding: 0.85rem 0.95rem; border-radius: 12px; border: 1.5px solid var(--line-2); background: #fff; font-size: 0.9rem; }
     .bw-pane[data-bstep="2"] .form-group .svc-row:hover { border-color: var(--brand-red-border); background: #fff; }
@@ -994,6 +1001,14 @@
     .bw-pane[data-bstep="3"] .time-slot-btn { padding: 0.95rem 0.5rem; border-radius: 12px; }
     .bw-pane[data-bstep="3"] .time-slot-btn .slot-start { font-size: 1.02rem; }
     .bw-pane[data-bstep="3"] .time-slot-btn .slot-sub { font-size: 0.72rem; }
+    /* the time buttons share all the height of the box (the rows stretch), so there is no empty block under them */
+    .bw-pane[data-bstep="3"] .bw-split { flex: 1 1 auto; min-height: 0; }
+    .bw-pane[data-bstep="3"] .bw-main { flex: 1; min-height: 0; }
+    .bw-pane[data-bstep="3"] #time-slots-wrap { flex: 1; min-height: 0; align-content: stretch; grid-auto-rows: auto; }
+    .bw-pane[data-bstep="3"] .time-slot-btn { align-self: stretch; min-height: 52px; }
+    .bw-pane[data-bstep="3"] .slot-group-label { align-self: end; }
+    .bw-pane[data-bstep="3"] .slot-lunch { align-self: center; }
+    @media (max-height: 800px) { .bw-pane[data-bstep="3"] .time-slot-btn { padding-top: 0.45rem; padding-bottom: 0.45rem; min-height: 44px; } }
 
     /* Step 4: the motorcycle and the odometer as two cards */
     .bw-pane[data-bstep="4"] .bw-main .form-grid { grid-template-columns: 1fr; gap: 1rem; }
@@ -1015,8 +1030,8 @@
 
     @media (max-width: 860px) {
       .bw-split { grid-template-columns: 1fr; }
-      .bw-recap { position: static; order: -1; padding-bottom: 0.2rem; }
-      .bw-recap .rc { padding: 0.45rem 0; }
+      .bw-recap { align-self: start; order: -1; padding-bottom: 0.2rem; }
+      .bw-recap .rc { flex: 0 0 auto; min-height: 0; padding: 0.45rem 0; }
       .bw-recap .ic { width: 26px; height: 26px; }
     }
     @media (max-height: 800px) {
@@ -10238,6 +10253,7 @@ updateMechNote();
     document.getElementById('bw-next').style.display    = n < 6 ? '' : 'none';      // step 6 has its own "Add to Queue"; 7 has Confirm
     document.getElementById('bw-another').style.display = n === 7 ? '' : 'none';
     const pane = panes[n - 1]; if (pane) pane.scrollTop = 0;
+    if (n === 2 && window.bwPageServices) requestAnimationFrame(() => window.bwPageServices());
   }
 
   window.bwNext = function () {
@@ -10273,6 +10289,48 @@ updateMechNote();
   window.addEventListener('resize', fit);
   const active = document.querySelector('.c-section.active');
   lock(active ? active.id.replace('sec-', '') : '');
+
+  // ── Step 2: as many services as fit the box, a page at a time, so nothing has to scroll ──
+  let svcPage = 1, lastSearch = '';
+  function pageServices() {
+    const list = document.getElementById('service-checklist');
+    const pane = document.querySelector('#bw .bw-pane[data-bstep="2"]');
+    if (!list || !pane || !pane.classList.contains('active')) return;
+    let pager = document.getElementById('bw-svc-pager');
+    if (!pager) {
+      pager = document.createElement('div'); pager.id = 'bw-svc-pager';
+      pager.innerHTML = '<button type="button" id="bw-svc-prev" aria-label="Previous page">&larr;</button><span id="bw-svc-pg"></span><button type="button" id="bw-svc-next" aria-label="Next page">&rarr;</button>';
+      list.parentNode.insertBefore(pager, list.nextSibling);
+      document.getElementById('bw-svc-prev').onclick = () => { svcPage--; pageServices(); };
+      document.getElementById('bw-svc-next').onclick = () => { svcPage++; pageServices(); };
+    }
+    const rows = [...list.children].filter(el => el.classList.contains('svc-row'));
+    rows.forEach(r => r.classList.remove('bw-off'));
+    if (!rows.length) { pager.style.visibility = 'hidden'; return; }
+    const gap = parseFloat(getComputedStyle(list).rowGap) || 10;
+    const rowH = Math.max(...rows.map(r => r.offsetHeight)) || 50;
+    const cols = Math.max(1, getComputedStyle(list).gridTemplateColumns.split(' ').length);
+    const fit = Math.max(1, Math.floor((list.clientHeight + gap) / (rowH + gap)));
+    const per = cols * fit, pages = Math.max(1, Math.ceil(rows.length / per));
+    svcPage = Math.min(Math.max(1, svcPage), pages);
+    rows.forEach((r, i) => r.classList.toggle('bw-off', i < (svcPage - 1) * per || i >= svcPage * per));
+    pager.style.visibility = pages > 1 ? 'visible' : 'hidden';
+    document.getElementById('bw-svc-pg').textContent = 'Page ' + svcPage + ' of ' + pages;
+    document.getElementById('bw-svc-prev').disabled = svcPage <= 1;
+    document.getElementById('bw-svc-next').disabled = svcPage >= pages;
+  }
+  const _renderSvc = window.renderServiceChecklist;
+  if (typeof _renderSvc === 'function') {
+    window.renderServiceChecklist = function () {
+      const r = _renderSvc.apply(this, arguments);
+      const q = (document.getElementById('service-search') || {}).value || '';
+      if (q !== lastSearch) { lastSearch = q; svcPage = 1; }          // a new search starts on page 1
+      pageServices();
+      return r;
+    };
+  }
+  window.addEventListener('resize', () => setTimeout(pageServices, 60));
+  window.bwPageServices = pageServices;
 
   show(1);
 })();
