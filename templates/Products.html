@@ -119,8 +119,18 @@
     .cart-note{font-size:12px;color:var(--fg-3);line-height:1.5;margin-bottom:12px}
     .cart-go{display:block;width:100%;text-align:center;padding:13px;border-radius:10px;background:var(--brand-red);color:#fff;font-family:var(--font-label);font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none}
     .cart-empty{color:var(--fg-3);text-align:center;padding:40px 0;font-size:14px}
-    .cart-toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--fg-1);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:80;opacity:0;pointer-events:none;transition:opacity 160ms}
-    .cart-toast.show{opacity:1}
+    .cart-toast{position:fixed;top:84px;right:20px;z-index:300;display:flex;align-items:center;gap:12px;max-width:min(420px,calc(100vw - 40px));background:var(--fg-1);color:#fff;padding:12px 14px 12px 12px;border-radius:12px;box-shadow:0 12px 32px rgba(28,24,20,0.35);font-size:13px;line-height:1.35;opacity:0;transform:translateY(-10px);pointer-events:none;transition:opacity 180ms var(--ease),transform 180ms var(--ease)}
+    .cart-toast.show{opacity:1;transform:none;pointer-events:auto}
+    .cart-toast .ck{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:#16a34a;display:flex;align-items:center;justify-content:center}
+    .cart-toast.warn .ck{background:#d97706}
+    .cart-toast .msg{flex:1;min-width:0;overflow-wrap:anywhere}
+    .cart-toast .msg b{display:block;font-size:12px;opacity:.75;font-weight:600}
+    .cart-toast .view{flex:0 0 auto;border:none;border-radius:8px;background:#fff;color:var(--fg-1);padding:7px 12px;font-family:var(--font-label);font-weight:700;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer}
+    .cart-toast .view:hover{background:var(--brand-red);color:#fff}
+    .add-cart.added{background:#16a34a !important;color:#fff !important}
+    .nav-cart.bump{animation:cartBump 520ms var(--ease)}
+    @keyframes cartBump{0%{transform:scale(1)}30%{transform:scale(1.28) rotate(-8deg)}60%{transform:scale(.94)}100%{transform:scale(1)}}
+    @media(max-width:640px){.cart-toast{left:12px;right:12px;top:80px;max-width:none}}
 
     /* ── PAGINATION ── */
     .pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:32px;flex-wrap:wrap}
@@ -162,6 +172,11 @@
       .products-grid{grid-template-columns:1fr}
     }
 
+    .nav-cart{position:relative;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;margin-left:8px;border:1px solid var(--line-2);border-radius:12px;background:#fff;color:var(--fg-1);cursor:pointer;flex-shrink:0;transition:all 120ms var(--ease)}
+    .nav-cart:hover{border-color:var(--brand-red);color:var(--brand-red);background:var(--brand-red-soft)}
+    .nav-cart .cnt{position:absolute;top:-6px;right:-6px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--brand-red);color:#fff;font-family:var(--font-label);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+    .nav-cart .cnt:empty,.nav-cart .cnt[data-zero="1"]{display:none}
+    @media(max-width:900px){ .nav-cart{order:2;margin-left:auto} .nav-toggle{order:3} }
     /* ── FIXED SCREEN LAYOUT: the page itself never scrolls; only the product cards do ── */
     html, body { height: 100%; overflow: hidden; }
     body { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
@@ -170,7 +185,7 @@
     .page-hero h1 { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 4px; }
     .page-hero p { font-size: 13px; line-height: 1.5; max-width: 640px; }
     .filters-bar { flex: 0 0 auto; padding-top: 10px; padding-bottom: 10px; position: relative; z-index: 20; }
-    .products-section { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px clamp(20px,4vw,48px) 96px; box-shadow: none; border-top: none; }
+    .products-section { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px clamp(20px,4vw,48px) 24px; box-shadow: none; border-top: none; }
     .footer { flex: 0 0 auto; padding: 10px clamp(20px,4vw,48px); gap: 12px; border-top-width: 1px; }
     .footer-logo { font-size: 18px; }
     .pagination { display: none; }
@@ -211,7 +226,11 @@
     <a href="/#feedback" onclick="setNavActive(this)">Feedback</a>
     <a href="{{ url_for('login') }}" class="nav-cta">Sign In →</a>
   </div>
-  <div class="nav-overlay" id="navOverlay" style="display:none;position:fixed;inset:0;background:rgba(28,24,20,0.4);z-index:199;" onclick="closeNav()"></div>
+  <button type="button" class="nav-cart" onclick="openCart()" aria-label="Open cart" title="Cart">
+    <i data-lucide="shopping-cart" style="width:20px;height:20px"></i>
+    <span class="cnt" id="cartCnt">0</span>
+  </button>
+    <div class="nav-overlay" id="navOverlay" style="display:none;position:fixed;inset:0;background:rgba(28,24,20,0.4);z-index:199;" onclick="closeNav()"></div>
 </nav>
 
 <!-- PAGE HEADER -->
@@ -277,24 +296,8 @@
   </div>
 </section>
 
-<!-- FOOTER -->
-<footer class="footer">
-  <div class="footer-logo">MOTO<span>TYRES</span></div>
-  <div class="footer-links">
-    <a href="/#about">About</a>
-    <a href="/products">Products</a>
-    <a href="/#services">Services</a>
-    <a href="/#contact">Contact</a>
-    <a href="{{ url_for('login') }}">Sign In</a>
-    <a href="{{ url_for('register') }}">Register</a>
-  </div>
-  <div class="footer-copy">© <span id="yr"></span> MotoTyres. All rights reserved.</div>
-</footer>
 
 <!-- CART (a guest's cart lives in this browser; checking out needs an account) -->
-<button type="button" class="cart-fab" onclick="openCart()" aria-label="Open cart">
-  <i data-lucide="shopping-cart" style="width:16px;height:16px"></i> Cart <span class="cnt" id="cartCnt">0</span>
-</button>
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
 <aside class="cart-drawer" id="cartDrawer" aria-label="Your cart">
   <div class="cart-head"><span>YOUR CART</span><button type="button" onclick="closeCart()" aria-label="Close">&times;</button></div>
@@ -311,7 +314,11 @@
     {% endif %}
   </div>
 </aside>
-<div class="cart-toast" id="cartToast"></div>
+<div class="cart-toast" id="cartToast" role="status" aria-live="polite">
+  <span class="ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+  <span class="msg" id="cartToastMsg"></span>
+  <button type="button" class="view" id="cartToastView" onclick="hideCartToast(); openCart()">View Cart</button>
+</div>
 
 <script>
   // Same item shape as the customer dashboard cart, so a guest cart carries over after login.
@@ -323,31 +330,53 @@
   }
   function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {} }
   function peso(n) { return '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function cartToast(msg) {
-    var t = document.getElementById('cartToast'); t.textContent = msg; t.classList.add('show');
-    clearTimeout(cartToast._t); cartToast._t = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  function hideCartToast() { document.getElementById('cartToast').classList.remove('show'); }
+  // title: bold small line above the message; warn: an amber check instead of a green one (limits, stock)
+  function cartToast(msg, opts) {
+    opts = opts || {};
+    var t = document.getElementById('cartToast');
+    var m = document.getElementById('cartToastMsg'); m.textContent = '';
+    if (opts.title) { var b = document.createElement('b'); b.textContent = opts.title; m.appendChild(b); }
+    m.appendChild(document.createTextNode(msg));
+    t.classList.toggle('warn', !!opts.warn);
+    document.getElementById('cartToastView').style.display = opts.warn ? 'none' : '';
+    t.classList.add('show');
+    clearTimeout(cartToast._t); cartToast._t = setTimeout(hideCartToast, opts.warn ? 2600 : 3200);
+  }
+  function bumpCart() {
+    var c = document.querySelector('.nav-cart'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump');
+  }
+  function flashAdded(btn, qty) {
+    if (!btn) return;
+    if (!btn._label) btn._label = btn.textContent;
+    btn.textContent = '\u2713 Added' + (qty > 1 ? ' (' + qty + ' in cart)' : '');
+    btn.classList.add('added');
+    clearTimeout(btn._t); btn._t = setTimeout(function () { btn.textContent = btn._label; btn.classList.remove('added'); }, 1600);
   }
   function addToCart(btn) {
     var id = parseInt(btn.dataset.id), stock = parseInt(btn.dataset.stock), name = btn.dataset.name;
     var ex = cart.find(function (i) { return i.id === id; });
     if (ex) {
-      if (ex.qty >= MAX_QTY) { cartToast('Up to ' + MAX_QTY + ' per item online'); return; }
-      if (ex.qty >= stock) { cartToast(name + ': max stock reached'); return; }
+      if (ex.qty >= MAX_QTY) { cartToast('Up to ' + MAX_QTY + ' per item online.', { warn: true }); return; }
+      if (ex.qty >= stock) { cartToast(name + ': max stock reached.', { warn: true }); return; }
       ex.qty++; ex.stock = stock;
     } else cart.push({ id: id, name: name, price: parseFloat(btn.dataset.price), stock: stock, qty: 1, category: btn.dataset.category || '' });
-    saveCart(); renderCart(); cartToast(name + ' added to cart');
+    var q = (cart.find(function (i) { return i.id === id; }) || {}).qty || 1;
+    saveCart(); renderCart(); flashAdded(btn, q); bumpCart();
+    cartToast(name, { title: 'Added to your cart' });
   }
   function changeQty(id, d) {
     var it = cart.find(function (i) { return i.id === id; }); if (!it) return;
     var q = it.qty + d;
     if (q < 1) return removeItem(id);
-    if (q > MAX_QTY) { cartToast('Up to ' + MAX_QTY + ' per item online'); return; }
-    if (q > it.stock) { cartToast('Max stock reached'); return; }
+    if (q > MAX_QTY) { cartToast('Up to ' + MAX_QTY + ' per item online.', { warn: true }); return; }
+    if (q > it.stock) { cartToast('Max stock reached.', { warn: true }); return; }
     it.qty = q; saveCart(); renderCart();
   }
   function removeItem(id) { cart = cart.filter(function (i) { return i.id !== id; }); saveCart(); renderCart(); }
   function renderCart() {
-    document.getElementById('cartCnt').textContent = cart.reduce(function (s, i) { return s + i.qty; }, 0);
+    var n = cart.reduce(function (s, i) { return s + i.qty; }, 0);
+    var cc = document.getElementById('cartCnt'); cc.textContent = n; cc.dataset.zero = n ? '0' : '1';
     var list = document.getElementById('cartList');
     if (!cart.length) list.innerHTML = '<div class="cart-empty">Your cart is empty.</div>';
     else {
@@ -481,7 +510,6 @@
 
   prodGo(1);
 
-  document.getElementById('yr').textContent = new Date().getFullYear();
 </script>
 </body>
 </html>

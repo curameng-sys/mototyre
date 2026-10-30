@@ -900,6 +900,62 @@
       #cart-toast { left: 1rem !important; right: 1rem !important; bottom: 1rem !important; max-width: none !important; }
       .cal-legend-bar { flex-wrap: wrap; row-gap: 0.4rem; }
     }
+
+    /* ── STEP-BY-STEP BOOKING (Appointments): one piece of information per step, and the browser page does not scroll ── */
+    body.book-lock { overflow: hidden; }
+    /* the small messages ("Added to queue") go to the top here, so they never cover the Back / Next buttons */
+    body.book-lock #cart-toast { bottom: auto !important; top: 84px !important; right: 1.5rem !important; left: auto !important; max-width: min(420px, calc(100vw - 2rem)) !important; }
+    body.book-lock .page-wrap { padding-bottom: 0; }
+    #sec-book.active { height: calc(100vh - var(--nav-h, 72px)); height: calc(100dvh - var(--nav-h, 72px)); padding: 1rem clamp(1rem, 5vw, 4.5rem) 1.25rem; display: flex; flex-direction: column; box-sizing: border-box; }
+    .bw { width: 100%; max-width: 1180px; margin: 0 auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+    .bw-head { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; flex: 0 0 auto; }
+    .bw-head .section-title { font-size: clamp(1.4rem, 2.4vw, 1.9rem); }
+    .bw-steps { list-style: none; display: flex; align-items: center; gap: 0.35rem; margin: 0 auto; padding: 0; }
+    .bw-steps li { display: flex; align-items: center; gap: 0.4rem; font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-3); }
+    .bw-steps li + li::before { content: ''; width: clamp(8px, 1.6vw, 22px); height: 2px; background: var(--line-2); }
+    .bw-steps .d { width: 26px; height: 26px; border-radius: 50%; background: var(--line-2); color: var(--fg-3); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; transition: all .2s; }
+    .bw-steps li.active { color: var(--fg-1); }
+    .bw-steps li.active .d { background: var(--brand-red); color: #fff; box-shadow: 0 0 0 4px var(--brand-red-soft); }
+    .bw-steps li.done { color: var(--brand-red); cursor: pointer; }
+    .bw-steps li.done .d { background: #15803d; color: #fff; }
+    .bw-steps li.done + li::before, .bw-steps li.active::before { background: #15803d; }
+    .bw-stage { flex: 1; min-height: 0; background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px; box-shadow: 0 6px 24px rgba(28,24,20,0.18); overflow: hidden; }
+    .bw-pane { display: none; height: 100%; overflow-y: auto; padding: clamp(1rem, 3vh, 1.75rem) clamp(1.25rem, 3.5vw, 2.75rem); box-sizing: border-box; animation: bwIn .22s ease both; }
+    .bw-pane.active { display: block; }
+    @keyframes bwIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+    .bw-q { font-family: 'Bebas Neue', sans-serif; font-size: clamp(1.5rem, 2.6vw, 2rem); letter-spacing: 0.04em; margin: 0 0 0.25rem; color: var(--fg-1); font-weight: 400; }
+    .bw-hint { font-size: 0.85rem; color: var(--fg-3); margin: 0 0 0.9rem; }
+    .bw-pane:not([data-bstep="1"]) .bw-q { max-width: 820px; margin-left: auto; margin-right: auto; margin-bottom: 0.35rem; }
+    .bw-narrow { max-width: 820px; margin: 0 auto; }
+    .bw-narrow > .appt-section-label:first-child { margin-top: 0.25rem; }
+    .bw-cols { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+    .bw .appt-cal-card { box-shadow: none; border-radius: 12px; }
+    .bw .appt-cal-header { padding: 0.6rem 1rem; }
+    .bw .appt-cal-body { padding: 0.6rem 1rem; }
+    .bw .cal-day { aspect-ratio: auto; height: clamp(30px, 5.4vh, 46px); }
+    .bw .cal-legend-bar { padding: 0.5rem 1rem; gap: 0.7rem; }
+    .bw .appt-date-chip { margin-bottom: 1rem; }
+    .bw-foot { flex: 0 0 auto; display: flex; align-items: center; gap: 1rem; }
+    #bw-msg { flex: 1; min-width: 0; font-size: 0.84rem; color: #b91c1c; font-weight: 600; line-height: 1.35; }
+    .bw-btn { border: none; border-radius: 10px; padding: 0.8rem 1.6rem; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: all .15s; }
+    .bw-btn.primary { background: var(--brand-red); color: #fff; }
+    .bw-btn.primary:hover { background: #a8001a; }
+    .bw-btn.ghost { background: var(--bg-page); color: var(--fg-2); border: 1.5px solid var(--line-2); }
+    .bw-btn.ghost:hover { border-color: var(--fg-3); color: var(--fg-1); }
+    @media (max-height: 800px) {
+      .bw-pane { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+      .bw-hint { margin-bottom: 0.5rem; }
+      .bw .cal-day { height: clamp(28px, 4.9vh, 40px); }
+      .bw .appt-cal-body { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+      .bw .appt-cal-header { padding-top: 0.45rem; padding-bottom: 0.45rem; }
+    }
+    @media (max-width: 860px) {
+      .bw-cols { grid-template-columns: 1fr; }
+      .bw-steps .l { display: none; }
+      .bw-steps li.active .l { display: inline; }
+      .bw-steps { margin: 0; flex: 1; justify-content: center; }
+      .bw-btn { padding: 0.75rem 1.1rem; }
+    }
   </style>
 </head>
 <body>
@@ -1178,13 +1234,24 @@
 
   <!-- ── BOOK ── -->
 <section id="sec-book" class="c-section">
-
-  <!-- Section Banner -->
-  <div class="appt-banner">
-    <div>
-<div class="section-title" style="margin-bottom:0.35rem;">SCHEDULE A <span>SERVICE</span></div>
-      <div class="section-sub">Select a date on the calendar, choose a time slot, then fill in your vehicle and contact details. You can queue multiple appointments before confirming.</div>
-    </div>
+  <!-- Step-by-step booking: one piece of information at a time. The page itself never scrolls. -->
+  <div class="bw" id="bw">
+    <div class="bw-head">
+      <div class="section-title" style="margin:0;">SCHEDULE A <span>SERVICE</span></div>
+      <ol class="bw-steps" id="bw-steps" aria-label="Booking steps">
+        <li data-s="1"><span class="d">1</span><span class="l">Date</span></li>
+        <li data-s="2"><span class="d">2</span><span class="l">Services</span></li>
+        <li data-s="3"><span class="d">3</span><span class="l">Time</span></li>
+        <li data-s="4"><span class="d">4</span><span class="l">Motorcycle</span></li>
+        <li data-s="5"><span class="d">5</span><span class="l">Mechanic</span></li>
+        <li data-s="6"><span class="d">6</span><span class="l">Notes</span></li>
+        <li data-s="7"><span class="d">7</span><span class="l">Confirm</span></li>
+      </ol>
+      <div id="queue-badge-wrap" style="display:block;background:var(--brand-red-soft);border:1px solid var(--brand-red-border);border-radius:8px;padding:0.3rem 0.75rem;font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:var(--brand-red);white-space:nowrap;">
+        <span id="queue-chip-text">0 in queue</span>
+      </div>
+      <!-- the old 3-step indicator, kept hidden because other code still updates it -->
+      <div style="display:none;">
     <div class="appt-steps">
       <div class="appt-step active" id="appt-step-1">
         <div class="appt-step-num">1</div>
@@ -1201,12 +1268,16 @@
         <div class="appt-step-lbl">Confirm</div>
       </div>
     </div>
-  </div>
+      </div>
+    </div>
 
-  <div class="book-grid">
+    <div class="bw-stage">
 
-    <!-- LEFT: Calendar (ends at its legend), then the upcoming bookings in their own card -->
-    <div class="appt-left" style="display:flex;flex-direction:column;gap:1.5rem;min-width:0;">
+      <div class="bw-pane active" data-bstep="1">
+        <h3 class="bw-q">When would you like to come in?</h3>
+        <p class="bw-hint">Pick a date on the calendar. Green days are available.</p>
+        <div class="bw-cols">
+          <div>
     <div class="appt-cal-card">
       <div class="appt-cal-header">
         <button onclick="changeMonth(-1)" class="cal-nav-btn">
@@ -1234,26 +1305,8 @@
         <span><span class="cal-legend-dot" style="background:#7c3aed;border:1px solid #7c3aed;border-radius:50%;width:8px;height:8px;"></span>Your booking</span>
       </div>
     </div>
-    <div class="appt-cal-card">
-      <div id="upcoming-bookings" style="padding:1rem 1.25rem 1.25rem;">
-        <div class="appt-section-label" style="margin-top:0.5rem;">Your Upcoming Bookings</div>
-        <div id="upcoming-bookings-list" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
-        <div id="booking-limits" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.6rem;margin-top:0.9rem;"></div>
-      </div>
-    </div>
-    </div>
-
-    <!-- RIGHT: Booking Form -->
-    <div class="appt-form-card">
-      <div class="appt-form-header">
-        <h5>Booking Details</h5>
-        <div id="queue-badge-wrap" style="display:block;background:var(--brand-red-soft);border:1px solid var(--brand-red-border);border-radius:8px;padding:0.3rem 0.75rem;font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:var(--brand-red);">
-          <span id="queue-chip-text">0 in queue</span>
-        </div>
-      </div>
-      <div class="appt-form-body">
-        <div id="single-booking-form">
-
+          </div>
+          <div>
           <!-- Date display chip -->
           <div class="appt-date-chip">
             <div class="appt-date-chip-icon">
@@ -1266,6 +1319,21 @@
           </div>
           <input type="hidden" id="selected-date-value">
 
+
+    <div class="appt-cal-card">
+      <div id="upcoming-bookings" style="padding:1rem 1.25rem 1.25rem;">
+        <div class="appt-section-label" style="margin-top:0.5rem;">Your Upcoming Bookings</div>
+        <div id="upcoming-bookings-list" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+        <div id="booking-limits" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.6rem;margin-top:0.9rem;"></div>
+      </div>
+    </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bw-pane" data-bstep="2">
+        <h3 class="bw-q">What do you need done?</h3>
+        <div class="bw-narrow">
           <!-- Service type -->
           <div class="appt-section-label">Service Type <span style="color:var(--fg-3);font-weight:400;font-size:0.72rem;text-transform:none;letter-spacing:0;">(select one or more · up to 4 hours per booking)</span></div>
           <div class="form-group">
@@ -1285,6 +1353,12 @@
             <div id="service-multiday-note" style="display:none;margin-top:0.4rem;font-size:0.72rem;color:#c2410c;"></div>
           </div>
 
+        </div>
+      </div>
+
+      <div class="bw-pane" data-bstep="3">
+        <h3 class="bw-q">Choose a time</h3>
+        <div class="bw-narrow">
           <!-- Time slots -->
           <div class="appt-section-label" id="time-slots-heading">Available Time Slots</div>
           <div id="time-clear-notice" class="amber-notice" style="display:none;"></div>
@@ -1293,6 +1367,12 @@
           </div>
           <input type="hidden" id="selected-time-value">
 
+        </div>
+      </div>
+
+      <div class="bw-pane" data-bstep="4">
+        <h3 class="bw-q">Which motorcycle is it for?</h3>
+        <div class="bw-narrow">
           <!-- Vehicle information -->
           <div class="appt-section-label">Vehicle Information</div>
           <div class="form-grid">
@@ -1312,6 +1392,12 @@
             </div>
           </div>
           <div id="moto-booked-note" style="display:none;margin:-0.2rem 0 0.9rem;padding:0.7rem 0.85rem;background:#fefce8;border:1px solid #fde68a;border-radius:10px;font-size:0.78rem;color:#713f12;line-height:1.5;"></div>
+        </div>
+      </div>
+
+      <div class="bw-pane" data-bstep="5">
+        <h3 class="bw-q">Who should work on it?</h3>
+        <div class="bw-narrow">
           <div class="form-group">
             <label>Mechanic</label>
             <div style="font-size:0.75rem;color:var(--fg-3);margin-bottom:0.5rem;">Name who you want, or leave it to the shop — both are fine.</div>
@@ -1367,6 +1453,12 @@
             </div>
             <div id="mech-note" style="font-size:0.8rem;color:var(--fg-2);margin-top:0.6rem;line-height:1.4;padding:0.7rem 0.85rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;"></div>
           </div>
+        </div>
+      </div>
+
+      <div class="bw-pane" data-bstep="6">
+        <h3 class="bw-q">Anything we should know?</h3>
+        <div class="bw-narrow">
           <div class="form-group">
             <label>Additional Notes</label>
             <textarea id="booking-notes" rows="2" placeholder="Describe your concern or any special requests..."></textarea>
@@ -1390,7 +1482,11 @@
             </button>
           </div>
         </div>
+      </div>
 
+      <div class="bw-pane" data-bstep="7">
+        <h3 class="bw-q">Review &amp; confirm</h3>
+        <div class="bw-narrow">
         <!-- Booking Queue Panel -->
         <div id="booking-queue-panel" style="display:block;margin-top:1.5rem;">
           <div class="appt-section-label" style="margin-top:0;">Booking Queue</div>
@@ -1432,7 +1528,16 @@
           <div id="policy-hint" style="display:none;margin-top:0.45rem;font-size:0.72rem;color:var(--fg-3);text-align:center;"></div>
         </div>
 
+        </div>
       </div>
+
+    </div>
+
+    <div class="bw-foot">
+      <button type="button" class="bw-btn ghost" id="bw-back" onclick="bwBack()">&larr; Back</button>
+      <div id="bw-msg" role="alert"></div>
+      <button type="button" class="bw-btn primary" id="bw-next" onclick="bwNext()">Next &rarr;</button>
+      <button type="button" class="bw-btn primary" id="bw-another" onclick="bwAnother()" style="display:none;">+ Book another service</button>
     </div>
   </div>
 </section>
@@ -2926,7 +3031,7 @@
       cart.push({ id, name, price, stock, qty: 1, category });
     }
     updateCartBadge();
-    showCartToast(name + ' added to cart!');
+    showAddedToCart(name, (cart.find(i => i.id === id) || {}).qty || 1);
   }
 
   function cartLimit(item) { return Math.max(0, Math.min(MAX_ONLINE_QTY, item.stock)); }
@@ -3117,6 +3222,43 @@
 
   function getCartTotal() {
     return cart.reduce((s, i) => s + i.price * (i.qty || 0), 0);
+  }
+
+  // A clear "it is in your cart" confirmation: a message at the top (next to the cart) with a View Cart button,
+  // and the cart button in the top bar bounces. Warnings (limits, stock) keep using the small bottom message.
+  function showAddedToCart(name, qty) {
+    if (!document.getElementById('added-toast-css')) {
+      const st = document.createElement('style'); st.id = 'added-toast-css';
+      st.textContent = `
+        #added-toast{position:fixed;top:84px;right:1.5rem;z-index:3000;display:flex;align-items:center;gap:0.75rem;max-width:min(420px,calc(100vw - 2rem));
+          background:#1c1814;color:#fff;padding:0.75rem 0.85rem 0.75rem 0.75rem;border-radius:12px;box-shadow:0 12px 32px rgba(28,24,20,0.35);
+          font-family:'DM Sans',sans-serif;font-size:0.84rem;line-height:1.35;opacity:0;transform:translateY(-10px);pointer-events:none;transition:opacity .18s,transform .18s}
+        #added-toast.show{opacity:1;transform:none;pointer-events:auto}
+        #added-toast .ck{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:#16a34a;display:flex;align-items:center;justify-content:center}
+        #added-toast .msg{flex:1;min-width:0;overflow-wrap:anywhere}
+        #added-toast .msg, #added-toast .msg *{color:#fff !important}
+        #added-toast .msg b{display:block;font-size:0.74rem;opacity:.75;font-weight:600}
+        #added-toast button{flex:0 0 auto;border:none;border-radius:8px;background:#fff;color:#1c1814;padding:0.45rem 0.8rem;font-family:'Syne',sans-serif;font-weight:700;font-size:0.68rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+        #added-toast button:hover{background:var(--brand-red);color:#fff}
+        .nav-cart.bump{animation:cartBump .52s cubic-bezier(.2,.7,.2,1)}
+        @keyframes cartBump{0%{transform:scale(1)}30%{transform:scale(1.22) rotate(-6deg)}60%{transform:scale(.95)}100%{transform:scale(1)}}
+        @media(max-width:640px){ #added-toast{left:1rem;right:1rem;top:76px;max-width:none}}`;
+      document.head.appendChild(st);
+    }
+    let t = document.getElementById('added-toast');
+    if (!t) {
+      t = document.createElement('div'); t.id = 'added-toast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite');
+      t.innerHTML = '<span class="ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>'
+                  + '<span class="msg"><b>Added to your cart</b><span class="nm"></span></span>'
+                  + '<button type="button">View Cart</button>';
+      t.querySelector('button').onclick = () => { t.classList.remove('show'); openCart(); };
+      document.body.appendChild(t);
+    }
+    t.querySelector('.nm').textContent = name + (qty > 1 ? ` (${qty} in cart)` : '');
+    t.classList.add('show');
+    clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 3400);
+    const c = document.querySelector('.nav-cart');
+    if (c) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
   }
 
   function showCartToast(msg) {
@@ -8506,7 +8648,7 @@ function addToCartFromInfo() {
   }
 
   updateCartBadge();
-  showCartToast(currentProductInfo.name + ' added to cart!');
+  showAddedToCart(currentProductInfo.name, (cart.find(i => i.id === currentProductInfo.id) || {}).qty || qty);
   closeModal('modal-product-info');
 }
 
@@ -9933,5 +10075,72 @@ renderMechSelect();
 updateMechNote();
 </script>
 
+
+<script>
+// Step-by-step booking. All the booking logic is the existing one; this only decides which piece is showing.
+(function () {
+  const panes = [...document.querySelectorAll('#bw .bw-pane')];
+  const dots  = [...document.querySelectorAll('#bw-steps li')];
+  const msg = document.getElementById('bw-msg');
+  let cur = 1, reached = 1;
+
+  // What is still missing before the person can leave step n ('' when it is fine)
+  function problem(n) {
+    if (n === 1 && !document.getElementById('selected-date-value').value) return 'Please pick a date on the calendar.';
+    if (n === 2 && !selectedServiceNames.length) return 'Please choose at least one service.';
+    if (n === 3 && !document.getElementById('selected-time-value').value) return 'Please pick a time.';
+    if (n === 4 && !document.getElementById('moto-plate').value) return 'Please choose a motorcycle.';
+    if (n === 5 && mechanicMode === 'choose' && !selectedMechanicId) return 'Please choose a mechanic, or let the shop assign one.';
+    return '';
+  }
+
+  function show(n) {
+    cur = n; reached = Math.max(reached, n);
+    panes.forEach(p => p.classList.toggle('active', +p.dataset.bstep === n));
+    dots.forEach(d => { const i = +d.dataset.s; d.classList.toggle('active', i === n); d.classList.toggle('done', i < n && i < 7); });
+    msg.textContent = '';
+    document.getElementById('bw-back').style.visibility = (n > 1 && n < 7) ? 'visible' : 'hidden';
+    document.getElementById('bw-next').style.display    = n < 6 ? '' : 'none';      // step 6 has its own "Add to Queue"; 7 has Confirm
+    document.getElementById('bw-another').style.display = n === 7 ? '' : 'none';
+    const pane = panes[n - 1]; if (pane) pane.scrollTop = 0;
+  }
+
+  window.bwNext = function () {
+    const p = problem(cur);
+    if (p) { msg.textContent = p; return; }
+    if (cur < 7) show(cur + 1);
+  };
+  window.bwBack = function () { if (cur > 1 && cur < 7) show(cur - 1); };
+  window.bwAnother = function () { show(1); };           // the date stays selected; everything else was cleared after adding
+  dots.forEach(d => d.addEventListener('click', () => { const i = +d.dataset.s; if (i < cur && i < 7) show(i); }));
+
+  // The moment something lands in the queue, the next thing to see is the queue itself.
+  let lastQueueLen = (typeof bookingQueue !== 'undefined') ? bookingQueue.length : 0;
+  const _render = window.renderBookingQueue;
+  if (typeof _render === 'function') {
+    window.renderBookingQueue = function () {
+      const r = _render.apply(this, arguments);
+      const n = bookingQueue.length;
+      if (n > lastQueueLen && cur === 6) show(7);
+      lastQueueLen = n;
+      return r;
+    };
+  }
+
+  // Appointments page: lock the browser page (no scroll) and size the section to what is left under the top bar.
+  function fit() {
+    const nav = document.querySelector('.top-nav');
+    document.documentElement.style.setProperty('--nav-h', (nav ? nav.offsetHeight : 72) + 'px');
+  }
+  function lock(name) { document.body.classList.toggle('book-lock', name === 'book'); fit(); }
+  const _show = window.showSection;
+  window.showSection = function (name, el) { const r = _show.apply(this, arguments); lock(name); return r; };
+  window.addEventListener('resize', fit);
+  const active = document.querySelector('.c-section.active');
+  lock(active ? active.id.replace('sec-', '') : '');
+
+  show(1);
+})();
+</script>
 </body>
 </html>
