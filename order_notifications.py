@@ -18,6 +18,17 @@ STAMP_FORMAT = '%b %d, %Y at %I:%M %p'
 
 SHOP_NAME = 'MotoTyres North Caloocan'
 
+# Shop Pickup: how long a ready order is held for the customer. After this it is cancelled automatically, the items
+# go back to stock, and a GCash payment is refunded to the same GCash account.
+PICKUP_HOLD_DAYS = 3
+
+
+def pickup_hold_line(deadline_text, paid_with_gcash):
+    """The sentence added to the 'ready for pickup' message, so the customer knows the last day up front."""
+    refund = ' Your GCash payment will then be refunded to the same GCash account.' if paid_with_gcash else ''
+    return (f' We hold it until {deadline_text}. Orders not picked up by then are cancelled automatically '
+            f'and the items go back on the shelf.{refund}')
+
 # Per-status label for the timestamp line, so the stamp reads naturally.
 _STAMP_LABELS = {
     'shipped':   'Shipped on',

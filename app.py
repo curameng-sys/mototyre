@@ -18,7 +18,7 @@ from io import BytesIO
 from security import (clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_otp_purpose,
     validate_return_kind, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
 import json as _json
-from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_receipt_email, booking_receipt_email
+from order_notifications import SHOP_NAME, PICKUP_HOLD_DAYS, pickup_hold_line, order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_receipt_email, booking_receipt_email
 from service_duration import queue_numbers, ordinal
 from service_duration import (
     DEFAULT_DURATION_MIN, combine_services, combined_service_name, split_service_names,
@@ -703,6 +703,9 @@ class Order(db.Model):
     refunded_at             = db.Column(db.DateTime, nullable=True)
     refund_amount           = db.Column(db.Float, nullable=True)
     refund_reason           = db.Column(db.String(300), nullable=True)
+    ready_at                = db.Column(db.DateTime, nullable=True)   # Shop Pickup: when it became Ready to Pick Up (starts the hold)
+    pickup_reminder_at      = db.Column(db.DateTime, nullable=True)   # the "last day tomorrow" reminder was sent
+    pickup_refund_failed_at = db.Column(db.DateTime, nullable=True)   # a GCash auto-refund failed (the shop was told; retried later)
     stock_restocked         = db.Column(db.Boolean, nullable=True)
 
 
@@ -1290,6 +1293,116 @@ def login():
     return render_template('login.html')
 
 
+# ── Sign in / sign up with Google ──────────────────────────────────────────────────────────────────────
+# Needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the environment (and the callback URL added in Google Cloud:
+# <site>/auth/google/callback). Without them the buttons are simply not shown and everything else works as before.
+# Someone who already registered with email + password signs in through Google by using the SAME email: it is the
+# same account (Google has confirmed they own that email). Brand-new people only need to add their mobile number.
+GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
+GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo'
+
+
+def _google_enabled():
+    return bool(os.getenv('GOOGLE_CLIENT_ID') and os.getenv('GOOGLE_CLIENT_SECRET'))
+
+
+app.jinja_env.globals['google_enabled'] = _google_enabled
+
+
+def _google_redirect_uri():
+    uri = os.getenv('GOOGLE_REDIRECT_URI') or url_for('google_callback', _external=True)
+    if uri.startswith('http://') and not any(h in uri for h in ('localhost', '127.0.0.1')):
+        uri = 'https://' + uri[len('http://'):]            # behind Render's proxy Flask sees http; Google needs the real https URL
+    return uri
+
+
+@app.route('/auth/google')
+def google_login():
+    if not _google_enabled():
+        flash('Google sign-in is not set up yet.', 'warning')
+        return redirect(url_for('login'))
+    import secrets as _secrets
+    state = _secrets.token_urlsafe(24)
+    session['google_state'] = state
+    from urllib.parse import urlencode
+    params = {'client_id': os.getenv('GOOGLE_CLIENT_ID'), 'redirect_uri': _google_redirect_uri(), 'response_type': 'code',
+              'scope': 'openid email profile', 'state': state, 'prompt': 'select_account', 'access_type': 'online'}
+    return redirect(f'{GOOGLE_AUTH_URL}?{urlencode(params)}')
+
+
+@app.route('/auth/google/callback')
+def google_callback():
+    if request.args.get('error'):
+        flash('Google sign-in was cancelled.', 'info')
+        return redirect(url_for('login'))
+    if not _google_enabled() or not request.args.get('code') or request.args.get('state') != session.pop('google_state', None):
+        flash('Google sign-in could not be verified. Please try again.', 'danger')
+        return redirect(url_for('login'))
+    try:
+        tok = requests.post(GOOGLE_TOKEN_URL, data={
+            'code': request.args['code'], 'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'client_secret': os.getenv('GOOGLE_CLIENT_SECRET'), 'redirect_uri': _google_redirect_uri(),
+            'grant_type': 'authorization_code'}, timeout=15)
+        access = tok.json().get('access_token') if tok.status_code == 200 else None
+        info = requests.get(GOOGLE_USERINFO_URL, headers={'Authorization': f'Bearer {access}'}, timeout=15).json() if access else {}
+    except Exception:
+        info = {}
+    email = (info.get('email') or '').strip().lower()
+    if not email or not info.get('email_verified'):
+        flash('Google could not confirm your email. Please try again, or sign in with your email and password.', 'danger')
+        return redirect(url_for('login'))
+
+    user = User.query.filter_by(email=email).first()
+    if user:
+        if user.role in ['admin', 'staff']:
+            flash('Admin and staff accounts must use the Admin Portal.', 'danger')
+            return redirect(url_for('login'))
+        if user.account_status == 'deactivated':
+            flash('Your account has been deactivated. Please contact support.', 'danger')
+            return redirect(url_for('login'))
+        if not user.email_verified:
+            user.email_verified = True                      # Google just proved they own this email
+            db.session.commit()
+        login_user(user, remember=True)
+        return redirect(url_for('customer_dashboard'))
+
+    session['google_signup'] = {'email': email, 'name': clean_str(info.get('name') or email.split('@')[0], max_len=100)}
+    return redirect(url_for('google_complete'))
+
+
+@app.route('/auth/google/complete', methods=['GET', 'POST'])
+def google_complete():
+    pending = session.get('google_signup')
+    if not pending:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        phone = clean_str(request.form.get('phone', ''), max_len=11)
+        if not is_valid_phone(phone):
+            flash('Enter a valid mobile number: 11 digits starting with 09.', 'danger')
+            return render_template('google_phone.html', name=pending['name'], email=pending['email'])
+        if User.query.filter_by(email=pending['email']).first():
+            session.pop('google_signup', None)
+            flash('That email is already registered. Please sign in.', 'info')
+            return redirect(url_for('login'))
+        import secrets as _secrets
+        user = User(fullname=pending['name'], email=pending['email'], phone=phone,
+                    motorcycle_model=clean_str(request.form.get('model', ''), max_len=100), email_verified=True)
+        user.set_password(_secrets.token_urlsafe(32))        # no password to remember: they sign in with Google (or reset one later)
+        db.session.add(user)
+        db.session.commit()
+        session.pop('google_signup', None)
+        login_user(user, remember=True)
+        return redirect(url_for('customer_dashboard'))
+    return render_template('google_phone.html', name=pending['name'], email=pending['email'])
+
+
+@app.route('/auth/google/cancel')
+def google_cancel():
+    session.pop('google_signup', None)
+    return redirect(url_for('login'))
+
+
 @app.route('/verify-login-otp', methods=['GET', 'POST'])
 def verify_login_otp():
     email = session.get('pending_login_email')
@@ -1537,6 +1650,7 @@ def customer_dashboard():
 
     for o in orders:
         o.return_window = return_window_info('product', o.delivered_at) if o.status in ('delivered', 'completed') else None
+        o.pickup_by = _pickup_last_day(o) if (o.delivery_method != 'ship' and o.status == 'shipped' and o.ready_at) else None
         o.ship_state = ship_order_state(o) if o.delivery_method == 'ship' else None
         o.open_claim = open_by_order.get(o.id)
         o.replacement_stats = _order_replacement_stats(o) if o.return_window else None
@@ -2223,8 +2337,8 @@ def book_service():
             motorcycle_model=clean_str(request.form.get('motorcycle_model', ''), max_len=100),
             motorcycle_plate=_norm_plate(clean_str(request.form.get('motorcycle_plate', ''), max_len=20)),
             notes=clean_str(request.form.get('notes', ''), max_len=500),
-            contact_name=clean_str(request.form.get('contact_name', ''), max_len=100),
-            contact_mobile=clean_str(request.form.get('contact_mobile', ''), max_len=13),
+            contact_name=clean_str(request.form.get('contact_name', ''), max_len=100) or (current_user.fullname or '')[:100],
+            contact_mobile=clean_str(request.form.get('contact_mobile', ''), max_len=13) or (current_user.phone or '')[:13],
             odometer=int(odo_raw) if odo_raw.isdigit() else None,
         )
         if requested_mechanic:
@@ -2652,8 +2766,8 @@ def book_multiple_services():
                 motorcycle_model=clean_str(b.get('motorcycle_model', ''), max_len=100),
                 motorcycle_plate=_norm_plate(clean_str(b.get('motorcycle_plate', ''), max_len=20)),
                 notes=clean_str(b.get('notes', ''), max_len=500),
-                contact_name=clean_str(b.get('contact_name', ''), max_len=100),
-                contact_mobile=clean_str(b.get('contact_mobile', ''), max_len=13),
+                contact_name=clean_str(b.get('contact_name', ''), max_len=100) or (current_user.fullname or '')[:100],
+                contact_mobile=clean_str(b.get('contact_mobile', ''), max_len=13) or (current_user.phone or '')[:13],
                 odometer=int(odo_raw) if odo_raw.isdigit() else None,
                 booking_batch=batch_id,
                 cancellation_policy_agreed_at=agreed_at,
@@ -4554,6 +4668,120 @@ def process_ship_deadlines():
                 _notify_order_customer(o, _t, _m, status=_s)
 
 
+# ── Shop Pickup: orders not picked up within PICKUP_HOLD_DAYS ──────────────────────────────────────────
+def _paymongo_refund_pickup(order, reason):
+    """Refunds a paid Shop Pickup order (items only, there is no shipping) to the customer's GCash through PayMongo.
+    Returns (ok, error)."""
+    headers = {"Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}",
+               "Content-Type": "application/json"}
+    payment_id = order.paymongo_payment_id
+    if not payment_id and order.payment_ref:                 # older record: look the payment up from its checkout session
+        try:
+            res = requests.get(f"{PAYMONGO_API_URL}/checkout_sessions/{order.payment_ref}", headers=headers, timeout=15)
+            if res.status_code == 200:
+                pays = res.json()['data']['attributes'].get('payments') or []
+                payment_id = pays[0]['id'] if pays else None
+        except Exception as e:
+            print('[pickup-hold] payment lookup failed:', e)
+    if not payment_id:
+        return False, 'The payment could not be found in PayMongo, so it could not be refunded automatically.'
+    payload = {"data": {"attributes": {"amount": int(round((order.total_amount or 0) * 100)), "payment_id": payment_id,
+                                       "reason": "requested_by_customer", "notes": (reason or 'Not picked up')[:200]}}}
+    try:
+        res = requests.post(f"{PAYMONGO_API_URL}/refunds", json=payload, headers=headers, timeout=20)
+    except Exception as e:
+        return False, f'Could not reach PayMongo: {e}'
+    if res.status_code in (200, 201):
+        return True, None
+    try:
+        detail = res.json()['errors'][0]['detail']
+    except Exception:
+        detail = f'PayMongo answered {res.status_code}.'
+    return False, f'PayMongo could not refund this payment: {detail}'
+
+
+def _pickup_last_day(order):
+    d = order.ready_at + timedelta(days=PICKUP_HOLD_DAYS)
+    return f"{d.strftime('%b')} {d.day}, {d.strftime('%I:%M %p').lstrip('0')}"
+
+
+def process_pickup_holds():
+    """Runs on its own (no one needs the website open). A Shop Pickup order that has been Ready to Pick Up for
+    PICKUP_HOLD_DAYS is cancelled: the items go back to stock, a cash order (nothing was paid yet) is simply cancelled,
+    and a GCash order is refunded in full to the same GCash account through PayMongo. One day before, the customer
+    gets a reminder. If a GCash refund fails, nothing is cancelled: the shop is told so the refund can be done by hand,
+    and it is tried again later."""
+    with app.app_context():
+        now = ph_now()
+        ready = Order.query.filter(Order.delivery_method != 'ship', Order.status == 'shipped').all()
+        for o in ready:
+            try:
+                ref = f'ORD-{o.id:03d}'
+                if not o.ready_at:                       # ready before this feature existed: the hold starts now
+                    o.ready_at = now
+                    db.session.commit()
+                    continue
+                deadline = o.ready_at + timedelta(days=PICKUP_HOLD_DAYS)
+                gcash = (o.payment_method or '').lower() == 'gcash'
+                if now < deadline:
+                    if not o.pickup_reminder_at and now >= deadline - timedelta(days=1):
+                        o.pickup_reminder_at = now
+                        db.session.commit()
+                        _notify_order_customer(
+                            o, 'Pick up your order by tomorrow',
+                            f'Your order {ref} is still waiting at {SHOP_NAME}. The last day to pick it up is {_pickup_last_day(o)}. '
+                            f'After that it is cancelled automatically and the items go back on the shelf.'
+                            + (' Your GCash payment will then be refunded.' if gcash else ''),
+                            status='shipped')
+                    continue
+                # ── past the last day ──
+                if o.pickup_refund_failed_at and now - o.pickup_refund_failed_at < timedelta(hours=6):
+                    continue                              # a failed refund is retried every 6 hours, not every run
+                items = ', '.join(f"{i.product.name if i.product else 'Item'} x{i.quantity}" for i in o.items)
+                reason = f'Not picked up within {PICKUP_HOLD_DAYS} days'
+                refunded = 0.0
+                if gcash:
+                    ok, why = _paymongo_refund_pickup(o, reason)
+                    if not ok:
+                        first = not o.pickup_refund_failed_at
+                        o.pickup_refund_failed_at = now
+                        db.session.commit()
+                        if first:
+                            for admin in User.query.filter_by(role='admin').all():
+                                send_notification(admin.id, f'{ref}: automatic refund failed',
+                                    f'{ref} was not picked up in {PICKUP_HOLD_DAYS} days, but the GCash refund of '
+                                    f'\u20b1{(o.total_amount or 0):,.2f} did not go through. {why} The order is still Ready to Pick Up. '
+                                    f'Refund it by hand, then cancel the order. The system will also try again.',
+                                    type='order', status='shipped', order_id=o.id)
+                        continue
+                    refunded = float(o.total_amount or 0)
+                _restock_order(o)
+                o.status = 'cancelled'
+                o.cancelled_by = 'auto'
+                o.cancel_reason = reason
+                if gcash:
+                    o.refunded_at = now
+                    o.refund_amount = refunded
+                    o.refund_reason = reason
+                db.session.commit()
+                if gcash:
+                    body = (f'Your order {ref} was not picked up within {PICKUP_HOLD_DAYS} days, so we cancelled it. '
+                            f'We refunded \u20b1{refunded:,.2f} to the same GCash account you paid with. '
+                            f'It can take a few banking days to show in your GCash.')
+                else:
+                    body = (f'Your order {ref} was not picked up within {PICKUP_HOLD_DAYS} days, so we cancelled it. '
+                            f'You were not charged. You can order again anytime.')
+                _notify_order_customer(o, 'Order cancelled: not picked up', body, status='cancelled')
+                for admin in User.query.filter_by(role='admin').all():
+                    send_notification(admin.id, f'{ref} cancelled automatically',
+                        f'{ref} was not picked up in {PICKUP_HOLD_DAYS} days \u00b7 ' +
+                        (f'\u20b1{refunded:,.2f} refunded to GCash via PayMongo' if gcash else 'cash order, nothing was paid') +
+                        f'. {items} went back to stock.', type='order', status='cancelled', order_id=o.id)
+            except Exception as e:
+                db.session.rollback()
+                print('[pickup-hold] could not process', o.id, e)
+
+
 # ── Scheduler ─────────────────────────────────────────────────────────────────
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -4566,6 +4794,8 @@ scheduler.add_job(func=check_day_before_reminders, trigger='interval', minutes=3
                   id='day_before_reminder_job', replace_existing=True)
 scheduler.add_job(func=process_ship_deadlines, trigger='interval', minutes=1,
                   id='ship_deadline_job', replace_existing=True)
+scheduler.add_job(func=process_pickup_holds, trigger='interval', minutes=10,
+                  id='pickup_hold_job', replace_existing=True)
 scheduler.start()
 print('[SCHEDULER] Booking reminder service started — checking every 1 minute (15-min) / 30 minutes (day-before)')
 atexit.register(lambda: scheduler.shutdown())
@@ -4630,6 +4860,9 @@ with app.app_context():
         "ALTER TABLE `order` ADD COLUMN cancelled_by VARCHAR(12)",
         "ALTER TABLE `order` ADD COLUMN cancel_reason VARCHAR(300)",
         "ALTER TABLE `order` ADD COLUMN refunded_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN ready_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN pickup_reminder_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN pickup_refund_failed_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN refund_amount DOUBLE",
         "ALTER TABLE `order` ADD COLUMN refund_reason VARCHAR(300)",
         "ALTER TABLE `order` ADD COLUMN stock_restocked TINYINT(1) DEFAULT NULL",

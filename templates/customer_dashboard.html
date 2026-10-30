@@ -1372,23 +1372,9 @@
             <textarea id="booking-notes" rows="2" placeholder="Describe your concern or any special requests..."></textarea>
           </div>
 
-          <!-- Contact information -->
-          <div class="appt-section-label">Contact Information</div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Full Name</label>
-              <input type="text" id="contact-name" placeholder="Juan Dela Cruz"
-                oninput="this.value=this.value.replace(/[^a-zA-Z\s]/g,''); checkBookingReady()" required>
-              <div id="name-error" style="display:none;color:#ef4444;font-size:0.75rem;margin-top:0.3rem;">Name must contain letters only.</div>
-            </div>
-            <div class="form-group">
-              <label>Mobile Number</label>
-              <input type="tel" id="contact-mobile" placeholder="09XX XXX XXXX"
-                oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11); checkBookingReady()"
-                maxlength="11" required>
-              <div id="mobile-error" style="display:none;color:#ef4444;font-size:0.75rem;margin-top:0.3rem;">Must start with 0 and be exactly 11 digits.</div>
-            </div>
-          </div>
+          <!-- Contact: no longer asked here. The name and mobile number come from the account the customer registered with. -->
+          <input type="hidden" id="contact-name" value="{{ (current_user.fullname or '')|e }}">
+          <input type="hidden" id="contact-mobile" value="{{ (current_user.phone or '')|e }}">
 
           <!-- Action buttons -->
           <div id="queue-missing" role="alert" style="display:none;margin-bottom:0.6rem;padding:0.55rem 0.8rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.8rem;color:#b91c1c;line-height:1.4;"></div>
@@ -3837,8 +3823,6 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
 
   // 1. Something missing: one red message above the button lists it.
   if (showQueueMissing()) {
-    if (!/^[a-zA-Z\s]+$/.test(nameVal) || !nameVal) document.getElementById('name-error').style.display = 'block';
-    if (!/^0\d{10}$/.test(mobileVal)) document.getElementById('mobile-error').style.display = 'block';
     return;
   }
   hideQueueMissing();
@@ -4133,8 +4117,6 @@ function resetBookingForm(keepDate) {
     refreshBookingLimits();
   }
   hideQueueMissing();
-  document.getElementById('name-error').style.display   = 'none';
-  document.getElementById('mobile-error').style.display = 'none';
   hideAmberNotice('time-clear-notice');
   hideAmberNotice('mech-unselect-notice');
   renderCalendar();
@@ -4763,16 +4745,12 @@ function slotReasonText(reason) {
 
 // What still needs filling in before a booking can be added, in the order of the form.
 function missingForQueue() {
-  const name   = document.getElementById('contact-name').value.trim();
-  const mobile = document.getElementById('contact-mobile').value.trim();
   const out = [];
   if (!document.getElementById('selected-date-value').value) out.push('a date');
   if (!selectedServiceNames.length) out.push('at least one service');
   if (!document.getElementById('selected-time-value').value) out.push('a time');
   if (!document.getElementById('moto-plate').value) out.push('a motorcycle');
   if (mechanicMode === 'choose' && !selectedMechanicId) out.push('a mechanic');
-  if (!/^[a-zA-Z\s]+$/.test(name) || !name) out.push('your full name');
-  if (!/^0\d{10}$/.test(mobile)) out.push('a valid mobile number (09XXXXXXXXX)');
   return out;
 }
 function showQueueMissing() {
@@ -4789,12 +4767,8 @@ function hideQueueMissing() {
 }
 
 function checkBookingReady() {
-  const name      = document.getElementById('contact-name').value.trim();
-  const mobile    = document.getElementById('contact-mobile').value.trim();
   const hasTime   = !!document.getElementById('selected-time-value').value;
   const hasService = selectedServiceNames.length > 0;
-  const nameOk    = /^[a-zA-Z\s]+$/.test(name) && name !== '';
-  const mobileOk  = /^0\d{10}$/.test(mobile);
   // "I'll Choose" isn't done until a specific mechanic is actually picked —
   // "no one in particular" doesn't count, that's the same as Shop Assign.
   const mechanicOk = mechanicMode !== 'choose' || !!selectedMechanicId;
@@ -5628,35 +5602,8 @@ function updateServiceSummary() {
     </div>`;
 }
 
-function validateBookingForm() {
-  let valid = true;
-
-  // Validate full name — letters only
-  const name = document.getElementById('contact-name');
-  const nameError = document.getElementById('name-error');
-  if (!/^[a-zA-Z\s]+$/.test(name.value.trim()) || name.value.trim() === '') {
-    nameError.style.display = 'block';
-    name.style.borderColor = 'var(--brand-red)';
-    valid = false;
-  } else {
-    nameError.style.display = 'none';
-    name.style.borderColor = '';
-  }
-
-  // Validate mobile — starts with 0, exactly 11 digits
-  const mobile = document.getElementById('contact-mobile');
-  const mobileError = document.getElementById('mobile-error');
-  if (!/^0\d{10}$/.test(mobile.value.trim())) {
-    mobileError.style.display = 'block';
-    mobile.style.borderColor = 'var(--brand-red)';
-    valid = false;
-  } else {
-    mobileError.style.display = 'none';
-    mobile.style.borderColor = '';
-  }
-
-  return valid;
-}
+// The contact name and number come from the customer's account now, so there is nothing to validate on this form.
+function validateBookingForm() { return true; }
 
 
 
@@ -5971,6 +5918,7 @@ const ordersData = {
     status: {{ o.status|tojson }},
     total: {{ o.total_amount }},
     payment_method: {{ (o.payment_method or "cash")|tojson }},
+    pickup_by: {{ (o.pickup_by or "")|tojson }},
     delivery_method: {{ (o.delivery_method or "pickup")|tojson }},
     created_at: '{{ o.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
     delivered_at: {{ (o.delivered_at.strftime("%b %d, %Y at %I:%M %p")|tojson) if o.delivered_at else 'null' }},
@@ -6176,6 +6124,11 @@ function openOrderDetails(orderId) {
   } else {
     _confirmOrderId = null;
     receivedWrap.style.display = 'none';
+  }
+  // Shop Pickup, ready: the last day to pick it up (after that it is cancelled and a GCash payment is refunded)
+  if (isPickup && order.status === 'shipped' && order.pickup_by) {
+    receivedWrap.style.display = 'block';
+    receivedWrap.insertAdjacentHTML('afterbegin', `<div style="margin-bottom:0.6rem;padding:0.65rem 0.8rem;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;font-size:0.8rem;color:#713f12;line-height:1.5;"><strong>Pick it up by ${order.pickup_by}.</strong> After that, the order is cancelled automatically and the items go back on the shelf.${order.payment_method === 'gcash' ? ' Your GCash payment is then refunded to the same GCash account.' : ''}</div>`);
   }
 
   renderShipSection(order);

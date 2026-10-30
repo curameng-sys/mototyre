@@ -23,7 +23,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from io import BytesIO
 from security import (clean_str, clean_int, clean_float, is_valid_email, is_valid_phone, validate_booking_status, validate_order_status,
     ALLOWED_RETURN_OUTCOMES, RETURN_OUTCOMES_BY_KIND, RETURN_REASONS, OPEN_RETURN_STATUSES)
-from order_notifications import order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_on_the_way_email, booking_receipt_email
+from order_notifications import PICKUP_HOLD_DAYS, pickup_hold_line, order_status_message, with_stamp, shipping_destination, ship_notice, ship_email_extra, build_order_email, ship_on_the_way_email, booking_receipt_email
 from delivery_zones import format_delivery_address
 from cloud_storage import upload_image
 from service_duration import queue_numbers, ordinal, BREAK_START_MIN, BREAK_END_MIN, MECHANIC_TURNOVER_MIN
@@ -419,6 +419,9 @@ class Order(db.Model):
     refunded_at             = db.Column(db.DateTime, nullable=True)
     refund_amount           = db.Column(db.Float, nullable=True)
     refund_reason           = db.Column(db.String(300), nullable=True)
+    ready_at                = db.Column(db.DateTime, nullable=True)   # Shop Pickup: when it became Ready to Pick Up (starts the hold)
+    pickup_reminder_at      = db.Column(db.DateTime, nullable=True)   # the "last day tomorrow" reminder was sent
+    pickup_refund_failed_at = db.Column(db.DateTime, nullable=True)   # a GCash auto-refund failed (the shop was told; retried later)
     stock_restocked         = db.Column(db.Boolean, nullable=True)
     contact_name    = db.Column(db.String(100), nullable=True)  # typed name for an in-store sale with no real account
     is_instore      = db.Column(db.Boolean, default=False)      # created from In-Store Parts Purchase — gets a SALE- ref, not ORD-
@@ -5821,6 +5824,10 @@ def update_order_status(oid):
     order.status = new_status
     if new_status == 'completed' and not order.delivered_at:
         order.delivered_at = ph_now()
+    if _is_pickup and new_status == 'shipped' and prev_status != 'shipped':
+        order.ready_at = ph_now()                     # the pick-up hold starts now
+        order.pickup_reminder_at = None
+        order.pickup_refund_failed_at = None
     db.session.commit()
     # Every tracking step gets a customer notification stamped with the exact time
     # of the update — ship-to-address orders get delivery-specific wording. Re-saving
@@ -5831,6 +5838,10 @@ def update_order_status(oid):
                                   when=ph_now()) if new_status != prev_status else None
     if notice:
         title, msg = notice
+        if _is_pickup and new_status == 'shipped' and order.ready_at:
+            last_day = order.ready_at + timedelta(days=PICKUP_HOLD_DAYS)
+            msg += pickup_hold_line(f"{last_day.strftime('%b')} {last_day.day}, {last_day.strftime('%I:%M %p').lstrip('0')}",
+                                    (order.payment_method or '').lower() == 'gcash')
         _notify_order_customer(order, title, msg, status=new_status)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'new_status': new_status, 'message': 'Order status updated!'})
@@ -9559,6 +9570,9 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN cancelled_by VARCHAR(12)",
         "ALTER TABLE `order` ADD COLUMN cancel_reason VARCHAR(300)",
         "ALTER TABLE `order` ADD COLUMN refunded_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN ready_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN pickup_reminder_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN pickup_refund_failed_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN refund_amount DOUBLE",
         "ALTER TABLE `order` ADD COLUMN refund_reason VARCHAR(300)",
         "ALTER TABLE `order` ADD COLUMN stock_restocked TINYINT(1) DEFAULT NULL",
