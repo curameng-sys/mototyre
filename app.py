@@ -864,6 +864,7 @@ class CustomerMotorcycle(db.Model):
     owner      = db.Column(db.String(60))
     created_at = db.Column(db.DateTime, default=lambda: ph_now())
     removed_at = db.Column(db.DateTime)
+    year       = db.Column(db.String(4))             # year model, e.g. "2021" (optional)
 
 
 class JobOrder(db.Model):
@@ -1993,7 +1994,7 @@ def _moto_upcoming_bookings(user_id, plate):
 
 def _moto_dict(m, upcoming=None):
     upcoming = upcoming if upcoming is not None else _moto_upcoming_bookings(m.user_id, m.plate)
-    return {'id': m.id, 'model': m.model, 'plate': m.plate, 'owner': m.owner or '',
+    return {'id': m.id, 'model': m.model, 'plate': m.plate, 'owner': m.owner or '', 'year': m.year or '',
             'is_new': bool(m.created_at and (ph_now() - m.created_at).days < MOTO_NEW_DAYS),
             'booked': [{'id': b.id, 'ref': f'BKG-{b.id:03d}', 'date_iso': b.date.isoformat(),
                         'date': f"{b.date.strftime('%b')} {b.date.day}", 'time': minutes_to_ampm(b.time.hour * 60 + b.time.minute),
@@ -4079,17 +4080,17 @@ def customer_poll():
 def _moto_payload():
     d = request.get_json(silent=True) or {}
     return (clean_str(d.get('model', ''), max_len=100).strip(), _norm_plate(clean_str(d.get('plate', ''), max_len=20)),
-            clean_str(d.get('owner', ''), max_len=60).strip())
+            clean_str(d.get('owner', ''), max_len=60).strip(), _clean_year(d.get('year')))
 
 
 @app.route('/customer/motorcycles', methods=['POST'])
 @login_required
 def add_my_motorcycle():
-    model, plate, owner = _moto_payload()
+    model, plate, owner, year = _moto_payload()
     err, field = _moto_form_error(current_user.id, model, plate)
     if err:
         return jsonify({'success': False, 'error': err, 'field': field}), 400
-    m = CustomerMotorcycle(user_id=current_user.id, model=model, plate=plate, owner=owner or None, created_at=ph_now())
+    m = CustomerMotorcycle(user_id=current_user.id, model=model, plate=plate, owner=owner or None, year=year, created_at=ph_now())
     db.session.add(m)
     db.session.commit()
     return jsonify({'success': True, 'motorcycle': _moto_dict(m, [])})
@@ -4099,7 +4100,7 @@ def add_my_motorcycle():
 @login_required
 def edit_my_motorcycle(mid):
     m = CustomerMotorcycle.query.filter_by(id=mid, user_id=current_user.id, removed_at=None).first_or_404()
-    model, plate, owner = _moto_payload()
+    model, plate, owner, year = _moto_payload()
     err, field = _moto_form_error(current_user.id, model, plate, exclude_id=m.id)
     if err:
         return jsonify({'success': False, 'error': err, 'field': field}), 400
@@ -4110,7 +4111,7 @@ def edit_my_motorcycle(mid):
             return jsonify({'success': False, 'field': 'plate',
                             'error': f"This motorcycle is booked on {b.date.strftime('%b')} {b.date.day} (BKG-{b.id:03d}), "
                                      f"so its plate can't be changed until that booking is done or cancelled."}), 400
-    m.model, m.plate, m.owner = model, plate, owner or None
+    m.model, m.plate, m.owner, m.year = model, plate, owner or None, year
     db.session.commit()
     return jsonify({'success': True, 'motorcycle': _moto_dict(m)})
 
@@ -4877,6 +4878,7 @@ with app.app_context():
         "ALTER TABLE user ADD COLUMN address VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN motorcycle_model VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN motorcycle_year VARCHAR(4) DEFAULT NULL",
+        "ALTER TABLE customer_motorcycle ADD COLUMN year VARCHAR(4) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN profile_pic VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN profile_pic_blob MEDIUMBLOB DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN profile_pic_mime VARCHAR(40) DEFAULT NULL",
