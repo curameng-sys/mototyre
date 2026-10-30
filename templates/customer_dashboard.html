@@ -8955,7 +8955,11 @@ function toggleCustMech(e) {
   if (open) { renderCustMechPicker(); _cmHl = Math.max(0, _cmOpts().findIndex(b => b.classList.contains('sel'))); _cmPaint(); fitCustMechList(); }
 }
 // How far down an open list may reach: the bottom edge of the Back / Next buttons (never past them).
-function bwListEdge() {
+function bwListEdge(alignToSummary) {
+  if (alignToSummary) {                                                   // the motorcycle / year lists end level with the bottom of "Your booking"
+    const r = document.querySelector('.bw-pane.active .bw-recap');
+    if (r && r.getBoundingClientRect().height) return r.getBoundingClientRect().bottom;
+  }
   const b = document.getElementById('bw-back');
   if (b && b.getBoundingClientRect().height) return b.getBoundingClientRect().bottom;
   const st = document.querySelector('.bw-stage'); return st ? st.getBoundingClientRect().bottom - 8 : window.innerHeight - 8;
@@ -8980,7 +8984,7 @@ function fitModelDd() {
   if (window.innerWidth <= 860) { list.style.maxHeight = ''; return; }
   const head = dd.querySelector('.mdd-other'), headH = head ? head.offsetHeight : 0;
   list.style.maxHeight = '';
-  const room = bwListEdge() - dd.getBoundingClientRect().top - headH - 2;
+  const room = bwListEdge(true) - dd.getBoundingClientRect().top - headH - 2;
   list.style.maxHeight = bwSnapHeight(list, Math.min(room, 480), 150) + 'px';
 }
 function fitYearDd() {
@@ -8988,7 +8992,7 @@ function fitYearDd() {
   if (!dd || !dd.classList.contains('open')) return;
   if (window.innerWidth <= 860) { dd.style.maxHeight = ''; return; }
   dd.style.maxHeight = '';
-  const room = bwListEdge() - dd.getBoundingClientRect().top - 2;
+  const room = bwListEdge(true) - dd.getBoundingClientRect().top - 2;
   dd.style.maxHeight = Math.max(160, Math.min(room, 420)) + 'px';
 }
 window.addEventListener('resize', () => setTimeout(() => { fitModelDd(); fitYearDd(); }, 60));
@@ -8999,7 +9003,7 @@ function fitCustMechList() {
   const pane = c.closest('.bw-pane');
   if (!pane || window.innerWidth <= 860) { list.style.maxHeight = ''; return; }
   const floats = getComputedStyle(pane).overflow === 'visible';           // roomy screens: the list may run down over the bottom strip, to the buttons' bottom edge
-  const edge = floats ? bwListEdge()
+  const edge = floats ? bwListEdge(true)
                       : pane.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(pane).paddingBottom) || 0);
   const room = edge - list.getBoundingClientRect().top - 2;
   list.style.maxHeight = '';                                                 // measure with the normal height first
