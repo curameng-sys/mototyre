@@ -472,6 +472,56 @@
     }
     .terms-wrap label a:hover { text-decoration: underline; }
 
+    /* ── STEP-BY-STEP REGISTRATION: one short step at a time, so the page never needs to scroll ── */
+    .stepper { list-style: none; display: flex; align-items: flex-start; justify-content: space-between; margin: 0 0 1rem; padding: 0; }
+    .stepper .st { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; position: relative; font-family: var(--font-mono); font-size: 0.58rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); }
+    .stepper .st::before { content: ''; position: absolute; top: 13px; left: -50%; width: 100%; height: 2px; background: var(--line-2); z-index: 0; }
+    .stepper .st:first-child::before { display: none; }
+    .stepper .dot { position: relative; z-index: 1; width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 2px solid var(--line-2); display: flex; align-items: center; justify-content: center; font-family: var(--font-body); font-size: 0.78rem; font-weight: 700; color: var(--fg-3); transition: all 0.2s; }
+    .stepper .st.active { color: var(--fg-1); }
+    .stepper .st.active .dot { background: var(--brand-red); border-color: var(--brand-red); color: #fff; box-shadow: 0 0 0 4px var(--brand-red-soft); }
+    .stepper .st.done .dot { background: #15803d; border-color: #15803d; color: #fff; }
+    .stepper .st.done::before, .stepper .st.active::before { background: #15803d; }
+    .wstep { display: none; }
+    .wstep.active { display: block; animation: fadeUp 0.25s ease both; }
+    .step-note { font-size: 0.8rem; color: var(--fg-2); line-height: 1.5; margin: -0.2rem 0 0.9rem; }
+    .wnav { display: flex; gap: 0.75rem; margin-top: 1rem; }
+    .wnav .btn-back { flex: 0 0 auto; padding: 0.875rem 1.4rem; border: 1.5px solid var(--line-2); border-radius: var(--radius-md); background: #fff; font-family: var(--font-body); font-weight: 700; font-size: 0.9rem; color: var(--fg-2); cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+    .wnav .btn-back:hover { border-color: var(--fg-3); color: var(--fg-1); }
+    .wnav .btn-next, .wnav .btn-submit { flex: 1; margin-top: 0; }
+    .wnav .btn-next { padding: 0.875rem; border: none; border-radius: var(--radius-md); background: #1c1814; color: #fff; font-family: var(--font-body); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.04em; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s; }
+    .wnav .btn-next:hover { background: #000; }
+    .field input.bad, .field select.bad { border-color: var(--brand-red) !important; }
+    /* step 2: leave room under the field for the model suggestions, so they never cover Back / Next */
+    .wstep[data-step="2"] { min-height: 340px; }
+    .wstep[data-step="2"] .moto-dropdown { max-height: 190px; }
+    .wstep[data-step="2"].active ~ .wnav { margin-top: 0; }
+    /* On a computer the whole registration fits the screen: no page scroll, each step is short */
+    @media (min-width: 861px) {
+      html, body { height: 100%; overflow: hidden; }
+      .page-main { height: 100vh; min-height: 0; padding: calc(64px + 1rem) 1.5rem 1rem; align-items: center; }
+      .reg-card { max-height: 100%; grid-template-rows: minmax(0, 1fr); }
+      .info-side { padding: 2rem 2.25rem; overflow: hidden; }
+      .info-img { max-height: 24vh; width: 100%; object-fit: cover; }
+      .form-side { padding: 1.5rem 2.5rem; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
+      .form-sub { margin-bottom: 0.6rem; }
+      .form-title { font-size: 1.9rem; }
+      .form-title-underline { margin-bottom: 0.4rem; }
+      .stepper { margin-bottom: 0.6rem; }
+      .section-divider { margin: 0.5rem 0 0.6rem; }
+      .field { margin-bottom: 0.6rem; }
+      .redirect-notice { margin-top: 0.6rem; }
+      .card-footer-row { margin-top: 0.6rem; padding-top: 0.6rem; }
+      .wnav { margin-top: 0.7rem; }
+      .pass-checklist { display: grid; grid-template-columns: 1fr 1fr; column-gap: 0.75rem; }
+      .terms-wrap { margin-top: 0.5rem; padding: 0.5rem 0.7rem; }
+      .wstep[data-step="3"] > div[style*="eff6ff"] { margin-bottom: 0.6rem !important; padding: 0.55rem 0.75rem !important; }
+    }
+    @media (min-width: 861px) and (max-height: 720px) {
+      .info-img { display: none; }
+      .info-desc { margin-top: 1rem; }
+    }
+
     /* ── SUBMIT ── */
     .google-btn { display:flex; align-items:center; justify-content:center; gap:0.6rem; width:100%; padding:0.8rem; margin-bottom:0.75rem;
       border:1.5px solid var(--line-2); border-radius:var(--radius-md); background:#fff; font-family:var(--font-body); font-size:0.875rem;
@@ -740,14 +790,24 @@
           {% endfor %}
         {% endwith %}
 
-        {% if google_enabled() %}
-        <a href="{{ url_for('google_login') }}" class="google-btn">
-            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.1.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
-            Sign up with Google
-          </a>
-        <div style="display:flex;align-items:center;gap:0.75rem;margin:0.2rem 0 1rem;font-size:0.72rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.08em;"><span style="flex:1;border-top:1px solid var(--line-2);"></span>or register with email<span style="flex:1;border-top:1px solid var(--line-2);"></span></div>
-        {% endif %}
-        <form method="POST" action="{{ url_for('register') }}" id="reg-form">
+        <ol class="stepper" id="stepper" aria-label="Registration steps">
+          <li class="st active" data-s="1"><span class="dot">1</span><span class="lbl">Personal</span></li>
+          <li class="st" data-s="2"><span class="dot">2</span><span class="lbl">Motorcycle</span></li>
+          <li class="st" data-s="3"><span class="dot">3</span><span class="lbl">Delivery</span></li>
+          <li class="st" data-s="4"><span class="dot">4</span><span class="lbl">Security</span></li>
+        </ol>
+
+        <form method="POST" action="{{ url_for('register') }}" id="reg-form" novalidate>
+
+          <!-- STEP 1 -->
+          <div class="wstep active" data-step="1">
+          {% if google_enabled() %}
+          <a href="{{ url_for('google_login') }}" class="google-btn">
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.1.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+              Sign up with Google
+            </a>
+          <div style="display:flex;align-items:center;gap:0.75rem;margin:0.2rem 0 1rem;font-size:0.72rem;color:var(--fg-3);text-transform:uppercase;letter-spacing:0.08em;"><span style="flex:1;border-top:1px solid var(--line-2);"></span>or register with email<span style="flex:1;border-top:1px solid var(--line-2);"></span></div>
+          {% endif %}
 
           <div class="section-divider">Personal Info</div>
 
@@ -823,7 +883,12 @@
             </div>
           </div>
 
-          <!-- Motorcycle Model -->
+          </div><!-- /step 1 -->
+
+          <!-- STEP 2 -->
+          <div class="wstep" data-step="2">
+          <div class="section-divider">Your Motorcycle <span style="opacity:.7;">· Optional</span></div>
+          <p class="step-note">Tell us what you ride so it is ready when you book. You can skip this and add motorcycles later in your account.</p>
           <div class="field">
             <label>Motorcycle Model <span class="opt">(Optional)</span></label>
             <div class="input-wrap">
@@ -839,6 +904,10 @@
             </div>
           </div>
 
+          </div><!-- /step 2 -->
+
+          <!-- STEP 3 -->
+          <div class="wstep" data-step="3">
           <div class="section-divider">Default Delivery Address <span style="opacity:.7;">· Optional</span></div>
           <div style="display:flex;gap:0.6rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:0.7rem 0.85rem;font-size:0.76rem;color:#1e3a8a;line-height:1.5;margin-bottom:0.9rem;">
             <span style="flex-shrink:0;margin-top:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
@@ -882,6 +951,10 @@
           <div id="dl-status" role="status" style="display:none;margin:-0.2rem 0 0.4rem;padding:0.55rem 0.8rem;border-radius:8px;font-size:0.76rem;line-height:1.45;"></div>
           <a href="#" id="dl-clear" onclick="dlClear(); return false;" style="display:none;font-size:0.74rem;color:var(--fg-2);text-decoration:underline;margin-bottom:0.6rem;">Clear address</a>
 
+          </div><!-- /step 3 -->
+
+          <!-- STEP 4 -->
+          <div class="wstep" data-step="4">
           <div class="section-divider">Security</div>
 
           <!-- Password -->
@@ -937,13 +1010,22 @@
             </label>
           </div>
 
-          <button type="submit" class="btn-submit">
-            Create Account
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <line x1="5" y1="12" x2="19" y2="12"/>
-              <polyline points="12,5 19,12 12,19"/>
-            </svg>
-          </button>
+          </div><!-- /step 4 -->
+
+          <div class="wnav">
+            <button type="button" class="btn-back" id="wbtn-back" onclick="wizPrev()">Back</button>
+            <button type="button" class="btn-next" id="wbtn-next" onclick="wizNext()">
+              Next
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+            </button>
+            <button type="submit" class="btn-submit" id="wbtn-submit">
+              Create Account
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12,5 19,12 12,19"/>
+              </svg>
+            </button>
+          </div>
         </form>
 
         <div class="redirect-notice">
@@ -1305,6 +1387,64 @@ document.getElementById('reg-form').addEventListener('submit', function (e) {
     document.getElementById('dl-status').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }, true);
+</script>
+<script>
+// Step-by-step registration. The server still receives ONE form, so nothing about how an account is made has changed.
+(function () {
+  const form = document.getElementById('reg-form');
+  if (!form) return;
+  const steps = [...form.querySelectorAll('.wstep')];
+  const dots = [...document.querySelectorAll('#stepper .st')];
+  let cur = 1;
+
+  function show(n) {
+    cur = n;
+    steps.forEach(el => el.classList.toggle('active', +el.dataset.step === n));
+    dots.forEach(el => { const i = +el.dataset.s; el.classList.toggle('active', i === n); el.classList.toggle('done', i < n); });
+    document.getElementById('wbtn-back').style.display = n > 1 ? '' : 'none';
+    document.getElementById('wbtn-next').style.display = n < steps.length ? '' : 'none';
+    document.getElementById('wbtn-submit').style.display = n === steps.length ? '' : 'none';
+    const first = steps[n - 1].querySelector('input:not([type=checkbox]):not([type=hidden]), select');
+    if (first && first.id !== 'motorcycle-model-input' && window.innerWidth > 560) setTimeout(() => first.focus({ preventScroll: true }), 60);
+  }
+
+  // Everything on this step that must be filled in and valid, one problem at a time.
+  function stepOk(n) {
+    const box = steps[n - 1];
+    if (n === 1) {
+      const ph = box.querySelector('[name=phone]');
+      ph.setCustomValidity(ph.value.length >= 10 ? '' : 'Enter your 10 or 11 digit mobile number.');
+    }
+    for (const el of box.querySelectorAll('input[required], select[required]')) {
+      el.classList.remove('bad');
+      if (!el.checkValidity()) { el.classList.add('bad'); el.reportValidity(); return false; }
+    }
+    if (n === 3) {                                   // optional address: all four parts, or none
+      const { any, missing } = dlMissing();
+      if (any && missing.length) { dlCheck(); return false; }
+    }
+    return true;
+  }
+
+  window.wizNext = function () { if (stepOk(cur) && cur < steps.length) show(cur + 1); };
+  window.wizPrev = function () { if (cur > 1) show(cur - 1); };
+
+  // Enter moves to the next step instead of sending the half-filled form
+  form.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && cur < steps.length && !/^(TEXTAREA|BUTTON|A)$/.test(e.target.tagName)) { e.preventDefault(); wizNext(); }
+  });
+  // If the browser finds a problem in a step that is not showing, take the person to it
+  form.addEventListener('invalid', e => {
+    const box = e.target.closest('.wstep');
+    if (box && +box.dataset.step !== cur) show(+box.dataset.step);
+  }, true);
+  form.addEventListener('submit', e => {
+    for (let n = 1; n <= steps.length; n++) {
+      if (!stepOk(n)) { e.preventDefault(); e.stopImmediatePropagation(); show(n); return; }
+    }
+  }, true);
+  show(1);
+})();
 </script>
 {% include 'partials/cookie_consent.html' %}
 </body>
