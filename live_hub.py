@@ -137,4 +137,12 @@ def attach(app, compute, can_connect, interval=3.0, name='live', path='/ws/live'
         finally:
             hub.remove(ws)
 
+    @app.after_request
+    def _nudge_after_change(resp):
+        """Something in THIS app was just saved (a status, a booking, a payment...): push now, don't wait for the next 3 s tick."""
+        from flask import request
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and resp.status_code < 400 and hub.clients:
+            hub.nudge()
+        return resp
+
     return hub

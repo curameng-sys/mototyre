@@ -1253,17 +1253,9 @@ app.jinja_env.filters['service_icon'] = service_icon
 
 
 def _landing_products(limit=5):
-    """The few products the landing page shows off: in stock, newest first, one per category before any repeats,
-    so the strip shows variety instead of five tires."""
-    pool = Product.query.filter(Product.stock > 0).order_by(Product.created_at.desc(), Product.id.desc()).all()
-    picked, seen = [], set()
-    for p in pool:
-        if p.category not in seen:
-            picked.append(p); seen.add(p.category)
-    for p in pool:
-        if p not in picked:
-            picked.append(p)
-    return picked[:limit]
+    """The few products the landing page shows off: the same in-stock products, in the same order, as the customer's
+    own Parts & Accessories page (the order they were added to the shop), so both pages list the same ones first."""
+    return Product.query.filter(Product.stock > 0).order_by(Product.id).limit(limit).all()
 
 
 @app.route('/')
@@ -1276,7 +1268,8 @@ def home():
 
 @app.route('/products')
 def products():
-    items = Product.query.order_by(Product.category, Product.name).all()
+    # Same order as the customer's Parts & Accessories page (the order they were added); what is out of stock goes last
+    items = Product.query.order_by(db.case((Product.stock > 0, 0), else_=1), Product.id).all()
     counts = {}
     for p in items:
         if p.category:
@@ -1701,7 +1694,7 @@ def customer_dashboard():
 
     bookings = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
     orders   = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
-    products = Product.query.filter(Product.stock > 0).all()
+    products = Product.query.filter(Product.stock > 0).order_by(Product.id).all()
     services = Service.query.filter_by(is_active=True).order_by(Service.name).all()
     returns  = ReturnRequest.query.filter_by(user_id=current_user.id).order_by(ReturnRequest.created_at.desc()).all()
     for r in returns:
