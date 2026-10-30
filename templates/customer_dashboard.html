@@ -1016,28 +1016,40 @@
       .bw-pane[data-bstep="3"] .slot-lunch { margin: 0.45rem 0; }
     }
 
-    /* Step 4: your motorcycles as cards to pick from, then the year model and the odometer */
-    .mc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.8rem; margin-bottom: 1.1rem; }
-    .mc-card { position: relative; display: flex; align-items: center; gap: 0.85rem; text-align: left; padding: 1rem 1.1rem; min-height: 86px; border: 1.5px solid var(--line-2); border-radius: 14px; background: #fff; cursor: pointer; font-family: inherit; color: var(--fg-1); transition: all .15s; }
-    .mc-card:hover { border-color: var(--brand-red-border); }
-    .mc-card.on { border-color: var(--brand-red); background: rgba(208,0,25,0.05); }
-    .mc-card .ico { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 12px; background: var(--bg-subtle); color: var(--fg-3); display: flex; align-items: center; justify-content: center; }
-    .mc-card.on .ico { background: var(--brand-red); color: #fff; }
-    .mc-card .tx { min-width: 0; flex: 1; }
-    .mc-card .tx b { display: block; font-family: 'Syne', sans-serif; font-size: 0.95rem; line-height: 1.25; overflow-wrap: anywhere; }
-    .mc-card .tx small { display: block; margin-top: 0.15rem; font-size: 0.76rem; color: var(--fg-3); }
-    .mc-card .yr { display: inline-block; margin-top: 0.3rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--bg-subtle); border: 1px solid var(--line-2); font-size: 0.7rem; font-weight: 700; color: var(--fg-2); }
-    .mc-card .tick { position: absolute; top: 0.6rem; right: 0.6rem; width: 20px; height: 20px; border-radius: 50%; background: var(--brand-red); color: #fff; display: none; align-items: center; justify-content: center; }
-    .mc-card.on .tick { display: flex; }
-    .mc-card .tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.3rem; }
-    .mc-card.add { border-style: dashed; color: #1d4ed8; justify-content: center; }
-    .mc-card.add .ico { background: rgba(29,78,216,0.08); color: #1d4ed8; font-size: 1.4rem; font-weight: 700; }
-    .mc-empty { grid-column: 1 / -1; padding: 1rem; border: 1.5px dashed var(--line-2); border-radius: 14px; color: var(--fg-3); font-size: 0.88rem; text-align: center; }
-    .bw-pane[data-bstep="4"] .bw-main .form-grid { grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .bw-pane[data-bstep="4"] .bw-main .form-grid > .form-group { margin: 0; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; justify-content: center; border: 1px solid var(--line-2); border-radius: 14px; background: #fff; }
-    .bw-pane[data-bstep="4"] .bw-main .form-grid > .form-group > label { font-size: 0.78rem; margin-bottom: 0.6rem; }
-    .bw-pane[data-bstep="4"] #bk-year { width: 100%; background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 8px; padding: 0.75rem 0.9rem; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--fg-1); }
-    @media (max-width: 560px) { .bw-pane[data-bstep="4"] .bw-main .form-grid { grid-template-columns: 1fr; } }
+    /* Step 4: model (searchable, like registration) and year model as two separate fields, then the odometer */
+    .mc-form { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(210px, 1fr); gap: 1rem; }
+    .mc-form > .form-group { margin: 0; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; justify-content: center; border: 1px solid var(--line-2); border-radius: 14px; background: #fff; }
+    .mc-form > .form-group > label { font-size: 0.78rem; margin-bottom: 0.6rem; }
+    .mc-form > .mc-odo { grid-column: 1 / -1; }
+    .ydd-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.7rem 0.9rem; background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--fg-1); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+    .ydd-btn:hover, .ydd-btn.open { border-color: var(--brand-red); box-shadow: 0 0 0 3px var(--brand-red-soft); }
+    .ydd-btn svg { color: var(--fg-3); transition: transform .15s; }
+    .ydd-btn.open svg { transform: rotate(180deg); }
+    /* the dropdown lists (model and year): rounder, roomier, red on hover, a thin scrollbar */
+    .mc-form .moto-dropdown { top: calc(100% - 0.4rem); left: 1rem; right: 1rem; max-height: 300px; padding: 0.35rem; border: 1px solid var(--line-2); border-radius: 12px; box-shadow: 0 14px 36px rgba(28,24,20,0.22); z-index: 40; scrollbar-width: thin; }
+    .mc-form .moto-group-label { background: #fff; padding: 0.5rem 0.7rem 0.3rem; font-size: 0.64rem; letter-spacing: 0.12em; }
+    .mc-form .moto-group-label.mine { color: var(--brand-red); }
+    .mc-form .moto-option { padding: 0.6rem 0.75rem; margin: 1px 0; border-radius: 8px; font-size: 0.92rem; cursor: pointer; transition: background .1s, color .1s; }
+    .mc-form .moto-option:hover { background: var(--brand-red-soft); color: var(--brand-red); }
+    .mc-form .moto-option .mo-sub { display: block; font-size: 0.72rem; color: var(--fg-3); margin-top: 0.1rem; }
+    .mc-form .moto-no-results { padding: 0.8rem; font-size: 0.82rem; color: var(--fg-3); }
+    /* the model list scrolls; the "type your own" box stays at the bottom of it */
+    .mc-form #bk-model-dd { padding: 0; max-height: none; overflow: hidden; }
+    .mc-form #bk-model-dd.open { display: flex; flex-direction: column; }
+    .mc-form #bk-model-dd .mdd-list { max-height: 220px; overflow-y: auto; padding: 0.35rem; scrollbar-width: thin; }
+    .mdd-other { flex: 0 0 auto; padding: 0.65rem 0.8rem 0.75rem; border-bottom: 1px solid var(--line-1); background: var(--bg-subtle); border-radius: 12px 12px 0 0; }
+    .mdd-other-t { font-size: 0.74rem; color: var(--fg-3); line-height: 1.4; margin-top: 0.45rem; }
+    .mdd-other-row { display: flex; gap: 0.5rem; }
+    .mdd-other-row input { flex: 1; min-width: 0; padding: 0.55rem 0.75rem !important; font-size: 0.88rem !important; }
+    .mdd-other-row button { flex: 0 0 auto; border: none; border-radius: 8px; padding: 0 1rem; background: var(--fg-1); color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.74rem; cursor: pointer; }
+    .mdd-other-row button:hover { background: var(--brand-red); }
+    .ydd .yopt { border: none; background: transparent; font-family: 'DM Sans', sans-serif; cursor: pointer; color: var(--fg-1); border-radius: 8px; transition: background .1s, color .1s; }
+    .ydd .yopt.none { display: block; width: 100%; text-align: left; padding: 0.6rem 0.75rem; font-size: 0.9rem; color: var(--fg-2); }
+    .ydd .ygrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; padding: 0.15rem 0 0.2rem; }
+    .ydd .ygrid .yopt { padding: 0.55rem 0; font-size: 0.9rem; text-align: center; }
+    .ydd .yopt:hover { background: var(--brand-red-soft); color: var(--brand-red); }
+    .ydd .yopt.on { background: var(--brand-red); color: #fff; font-weight: 700; }
+    @media (max-width: 560px) { .mc-form { grid-template-columns: 1fr; } }
 
     /* Step 5: two big choices */
     .bw-pane[data-bstep="5"] .bw-main > .form-group { margin: 0; }
@@ -1498,9 +1510,8 @@
         <h3 class="bw-q">Which motorcycle is it for?</h3>
         <div class="bw-split">
         <div class="bw-main">
-          <!-- Vehicle information -->
-          <div class="appt-section-label">Choose your motorcycle</div>
-          <div id="moto-cards" class="mc-grid"></div>
+          <!-- Vehicle information: pick from every motorcycle, like the registration form; your saved ones are at the top of the list -->
+          <div class="appt-section-label">Your motorcycle</div>
           <!-- the old dropdown stays in the page (other code still fills it) but is not shown -->
           <div style="display:none;">
             <div class="mpick" id="mpick">
@@ -1510,13 +1521,34 @@
           </div>
           <input type="hidden" id="moto-model" value="">
           <input type="hidden" id="moto-plate" value="">
-          <div class="form-grid mc-extra">
-            <div class="form-group">
-              <label>Year model <span style="color:var(--fg-3);font-size:0.72rem;">(optional)</span></label>
-              <select id="bk-year" onchange="onBookingYearChange(this.value)"><option value="">Not sure</option>{% for y in range(current_year + 1, 1979, -1) %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select>
-              <div id="bk-year-hint" style="font-size:0.72rem;color:var(--fg-3);margin-top:0.4rem;">Saved to this motorcycle, so you only choose it once.</div>
+          <div class="mc-form">
+            <div class="form-group mc-model" style="position:relative;">
+              <label>Motorcycle model</label>
+              <input type="text" id="bk-model" maxlength="100" autocomplete="off" readonly placeholder="Choose your motorcycle" style="cursor:pointer;"
+                onclick="bkOpenModel()" onfocus="bkOpenModel()">
+              <div id="bk-model-dd" class="moto-dropdown">
+                <div class="mdd-other">
+                  <div class="mdd-other-row">
+                    <input type="text" id="bk-model-other" maxlength="100" autocomplete="off" placeholder="Search, e.g. Click 125 or Ninja"
+                      oninput="bkModelInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();bkSearchEnter();}">
+                    <button type="button" id="bk-use-btn" onmousedown="event.preventDefault();bkUseOther()">Use this</button>
+                  </div>
+                  <div class="mdd-other-t">Not in the list? Just type your motorcycle's name above and tap "Use this".</div>
+                </div>
+                <div id="bk-model-list" class="mdd-list"></div>
+              </div>
             </div>
-            <div class="form-group">
+            <div class="form-group mc-year" style="position:relative;">
+              <label>Year model <span style="color:var(--fg-3);font-size:0.72rem;">(optional)</span></label>
+              <input type="hidden" id="bk-year" value="">
+              <button type="button" id="bk-year-btn" class="ydd-btn" onclick="bkYearToggle(event)" aria-haspopup="listbox"><span id="bk-year-label">Not sure</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+              <div id="bk-year-dd" class="moto-dropdown ydd">
+                <button type="button" class="yopt none" data-y="" onmousedown="bkYearPick('')">Not sure</button>
+                <div class="ygrid">{% for y in range(current_year + 1, 1979, -1) %}<button type="button" class="yopt" data-y="{{ y }}" onmousedown="bkYearPick('{{ y }}')">{{ y }}</button>{% endfor %}</div>
+              </div>
+            </div>
+            <div class="form-group mc-odo">
               <label>Odometer <span style="color:var(--fg-3);font-size:0.72rem;">(km)</span></label>
               <input type="number" id="odometer" placeholder="e.g. 12500" min="0" max="999999" style="appearance:textfield;">
             </div>
@@ -3857,7 +3889,7 @@ function minutesToAmpmJS(m) {
 //  2. Up to 2 bookings per account per day, each for a different motorcycle.
 //  3. Up to 3 upcoming bookings per account; bookings waiting in the queue count too.
 const MAX_BOOKINGS_PER_DAY = 2, MAX_UPCOMING_BOOKINGS = 3;
-function motoKeyJS(model) { return (model || '').trim().toLowerCase().replace(/\s+/g, ' ') || 'unspecified'; }
+function motoKeyJS(model) { return (model || '').trim().toLowerCase().replace(/\s*\(\d{4}\)\s*$/, '').replace(/\s+/g, ' ') || 'unspecified'; }
 function plateKeyJS(p) { return String(p || '').replace(/[\s\-]+/g, '').toLowerCase(); }
 function bookingMotoKey(b) { return plateKeyJS(b.motorcycle_plate) || motoKeyJS(b.motorcycle_model); }
 // The motorcycle picked in the booking form: by plate (two of the same model never get mixed up).
@@ -5059,7 +5091,7 @@ function missingForQueue() {
   if (!document.getElementById('selected-date-value').value) out.push('a date');
   if (!selectedServiceNames.length) out.push('at least one service');
   if (!document.getElementById('selected-time-value').value) out.push('a time');
-  if (!document.getElementById('moto-plate').value) out.push('a motorcycle');
+  if (!document.getElementById('moto-plate').value && !document.getElementById('moto-model').value) out.push('a motorcycle');
   if (mechanicMode === 'choose' && !selectedMechanicId) out.push('a mechanic');
   return out;
 }
@@ -8944,13 +8976,13 @@ function motoSubLine(m) { return [m.year, 'Plate ' + m.plate, m.owner].filter(Bo
 
 // Real bookings (not cancelled / completed) and queue items for this motorcycle, from today on.
 function motoRealBookings(m, dateIso) {
-  const t = shopTodayIso(), k = plateKeyJS(m.plate);
-  return Object.values(bookingsData).filter(b => !['cancelled', 'completed'].includes(b.status) && plateKeyJS(b.motorcycle_plate) === k
+  const t = shopTodayIso(), k = plateKeyJS(m.plate) || motoKeyJS(m.model);
+  return Object.values(bookingsData).filter(b => !['cancelled', 'completed'].includes(b.status) && bookingMotoKey(b) === k
     && (dateIso ? b.date_iso === dateIso : b.date_iso >= t)).sort((x, y) => x.date_iso < y.date_iso ? -1 : 1);
 }
 function motoQueueItems(m, dateIso) {
-  const t = shopTodayIso(), k = plateKeyJS(m.plate);
-  return bookingQueue.filter(q => plateKeyJS(q.motorcycle_plate) === k && (dateIso ? q.date === dateIso : q.date >= t))
+  const t = shopTodayIso(), k = plateKeyJS(m.plate) || motoKeyJS(m.model);
+  return bookingQueue.filter(q => (plateKeyJS(q.motorcycle_plate) || motoKeyJS(q.motorcycle_model)) === k && (dateIso ? q.date === dateIso : q.date >= t))
     .sort((x, y) => x.date < y.date ? -1 : 1);
 }
 function motoTagsHTML(m, dateIso) {
@@ -9032,49 +9064,128 @@ function renderMotoPicker(keepOpen) {
   if (!keepOpen) menu.classList.remove('open');
   refreshMotoBookedNote();
 }
-function renderMotoCards() {
-  const box = document.getElementById('moto-cards');
-  if (!box || !MY_MOTOS) return;
+// ── Step 4: model picker (every motorcycle, like registration) + year + plate ──
+let bkDirty = false;                        // something was typed that is not a saved motorcycle yet
+function bkTouched() { bkDirty = true; }
+function bkYearLabel() {
+  const v = document.getElementById('bk-year').value;
+  document.getElementById('bk-year-label').textContent = v || 'Not sure';
+  document.querySelectorAll('#bk-year-dd .yopt').forEach(b => b.classList.toggle('on', b.dataset.y === v && v !== ''));
+}
+function bkYearToggle(e) {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById('bk-year-dd'), btn = document.getElementById('bk-year-btn');
+  const open = !dd.classList.contains('open');
+  dd.classList.toggle('open', open); btn.classList.toggle('open', open);
+  if (open) { document.getElementById('bk-model-dd').classList.remove('open'); const on = dd.querySelector('.yopt.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
+}
+function bkYearPick(v) {
+  document.getElementById('bk-year').value = v; bkYearLabel(); bkDirty = true;
+  document.getElementById('bk-year-dd').classList.remove('open'); document.getElementById('bk-year-btn').classList.remove('open');
+}
+function _bkEsc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+function bkOpenModel() {
+  const dd = document.getElementById('bk-model-dd'), box = document.getElementById('bk-model-other');
+  if (dd.classList.contains('open')) return;
+  box.value = '';
+  bkModelInput();
+  setTimeout(() => box.focus(), 30);
+}
+function bkModelInput() {
+  const dd = document.getElementById('bk-model-dd'), list = document.getElementById('bk-model-list'), box = document.getElementById('bk-model-other');
+  const q = box.value.trim().toLowerCase();
+  const useBtn = document.getElementById('bk-use-btn');
+  if (useBtn) useBtn.textContent = q ? 'Use “' + (box.value.trim().length > 18 ? box.value.trim().slice(0, 18) + '…' : box.value.trim()) + '”' : 'Use this';
+  let html = '', n = 0;
+  const mine = (MY_MOTOS || []).filter(x => !q || (x.model + ' ' + x.plate).toLowerCase().includes(q));
+  if (mine.length) {
+    html += '<div class="moto-group-label mine">YOUR MOTORCYCLES</div>' + mine.map(x =>
+      `<div class="moto-option" onmousedown="bkPickSaved(${x.id})">${_bkEsc(x.model)}<span class="mo-sub">${_bkEsc([x.year, 'Plate ' + x.plate, x.owner].filter(Boolean).join(' · '))}</span></div>`).join('');
+    n += mine.length;
+  }
+  for (const [brand, models] of Object.entries(MOTORCYCLE_MODELS)) {
+    const hit = models.filter(m => !q || `${brand} ${m}`.toLowerCase().includes(q));
+    if (!hit.length) continue;
+    n += hit.length;
+    html += `<div class="moto-group-label">${brand.toUpperCase()}</div>` + hit.map(m =>
+      `<div class="moto-option" data-value="${_bkEsc(brand + ' ' + m)}" onmousedown="bkPickModel(this.dataset.value)">${_bkEsc(brand + ' ' + m)}</div>`).join('');
+  }
+  list.innerHTML = n ? html : '<div class="moto-no-results">No matching model. Type the full name of your motorcycle above, then tap “Use this”.</div>';
+  list.scrollTop = 0;
+  dd.classList.add('open');
+  const yd = document.getElementById('bk-year-dd'); if (yd) { yd.classList.remove('open'); document.getElementById('bk-year-btn').classList.remove('open'); }
+}
+function bkUseOther() {
+  const o = document.getElementById('bk-model-other'), v = o.value.trim();
+  if (!v) { o.focus(); o.style.borderColor = '#dc2626'; setTimeout(() => { o.style.borderColor = ''; }, 1200); return; }
+  document.getElementById('bk-model').value = v;
+  document.getElementById('bk-model-dd').classList.remove('open');
+  bkDirty = true;
+}
+// Enter in the search box picks the first match; with no match it uses what was typed
+function bkSearchEnter() {
+  const first = document.querySelector('#bk-model-list .moto-option');
+  if (first) { first.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); return; }
+  bkUseOther();
+}
+function bkPickSaved(id) { document.getElementById('bk-model-dd').classList.remove('open'); selectMoto(id); }
+function bkPickModel(value) {
+  document.getElementById('bk-model').value = value;
+  document.getElementById('bk-model-dd').classList.remove('open');
+  bkDirty = true;
+}
+document.addEventListener('click', e => {
+  const dd = document.getElementById('bk-model-dd'), input = document.getElementById('bk-model');
+  if (dd && input && !input.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('open');
+  const yd = document.getElementById('bk-year-dd'), yb = document.getElementById('bk-year-btn');
+  if (yd && yb && !yb.contains(e.target) && !yd.contains(e.target)) { yd.classList.remove('open'); yb.classList.remove('open'); }
+});
+// The fields follow the saved motorcycle that is picked, unless something new is being typed.
+function bkSync() {
+  if (bkDirty) return;
   const m = currentMoto();
-  const day = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : '';
-  const tick = '<span class="tick"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>';
-  const cards = MY_MOTOS.map(x => {
-    const on = m && String(x.id) === String(m.id);
-    const tags = [x.is_new ? '<span class="mm-tag new">New</span>' : ''];
-    if (day) {
-      if (motoRealBookings(x, day).length) tags.push(`<span class="mm-tag booked">Booked ${_mmShort(day)}</span>`);
-      else if (motoQueueItems(x, day).length) tags.push(`<span class="mm-tag queue">In queue ${_mmShort(day)}</span>`);
-    }
-    const tg = tags.join('');
-    return `<button type="button" class="mc-card${on ? ' on' : ''}" onclick="selectMoto(${x.id})" aria-pressed="${!!on}">
-      <span class="ico">${MOTO_ICON}</span>
-      <span class="tx"><b>${_mmEsc(x.model)}</b><small>${_mmEsc(['Plate ' + x.plate, x.owner].filter(Boolean).join(' · '))}</small>${x.year ? `<span class="yr">${_mmEsc(x.year)}</span>` : ''}${tg ? `<span class="tags">${tg}</span>` : ''}</span>${tick}</button>`;
-  }).join('');
-  box.innerHTML = (cards || '<div class="mc-empty">No motorcycles saved yet. Add the one you are booking.</div>')
-    + `<button type="button" class="mc-card add" onclick="openMotoForm(null, true)"><span class="ico">+</span><span class="tx"><b>Add a motorcycle</b><small>Yours, a family member's, a friend's</small></span></button>`;
-  const ys = document.getElementById('bk-year');
-  if (ys) { ys.value = m ? (m.year || '') : ''; ys.disabled = !m; }
-  // the booking carries the year model with the model name, e.g. "Honda Click 125i (2021)"
+  const f = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  f('bk-model', m ? m.model : ''); f('bk-year', m ? (m.year || '') : ''); bkYearLabel();
   const mm = document.getElementById('moto-model');
-  if (mm && m) mm.value = m.model + (m.year ? ' (' + m.year + ')' : '');
+  if (mm && m) mm.value = m.model + (m.year ? ' (' + m.year + ')' : '');      // the booking carries the year, e.g. "Honda Click 125i (2021)"
 }
-// Year model picked in the booking: kept on the saved motorcycle, so it only has to be chosen once.
-async function onBookingYearChange(year) {
-  const m = currentMoto(); if (!m) return;
-  const hint = document.getElementById('bk-year-hint');
+async function _bkSave(url, body) {
+  const res = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return res.json();
+}
+// Called when leaving step 4: a motorcycle that is not saved yet is saved to My Motorcycles and picked. Returns a message, or '' when fine.
+async function bkCommit() {
+  const model = document.getElementById('bk-model').value.trim();
+  const year  = document.getElementById('bk-year').value;
+  if (!model) return 'Please choose or type the motorcycle model.';
+  // the same motorcycle is found by its model (a plate is not asked here; a saved plate is kept)
+  const match = (MY_MOTOS || []).find(x => String(x.id) === String(selectedMotoId) && x.model.trim().toLowerCase() === model.toLowerCase())
+             || (MY_MOTOS || []).find(x => x.model.trim().toLowerCase() === model.toLowerCase());
   try {
-    const res = await fetch(`/customer/motorcycles/${m.id}`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: m.model, plate: m.plate, owner: m.owner || '', year: year }) });
-    const data = await res.json();
-    if (!data.success) { if (hint) hint.textContent = data.error || 'Could not save the year model.'; renderMotoCards(); return; }
-    MY_MOTOS = MY_MOTOS.map(x => String(x.id) === String(m.id) ? data.motorcycle : x);
-    renderMyMotorcycles(); renderMotoPicker();
-    if (hint) hint.textContent = year ? 'Saved to this motorcycle.' : 'Year model cleared.';
-  } catch (e) { if (hint) hint.textContent = 'Network error. The year was not saved.'; renderMotoCards(); }
+    let saved = null;
+    if (match) {
+      if ((match.year || '') !== year) {
+        const d = await _bkSave(`/customer/motorcycles/${match.id}`, { model: match.model, plate: match.plate, owner: match.owner || '', year });
+        if (!d.success) return d.error || 'Could not save the motorcycle.';
+        saved = d.motorcycle;
+        MY_MOTOS = MY_MOTOS.map(x => String(x.id) === String(match.id) ? saved : x);
+      } else saved = match;
+    } else {
+      const d = await _bkSave('/customer/motorcycles', { model, plate: '', owner: '', year });
+      if (!d.success) return d.error || 'Could not save the motorcycle.';
+      saved = d.motorcycle; MY_MOTOS.push(saved);
+    }
+    bkDirty = false;
+    selectedMotoId = saved.id;
+    renderMyMotorcycles(); renderMotoPicker(); refreshBookingLimits(); hideQueueMissing();
+    return '';
+  } catch (e) { return 'Network error. Please try again.'; }
 }
-(function () {                       // every time the picker redraws, the cards follow it
+(function () {                       // every time the picker redraws, the fields follow it
   const _orig = renderMotoPicker;
-  renderMotoPicker = function () { const r = _orig.apply(this, arguments); renderMotoCards(); return r; };
+  renderMotoPicker = function () { const r = _orig.apply(this, arguments); bkSync(); return r; };
+  const _sel = selectMoto;
+  selectMoto = function () { bkDirty = false; return _sel.apply(this, arguments); };
 })();
 
 function toggleMotoPicker(e) {
@@ -9108,7 +9219,7 @@ function refreshMotoBookedNote() {
   const m = currentMoto();
   const day = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : '';
   if (!m || !day) { box.style.display = 'none'; return; }
-  const real = Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.date_iso === day && plateKeyJS(b.motorcycle_plate) === plateKeyJS(m.plate));
+  const real = Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.date_iso === day && bookingMotoKey(b) === (plateKeyJS(m.plate) || motoKeyJS(m.model)));
   const queued = motoQueueItems(m, day);
   if (!real.length && !queued.length) { box.style.display = 'none'; return; }
   const noZero = t => (t || '').replace(/^0/, '');
@@ -10277,7 +10388,7 @@ updateMechNote();
     if (n === 1 && !document.getElementById('selected-date-value').value) return 'Please pick a date on the calendar.';
     if (n === 2 && !selectedServiceNames.length) return 'Please choose at least one service.';
     if (n === 3 && !document.getElementById('selected-time-value').value) return 'Please pick a time.';
-    if (n === 4 && !document.getElementById('moto-plate').value) return 'Please choose a motorcycle.';
+    if (n === 4 && !document.getElementById('moto-plate').value && !document.getElementById('moto-model').value) return 'Please choose a motorcycle.';
     if (n === 5 && mechanicMode === 'choose' && !selectedMechanicId) return 'Please choose a mechanic, or let the shop assign one.';
     return '';
   }
@@ -10301,7 +10412,8 @@ updateMechNote();
     rows.push(['svc', 'Services', svc]);
     const t = val('selected-time-value');
     rows.push(['time', 'Time', t ? (minutesToAmpmJS(hhmmToMinutes(t)) + (selectedEndLabel ? ' – ' + selectedEndLabel : '')) : '']);
-    const mm = val('moto-model'), pl = val('moto-plate');
+    const bm = val('bk-model'), by = val('bk-year');
+    const mm = bm ? bm + (by ? ' (' + by + ')' : '') : val('moto-model'), pl = val('moto-plate');
     rows.push(['moto', 'Motorcycle', mm ? mm + (pl ? ' · ' + pl : '') : '']);
     let mech = '';
     if (mechanicMode === 'choose') {
@@ -10337,7 +10449,15 @@ updateMechNote();
     const pane = panes[n - 1]; if (pane) pane.scrollTop = 0;
   }
 
-  window.bwNext = function () {
+  let busyNext = false;
+  window.bwNext = async function () {
+    if (busyNext) return;
+    if (cur === 4) {                                     // a typed motorcycle is saved before moving on
+      busyNext = true; msg.textContent = 'Saving your motorcycle…';
+      const err = await bkCommit();
+      busyNext = false; msg.textContent = '';
+      if (err) { msg.textContent = err; return; }
+    }
     const p = problem(cur);
     if (p) { msg.textContent = p; return; }
     if (cur < 7) show(cur + 1);

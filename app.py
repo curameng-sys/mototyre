@@ -2009,11 +2009,13 @@ def _my_motorcycles(user_id):
 def _moto_form_error(user_id, model, plate, exclude_id=None):
     if not model:
         return 'Type the motorcycle model.', 'model'
-    if not plate:
-        return 'Type the plate number. No plate yet? Type the temporary plate or MV file number.', 'plate'
     for m in CustomerMotorcycle.query.filter_by(user_id=user_id, removed_at=None).all():
-        if m.id != exclude_id and _plate_key(m.plate) == _plate_key(plate):
+        if m.id == exclude_id:
+            continue
+        if plate and _plate_key(m.plate) == _plate_key(plate):
             return f'That plate is already saved as your {m.model}.', 'plate'
+        if not plate and not _plate_key(m.plate) and (m.model or '').strip().lower() == model.strip().lower():
+            return f'{m.model} is already saved.', 'model'        # without a plate, the model is what tells motorcycles apart
     return None, None
 
 
@@ -2021,7 +2023,8 @@ def _moto_key(model, plate=''):
     """Which motorcycle a booking is for: its plate if there is one, otherwise the model typed on the form."""
     import re as _re
     plate = _plate_key(plate)
-    model = _re.sub(r'\s+', ' ', (model or '').strip().lower())
+    model = _re.sub(r'\s*\(\d{4}\)\s*$', '', (model or '').strip().lower())      # "honda click 125i (2021)" is the same motorcycle as "honda click 125i"
+    model = _re.sub(r'\s+', ' ', model)
     return plate or model or 'unspecified'
 
 
