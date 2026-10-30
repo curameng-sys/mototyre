@@ -1255,7 +1255,13 @@ def home():
 @app.route('/products')
 def products():
     items = Product.query.order_by(Product.category, Product.name).all()
-    categories = sorted({p.category for p in items if p.category})
+    counts = {}
+    for p in items:
+        if p.category:
+            key = p.category.strip().lower()
+            label, n = counts.get(key, (p.category.strip(), 0))
+            counts[key] = (label, n + 1)
+    categories = sorted(((k, v[0], v[1]) for k, v in counts.items()), key=lambda c: c[1].lower())   # (filter key, label, how many)
     return render_template('Products.html', products=items, categories=categories, max_online_qty=MAX_ONLINE_QTY)
 
 

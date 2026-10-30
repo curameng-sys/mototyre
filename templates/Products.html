@@ -62,10 +62,25 @@
     .page-hero p{font-family:var(--font-body);font-size:15px;color:rgba(255,255,255,0.65);line-height:1.65;max-width:480px}
 
     /* ── FILTERS ── */
-    .filters-bar{background:var(--bg-page);border-bottom:1px solid var(--line-1);padding:16px clamp(20px,4vw,48px);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .filter-btn{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:7px 16px;border-radius:999px;border:1px solid var(--line-2);background:var(--bg-page);color:var(--fg-2);transition:all 120ms var(--ease);cursor:pointer}
-    .filter-btn:hover{border-color:var(--brand-red);color:var(--brand-red);background:var(--brand-red-soft)}
-    .filter-btn.active{background:var(--brand-red);border-color:var(--brand-red);color:#fff}
+    .filters-bar{background:var(--bg-page);border-bottom:1px solid var(--line-1);padding:16px clamp(20px,4vw,48px);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .filters-bar .flabel{font-family:var(--font-label);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--fg-3)}
+    .cat-dd{position:relative;width:min(340px,100%)}
+    .cat-dd-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg-page);font-family:var(--font-label);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--fg-1);cursor:pointer;transition:border-color 120ms var(--ease)}
+    .cat-dd-btn:hover,.cat-dd.open .cat-dd-btn{border-color:var(--brand-red)}
+    .cat-dd-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cat-dd-btn svg{flex-shrink:0;transition:transform 160ms var(--ease)}
+    .cat-dd.open .cat-dd-btn svg{transform:rotate(180deg)}
+    .cat-dd-panel{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:50;background:var(--bg-page);border:1px solid var(--line-2);border-radius:12px;box-shadow:0 16px 40px rgba(28,24,20,0.22);overflow:hidden}
+    .cat-dd.open .cat-dd-panel{display:block}
+    .cat-dd-search{width:100%;box-sizing:border-box;padding:11px 14px;border:none;border-bottom:1px solid var(--line-1);font-family:var(--font-body);font-size:14px;outline:none;background:transparent;color:var(--fg-1)}
+    .cat-dd-list{max-height:320px;overflow-y:auto;list-style:none;margin:0;padding:6px}
+    .cat-dd-list li{display:flex;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--fg-2);cursor:pointer}
+    .cat-dd-list li small{color:var(--fg-3);font-size:11px;align-self:center}
+    .cat-dd-list li:hover{background:var(--brand-red-soft);color:var(--brand-red)}
+    .cat-dd-list li.sel{background:var(--brand-red);color:#fff}
+    .cat-dd-list li.sel small{color:rgba(255,255,255,0.8)}
+    .cat-dd-empty{padding:14px;text-align:center;color:var(--fg-3);font-size:13px;display:none}
+    .filters-count{font-size:13px;color:var(--fg-3)}
 
     /* ── PRODUCTS GRID ── */
     .products-section{padding:clamp(48px,6vw,80px) clamp(20px,4vw,48px);background:var(--bg-subtle);border-top:1px solid var(--line-2);box-shadow:0 -8px 32px rgba(28,24,20,0.08)}
@@ -133,8 +148,7 @@
       .products-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
     }
     @media(max-width:640px){
-      .filters-bar{gap:6px;padding:12px 16px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
-      .filter-btn{flex-shrink:0}
+      .filters-bar{gap:8px;padding:12px 16px}
       .products-section{padding:32px 16px}
       .page-hero{padding:48px 16px}
     }
@@ -183,9 +197,23 @@
 
 <!-- FILTER BAR -->
 <div class="filters-bar">
-  <button class="filter-btn active" data-filter="all" onclick="filterProducts('all', this)">All</button>
-  {% for c in categories %}<button class="filter-btn" data-filter="{{ c|lower }}" onclick="filterProducts(this.dataset.filter, this)">{{ c }}</button>
-  {% endfor %}
+  <span class="flabel">Category</span>
+  <div class="cat-dd" id="catDd">
+    <button type="button" class="cat-dd-btn" id="catBtn" aria-haspopup="listbox" aria-expanded="false">
+      <span id="catLabel">All products</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="cat-dd-panel">
+      <input type="text" class="cat-dd-search" id="catSearch" placeholder="Search category…" autocomplete="off">
+      <ul class="cat-dd-list" id="catList" role="listbox">
+        <li class="sel" data-filter="all" data-label="All products">All products <small>{{ products|length }}</small></li>
+        {% for key, label, n in categories %}<li data-filter="{{ key }}" data-label="{{ label }}">{{ label }} <small>{{ n }}</small></li>
+        {% endfor %}
+      </ul>
+      <div class="cat-dd-empty" id="catEmpty">No matching category</div>
+    </div>
+  </div>
+  <span class="filters-count" id="filtersCount"></span>
 </div>
 
 <!-- PRODUCTS -->
@@ -194,7 +222,7 @@
   <div class="products-grid" id="productsGrid">
     {% for p in products %}
     {% set src = p|product_img %}
-    <div class="product-card" data-cat="{{ p.category|lower }}">
+    <div class="product-card" data-cat="{{ p.category|trim|lower }}">
       <div class="product-img">
         {% if src %}<img src="{{ src }}" alt="{{ p.name }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
         {% else %}<i data-lucide="package" style="width:40px;height:40px"></i>{% endif %}
@@ -227,7 +255,7 @@
     <a href="/products">Products</a>
     <a href="/#services">Services</a>
     <a href="/#contact">Contact</a>
-    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('login') }}">Sign In</a>
     <a href="{{ url_for('register') }}">Register</a>
   </div>
   <div class="footer-copy">© <span id="yr"></span> MotoTyres. All rights reserved.</div>
@@ -247,8 +275,8 @@
     <div class="cart-note">Continue to your account to choose pickup or delivery and pay.</div>
     <a class="cart-go" href="{{ url_for('customer_dashboard') }}" onclick="try{sessionStorage.setItem('mt_open_cart','1')}catch(e){}">Checkout</a>
     {% else %}
-    <div class="cart-note">You can browse and add items freely. To check out, please log in or register first. Your cart will be kept.</div>
-    <a class="cart-go" href="{{ url_for('login') }}" onclick="try{sessionStorage.setItem('mt_open_cart','1')}catch(e){}">Log in to Checkout</a>
+    <div class="cart-note">You can browse and add items freely. To check out, please sign in or register first. Your cart will be kept.</div>
+    <a class="cart-go" href="{{ url_for('login') }}" onclick="try{sessionStorage.setItem('mt_open_cart','1')}catch(e){}">Sign In to Checkout</a>
     <div class="cart-note" style="text-align:center;margin:10px 0 0;">New here? <a href="{{ url_for('register') }}" style="color:var(--brand-red);font-weight:600;" onclick="try{sessionStorage.setItem('mt_open_cart','1')}catch(e){}">Create an account</a></div>
     {% endif %}
   </div>
@@ -347,12 +375,34 @@
 
   // Filter
   var activeFilter = 'all';
-  function filterProducts(cat, btn) {
+  var catDd = document.getElementById('catDd');
+  function setCatOpen(o) {
+    catDd.classList.toggle('open', o);
+    document.getElementById('catBtn').setAttribute('aria-expanded', o);
+    if (o) { var q = document.getElementById('catSearch'); q.value = ''; filterCatList(''); setTimeout(function () { q.focus(); }, 0); }
+  }
+  function filterCatList(q) {
+    q = q.trim().toLowerCase(); var shown = 0;
+    document.querySelectorAll('#catList li').forEach(function (li) {
+      var ok = !q || li.dataset.label.toLowerCase().indexOf(q) !== -1;
+      li.style.display = ok ? '' : 'none'; if (ok) shown++;
+    });
+    document.getElementById('catEmpty').style.display = shown ? 'none' : 'block';
+  }
+  function filterProducts(cat, label) {
     activeFilter = cat;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    document.querySelectorAll('#catList li').forEach(function (li) { li.classList.toggle('sel', li.dataset.filter === cat); });
+    document.getElementById('catLabel').textContent = label;
     prodGo(1);
   }
+  document.getElementById('catBtn').addEventListener('click', function () { setCatOpen(!catDd.classList.contains('open')); });
+  document.getElementById('catSearch').addEventListener('input', function (e) { filterCatList(e.target.value); });
+  document.getElementById('catList').addEventListener('click', function (e) {
+    var li = e.target.closest('li'); if (!li) return;
+    filterProducts(li.dataset.filter, li.dataset.label); setCatOpen(false);
+  });
+  document.addEventListener('click', function (e) { if (!catDd.contains(e.target)) setCatOpen(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setCatOpen(false); });
 
   // Pagination
   var PROD_PER_PAGE = 10;
@@ -376,6 +426,7 @@
     var start = (page - 1) * PROD_PER_PAGE;
     cards.slice(start, start + PROD_PER_PAGE).forEach(c => c.classList.remove('hidden'));
 
+    document.getElementById('filtersCount').textContent = cards.length + ' product' + (cards.length === 1 ? '' : 's');
     document.getElementById('prevPage').disabled = page === 1;
     document.getElementById('nextPage').disabled = page >= total;
 
