@@ -2954,7 +2954,26 @@
     saveCart();
   }
 
-  loadCart(); updateCartBadge();
+  loadCart();
+  // Items picked on the public Products page before logging in / registering: carry them into this account's cart.
+  try {
+    const GUEST_MAXQ = 10;      // same cap as MAX_ONLINE_QTY (declared further down, so not readable yet here)
+    const guest = JSON.parse(localStorage.getItem('mt_cart_guest') || '[]');
+    if (Array.isArray(guest)) guest.forEach(g => {
+      if (!g || !g.id || !(g.qty >= 1)) return;
+      const mine = cart.find(i => i.id === +g.id);
+      if (mine) mine.qty = Math.min(GUEST_MAXQ, mine.stock || GUEST_MAXQ, mine.qty + g.qty);
+      else cart.push({ id: +g.id, name: String(g.name), price: +g.price, stock: +g.stock, qty: Math.min(GUEST_MAXQ, +g.qty), category: g.category || '' });
+    });
+    localStorage.removeItem('mt_cart_guest');
+  } catch (e) {}
+  updateCartBadge();
+  try {
+    if (sessionStorage.getItem('mt_open_cart')) {
+      sessionStorage.removeItem('mt_open_cart');
+      if (cart.length) setTimeout(openCart, 400);
+    }
+  } catch (e) {}
 
   function openCart() {
     deliveryMethod = 'pickup';

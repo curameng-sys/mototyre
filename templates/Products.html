@@ -79,6 +79,34 @@
     .product-name{font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--fg-1);line-height:1.3}
     .product-price{font-family:var(--font-display);font-size:22px;letter-spacing:0.02em;color:var(--brand-red);margin-top:auto}
 
+    .product-fit{font-size:11px;color:var(--fg-3);line-height:1.4}
+    .add-cart{margin-top:6px;padding:10px;border:none;border-radius:8px;background:var(--fg-1);color:#fff;font-family:var(--font-label);font-weight:700;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:background 120ms var(--ease)}
+    .add-cart:hover:not(:disabled){background:var(--brand-red)}
+    .add-cart:disabled{background:var(--line-2);color:var(--fg-3);cursor:not-allowed}
+    .cart-fab{position:fixed;right:20px;bottom:20px;z-index:60;display:flex;align-items:center;gap:8px;padding:12px 18px;border:none;border-radius:999px;background:var(--brand-red);color:#fff;font-family:var(--font-label);font-weight:700;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;box-shadow:0 8px 24px rgba(208,0,25,0.4)}
+    .cart-fab .cnt{background:#fff;color:var(--brand-red);border-radius:999px;min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+    .cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:70;display:none}
+    .cart-overlay.open{display:block}
+    .cart-drawer{position:fixed;top:0;right:0;bottom:0;width:min(400px,100%);background:var(--bg-page);z-index:71;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 220ms var(--ease);box-shadow:-12px 0 40px rgba(0,0,0,0.25)}
+    .cart-drawer.open{transform:none}
+    .cart-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line-1);font-family:var(--font-display);font-size:24px;letter-spacing:0.03em}
+    .cart-head button{border:none;background:none;font-size:22px;cursor:pointer;color:var(--fg-2)}
+    .cart-list{flex:1;overflow-y:auto;padding:12px 20px}
+    .cart-row{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line-1)}
+    .cart-row .nm{flex:1;font-size:13px;font-weight:600;line-height:1.3}
+    .cart-row .nm small{display:block;color:var(--fg-3);font-weight:400;margin-top:2px}
+    .qty{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
+    .qty button{width:26px;height:26px;border:none;background:var(--bg-subtle);cursor:pointer;font-size:15px}
+    .qty span{min-width:26px;text-align:center;font-size:13px;font-weight:600}
+    .cart-rm{border:none;background:none;color:var(--fg-3);cursor:pointer;font-size:18px}
+    .cart-foot{padding:16px 20px;border-top:1px solid var(--line-1)}
+    .cart-total{display:flex;justify-content:space-between;font-weight:700;margin-bottom:6px}
+    .cart-note{font-size:12px;color:var(--fg-3);line-height:1.5;margin-bottom:12px}
+    .cart-go{display:block;width:100%;text-align:center;padding:13px;border-radius:10px;background:var(--brand-red);color:#fff;font-family:var(--font-label);font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none}
+    .cart-empty{color:var(--fg-3);text-align:center;padding:40px 0;font-size:14px}
+    .cart-toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--fg-1);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:80;opacity:0;pointer-events:none;transition:opacity 160ms}
+    .cart-toast.show{opacity:1}
+
     /* ── PAGINATION ── */
     .pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:32px;flex-wrap:wrap}
     .page-btn{height:40px;min-width:40px;padding:0 12px;border-radius:8px;border:1px solid var(--line-1);background:var(--bg-panel);color:var(--fg-3);font-family:var(--font-body);font-weight:600;font-size:14px;transition:all 120ms var(--ease);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(28,24,20,0.18),0 1px 4px rgba(28,24,20,0.10)}
@@ -155,130 +183,33 @@
 
 <!-- FILTER BAR -->
 <div class="filters-bar">
-  <button class="filter-btn active" onclick="filterProducts('all', this)">All</button>
-  <button class="filter-btn" onclick="filterProducts('tires', this)">Tires</button>
-  <button class="filter-btn" onclick="filterProducts('oil', this)">Engine Oil</button>
-  <button class="filter-btn" onclick="filterProducts('brakes', this)">Brakes</button>
-  <button class="filter-btn" onclick="filterProducts('electrical', this)">Electrical</button>
-  <button class="filter-btn" onclick="filterProducts('accessories', this)">Accessories</button>
+  <button class="filter-btn active" data-filter="all" onclick="filterProducts('all', this)">All</button>
+  {% for c in categories %}<button class="filter-btn" data-filter="{{ c|lower }}" onclick="filterProducts(this.dataset.filter, this)">{{ c }}</button>
+  {% endfor %}
 </div>
 
 <!-- PRODUCTS -->
 <section class="products-section">
+  {% if not products %}<p style="text-align:center;color:var(--fg-3);">Products are being updated. Please check back soon.</p>{% endif %}
   <div class="products-grid" id="productsGrid">
-
-    <div class="product-card" data-cat="tires">
-      <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Tire</div>
-      <div class="product-name">IRC Street Sport Tire</div>
-      <div class="product-price">₱1,890</div>
+    {% for p in products %}
+    {% set src = p|product_img %}
+    <div class="product-card" data-cat="{{ p.category|lower }}">
+      <div class="product-img">
+        {% if src %}<img src="{{ src }}" alt="{{ p.name }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+        {% else %}<i data-lucide="package" style="width:40px;height:40px"></i>{% endif %}
+      </div>
+      <div class="product-cat">{{ p.category }}</div>
+      <div class="product-name">{{ p.name }}</div>
+      {% if p.motor_model %}<div class="product-fit">Fits: {{ p.motor_model }}</div>{% endif %}
+      <div class="product-price">₱{{ '{:,.2f}'.format(p.price) }}</div>
+      {% if p.stock and p.stock > 0 %}
+      <button type="button" class="add-cart" data-id="{{ p.id }}" data-name="{{ p.name }}" data-price="{{ p.price }}" data-stock="{{ p.stock }}" data-category="{{ p.category }}" onclick="addToCart(this)">Add to Cart</button>
+      {% else %}
+      <button type="button" class="add-cart" disabled>Out of Stock</button>
+      {% endif %}
     </div>
-
-    <div class="product-card" data-cat="tires">
-      <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Tire</div>
-      <div class="product-name">FDR Sport XR Evo</div>
-      <div class="product-price">₱1,650</div>
-    </div>
-
-    <div class="product-card" data-cat="tires">
-      <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Tire</div>
-      <div class="product-name">Michelin Pilot Street</div>
-      <div class="product-price">₱2,400</div>
-    </div>
-
-    <div class="product-card" data-cat="tires">
-      <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Tire</div>
-      <div class="product-name">Pirelli Diablo Scooter</div>
-      <div class="product-price">₱2,100</div>
-    </div>
-
-    <div class="product-card" data-cat="oil">
-      <div class="product-img"><i data-lucide="droplet" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Engine Oil</div>
-      <div class="product-name">Motul 5100 10W-40 1L</div>
-      <div class="product-price">₱520</div>
-    </div>
-
-    <div class="product-card" data-cat="oil">
-      <div class="product-img"><i data-lucide="droplet" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Engine Oil</div>
-      <div class="product-name">Shell Advance AX7 1L</div>
-      <div class="product-price">₱380</div>
-    </div>
-
-    <div class="product-card" data-cat="oil">
-      <div class="product-img"><i data-lucide="droplet" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Lubricant</div>
-      <div class="product-name">CVT Belt &amp; Clutch Grease</div>
-      <div class="product-price">₱220</div>
-    </div>
-
-    <div class="product-card" data-cat="brakes">
-      <div class="product-img"><i data-lucide="disc" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Brake</div>
-      <div class="product-name">Brembo Semi-Metallic Pads</div>
-      <div class="product-price">₱1,250</div>
-    </div>
-
-    <div class="product-card" data-cat="brakes">
-      <div class="product-img"><i data-lucide="disc" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Brake</div>
-      <div class="product-name">Ceramic Brake Pads</div>
-      <div class="product-price">₱980</div>
-    </div>
-
-    <div class="product-card" data-cat="electrical">
-      <div class="product-img"><i data-lucide="battery-charging" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Battery</div>
-      <div class="product-name">Motolite MF Battery 12V</div>
-      <div class="product-price">₱2,450</div>
-    </div>
-
-    <div class="product-card" data-cat="electrical">
-      <div class="product-img"><i data-lucide="zap" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Lighting</div>
-      <div class="product-name">LED Headlight Bulb H4</div>
-      <div class="product-price">₱680</div>
-    </div>
-
-    <div class="product-card" data-cat="electrical">
-      <div class="product-img"><i data-lucide="volume-2" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Horn</div>
-      <div class="product-name">Hella Supertone Horn</div>
-      <div class="product-price">₱750</div>
-    </div>
-
-    <div class="product-card" data-cat="accessories">
-      <div class="product-img"><i data-lucide="hard-hat" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Helmet</div>
-      <div class="product-name">HJC Full Face Helmet</div>
-      <div class="product-price">₱4,890</div>
-    </div>
-
-    <div class="product-card" data-cat="accessories">
-      <div class="product-img"><i data-lucide="link-2" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Drivetrain</div>
-      <div class="product-name">DID Chain &amp; Sprocket Kit</div>
-      <div class="product-price">₱1,980</div>
-    </div>
-
-    <div class="product-card" data-cat="accessories">
-      <div class="product-img"><i data-lucide="shield" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Gear</div>
-      <div class="product-name">Leather Riding Gloves</div>
-      <div class="product-price">₱890</div>
-    </div>
-
-    <div class="product-card" data-cat="accessories">
-      <div class="product-img"><i data-lucide="wrench" style="width:40px;height:40px"></i></div>
-      <div class="product-cat">Tools</div>
-      <div class="product-name">Complete Tool Kit</div>
-      <div class="product-price">₱1,100</div>
-    </div>
-
+    {% endfor %}
   </div>
 
   <div class="pagination" id="productsPagination">
@@ -301,6 +232,88 @@
   </div>
   <div class="footer-copy">© <span id="yr"></span> MotoTyres. All rights reserved.</div>
 </footer>
+
+<!-- CART (a guest's cart lives in this browser; checking out needs an account) -->
+<button type="button" class="cart-fab" onclick="openCart()" aria-label="Open cart">
+  <i data-lucide="shopping-cart" style="width:16px;height:16px"></i> Cart <span class="cnt" id="cartCnt">0</span>
+</button>
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+<aside class="cart-drawer" id="cartDrawer" aria-label="Your cart">
+  <div class="cart-head"><span>YOUR CART</span><button type="button" onclick="closeCart()" aria-label="Close">&times;</button></div>
+  <div class="cart-list" id="cartList"></div>
+  <div class="cart-foot" id="cartFoot">
+    <div class="cart-total"><span>Total</span><span id="cartTotal">₱0.00</span></div>
+    {% if current_user.is_authenticated %}
+    <div class="cart-note">Continue to your account to choose pickup or delivery and pay.</div>
+    <a class="cart-go" href="{{ url_for('customer_dashboard') }}" onclick="try{sessionStorage.setItem('mt_open_cart','1')}catch(e){}">Checkout</a>
+    {% else %}
+    <div class="cart-note">You can browse and add items freely. To check out, please log in or register first. Your cart will be kept.</div>
+    <a class="cart-go" href="{{ url_for('login') }}" onclick="try{sessionStorage.setItem('mt_open_cart','1')}catch(e){}">Log in to Checkout</a>
+    <div class="cart-note" style="text-align:center;margin:10px 0 0;">New here? <a href="{{ url_for('register') }}" style="color:var(--brand-red);font-weight:600;" onclick="try{sessionStorage.setItem('mt_open_cart','1')}catch(e){}">Create an account</a></div>
+    {% endif %}
+  </div>
+</aside>
+<div class="cart-toast" id="cartToast"></div>
+
+<script>
+  // Same item shape as the customer dashboard cart, so a guest cart carries over after login.
+  var MAX_QTY = {{ max_online_qty }};
+  var CART_KEY = {% if current_user.is_authenticated %}'mt_cart_{{ current_user.id }}'{% else %}'mt_cart_guest'{% endif %};
+  var cart = [];
+  function loadCart() {
+    try { var v = JSON.parse(localStorage.getItem(CART_KEY) || '[]'); cart = Array.isArray(v) ? v.filter(function (i) { return i && i.id && i.qty >= 1; }) : []; } catch (e) { cart = []; }
+  }
+  function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {} }
+  function peso(n) { return '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function cartToast(msg) {
+    var t = document.getElementById('cartToast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(cartToast._t); cartToast._t = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+  function addToCart(btn) {
+    var id = parseInt(btn.dataset.id), stock = parseInt(btn.dataset.stock), name = btn.dataset.name;
+    var ex = cart.find(function (i) { return i.id === id; });
+    if (ex) {
+      if (ex.qty >= MAX_QTY) { cartToast('Up to ' + MAX_QTY + ' per item online'); return; }
+      if (ex.qty >= stock) { cartToast(name + ': max stock reached'); return; }
+      ex.qty++; ex.stock = stock;
+    } else cart.push({ id: id, name: name, price: parseFloat(btn.dataset.price), stock: stock, qty: 1, category: btn.dataset.category || '' });
+    saveCart(); renderCart(); cartToast(name + ' added to cart');
+  }
+  function changeQty(id, d) {
+    var it = cart.find(function (i) { return i.id === id; }); if (!it) return;
+    var q = it.qty + d;
+    if (q < 1) return removeItem(id);
+    if (q > MAX_QTY) { cartToast('Up to ' + MAX_QTY + ' per item online'); return; }
+    if (q > it.stock) { cartToast('Max stock reached'); return; }
+    it.qty = q; saveCart(); renderCart();
+  }
+  function removeItem(id) { cart = cart.filter(function (i) { return i.id !== id; }); saveCart(); renderCart(); }
+  function renderCart() {
+    document.getElementById('cartCnt').textContent = cart.reduce(function (s, i) { return s + i.qty; }, 0);
+    var list = document.getElementById('cartList');
+    if (!cart.length) list.innerHTML = '<div class="cart-empty">Your cart is empty.</div>';
+    else {
+      list.innerHTML = '';
+      cart.forEach(function (i) {
+        var row = document.createElement('div'); row.className = 'cart-row';
+        var nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = i.name;
+        var sm = document.createElement('small'); sm.textContent = peso(i.price); nm.appendChild(sm);
+        var q = document.createElement('div'); q.className = 'qty';
+        var minus = document.createElement('button'); minus.type = 'button'; minus.textContent = '−'; minus.onclick = function () { changeQty(i.id, -1); };
+        var cnt = document.createElement('span'); cnt.textContent = i.qty;
+        var plus = document.createElement('button'); plus.type = 'button'; plus.textContent = '+'; plus.onclick = function () { changeQty(i.id, 1); };
+        q.appendChild(minus); q.appendChild(cnt); q.appendChild(plus);
+        var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'cart-rm'; rm.innerHTML = '&times;'; rm.setAttribute('aria-label', 'Remove'); rm.onclick = function () { removeItem(i.id); };
+        row.appendChild(nm); row.appendChild(q); row.appendChild(rm); list.appendChild(row);
+      });
+    }
+    document.getElementById('cartTotal').textContent = peso(cart.reduce(function (s, i) { return s + i.price * i.qty; }, 0));
+    document.getElementById('cartFoot').style.display = cart.length ? '' : 'none';
+  }
+  function openCart() { document.getElementById('cartOverlay').classList.add('open'); document.getElementById('cartDrawer').classList.add('open'); }
+  function closeCart() { document.getElementById('cartOverlay').classList.remove('open'); document.getElementById('cartDrawer').classList.remove('open'); }
+  loadCart(); renderCart();
+</script>
 
 <script>
   lucide.createIcons();

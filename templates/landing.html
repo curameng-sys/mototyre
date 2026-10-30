@@ -596,38 +596,24 @@
         <a href="{{ url_for('products') }}">View All <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
       </div>
     </div>
+    {% if featured_products %}
     <div class="products-grid">
-      <div class="product-card">
-        <div class="product-img"><i data-lucide="circle-dot" style="width:40px;height:40px"></i></div>
-        <div class="product-cat">Tire</div>
-        <div class="product-name">IRC Street Sport Tire</div>
-        <div class="product-price">₱1,890</div>
-      </div>
-      <div class="product-card">
-        <div class="product-img"><i data-lucide="droplet" style="width:40px;height:40px"></i></div>
-        <div class="product-cat">Engine Oil</div>
-        <div class="product-name">Motul 5100 10W-40 1L</div>
-        <div class="product-price">₱520</div>
-      </div>
-      <div class="product-card">
-        <div class="product-img"><i data-lucide="octagon-alert" style="width:40px;height:40px"></i></div>
-        <div class="product-cat">Brake</div>
-        <div class="product-name">Brembo Brake Pads</div>
-        <div class="product-price">₱1,250</div>
-      </div>
-      <div class="product-card">
-        <div class="product-img"><i data-lucide="battery-charging" style="width:40px;height:40px"></i></div>
-        <div class="product-cat">Battery</div>
-        <div class="product-name">Motolite MF Battery 12V</div>
-        <div class="product-price">₱2,450</div>
-      </div>
-      <div class="product-card">
-        <div class="product-img"><i data-lucide="hard-hat" style="width:40px;height:40px"></i></div>
-        <div class="product-cat">Helmet</div>
-        <div class="product-name">HJC Full Face Helmet</div>
-        <div class="product-price">₱4,890</div>
-      </div>
+      {% for p in featured_products %}
+      <a class="product-card" href="{{ url_for('products') }}" style="text-decoration:none;color:inherit;">
+        <div class="product-img">
+          {% set src = p|product_img %}
+          {% if src %}<img src="{{ src }}" alt="{{ p.name }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          {% else %}<i data-lucide="package" style="width:40px;height:40px"></i>{% endif %}
+        </div>
+        <div class="product-cat">{{ p.category }}</div>
+        <div class="product-name">{{ p.name }}</div>
+        <div class="product-price">₱{{ '{:,.2f}'.format(p.price) }}</div>
+      </a>
+      {% endfor %}
     </div>
+    {% else %}
+    <p style="color:var(--fg-3);">Products are being updated. Please check back soon.</p>
+    {% endif %}
   </div>
 </section>
 

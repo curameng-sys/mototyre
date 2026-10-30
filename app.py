@@ -1231,16 +1231,32 @@ def cleanup_abandoned_gcash_orders():
 
 # ── Auth routes ───────────────────────────────────────────────────────────────
 
+def _landing_products(limit=5):
+    """The few products the landing page shows off: in stock, newest first, one per category before any repeats,
+    so the strip shows variety instead of five tires."""
+    pool = Product.query.filter(Product.stock > 0).order_by(Product.created_at.desc(), Product.id.desc()).all()
+    picked, seen = [], set()
+    for p in pool:
+        if p.category not in seen:
+            picked.append(p); seen.add(p.category)
+    for p in pool:
+        if p not in picked:
+            picked.append(p)
+    return picked[:limit]
+
+
 @app.route('/')
 def home():
     return render_template('landing.html', FACEBOOK_PAGE_URL=FACEBOOK_PAGE_URL,
                            SHOP_ADDRESS=SHOP_ADDRESS, SHOP_PHONE=SHOP_PHONE, SHOP_PHONE_DISPLAY=SHOP_PHONE_DISPLAY,
                            SHOP_MAP_EMBED_URL=SHOP_MAP_EMBED_URL, SHOP_DIRECTIONS_URL=SHOP_DIRECTIONS_URL,
-                           SHOP_MAPS_URL=SHOP_MAPS_URL)
+                           SHOP_MAPS_URL=SHOP_MAPS_URL, featured_products=_landing_products())
 
 @app.route('/products')
 def products():
-    return render_template('Products.html')
+    items = Product.query.order_by(Product.category, Product.name).all()
+    categories = sorted({p.category for p in items if p.category})
+    return render_template('Products.html', products=items, categories=categories, max_online_qty=MAX_ONLINE_QTY)
 
 
 @app.route('/api/feedback', methods=['POST'])
