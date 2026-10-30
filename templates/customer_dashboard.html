@@ -906,6 +906,26 @@
     #queue-badge-wrap, #queue-select-all { display: none !important; }                                   /* no queue any more: one booking at a time */
     #booking-queue-list input[type="checkbox"] { display: none; }
     #booking-queue-list { max-height: none !important; }
+    /* Step 7: the details on the left, the policy and Confirm on the right, so it fits one screen */
+    @media (min-width: 861px) {
+      .bw-pane[data-bstep="7"] .bw-narrow { max-width: 1120px; }
+      .bw-pane[data-bstep="7"] .bw-q { max-width: 1120px; }
+      .bw-pane[data-bstep="7"] #booking-queue-panel { display: grid !important; grid-template-columns: minmax(0, 1.2fr) minmax(300px, 1fr); column-gap: clamp(1rem, 2.2vw, 2rem); align-items: start; margin-top: 0 !important; }
+      .bw-pane[data-bstep="7"] #booking-queue-panel > .appt-section-label { grid-column: 1; grid-row: 1; }
+      .bw-pane[data-bstep="7"] #booking-queue-list { grid-column: 1; grid-row: 2 / span 3; }
+      .bw-pane[data-bstep="7"] #cancel-policy-section { grid-column: 2; grid-row: 1 / span 2; margin-top: 0 !important; }
+      .bw-pane[data-bstep="7"] #btn-confirm-all-bottom { grid-column: 2; grid-row: 3; margin-top: 0.9rem !important; padding: 0.95rem 1rem !important; font-size: 0.95rem !important; }
+      .bw-pane[data-bstep="7"] #policy-hint { grid-column: 2; grid-row: 4; }
+    }
+    .rv-card { border: 1px solid #bfdbfe; border-radius: 14px; overflow: hidden; background: #fff; }
+    .rv-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.1rem; background: #eff6ff; color: #1d4ed8; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
+    .rv-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 1rem; padding: 0.8rem 1.1rem; border-top: 1px solid var(--line-1); align-items: start; }
+    .rv-k { font-family: 'Syne', sans-serif; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); padding-top: 0.15rem; }
+    .rv-v { font-size: 0.95rem; font-weight: 600; color: var(--fg-1); overflow-wrap: anywhere; line-height: 1.4; }
+    .rv-svc { display: flex; justify-content: space-between; gap: 0.8rem; padding: 0.15rem 0; }
+    .rv-svc small { color: var(--fg-3); font-weight: 500; font-size: 0.8rem; white-space: nowrap; }
+    .rv-total { margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px dashed var(--line-2); font-size: 0.8rem; color: var(--fg-2); font-weight: 700; }
+    @media (max-width: 560px) { .rv-row { grid-template-columns: 1fr; gap: 0.15rem; } }
     /* the small messages ("Added to queue") go to the top here, so they never cover the Back / Next buttons */
     body.book-lock #cart-toast { bottom: auto !important; top: 84px !important; right: 1.5rem !important; left: auto !important; max-width: min(420px, calc(100vw - 2rem)) !important; }
     body.book-lock .page-wrap { padding-bottom: 0; }
@@ -1030,7 +1050,7 @@
     .ydd-btn.open svg { transform: rotate(180deg); }
     /* the dropdown lists (model and year): rounder, roomier, red on hover, a thin scrollbar */
     .mc-form .moto-dropdown { top: calc(100% - 0.4rem); left: 1rem; right: 1rem; max-height: 300px; padding: 0.35rem; border: 1px solid var(--line-2); border-radius: 12px; box-shadow: 0 14px 36px rgba(28,24,20,0.22); z-index: 40; scrollbar-width: thin; }
-    .mc-form .moto-group-label { background: #fff; padding: 0.5rem 0.7rem 0.3rem; font-size: 0.64rem; letter-spacing: 0.12em; }
+    .mc-form .moto-group-label { position: sticky; top: 0; z-index: 2; background: #fff; padding: 0.7rem 0.7rem 0.35rem; margin: 0 -0.35rem; padding-left: 1.05rem; font-size: 0.64rem; letter-spacing: 0.12em; box-shadow: 0 1px 0 var(--line-1); }
     .mc-form .moto-group-label.mine { color: var(--brand-red); }
     .mc-form .moto-option { padding: 0.6rem 0.75rem; margin: 1px 0; border-radius: 8px; font-size: 0.92rem; cursor: pointer; transition: background .1s, color .1s; }
     .mc-form .moto-option:hover { background: var(--brand-red-soft); color: var(--brand-red); }
@@ -1039,7 +1059,7 @@
     /* the model list scrolls; the "type your own" box stays at the bottom of it */
     .mc-form #bk-model-dd { padding: 0; max-height: none; overflow: hidden; }
     .mc-form #bk-model-dd.open { display: flex; flex-direction: column; }
-    .mc-form #bk-model-dd .mdd-list { max-height: 220px; overflow-y: auto; padding: 0.35rem; scrollbar-width: thin; }
+    .mc-form #bk-model-dd .mdd-list { max-height: 220px; overflow-y: auto; padding: 0 0.35rem 0.35rem; scrollbar-width: thin; }       /* no space above the pinned brand name: nothing can show through it */
     .mdd-other { flex: 0 0 auto; padding: 0.65rem 0.8rem 0.75rem; border-bottom: 1px solid var(--line-1); background: var(--bg-subtle); border-radius: 12px 12px 0 0; }
     .mdd-other-t { font-size: 0.74rem; color: var(--fg-3); line-height: 1.4; margin-top: 0.45rem; }
     .mdd-other-row { display: flex; gap: 0.5rem; }
@@ -1047,13 +1067,19 @@
     .mdd-other-row button { flex: 0 0 auto; border: none; border-radius: 8px; padding: 0 1rem; background: var(--fg-1); color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.74rem; cursor: pointer; }
     .mdd-other-row button:hover { background: var(--brand-red); }
     .ydd .yopt { border: none; background: transparent; font-family: 'DM Sans', sans-serif; cursor: pointer; color: var(--fg-1); border-radius: 8px; transition: background .1s, color .1s; }
-    .ydd .yopt.none { display: block; width: 100%; text-align: left; padding: 0.6rem 0.75rem; font-size: 0.9rem; color: var(--fg-2); }
-    .ydd .ygrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; padding: 0.15rem 0 0.2rem; }
-    .ydd .ygrid .yopt { padding: 0.55rem 0; font-size: 0.9rem; text-align: center; }
+    /* one year per row, roomy */
+    .ydd .yopt { display: block; width: 100%; text-align: left; padding: 0.7rem 0.9rem; font-size: 0.95rem; }
+    .ydd .yopt.none { color: var(--fg-2); border-bottom: 1px solid var(--line-1); border-radius: 8px 8px 0 0; margin-bottom: 0.2rem; }
+    .ydd .ygrid { display: flex; flex-direction: column; gap: 2px; padding: 0.1rem 0 0.2rem; }
     .ydd .yopt:hover { background: var(--brand-red-soft); color: var(--brand-red); }
     .ydd .yopt.on { background: var(--brand-red); color: #fff; font-weight: 700; }
+    .mc-form .ydd { max-height: 260px; }
     @media (max-width: 560px) { .mc-form { grid-template-columns: 1fr; } }
 
+    /* Step 5: two big choices; white until one is picked, and no note about an assignment nobody chose yet */
+    .bw-pane[data-bstep="5"] .mech-toggle-card { background: #fff; }
+    .bw-pane[data-bstep="5"] .mech-toggle-card.active { background: var(--brand-red-soft); }
+    .bw-pane[data-bstep="5"].unchosen #mech-note { display: none; }
     /* Step 5: two big choices */
     .bw-pane[data-bstep="5"] .bw-main > .form-group { margin: 0; }
     .bw-pane[data-bstep="5"] .mech-toggle-card { padding: 1.3rem 1.25rem; min-height: clamp(104px, 24vh, 240px); border-radius: 14px; justify-content: center; }
@@ -1571,11 +1597,11 @@
             <div style="font-size:0.75rem;color:var(--fg-3);margin-bottom:0.5rem;">Name who you want, or leave it to the shop — both are fine.</div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem;">
-              <button type="button" id="mech-card-shop" class="mech-toggle-card" onclick="setMechanicMode('shop')">
+              <button type="button" id="mech-card-shop" class="mech-toggle-card" onclick="bwChooseMech('shop')">
                 <span class="mech-card-title">Let the Shop Assign</span>
                 <span class="mech-card-sub">We'll pick someone available</span>
               </button>
-              <button type="button" id="mech-card-choose" class="mech-toggle-card" onclick="setMechanicMode('choose')">
+              <button type="button" id="mech-card-choose" class="mech-toggle-card" onclick="bwChooseMech('choose')">
                 <span class="mech-card-title">I'll Choose</span>
                 <span class="mech-card-sub">Name who you want</span>
               </button>
@@ -1708,7 +1734,6 @@
       <button type="button" class="bw-btn ghost" id="bw-back" onclick="bwBack()">&larr; Back</button>
       <div id="bw-msg" role="alert"></div>
       <button type="button" class="bw-btn primary" id="bw-next" onclick="bwNext()">Next &rarr;</button>
-      <button type="button" class="bw-btn ghost" id="bw-another" onclick="bwAnother()" style="display:none;">&larr; Change booking</button>
       </div>
     </div>
   </div>
@@ -2152,7 +2177,7 @@
           <div class="card-body">
             <div style="display:flex;gap:0.6rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.76rem;color:#1e3a8a;margin-bottom:1rem;line-height:1.5;">
               <span style="flex-shrink:0;margin-top:1px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="3.5"/><circle cx="18.5" cy="17" r="3.5"/><path d="M15 6h2l3 7"/><path d="M5.5 17 9 10h6l3.5 7"/><path d="M9 10 7.5 6H5"/></svg></span>
-              <span>Motorcycles saved here show up under <strong>Your motorcycles</strong> when you book a service. Add the plate number so two of the same model (like two Honda Click 125i) never get mixed up.</span>
+              <span>Motorcycles saved here show up under <strong>Your motorcycles</strong> when you book a service. The motorcycle you typed when you registered is already here.</span>
             </div>
             <div id="mm-list"></div>
           </div>
@@ -2174,17 +2199,12 @@
       <button type="button" onclick="closeModal('modal-moto-form')" aria-label="Close" style="background:none;border:none;color:var(--fg-3);font-size:1.2rem;cursor:pointer;padding:0.25rem;line-height:1;">✕</button>
     </div>
     <input type="hidden" id="mf-id">
-    <div class="form-grid">
+    <div>
       <div class="form-group moto-field-wrap">
         <label>Model <span style="color:var(--brand-red);">*</span></label>
         <input type="text" id="mf-model" maxlength="100" placeholder="Type to search, e.g. Honda Click 125i" autocomplete="off"
           oninput="filterMotorcycleModels(); mfClearErr(this)" onfocus="filterMotorcycleModels()">
         <div id="motorcycle-model-dropdown" class="moto-dropdown"></div>
-      </div>
-      <div class="form-group">
-        <label>Plate number <span style="color:var(--brand-red);">*</span></label>
-        <input type="text" id="mf-plate" maxlength="20" placeholder="E.G. ABC 1234" autocomplete="off" style="text-transform:uppercase;"
-          oninput="this.value=this.value.toUpperCase(); mfClearErr(this)">
       </div>
     </div>
     <div class="form-group">
@@ -2195,7 +2215,6 @@
       <label>Whose motorcycle? <span style="color:var(--fg-3);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
       <input type="text" id="mf-owner" maxlength="60" placeholder="e.g. Mine, Kuya's, Papa's, a friend's">
     </div>
-    <div style="font-size:0.72rem;color:var(--fg-3);margin:-0.3rem 0 0.8rem;">No plate yet? Type the temporary plate or MV file number.</div>
     <div id="mf-err" role="alert" style="display:none;margin-bottom:0.7rem;padding:0.5rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.76rem;color:#b91c1c;"></div>
     <div class="modal-actions">
       <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-moto-form')">Cancel</button>
@@ -4795,7 +4814,7 @@ function refreshBookingLimits() {
   const dateIso = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : '';
   const dateLabel = dateIso ? new Date(dateIso + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';
   const _m = (typeof currentMoto === 'function') ? currentMoto() : null;
-  const motoName = _m ? [_m.model, _m.plate, _m.owner].filter(Boolean).join(' · ') : 'Pick a motorcycle';
+  const motoName = _m ? [_m.model, _m.owner].filter(Boolean).join(' · ') : 'Pick a motorcycle';
   const key = currentMotoKey();
 
   const card = (title, value, valueColor, sub, bar, reached) => `
@@ -8964,14 +8983,15 @@ function updateMechNote() {
 // ── My Motorcycles (Account Information) and the booking form's motorcycle picker: one list, MY_MOTOS ──
 const MOTO_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="3.5"/><circle cx="18.5" cy="17" r="3.5"/><path d="M15 6h2l3 7"/><path d="M5.5 17 9 10h6l3.5 7"/><path d="M9 10 7.5 6H5"/></svg>';
 var MY_MOTOS = {{ (my_motorcycles or [])|tojson }};      // var: other code may ask before this line has run
-var selectedMotoId = MY_MOTOS.length ? MY_MOTOS[0].id : null;
+var selectedMotoId = null;          // the customer chooses it in the booking form; nothing is picked for them
 const _mmEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const _mmShort = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 const _mmLong = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 
 function motoById(id) { return (MY_MOTOS || []).find(m => String(m.id) === String(id)) || null; }
 function currentMoto() { return motoById(selectedMotoId); }
-function motoSubLine(m) { return [m.year, 'Plate ' + m.plate, m.owner].filter(Boolean).join(' · '); }
+function motoSubLine(m) { return [m.year, m.owner].filter(Boolean).join(' · '); }
+function motoLabel(m) { return m.model + (m.year ? ' (' + m.year + ')' : ''); }
 
 // Real bookings (not cancelled / completed) and queue items for this motorcycle, from today on.
 function motoRealBookings(m, dateIso) {
@@ -9012,7 +9032,7 @@ function renderMyMotorcycles() {
       <span class="mm-ico">${MOTO_ICON}</span>
       <div style="flex:1;min-width:0;">
         <div class="mm-name">${_mmEsc(m.model)}</div>
-        <div class="mm-sub">Plate ${_mmEsc(m.plate)}</div>
+        ${m.year ? `<div class="mm-sub">${_mmEsc(m.year)}</div>` : ''}
         ${m.owner ? `<div class="mm-sub">${_mmEsc(m.owner)}</div>` : ''}
         <div class="mm-tags">${motoTagsHTML(m)}</div>
         <div class="mm-acts">
@@ -9096,10 +9116,10 @@ function bkModelInput() {
   const useBtn = document.getElementById('bk-use-btn');
   if (useBtn) useBtn.textContent = q ? 'Use “' + (box.value.trim().length > 18 ? box.value.trim().slice(0, 18) + '…' : box.value.trim()) + '”' : 'Use this';
   let html = '', n = 0;
-  const mine = (MY_MOTOS || []).filter(x => !q || (x.model + ' ' + x.plate).toLowerCase().includes(q));
+  const mine = (MY_MOTOS || []).filter(x => !q || x.model.toLowerCase().includes(q));
   if (mine.length) {
     html += '<div class="moto-group-label mine">YOUR MOTORCYCLES</div>' + mine.map(x =>
-      `<div class="moto-option" onmousedown="bkPickSaved(${x.id})">${_bkEsc(x.model)}<span class="mo-sub">${_bkEsc([x.year, 'Plate ' + x.plate, x.owner].filter(Boolean).join(' · '))}</span></div>`).join('');
+      `<div class="moto-option" onmousedown="bkPickSaved(${x.id})">${_bkEsc(x.model)}<span class="mo-sub">${_bkEsc([x.year ? 'Year model ' + x.year : 'No year model set', x.owner].filter(Boolean).join(' · '))}</span></div>`).join('');
     n += mine.length;
   }
   for (const [brand, models] of Object.entries(MOTORCYCLE_MODELS)) {
@@ -9117,8 +9137,11 @@ function bkModelInput() {
 function bkUseOther() {
   const o = document.getElementById('bk-model-other'), v = o.value.trim();
   if (!v) { o.focus(); o.style.borderColor = '#dc2626'; setTimeout(() => { o.style.borderColor = ''; }, 1200); return; }
+  const saved = bkSavedWithModel(v);
+  if (saved) { bkPickSaved(saved.id); return; }
   document.getElementById('bk-model').value = v;
   document.getElementById('bk-model-dd').classList.remove('open');
+  document.getElementById('bk-year').value = ''; bkYearLabel();
   bkDirty = true;
 }
 // Enter in the search box picks the first match; with no match it uses what was typed
@@ -9128,9 +9151,16 @@ function bkSearchEnter() {
   bkUseOther();
 }
 function bkPickSaved(id) { document.getElementById('bk-model-dd').classList.remove('open'); selectMoto(id); }
+function bkSavedWithModel(name) {
+  const n = String(name || '').trim().toLowerCase();
+  return (MY_MOTOS || []).find(x => x.model.trim().toLowerCase() === n) || null;
+}
 function bkPickModel(value) {
+  const saved = bkSavedWithModel(value);
+  if (saved) { bkPickSaved(saved.id); return; }                 // it is one of the customer's saved motorcycles: its year model comes with it
   document.getElementById('bk-model').value = value;
   document.getElementById('bk-model-dd').classList.remove('open');
+  document.getElementById('bk-year').value = ''; bkYearLabel();   // not saved: the year model is chosen here, and it is optional
   bkDirty = true;
 }
 document.addEventListener('click', e => {
@@ -9224,7 +9254,7 @@ function refreshMotoBookedNote() {
   const noZero = t => (t || '').replace(/^0/, '');
   const lines = real.map(b => `${b.end_time ? noZero(b.time) + ' – ' + noZero(b.end_time) : noZero(b.time)} · ${_mmEsc(b.service)} · BKG-${String(b.id).padStart(3, '0')}`)
     .concat(queued.map(q => `In your queue · ${_mmEsc(noZero(q._displayTime || ''))} · ${_mmEsc((q.services || []).join(', ') || q.service_display || '')}`));
-  box.innerHTML = `<div style="font-weight:700;">Your ${_mmEsc(m.model)} (${_mmEsc(m.plate)}) is already booked on ${_mmLong(day)}</div>`
+  box.innerHTML = `<div style="font-weight:700;">Your ${_mmEsc(m.model)} is already booked on ${_mmLong(day)}</div>`
     + lines.map(l => `<div>${l}</div>`).join('')
     + `<div style="margin-top:0.2rem;">One motorcycle can only be booked once a day.</div>
        <div style="margin-top:0.55rem;font-weight:600;">Booking another motorcycle on the same day?</div>
@@ -9246,10 +9276,9 @@ function openMotoForm(id, fromBooking) {
   document.getElementById('mf-title').textContent = m ? 'Edit motorcycle' : 'Add a motorcycle';
   document.getElementById('mf-save').textContent = m ? 'Save Changes' : 'Save Motorcycle';
   document.getElementById('mf-model').value = m ? m.model : '';
-  document.getElementById('mf-plate').value = m ? m.plate : '';
   document.getElementById('mf-owner').value = m ? m.owner : '';
   document.getElementById('mf-year').value = m ? (m.year || '') : '';
-  ['mf-model', 'mf-plate'].forEach(x => { document.getElementById(x).style.borderColor = ''; });
+  ['mf-model'].forEach(x => { document.getElementById(x).style.borderColor = ''; });
   mfClearErr();
   document.getElementById('motorcycle-model-dropdown').classList.remove('open');
   document.getElementById('modal-moto-form').classList.add('open');
@@ -9262,13 +9291,12 @@ function mfShowErr(msg, field) {
 async function saveMotoForm() {
   const id = document.getElementById('mf-id').value;
   const body = { model: document.getElementById('mf-model').value.trim(),
-                 plate: document.getElementById('mf-plate').value.trim().toUpperCase(),
+                 plate: id ? ((motoById(id) || {}).plate || '') : '',          // a plate is not asked any more; one that was saved earlier is kept
                  owner: document.getElementById('mf-owner').value.trim(),
                  year: document.getElementById('mf-year').value };
   if (!body.model) { mfShowErr('Type the motorcycle model.', 'model'); return; }
-  if (!body.plate) { mfShowErr('Type the plate number. No plate yet? Type the temporary plate or MV file number.', 'plate'); return; }
-  const dup = MY_MOTOS.find(x => String(x.id) !== String(id) && plateKeyJS(x.plate) === plateKeyJS(body.plate));
-  if (dup) { mfShowErr(`That plate is already saved as your ${dup.model}.`, 'plate'); return; }
+  const dup = MY_MOTOS.find(x => String(x.id) !== String(id) && x.model.trim().toLowerCase() === body.model.toLowerCase());
+  if (dup) { mfShowErr(`${dup.model} is already saved.`, 'model'); return; }
   const btn = document.getElementById('mf-save'); btn.disabled = true;
   try {
     const res = await fetch(id ? `/customer/motorcycles/${id}` : '/customer/motorcycles', {
@@ -9278,7 +9306,7 @@ async function saveMotoForm() {
     const saved = data.motorcycle;
     if (id) MY_MOTOS = MY_MOTOS.map(x => String(x.id) === String(id) ? saved : x);
     else MY_MOTOS.push(saved);
-    if (!id && (_mfFromBooking || !currentMoto())) selectedMotoId = saved.id;
+    if (!id && _mfFromBooking) selectedMotoId = saved.id;
     closeModal('modal-moto-form');
     renderMyMotorcycles();
     renderMotoPicker();
@@ -9295,7 +9323,7 @@ async function saveMotoForm() {
 // ── remove: asks first; not while it has a booking or queue item today or later ──
 function cantRemoveMoto(m, cards) {
   showSchedModal({ icon: 'calendar', title: "Can't remove it yet",
-    message: `Your ${m.model} (${m.plate}) has a booking from today on. You can remove it once that booking is done or cancelled. Past bookings stay in your history.`,
+    message: `Your ${m.model} has a booking from today on. You can remove it once that booking is done or cancelled. Past bookings stay in your history.`,
     cards, buttons: [{ label: 'OK', primary: true, safe: true }] });
 }
 async function removeMoto(id) {
@@ -9307,7 +9335,7 @@ async function removeMoto(id) {
     return;
   }
   const ok = await askConfirm('Remove this motorcycle?',
-    `${m.model} (${m.plate}) will be taken off My Motorcycles and the motorcycle dropdown. Past bookings for it stay in your history.`,
+    `${m.model} will be taken off My Motorcycles and the motorcycle dropdown. Past bookings for it stay in your history.`,
     'Remove', 'Keep it');
   if (!ok) return;
   try {
@@ -10388,6 +10416,7 @@ updateMechNote();
     if (n === 2 && !selectedServiceNames.length) return 'Please choose at least one service.';
     if (n === 3 && !document.getElementById('selected-time-value').value) return 'Please pick a time.';
     if (n === 4 && !document.getElementById('moto-plate').value && !document.getElementById('moto-model').value) return 'Please choose a motorcycle.';
+    if (n === 5 && !mechChosen) return 'Please choose how your mechanic is assigned.';
     if (n === 5 && mechanicMode === 'choose' && !selectedMechanicId) return 'Please choose a mechanic, or let the shop assign one.';
     return '';
   }
@@ -10412,10 +10441,11 @@ updateMechNote();
     const t = val('selected-time-value');
     rows.push(['time', 'Time', t ? (minutesToAmpmJS(hhmmToMinutes(t)) + (selectedEndLabel ? ' – ' + selectedEndLabel : '')) : '']);
     const bm = val('bk-model'), by = val('bk-year');
-    const mm = bm ? bm + (by ? ' (' + by + ')' : '') : val('moto-model'), pl = val('moto-plate');
-    rows.push(['moto', 'Motorcycle', mm ? mm + (pl ? ' · ' + pl : '') : '']);
+    const mm = bm ? bm + (by ? ' (' + by + ')' : '') : val('moto-model');
+    rows.push(['moto', 'Motorcycle', mm]);
     let mech = '';
-    if (mechanicMode === 'choose') {
+    if (!mechChosen) mech = '';
+    else if (mechanicMode === 'choose') {
       const m = (typeof mechanicsRoster !== 'undefined' ? mechanicsRoster : []).find(x => String(x.id) === String(selectedMechanicId));
       mech = m ? m.name : '';
     } else mech = 'The shop will assign one';
@@ -10442,13 +10472,21 @@ updateMechNote();
     panes.forEach(p => p.classList.toggle('active', +p.dataset.bstep === n));
     dots.forEach(d => { const i = +d.dataset.s; d.classList.toggle('active', i === n); d.classList.toggle('done', i < n && i < 7); });
     msg.textContent = '';
-    document.getElementById('bw-back').style.visibility = (n > 1 && n < 7) ? 'visible' : 'hidden';
+    document.getElementById('bw-back').style.visibility = n > 1 ? 'visible' : 'hidden';
     document.getElementById('bw-next').style.display    = n < 6 ? '' : 'none';      // step 6 has its own "Review booking"; 7 has Confirm
-    document.getElementById('bw-another').style.display = n === 7 ? '' : 'none';
     const pane = panes[n - 1]; if (pane) pane.scrollTop = 0;
   }
 
   let busyNext = false;
+  // The mechanic is not chosen for the customer: neither card is highlighted until one is tapped.
+  let mechChosen = false;
+  function paintMech() {
+    ['mech-card-shop', 'mech-card-choose'].forEach(id => { const el = document.getElementById(id); if (el && !mechChosen) el.classList.remove('active'); });
+    const pane = document.querySelector('#bw .bw-pane[data-bstep="5"]'); if (pane) pane.classList.toggle('unchosen', !mechChosen);
+  }
+  window.bwChooseMech = function (mode) { mechChosen = true; setMechanicMode(mode); };
+  const _smm = window.setMechanicMode;
+  window.setMechanicMode = function () { const r = _smm.apply(this, arguments); paintMech(); return r; };
   window.bwNext = async function () {
     if (busyNext) return;
     if (cur === 4) {                                     // a typed motorcycle is saved before moving on
@@ -10461,10 +10499,17 @@ updateMechNote();
     if (p) { msg.textContent = p; return; }
     if (cur < 7) show(cur + 1);
   };
-  window.bwBack = function () { if (cur > 1 && cur < 7) show(cur - 1); };
+  window.bwBack = function () {
+    if (cur === 7) { backing = true; reviewing = false; bookingQueue = []; renderBookingQueue(); backing = false; show(6); return; }
+    if (cur > 1) show(cur - 1);
+  };
   // One booking at a time: reviewing replaces whatever was staged before, and "Change booking" clears it and starts again.
   window.bwReview = function () { bookingQueue = []; if (typeof _queueOpen !== 'undefined') _queueOpen.clear(); renderBookingQueue(); addToBookingQueue(); };
-  window.bwAnother = function () { bookingQueue = []; if (typeof _queueOpen !== 'undefined') _queueOpen.clear(); renderBookingQueue(); show(1); };
+  // While the booking is being reviewed the form keeps everything the person picked (so Back loses nothing).
+  // It is cleared only once the booking is really confirmed.
+  let reviewing = false, backing = false;
+  const _resetForm = window.resetBookingForm;
+  window.resetBookingForm = function () { if (reviewing) return; return _resetForm.apply(this, arguments); };
   dots.forEach(d => d.addEventListener('click', () => { const i = +d.dataset.s; if (i < cur && i < 7) show(i); }));
 
   // Time slots arrive as one flat list (label, buttons, lunch line, label, buttons). Regroup them so the lunch line
@@ -10495,10 +10540,41 @@ updateMechNote();
   let lastQueueLen = (typeof bookingQueue !== 'undefined') ? bookingQueue.length : 0;
   const _render = window.renderBookingQueue;
   if (typeof _render === 'function') {
+    // The review card: everything the customer picked, laid out as labelled rows (no queue controls, nothing to remove).
+    function paintBookingDetails() {
+      const list = document.getElementById('booking-queue-list');
+      if (!list || !bookingQueue.length) return;
+      const q = bookingQueue[0], esc = _bkEsc;
+      const title = new Date(q.date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
+      const svcs = (q.services && q.services.length) ? q.services : String(q.service_display || '').split(',').map(x => x.trim()).filter(Boolean);
+      const dur = name => { const sv = SERVICES_DATA.find(x => x.name === name); return sv ? (sv.is_multiday ? (sv.duration_label || '3–5 working days') : formatDurationJS(sv.duration_minutes)) : ''; };
+      const when = q.is_multiday ? `${minutesToAmpmJS(hhmmToMinutes(q.time))} drop-off` : (q._displayTime || '');
+      const row = (label, html) => `<div class="rv-row"><div class="rv-k">${label}</div><div class="rv-v">${html}</div></div>`;
+      const svcHtml = svcs.map(n => `<div class="rv-svc"><span>${esc(n)}</span><small>${esc(dur(n))}</small></div>`).join('')
+        + (!q.is_multiday && q.duration_minutes ? `<div class="rv-total">Total: ${esc(formatDurationJS(q.duration_minutes))}</div>` : '');
+      const bike = q.motorcycle_model || '';
+      list.innerHTML = `<div class="rv-card">
+        <div class="rv-head"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${esc(title)}</div>
+        ${row('Time', esc(when))}
+        ${row(svcs.length > 1 ? 'Services' : 'Service', svcHtml)}
+        ${row('Motorcycle', esc(bike) || '—')}
+        ${q.odometer ? row('Odometer', esc(Number(q.odometer).toLocaleString('en-US')) + ' km') : ''}
+        ${row('Mechanic', q.mechanic_name ? esc(q.mechanic_name) : 'The shop will assign one')}
+        ${q.notes ? row('Notes', esc(q.notes)) : ''}
+        ${q._mechIssue && typeof issueBlockHTML === 'function' ? `<div style="padding:0.6rem 1rem;">${issueBlockHTML(q, 0)}</div>` : ''}
+      </div>`;
+    }
     window.renderBookingQueue = function () {
       const r = _render.apply(this, arguments);
+      paintBookingDetails();
       const n = bookingQueue.length;
-      if (n > lastQueueLen && cur === 6) show(7);
+      if (n > lastQueueLen && cur === 6) { reviewing = true; show(7); }
+      else if (n === 0 && reviewing && !backing) {            // the booking went through: start fresh
+        reviewing = false; _resetForm(false);
+        mechChosen = false; selectedMotoId = null; bkDirty = false; renderMotoPicker(); setMechanicMode('shop');
+        const pl = document.getElementById('policy-check'); if (pl) pl.checked = false;
+        show(1);
+      }
       lastQueueLen = n;
       return r;
     };
@@ -10517,6 +10593,7 @@ updateMechNote();
   lock(active ? active.id.replace('sec-', '') : '');
 
 
+  paintMech();
   show(1);
 })();
 </script>

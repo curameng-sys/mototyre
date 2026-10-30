@@ -2001,7 +2001,23 @@ def _moto_dict(m, upcoming=None):
                         'service': b.service, 'status': b.status} for b in upcoming]}
 
 
+def _seed_registered_motorcycle(user_id):
+    """The motorcycle typed at registration becomes the first saved motorcycle, once. If the customer removes it later, it
+    stays removed (a removed one still counts as 'already there')."""
+    u = db.session.get(User, user_id)
+    model = ((u.motorcycle_model if u else '') or '').strip()
+    if not model:
+        return
+    if CustomerMotorcycle.query.filter(CustomerMotorcycle.user_id == user_id,
+                                       db.func.lower(CustomerMotorcycle.model) == model.lower()).first():
+        return
+    db.session.add(CustomerMotorcycle(user_id=user_id, model=model[:100], plate='', owner=None, year=u.motorcycle_year,
+                                      created_at=getattr(u, 'created_at', None) or ph_now()))
+    db.session.commit()
+
+
 def _my_motorcycles(user_id):
+    _seed_registered_motorcycle(user_id)
     rows = CustomerMotorcycle.query.filter_by(user_id=user_id, removed_at=None).order_by(CustomerMotorcycle.created_at).all()
     return [_moto_dict(m) for m in rows]
 
