@@ -345,6 +345,15 @@
     .cmp-opt { width: 100%; display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.55rem; border: none; background: none; border-radius: 9px; cursor: pointer; text-align: left; font-family: inherit; color: var(--fg-1); }
     .cmp-opt.hl, .cmp-opt:not(.dis):hover { background: var(--bg-subtle); }
     .cmp-opt.sel { background: var(--brand-red-soft); }
+    /* The list of mechanics looks like the list of motorcycles: rounded, roomy, the group name stays pinned, red on hover. No text box. */
+    #cmp-list { padding: 0 0.35rem 0.35rem; border-radius: 12px; box-shadow: 0 14px 36px rgba(28,24,20,0.22); scrollbar-width: thin; }
+    #cmp-list > .cmp-opt:first-child { margin-top: 0.35rem; }
+    #cmp-list .cmp-sep { margin: 0.2rem 0 0; }
+    #cmp-list .cmp-group { position: sticky; top: 0; z-index: 2; background: #fff; margin: 0 -0.35rem; padding: 0.7rem 0.7rem 0.35rem 1.05rem; font-size: 0.64rem; letter-spacing: 0.12em; box-shadow: 0 1px 0 var(--line-1); }
+    #cmp-list .cmp-opt { padding: 0.6rem 0.75rem; margin: 1px 0; border-radius: 8px; transition: background .1s; }
+    #cmp-list .cmp-opt.hl, #cmp-list .cmp-opt:not(.dis):hover { background: var(--brand-red-soft); }
+    #cmp-list .cmp-opt:not(.dis):hover .cmp-txt b, #cmp-list .cmp-opt.hl .cmp-txt b, #cmp-list .cmp-opt.sel .cmp-txt b { color: var(--brand-red); }
+    #cmp-list .cmp-opt.sel { background: var(--brand-red-soft); }
     .cmp-opt.dis { cursor: not-allowed; }
     .cmp-opt.dis .cmp-av, .cmp-opt.dis .cmp-txt b, .cmp-opt.dis .cmp-txt small { opacity: 0.55; }
     .cmp-tag { flex-shrink: 0; font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700; padding: 0.15em 0.6em; border-radius: 99px; white-space: nowrap; }
@@ -1059,7 +1068,7 @@
     /* the model list scrolls; the "type your own" box stays at the bottom of it */
     .mc-form #bk-model-dd { padding: 0; max-height: none; overflow: hidden; }
     .mc-form #bk-model-dd.open { display: flex; flex-direction: column; }
-    .mc-form #bk-model-dd .mdd-list { max-height: 220px; overflow-y: auto; padding: 0 0.35rem 0.35rem; scrollbar-width: thin; }       /* no space above the pinned brand name: nothing can show through it */
+    .mc-form #bk-model-dd .mdd-list { max-height: 300px; overflow-y: auto; padding: 0 0.35rem 0.35rem; scrollbar-width: thin; }       /* no space above the pinned brand name: nothing can show through it */
     .mdd-other { flex: 0 0 auto; padding: 0.65rem 0.8rem 0.75rem; border-bottom: 1px solid var(--line-1); background: var(--bg-subtle); border-radius: 12px 12px 0 0; }
     .mdd-other-t { font-size: 0.74rem; color: var(--fg-3); line-height: 1.4; margin-top: 0.45rem; }
     .mdd-other-row { display: flex; gap: 0.5rem; }
@@ -1077,6 +1086,9 @@
     @media (max-width: 560px) { .mc-form { grid-template-columns: 1fr; } }
 
     /* Step 5: two big choices; white until one is picked, and no note about an assignment nobody chose yet */
+    @media (min-width: 861px) and (min-height: 700px) {
+      .bw-pane[data-bstep="4"], .bw-pane[data-bstep="5"] { overflow: visible; }                         /* the box never scrolls; the open list of mechanics floats over the bottom strip and scrolls by itself */
+    }
     .bw-pane[data-bstep="5"] .mech-toggle-card { background: #fff; }
     .bw-pane[data-bstep="5"] .mech-toggle-card.active { background: var(--brand-red-soft); }
     .bw-pane[data-bstep="5"].unchosen #mech-note { display: none; }
@@ -8940,8 +8952,60 @@ function toggleCustMech(e) {
   const open = !c.classList.contains('open');
   c.classList.toggle('open', open);
   document.getElementById('cmp-box').setAttribute('aria-expanded', String(open));
-  if (open) { renderCustMechPicker(); _cmHl = Math.max(0, _cmOpts().findIndex(b => b.classList.contains('sel'))); _cmPaint(); }
+  if (open) { renderCustMechPicker(); _cmHl = Math.max(0, _cmOpts().findIndex(b => b.classList.contains('sel'))); _cmPaint(); fitCustMechList(); }
 }
+// How far down an open list may reach: the bottom edge of the Back / Next buttons (never past them).
+function bwListEdge() {
+  const b = document.getElementById('bw-back');
+  if (b && b.getBoundingClientRect().height) return b.getBoundingClientRect().bottom;
+  const st = document.querySelector('.bw-stage'); return st ? st.getBoundingClientRect().bottom - 8 : window.innerHeight - 8;
+}
+// Height for a scrolling list: as tall as the room allows, ending exactly where a row ends (no name cut at the bottom).
+function bwSnapHeight(list, room, min) {
+  const h = Math.max(min, room);
+  if (list.scrollHeight <= h) return Math.floor(h);
+  // use the whole room; only when a whole row ends almost exactly there, end on it (so a name is not cut for nothing)
+  const padB = parseFloat(getComputedStyle(list).paddingBottom) || 0;
+  let snapped = 0;
+  for (const ch of list.children) {
+    const bottom = ch.offsetTop + ch.offsetHeight + padB;
+    if (bottom <= h) snapped = bottom; else break;
+  }
+  return Math.floor(h - snapped <= 22 && snapped >= min ? snapped : h);
+}
+// Motorcycle model list: the search box stays on top, the list under it takes the rest of the room.
+function fitModelDd() {
+  const dd = document.getElementById('bk-model-dd'), list = document.getElementById('bk-model-list');
+  if (!dd || !list || !dd.classList.contains('open')) return;
+  if (window.innerWidth <= 860) { list.style.maxHeight = ''; return; }
+  const head = dd.querySelector('.mdd-other'), headH = head ? head.offsetHeight : 0;
+  list.style.maxHeight = '';
+  const room = bwListEdge() - dd.getBoundingClientRect().top - headH - 2;
+  list.style.maxHeight = bwSnapHeight(list, Math.min(room, 480), 150) + 'px';
+}
+function fitYearDd() {
+  const dd = document.getElementById('bk-year-dd');
+  if (!dd || !dd.classList.contains('open')) return;
+  if (window.innerWidth <= 860) { dd.style.maxHeight = ''; return; }
+  dd.style.maxHeight = '';
+  const room = bwListEdge() - dd.getBoundingClientRect().top - 2;
+  dd.style.maxHeight = Math.max(160, Math.min(room, 420)) + 'px';
+}
+window.addEventListener('resize', () => setTimeout(() => { fitModelDd(); fitYearDd(); }, 60));
+// Keeps the open list of mechanics inside the booking box: as tall as the room below it, and it scrolls inside itself.
+function fitCustMechList() {
+  const list = document.getElementById('cmp-list'), c = document.getElementById('cmp');
+  if (!list || !c || !c.classList.contains('open')) return;
+  const pane = c.closest('.bw-pane');
+  if (!pane || window.innerWidth <= 860) { list.style.maxHeight = ''; return; }
+  const floats = getComputedStyle(pane).overflow === 'visible';           // roomy screens: the list may run down over the bottom strip, to the buttons' bottom edge
+  const edge = floats ? bwListEdge()
+                      : pane.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(pane).paddingBottom) || 0);
+  const room = edge - list.getBoundingClientRect().top - 2;
+  list.style.maxHeight = '';                                                 // measure with the normal height first
+  list.style.maxHeight = bwSnapHeight(list, Math.min(440, room), 110) + 'px';
+}
+window.addEventListener('resize', () => setTimeout(fitCustMechList, 60));
 function closeCustMech() { const c = document.getElementById('cmp'); if (c) { c.classList.remove('open'); document.getElementById('cmp-box').setAttribute('aria-expanded', 'false'); } }
 function pickCustMech(id) {
   closeCustMech();
@@ -9096,7 +9160,7 @@ function bkYearToggle(e) {
   const dd = document.getElementById('bk-year-dd'), btn = document.getElementById('bk-year-btn');
   const open = !dd.classList.contains('open');
   dd.classList.toggle('open', open); btn.classList.toggle('open', open);
-  if (open) { document.getElementById('bk-model-dd').classList.remove('open'); const on = dd.querySelector('.yopt.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
+  if (open) { document.getElementById('bk-model-dd').classList.remove('open'); fitYearDd(); const on = dd.querySelector('.yopt.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
 }
 function bkYearPick(v) {
   document.getElementById('bk-year').value = v; bkYearLabel(); bkDirty = true;
@@ -9132,6 +9196,7 @@ function bkModelInput() {
   list.innerHTML = n ? html : '<div class="moto-no-results">No matching model. Type the full name of your motorcycle above, then tap “Use this”.</div>';
   list.scrollTop = 0;
   dd.classList.add('open');
+  fitModelDd();
   const yd = document.getElementById('bk-year-dd'); if (yd) { yd.classList.remove('open'); document.getElementById('bk-year-btn').classList.remove('open'); }
 }
 function bkUseOther() {
@@ -10464,7 +10529,8 @@ updateMechNote();
     });
   }
   // whatever the person taps or types in the booking area, the summary follows
-  ['click', 'input', 'change'].forEach(ev => document.getElementById('bw').addEventListener(ev, () => setTimeout(paintRecaps, 80)));
+  // (capture phase: some lists stop their own clicks from bubbling, and the summary must still follow what was picked)
+  ['click', 'input', 'change'].forEach(ev => document.getElementById('bw').addEventListener(ev, () => setTimeout(paintRecaps, 80), true));
 
   function show(n) {
     cur = n; reached = Math.max(reached, n);
@@ -10482,7 +10548,8 @@ updateMechNote();
   let mechChosen = false;
   function paintMech() {
     ['mech-card-shop', 'mech-card-choose'].forEach(id => { const el = document.getElementById(id); if (el && !mechChosen) el.classList.remove('active'); });
-    const pane = document.querySelector('#bw .bw-pane[data-bstep="5"]'); if (pane) pane.classList.toggle('unchosen', !mechChosen);
+    const pane = document.querySelector('#bw .bw-pane[data-bstep="5"]');
+    if (pane) pane.classList.toggle('unchosen', !mechChosen);
   }
   window.bwChooseMech = function (mode) { mechChosen = true; setMechanicMode(mode); };
   const _smm = window.setMechanicMode;
