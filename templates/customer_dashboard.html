@@ -9400,7 +9400,11 @@ function showToast(msg, type) {
       if (lastSig !== null && e.data !== lastSig && !document.hidden) poll();
       lastSig = e.data;
     };
-    ws.onclose = () => { wsUp = false; ws = null; startFallback(); setTimeout(connect, retry); retry = Math.min(retry * 2, 20000); };
+    ws.onclose = e => {
+      wsUp = false; ws = null; startFallback();
+      if (e && e.code === 4000) return;                  // the server cannot hold sockets: stay on the slow poll
+      setTimeout(connect, retry); retry = Math.min(retry * 2, 20000);
+    };
     ws.onerror = () => { try { ws.close(); } catch (err) {} };
   }
   setInterval(() => { if (wsUp && ws && ws.readyState === 1) ws.send('ping'); }, 25000);

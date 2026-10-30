@@ -8874,7 +8874,13 @@ document.addEventListener('submit', function(e) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
     body: 'status=' + encodeURIComponent(newStatus)
   })
-  .then(r => r.json())
+  .then(async r => {
+    if (r.redirected && /\/login/.test(r.url)) throw new Error('Your session expired. Please sign in again.');
+    let data = null;
+    try { data = await r.json(); } catch (e) {}
+    if (!data) throw new Error(`The server did not answer properly (${r.status}). Please refresh the page and check the order.`);
+    return data;
+  })
   .then(data => {
     if (!data.success) throw new Error(data.error || 'Update failed');
     const row = form.closest('tr');
@@ -9475,7 +9481,9 @@ setInterval(() => { const d = document.getElementById('sec-dashboard'); if (!doc
     if (document.hidden) return false;
     if (document.querySelector('.modal-overlay.open')) return false;
     const a = document.activeElement;
-    return !(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName));
+    if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return false;
+    // a status that was picked but not saved yet must not be wiped by a refresh before Save is pressed
+    return ![...document.querySelectorAll('.status-form select[data-current]')].some(sel => sel.value !== sel.dataset.current);
   }
 
   // Re-read a server-drawn section from the dashboard page and swap its contents, keeping what the person
@@ -9555,8 +9563,9 @@ setInterval(() => { const d = document.getElementById('sec-dashboard'); if (!doc
     catch (e) { startFallback(); return; }
     ws.onopen = () => { wsUp = true; retry = 1000; stopFallback(); };
     ws.onmessage = e => { if (e.data === 'pong') return; try { handle(JSON.parse(e.data)); } catch (err) {} };
-    ws.onclose = () => {
+    ws.onclose = e => {
       wsUp = false; ws = null; startFallback();
+      if (e && e.code === 4000) return;                  // the server cannot hold sockets: stay on the slow poll
       setTimeout(connect, retry); retry = Math.min(retry * 2, 20000);
     };
     ws.onerror = () => { try { ws.close(); } catch (e) {} };

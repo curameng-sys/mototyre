@@ -5743,6 +5743,51 @@ def ship_cancel(oid):
     return jsonify({'success': True, 'status': order.status})
 
 
+def _notify_order_status_change(order_id, new_status, is_pickup):
+    """Tells the customer an order moved to a new step (runs in a background thread, after the status is saved).
+    A problem here is logged and never reaches the staff member who pressed Save."""
+    with admin_app.app_context():
+        try:
+            order = Order.query.get(order_id)
+            if not order:
+                return
+            notice = order_status_message(new_status, order.id,
+                                          delivery_method=order.delivery_method,
+                                          ship_address=order.ship_address,
+                                          when=ph_now())
+            if not notice:
+                return
+            title, msg = notice
+            if is_pickup and new_status == 'shipped' and order.ready_at:
+                last_day = order.ready_at + timedelta(days=PICKUP_HOLD_DAYS)
+                msg += pickup_hold_line(f"{last_day.strftime('%b')} {last_day.day}, {last_day.strftime('%I:%M %p').lstrip('0')}",
+                                        (order.payment_method or '').lower() == 'gcash')
+            _notify_order_customer(order, title, msg, status=new_status)
+        except Exception:
+            db.session.rollback()
+            import traceback
+            print(f'[ORDER STATUS] Order {order_id} saved as {new_status}, but notifying the customer failed:\n{traceback.format_exc()}', flush=True)
+        finally:
+            db.session.remove()
+
+
+@admin_app.errorhandler(Exception)
+def _json_for_ajax_errors(e):
+    """A background (AJAX) request that crashes gets a short JSON message the page can show, not an HTML error page
+    (which the page cannot read and would show as a confusing "not valid JSON" error)."""
+    from werkzeug.exceptions import HTTPException
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        if isinstance(e, HTTPException):
+            return e
+        raise e
+    if isinstance(e, HTTPException):
+        return jsonify({'success': False, 'error': e.description or e.name}), e.code
+    import traceback
+    print(f'[ADMIN ERROR] {request.method} {request.path}:\n{traceback.format_exc()}', flush=True)
+    db.session.rollback()
+    return jsonify({'success': False, 'error': 'Something went wrong on the server. Please try again, and tell the developer if it keeps happening.'}), 500
+
+
 @admin_app.route('/order/<int:oid>/status', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -5830,20 +5875,12 @@ def update_order_status(oid):
         order.pickup_reminder_at = None
         order.pickup_refund_failed_at = None
     db.session.commit()
-    # Every tracking step gets a customer notification stamped with the exact time
-    # of the update — ship-to-address orders get delivery-specific wording. Re-saving
-    # the same status is a no-op so the customer isn't notified twice for one step.
-    notice = order_status_message(new_status, order.id,
-                                  delivery_method=order.delivery_method,
-                                  ship_address=order.ship_address,
-                                  when=ph_now()) if new_status != prev_status else None
-    if notice:
-        title, msg = notice
-        if _is_pickup and new_status == 'shipped' and order.ready_at:
-            last_day = order.ready_at + timedelta(days=PICKUP_HOLD_DAYS)
-            msg += pickup_hold_line(f"{last_day.strftime('%b')} {last_day.day}, {last_day.strftime('%I:%M %p').lstrip('0')}",
-                                    (order.payment_method or '').lower() == 'gcash')
-        _notify_order_customer(order, title, msg, status=new_status)
+    # Every tracking step gets a customer notification (bell + email) stamped with the exact time of the update.
+    # That is several more database round-trips and an email, so it runs in the background: the staff's "Save"
+    # answers as soon as the status is saved instead of waiting for them. Re-saving the same status is a no-op,
+    # so the customer is not notified twice for one step.
+    if new_status != prev_status:
+        threading.Thread(target=_notify_order_status_change, args=(order.id, new_status, _is_pickup), daemon=True).start()
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'new_status': new_status, 'message': 'Order status updated!'})
     flash('Order status updated!', 'success')

@@ -11,7 +11,8 @@ How it works (one hub per app process):
     through that same fingerprint (a booking the customer makes shows up on the admin page a moment later).
 
 If the socket can't connect (old browser, proxy, server without threads) the pages fall back to a slow poll, so
-nothing breaks.
+nothing breaks. On a server that handles one request at a time the socket is refused straight away, because an open
+socket would otherwise freeze every other request.
 """
 import json
 import threading
@@ -112,6 +113,13 @@ def attach(app, compute, can_connect, interval=3.0, name='live', path='/ws/live'
 
     @sock.route(path)
     def _ws(ws):
+        from flask import request
+        if not request.environ.get('wsgi.multithread'):
+            # A server running one request at a time (plain gunicorn "sync" worker) would be frozen by this open
+            # socket: every other request, like saving an order status, would wait behind it. Hand the page back
+            # to its slow poll instead; 4000 tells the page not to keep retrying.
+            ws.close(reason=4000, message='Server has no threads')
+            return
         if not can_connect():
             ws.close(reason=1008, message='Not allowed')
             return
