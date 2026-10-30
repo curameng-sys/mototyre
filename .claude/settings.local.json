@@ -7,7 +7,8 @@
       "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"SELECT email, fullname, role FROM mototyre.user;\" 2>&1)",
       "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"SELECT email FROM mototyre.user WHERE email='mototyre0505@gmail.com';\" 2>&1)",
       "Bash(python3 -c ' *)",
-      "PowerShell(Get-ChildItem -Path \"d:\\\\CAPS\\\\mototyre\" -Recurse -File | Where-Object { $_.Extension -in @\\('.py', '.html', '.js'\\) -and $_.FullName -notmatch 'venv|node_modules|__pycache__' } | Select-Object FullName)"
+      "PowerShell(Get-ChildItem -Path \"d:\\\\CAPS\\\\mototyre\" -Recurse -File | Where-Object { $_.Extension -in @\\('.py', '.html', '.js'\\) -and $_.FullName -notmatch 'venv|node_modules|__pycache__' } | Select-Object FullName)",
+      "PowerShell($base='C:\\\\Users\\\\macky\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--CAPS-mototyre\\\\ed6cff04-b8f0-4491-a0b1-7490aed25c52'; foreach \\($d in 'scratchpad','tasks','images','tool-results'\\) { $p = Join-Path $base $d; if \\(Test-Path $p\\) { $m = Get-ChildItem $p -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum; '{0,-14} {1,8:N1} MB  \\({2} files\\)' -f $d, \\($m.Sum/1MB\\), $m.Count } }; $t = Get-ChildItem 'C:\\\\Users\\\\macky\\\\AppData\\\\Local\\\\Temp\\\\claude' -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum; 'Buong claude temp: {0:N1} MB' -f \\($t.Sum/1MB\\); Get-PSDrive C | ForEach-Object { 'C: libre {0:N0} MB, gamit {1:N1} GB' -f \\($_.Free/1MB\\), \\($_.Used/1GB\\) }; Get-ChildItem $base\\\\scratchpad -File -ErrorAction SilentlyContinue | Sort-Object Length -Descending | Select-Object -First 6 Name, @{n='MB';e={[math]::Round\\($_.Length/1MB,2\\)}})"
     ]
   }
 }

@@ -1665,13 +1665,9 @@ def booking_tab_seen(tab):
     return jsonify({'success': True})
 
 
-@admin_app.route('/api/live-signature')
-@login_required
-@require_admin_or_staff
-def api_live_signature():
-    """A short fingerprint per area (bookings, orders, return claims, quotations). The open admin page asks for
-    this every few seconds and only re-reads an area when its fingerprint changed, so a customer booking,
-    cancelling, paying or answering a quotation shows up without anyone pressing refresh."""
+def _live_signature_payload():
+    """The "what changed" fingerprint for the admin pages: one short hash per area, plus the booking-tab badge counts.
+    Everything in it is shop-wide (not per user), so one computation serves every connected admin / staff page."""
     import hashlib
 
     def fp(rows):
@@ -1690,13 +1686,39 @@ def api_live_signature():
     bookings = list(bookings) + db.session.query(JobOrder.id, JobOrder.status, JobOrder.mechanic_name, JobOrder.mechanic_done_at,
                                                  JobOrder.est_minutes).order_by(JobOrder.id).all()
     # A job running past its time starts clashing with the next one just by the clock reaching it (no row changes),
-    # so today's clash list is part of the bookings fingerprint too.
+    # so today's clash list is part of the bookings fingerprint. It only changes with the clock minute, so it is
+    # worked out once per minute, not on every check.
     try:
-        bookings = list(bookings) + [('clash',) + tuple(sorted(_compute_day_clash_ids(ph_now().date())))]
+        now = ph_now()
+        key = (now.date(), now.hour * 60 + now.minute)
+        cached = _LIVE_CLASH_CACHE.get('v')
+        if not cached or cached[0] != key:
+            cached = (key, tuple(sorted(_compute_day_clash_ids(now.date()))))
+            _LIVE_CLASH_CACHE['v'] = cached
+        bookings = list(bookings) + [('clash',) + cached[1]]
     except Exception:
         pass
-    return jsonify({'bookings': fp(bookings), 'orders': fp(orders), 'returns': fp(returns), 'quotes': fp(quotes),
-                    'bk_unseen': _sync_booking_tab_badges()})
+    return {'bookings': fp(bookings), 'orders': fp(orders), 'returns': fp(returns), 'quotes': fp(quotes),
+            'bk_unseen': _sync_booking_tab_badges()}
+
+
+_LIVE_CLASH_CACHE = {}
+
+
+@admin_app.route('/api/live-signature')
+@login_required
+@require_admin_or_staff
+def api_live_signature():
+    """Same fingerprint over plain HTTP: the fallback for a page whose WebSocket could not connect (it asks slowly)."""
+    return jsonify(_live_signature_payload())
+
+
+# Real-time push: the page keeps one WebSocket open and is told when a fingerprint changes (see live_hub.py).
+import live_hub as _live_hub
+admin_live = _live_hub.attach(
+    admin_app, _live_signature_payload,
+    can_connect=lambda: current_user.is_authenticated and current_user.role in ('admin', 'staff'),
+    interval=3.0, name='admin-live')
 
 
 @admin_app.route('/api/dashboard-stats')

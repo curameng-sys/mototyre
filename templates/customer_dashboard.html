@@ -9249,7 +9249,7 @@ function showToast(msg, type) {
 
 /* ══ REALTIME POLLING ══ */
 (function() {
-  const POLL_MS = 2000;    // the Home bars, status labels, bell and claims refresh every 2 seconds
+  const POLL_MS = 10000;   // only a safety net when the WebSocket is down; normally the shop's push triggers poll()
   let _claimsSig = null;   // fingerprint of the customer's return claims as last seen
 
   // Queue no. column on Home: same rules as the queue_cell macro near the top of this page.
@@ -9405,8 +9405,28 @@ function showToast(msg, type) {
     } catch(e) {}
   }
 
-  // First poll after 2 s, then every 2 s while the tab is in view; coming back to the tab polls right away
-  setTimeout(() => { poll(); setInterval(() => { if (!document.hidden) poll(); }, POLL_MS); }, POLL_MS);
+  // Real-time: one WebSocket tells this page when anything in the shop changed, and only then is /api/customer/poll
+  // asked (once). If the socket can't connect, a slow poll keeps the page correct. It reconnects by itself.
+  let ws = null, wsUp = false, retry = 1000, fallback = null, lastSig = null;
+  const startFallback = () => { if (!fallback) fallback = setInterval(() => { if (!document.hidden) poll(); }, POLL_MS); };
+  const stopFallback  = () => { if (fallback) { clearInterval(fallback); fallback = null; } };
+  function connect() {
+    if (!('WebSocket' in window)) { startFallback(); return; }
+    try { ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/live`); }
+    catch (e) { startFallback(); return; }
+    ws.onopen = () => { wsUp = true; retry = 1000; stopFallback(); };
+    ws.onmessage = e => {
+      if (e.data === 'pong') return;
+      if (lastSig !== null && e.data !== lastSig && !document.hidden) poll();
+      lastSig = e.data;
+    };
+    ws.onclose = () => { wsUp = false; ws = null; startFallback(); setTimeout(connect, retry); retry = Math.min(retry * 2, 20000); };
+    ws.onerror = () => { try { ws.close(); } catch (err) {} };
+  }
+  setInterval(() => { if (wsUp && ws && ws.readyState === 1) ws.send('ping'); }, 25000);
+  poll();                       // once on load; after that the push decides
+  connect();
+  // Coming back to the tab: catch up right away (changes pushed while it was hidden were skipped)
   document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 })();
 

@@ -3843,6 +3843,33 @@ def delete_notification(nid):
     return jsonify({'success': True})
 
 
+def _customer_live_payload():
+    """Shop-wide "something changed" fingerprint pushed over the WebSocket. When it changes, each open customer page
+    asks /api/customer/poll once (that route stays per user). Covers bookings (and so queue numbers), orders and their
+    shipping steps, return claims, notifications, walk-in jobs and attendance (mechanic availability)."""
+    import hashlib
+
+    def fp(rows):
+        return hashlib.md5(repr([tuple(str(c) for c in r) for r in rows]).encode()).hexdigest()
+
+    bookings = db.session.query(Booking.id, Booking.status, Booking.date, Booking.time, Booking.assigned_mechanic_name,
+                                Booking.overrun_minutes, Booking.invoice_paid, Booking.cancelled_at).order_by(Booking.id).all()
+    orders = db.session.query(Order.id, Order.status, Order.paid_at, Order.shipping_option, Order.shipping_started_at,
+                              Order.received_at, Order.refunded_at, Order.shipping_options_sent_at).order_by(Order.id).all()
+    returns = db.session.query(ReturnRequest.id, ReturnRequest.status, ReturnRequest.resolution, ReturnRequest.item_returned,
+                               ReturnRequest.awaiting_customer_info, ReturnRequest.refund_receipt, ReturnRequest.cash_ready_at,
+                               ReturnRequest.customer_at_shop, ReturnRequest.redo_date).order_by(ReturnRequest.id).all()
+    notes = db.session.query(Notification.id, Notification.user_id, Notification.is_read).order_by(Notification.id).all()
+    shop = list(db.session.query(JobOrder.id, JobOrder.status, JobOrder.mechanic_name, JobOrder.mechanic_done_at).all())
+    shop += list(db.session.query(MechanicAttendance.mechanic_id, MechanicAttendance.date, MechanicAttendance.is_absent).all())
+    return {'bookings': fp(bookings), 'orders': fp(orders), 'returns': fp(returns), 'notifications': fp(notes), 'shop': fp(shop)}
+
+
+import live_hub as _live_hub
+customer_live = _live_hub.attach(app, _customer_live_payload, can_connect=lambda: current_user.is_authenticated,
+                                 interval=3.0, name='customer-live')
+
+
 @app.route('/api/customer/poll')
 @login_required
 def customer_poll():

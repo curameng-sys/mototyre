@@ -9460,13 +9460,13 @@ function _renderRecentBookings(rows) {
   </table>`;
 }
 
-setInterval(refreshDashboardOverview, 15000);
+setInterval(() => { const d = document.getElementById('sec-dashboard'); if (!document.hidden && d && d.classList.contains('active')) refreshDashboardOverview(); }, 60000);
 
 // ── Live updates: when a customer (or another staff member) changes something, the open lists refresh
 // by themselves. The server gives a short fingerprint per area every few seconds; an area is re-read only
 // when its fingerprint changed, and never while a pop-up is open or a field is being used.
 (function liveUpdates() {
-  const POLL_MS = 2000;
+  const POLL_MS = 10000;               // only used if the WebSocket is down: a slow safety-net poll
   let last = null;                     // fingerprints from the previous check
   const pending = new Set();             // areas that changed but could not be refreshed yet
   let busy = false;
@@ -9523,24 +9523,49 @@ setInterval(refreshDashboardOverview, 15000);
     pending.clear();
   }
 
-  async function tick() {
-    if (busy || document.hidden) return;
+  // One message from the server (WebSocket push, or the slow fallback poll): compare, and refresh what changed.
+  async function handle(body) {
+    if (busy) return;
     busy = true;
     try {
-      const res = await fetch('/api/live-signature', { credentials: 'same-origin' });
-      if (!res.ok) return;
-      const body = await res.json();
       const { bk_unseen, ...now } = body;                       // bk_unseen is a counter, not a section fingerprint
       if (last) Object.keys(now).forEach(k => { if (now[k] !== last[k]) pending.add(k); });
       last = now;
       if (bk_unseen && typeof applyBkBadges === 'function') applyBkBadges(bk_unseen);
       if (pending.size && safeNow()) await refreshChanged();
-    } catch (e) { /* quiet: the next tick retries */ }
+    } catch (e) { /* quiet: the next message retries */ }
     finally { busy = false; }
   }
+  async function pollOnce() {
+    if (document.hidden) return;
+    try {
+      const res = await fetch('/api/live-signature', { credentials: 'same-origin' });
+      if (res.ok) await handle(await res.json());
+    } catch (e) {}
+  }
 
-  setInterval(tick, POLL_MS);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+  // The WebSocket: connects once, reconnects by itself (1 s, 2 s, 4 s ... up to 20 s), and pings every 25 s so idle
+  // proxies keep it open. While it is down, a slow poll keeps the page correct.
+  let ws = null, wsUp = false, retry = 1000, fallback = null;
+  function startFallback() { if (!fallback) { pollOnce(); fallback = setInterval(pollOnce, POLL_MS); } }
+  function stopFallback() { if (fallback) { clearInterval(fallback); fallback = null; } }
+  function connect() {
+    if (!('WebSocket' in window)) { startFallback(); return; }
+    try { ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/live`); }
+    catch (e) { startFallback(); return; }
+    ws.onopen = () => { wsUp = true; retry = 1000; stopFallback(); };
+    ws.onmessage = e => { if (e.data === 'pong') return; try { handle(JSON.parse(e.data)); } catch (err) {} };
+    ws.onclose = () => {
+      wsUp = false; ws = null; startFallback();
+      setTimeout(connect, retry); retry = Math.min(retry * 2, 20000);
+    };
+    ws.onerror = () => { try { ws.close(); } catch (e) {} };
+  }
+  setInterval(() => { if (wsUp && ws && ws.readyState === 1) ws.send('ping'); }, 25000);
+  // A change that arrived while a pop-up was open or a field was being used is applied as soon as it is safe (no request).
+  setInterval(() => { if (pending.size && !busy && safeNow()) refreshChanged(); }, 2000);
+  connect();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !wsUp) pollOnce(); });
 })();
 
 // ── Reports & Sales: live date-range filtering ──
