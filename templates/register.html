@@ -797,7 +797,7 @@
           <li class="st" data-s="4"><span class="dot">4</span><span class="lbl">Security</span></li>
         </ol>
 
-        <form method="POST" action="{{ url_for('register') }}" id="reg-form" novalidate>
+        <form method="POST" action="{{ url_for('register') }}" id="reg-form" novalidate autocomplete="off">
 
           <!-- STEP 1 -->
           <div class="wstep active" data-step="1">
@@ -822,7 +822,7 @@
                   </svg>
                 </span>
                 <input type="text" name="firstname" placeholder="Juan" required
-                  oninput="this.value = this.value.replace(/[^A-Za-zÑñ\s]/g, '')">
+                  oninput="this.value = this.value.replace(/[^A-Za-zÑñ\s]/g, '')" autocomplete="off">
               </div>
             </div>
             <div class="field">
@@ -834,7 +834,7 @@
                   </svg>
                 </span>
                 <input type="text" name="lastname" placeholder="dela Cruz" required
-                  oninput="this.value = this.value.replace(/[^A-Za-zÑñ\s]/g, '')">
+                  oninput="this.value = this.value.replace(/[^A-Za-zÑñ\s]/g, '')" autocomplete="off">
               </div>
             </div>
             <div class="field col-suffix">
@@ -864,7 +864,7 @@
                   </svg>
                 </span>
                 <input type="email" name="email" id="reg-email" placeholder="you@email.com" required
-                  oninput="validateEmailDomain(this)">
+                  oninput="validateEmailDomain(this)" autocomplete="off">
               </div>
               <div class="email-hint" id="email-domain-msg"></div>
             </div>
@@ -878,7 +878,7 @@
                 </span>
                 <input type="tel" name="phone" placeholder="09xx xxx xxxx" required
                   oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                  maxlength="11">
+                  maxlength="11" autocomplete="off">
               </div>
             </div>
           </div>
@@ -947,14 +947,14 @@
               <label>House No. and Street</label>
               <div class="input-wrap">
                 <span class="input-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
-                <input type="text" name="dl_street" id="dl-street" placeholder="e.g. 12 Saranay Rd" maxlength="255" oninput="dlCheck()">
+                <input type="text" name="dl_street" id="dl-street" placeholder="e.g. 12 Saranay Rd" maxlength="255" oninput="dlCheck()" autocomplete="off">
               </div>
             </div>
             <div class="field">
               <label>ZIP Code</label>
               <div class="input-wrap">
                 <span class="input-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
-                <input type="text" name="dl_zip" id="dl-zip" placeholder="e.g. 1421" maxlength="4" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4); dlCheck()">
+                <input type="text" name="dl_zip" id="dl-zip" placeholder="e.g. 1421" maxlength="4" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4); dlCheck()" autocomplete="off">
               </div>
             </div>
           </div>
@@ -979,7 +979,7 @@
               <input type="password" name="password" id="password" placeholder="Create a strong password" required
                 minlength="8" maxlength="12"
                 pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,12}"
-                title="8–12 chars: uppercase, lowercase, number, special char">
+                title="8–12 chars: uppercase, lowercase, number, special char" autocomplete="new-password">
               <button type="button" class="pass-toggle" onclick="togglePass('password', this)">SHOW</button>
             </div>
             <div class="pass-checklist">
@@ -1001,7 +1001,7 @@
                 </svg>
               </span>
               <input type="password" name="confirm_password" id="confirm-password"
-                placeholder="Re-enter your password" required minlength="8" maxlength="12">
+                placeholder="Re-enter your password" required minlength="8" maxlength="12" autocomplete="new-password">
               <button type="button" class="pass-toggle" onclick="togglePass('confirm-password', this)">SHOW</button>
             </div>
             <div class="pass-checklist">
@@ -1060,7 +1060,7 @@
 
         <div id="otp-flash"></div>
 
-        <form method="POST" action="{{ url_for('verify_email_otp') }}" id="otp-form">
+        <form method="POST" action="{{ url_for('verify_email_otp') }}" id="otp-form" autocomplete="off">
           <input type="hidden" name="otp" id="otp-hidden">
           <div class="otp-grid">
             <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
@@ -1457,5 +1457,12 @@ document.getElementById('reg-form').addEventListener('submit', function (e) {
 })();
 </script>
 {% include 'partials/cookie_consent.html' %}
+<script data-fresh-form>
+// Privacy: never keep what was typed in these forms when the page is shown again (Back button / bfcache).
+window.addEventListener('pageshow', function (e) {
+  if (!e.persisted) return;
+  document.querySelectorAll('form').forEach(function (f) { f.reset(); });
+});
+</script>
 </body>
 </html>

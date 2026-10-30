@@ -517,7 +517,7 @@
             {% endwith %}
           </div>
 
-          <form method="POST" action="{{ url_for('login') }}" id="login-form">
+          <form method="POST" action="{{ url_for('login') }}" id="login-form" autocomplete="off">
             <div class="field">
               <label>Email Address</label>
               <div class="input-wrap">
@@ -527,7 +527,7 @@
                     <polyline points="22,6 12,13 2,6"/>
                   </svg>
                 </span>
-                <input type="email" name="email" id="login-email" placeholder="you@email.com" required autocomplete="email">
+                <input type="email" name="email" id="login-email" placeholder="you@email.com" required autocomplete="off">
               </div>
             </div>
 
@@ -539,7 +539,7 @@
                     <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
                 </span>
-                <input type="password" name="password" id="login-pass" placeholder="••••••••" required autocomplete="current-password">
+                <input type="password" name="password" id="login-pass" placeholder="••••••••" required autocomplete="new-password">
                 <button type="button" class="pass-toggle" onclick="togglePass('login-pass', this)">SHOW</button>
               </div>
             </div>
@@ -592,7 +592,7 @@
 
           <div id="otp-flash"></div>
 
-          <form method="POST" action="{{ url_for('verify_login_otp') }}" id="otp-form">
+          <form method="POST" action="{{ url_for('verify_login_otp') }}" id="otp-form" autocomplete="off">
             <input type="hidden" name="otp" id="otp-hidden">
             <div class="otp-grid">
               <input class="otp-cell" type="text" inputmode="numeric" maxlength="1" placeholder="·" autocomplete="off">
@@ -639,7 +639,7 @@
 
           <div id="forgot-flash"></div>
 
-          <form method="POST" action="{{ url_for('forgot_password') }}">
+          <form method="POST" action="{{ url_for('forgot_password') }}" autocomplete="off">
             <div class="field">
               <label>Email Address</label>
               <div class="input-wrap">
@@ -649,7 +649,7 @@
                     <polyline points="22,6 12,13 2,6"/>
                   </svg>
                 </span>
-                <input type="email" name="email" placeholder="you@email.com" required autocomplete="email">
+                <input type="email" name="email" placeholder="you@email.com" required autocomplete="off">
               </div>
             </div>
 
@@ -794,5 +794,12 @@
   }
 </script>
 {% include 'partials/cookie_consent.html' %}
+<script data-fresh-form>
+// Privacy: never keep what was typed in these forms when the page is shown again (Back button / bfcache).
+window.addEventListener('pageshow', function (e) {
+  if (!e.persisted) return;
+  document.querySelectorAll('form').forEach(function (f) { f.reset(); });
+});
+</script>
 </body>
 </html>

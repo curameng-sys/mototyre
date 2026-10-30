@@ -36,14 +36,14 @@
     <p class="sub">Google confirmed your email. We just need your mobile number so the shop can reach you about your bookings and orders.</p>
     {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash">{{ message }}</div>{% endfor %}{% endwith %}
     <div class="who"><div><b>{{ name }}</b><small>{{ email }}</small></div></div>
-    <form method="POST">
+    <form method="POST" autocomplete="off">
       <label for="phone">Mobile number</label>
-      <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="09XX XXX XXXX" autocomplete="tel" required
+      <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="09XX XXX XXXX" autocomplete="off" required
              oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
       <div class="hint">11 digits starting with 09.</div>
       <label for="model">Motorcycle model <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--fg-3);">(optional)</span></label>
       <div style="display:grid;grid-template-columns:1fr 110px;gap:0.6rem;">
-        <input id="model" name="model" type="text" maxlength="100" placeholder="e.g. Honda Click 125i">
+        <input id="model" name="model" type="text" maxlength="100" placeholder="e.g. Honda Click 125i" autocomplete="off">
         <select name="model_year" style="width:100%;padding:0.8rem 0.6rem;border:1.5px solid var(--line-2);border-radius:10px;font-family:inherit;font-size:0.9rem;margin-bottom:0.9rem;background:#fff;">
           <option value="">Year</option>
           {% for y in range(current_year + 1, 1979, -1) %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
@@ -53,5 +53,12 @@
     </form>
     <a class="cancel" href="{{ url_for('google_cancel') }}">Cancel</a>
   </div>
+<script data-fresh-form>
+// Privacy: never keep what was typed in these forms when the page is shown again (Back button / bfcache).
+window.addEventListener('pageshow', function (e) {
+  if (!e.persisted) return;
+  document.querySelectorAll('form').forEach(function (f) { f.reset(); });
+});
+</script>
 </body>
 </html>

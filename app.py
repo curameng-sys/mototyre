@@ -102,6 +102,20 @@ def _inject_current_year():
     copyright line reads the real year instead of whatever was hardcoded
     when that page was last touched."""
     return {'current_year': datetime.now().year}
+
+
+_NO_STORE_ENDPOINTS = {'login', 'register', 'google_complete', 'verify_login_otp', 'verify_email_otp',
+                       'forgot_password', 'forgot_password_verify', 'forgot_password_reset'}
+
+@app.after_request
+def _no_store_for_sign_in_pages(resp):
+    """Privacy: the sign-in / registration pages (and what was typed in them) are never kept by the browser cache."""
+    if request.endpoint in _NO_STORE_ENDPOINTS:
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+    return resp
+
+
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
