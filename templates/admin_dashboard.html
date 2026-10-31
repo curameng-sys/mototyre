@@ -210,11 +210,11 @@
       body.tbl-lock #products-pagination { flex-shrink: 0; margin-top: 0.7rem !important; min-height: 32px; }
     }
     .ds-count { display: none; }
-    .ds-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; position: sticky; top: 0; z-index: 3; background: var(--ink); padding: 0.35rem 0 0.7rem; }
-    .ds-tab { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: #6b7280; font-family: 'Syne', sans-serif; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+    .ds-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; position: sticky; top: 0; z-index: 3; background: var(--ink); padding: 0.3rem 0 0.6rem; }
+    .ds-tab { display: flex; align-items: center; justify-content: center; gap: 0.4rem; height: 34px; padding: 0 0.5rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: #6b7280; font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; line-height: 1; cursor: pointer; transition: all 0.15s; }
     .ds-tab:hover { color: var(--text); border-color: #d1d5db; }
     .ds-tab.on { background: var(--red); border-color: var(--red); color: #fff; }
-    .ds-tab .n { font-size: 0.66rem; min-width: 18px; text-align: center; padding: 0.05rem 0.4rem; border-radius: 99px; background: rgba(0,0,0,0.07); color: #374151; }
+    .ds-tab .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 20px; height: 18px; padding: 0 0.35rem; font-size: 0.62rem; line-height: 1; border-radius: 99px; background: rgba(0,0,0,0.07); color: #374151; }
     .ds-tab.on .n { background: rgba(255,255,255,0.25); color: #fff; }
     .ds-tab .n.alert { background: #dc2626; color: #fff; }
     #day-schedule-body > .ds-sec:not(.ds-on), #day-schedule-body > .ds-foot:not(.ds-on) { display: none !important; }
