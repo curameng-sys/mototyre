@@ -742,8 +742,8 @@
             <input class="field-inp" id="cust-moto-model" type="text" placeholder="e.g. Honda Click 125">
           </div>
           <div class="field-wrap" style="max-width:110px;">
-            <label class="field-label">Plate No.</label>
-            <input class="field-inp" id="cust-moto-plate" type="text" placeholder="ABC 123">
+            <label class="field-label">Year model</label>
+            <select class="field-inp" id="cust-moto-year"><option value="">Year</option></select><script>(function(){var s=document.currentScript.previousElementSibling,y=new Date().getFullYear()+1;for(;y>=1980;y--){var o=document.createElement('option');o.value=y;o.textContent=y;s.appendChild(o);}})();</script>
           </div>
         </div>
       </div>
@@ -1099,18 +1099,25 @@ async function searchCustomerByPhone(phone) {
     box.innerHTML = data.map(c => `
       <div class="phone-suggest-item" onclick="selectCustomer(${JSON.stringify(c).replace(/"/g,'&quot;')})">
         <div class="suggest-name">${c.name}</div>
-        <div class="suggest-meta">${c.phone}${c.motorcycle_model ? ' · ' + c.motorcycle_model : ''}${c.motorcycle_plate ? ' · ' + c.motorcycle_plate : ''}</div>
+        <div class="suggest-meta">${c.phone}${c.motorcycle_model ? ' · ' + c.motorcycle_model : ''}</div>
       </div>`).join('');
     box.classList.add('show');
   } catch(e) {}
+}
+
+// "Honda Click 125" + year 2021 -> "Honda Click 125 (2021)", the same way a customer's own booking carries it
+function motoWithYear() {
+  const m = document.getElementById('cust-moto-model').value.trim(), y = document.getElementById('cust-moto-year').value;
+  return m ? (y ? m + ' (' + y + ')' : m) : '';
 }
 
 function selectCustomer(c) {
   walkinCustomerId = c.id;
   document.getElementById('cust-phone').value       = c.phone;
   document.getElementById('cust-name').value        = c.name;
-  document.getElementById('cust-moto-model').value  = c.motorcycle_model || '';
-  document.getElementById('cust-moto-plate').value  = c.motorcycle_plate || '';
+  const _my = String(c.motorcycle_model || '').match(/^(.*?)\s*\((\d{4})\)\s*$/);
+  document.getElementById('cust-moto-model').value  = _my ? _my[1] : (c.motorcycle_model || '');
+  document.getElementById('cust-moto-year').value   = _my ? _my[2] : '';
   hideSuggestions();
   document.getElementById('returning-badge').classList.add('show');
   toast(`Returning customer: ${c.name}`, false, 'info');
@@ -1336,14 +1343,13 @@ function openConfirm() {
 
   const total    = cart.reduce((s, c) => s + c.price * c.qty, 0);
   const mechName = (document.getElementById('mechanic-select').value && mechPicker && mechPicker.name()) || 'Not assigned';
-  const motoModel = document.getElementById('cust-moto-model').value.trim();
-  const motoPlate = document.getElementById('cust-moto-plate').value.trim();
+  const motoModel = motoWithYear();
 
   document.getElementById('confirm-title').textContent    = 'Create Job Order';
   document.getElementById('confirm-total').textContent    = `₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   document.getElementById('confirm-customer').textContent = name;
   document.getElementById('confirm-phone').textContent    = phone || '—';
-  document.getElementById('confirm-moto').textContent     = [motoModel, motoPlate].filter(Boolean).join(' · ') || '—';
+  document.getElementById('confirm-moto').textContent     = motoModel || '—';
   document.getElementById('confirm-mechanic').textContent = mechName;
   document.getElementById('confirm-status').textContent   = 'Pending';
   document.getElementById('confirm-items').textContent    = cart.reduce((s,c)=>s+c.qty,0) + ' item(s)';
@@ -1424,8 +1430,8 @@ async function processTransaction() {
   const payload = {
     customer_name:      document.getElementById('cust-name').value.trim(),
     customer_phone:     document.getElementById('cust-phone').value.trim(),
-    motorcycle_model:   document.getElementById('cust-moto-model').value.trim(),
-    motorcycle_plate:   document.getElementById('cust-moto-plate').value.trim(),
+    motorcycle_model:   motoWithYear(),
+    motorcycle_plate:   '',
     walkin_customer_id: walkinCustomerId || null,
     mechanic_id:        document.getElementById('mechanic-select').value || null,
     cart: cart.filter(c => c.type === 'product').map(c => ({
@@ -1468,7 +1474,7 @@ function newTransaction() {
   document.getElementById('cust-phone').value      = '';
   document.getElementById('cust-name').value       = '';
   document.getElementById('cust-moto-model').value = '';
-  document.getElementById('cust-moto-plate').value = '';
+  document.getElementById('cust-moto-year').value  = '';
   document.getElementById('mechanic-select').value = '';
   if (mechPicker) { mechPicker.clear(); refreshMechanicStatus(); }
   document.getElementById('returning-badge').classList.remove('show');
