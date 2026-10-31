@@ -229,10 +229,53 @@
     html.embedded .topbar{display:none;}
     html.embedded .wrap{height:100vh;}
     html.embedded .quote-panel{height:100vh;}
+
+    /* ── Same look as the rest of the dashboard: light page, a page title, cards ── */
+    .page-header{display:none;}
+    html.embedded body{display:flex;flex-direction:column;background:var(--ink);padding:0 2rem 1.25rem;box-sizing:border-box;}
+    html.embedded .page-header{display:block;flex-shrink:0;margin-bottom:.9rem;}
+    html.embedded .page-title{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:.04em;color:#111827;line-height:1;}
+    html.embedded .page-title .accent{color:var(--red);}
+    html.embedded .page-sub{color:#6b7280;font-size:.84rem;margin-top:.2rem;}
+    html.embedded .wrap{flex:1;min-height:0;height:auto;grid-template-columns:minmax(0,1fr) 340px;gap:1.5rem;}
+    html.embedded .catalog{background:transparent;border:0;}
+    html.embedded .catalog-header{background:transparent;border:0;padding:0 0 .75rem;}
+    html.embedded .tab-btn{background:#fff;border:1px solid var(--border);color:#6b7280;}
+    html.embedded .tab-btn:hover{color:var(--text);border-color:#d1d5db;}
+    html.embedded .tab-btn.active{background:var(--red);border-color:var(--red);color:#fff;}
+    html.embedded .search-box svg{color:#9ca3af;}
+    html.embedded .search-box input{background:#fff;border:1px solid var(--border);color:var(--text);padding-top:.55rem;padding-bottom:.55rem;}
+    html.embedded .search-box input:focus{border-color:var(--red);}
+    html.embedded .search-box input::placeholder{color:#9ca3af;}
+    html.embedded #quot-refresh-btn{background:#fff !important;border-radius:8px;}
+    html.embedded .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.75rem;align-content:start;padding:2px 2px .5rem;}
+    html.embedded .product-card{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:.4rem;padding:.75rem .9rem;border:1px solid var(--border);border-radius:10px;background:var(--card);box-shadow:0 2px 8px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s;}
+    html.embedded .product-card:hover{background:var(--card);border-color:var(--red);box-shadow:0 4px 16px rgba(0,0,0,.13);}
+    html.embedded .product-card > div:first-child{flex:1;}
+    html.embedded .product-card > div:first-child > div:first-child{white-space:normal !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3;}
+    html.embedded .product-card > div:last-child{display:flex;justify-content:space-between;align-items:baseline;text-align:left !important;}
+    html.embedded .product-card::after{content:'+ Add';display:block;text-align:center;padding:.38rem;border-radius:6px;background:var(--red);color:#fff;font-size:.78rem;font-weight:600;}
+    html.embedded .product-card.out-of-stock{opacity:.6 !important;}
+    html.embedded .product-card.out-of-stock .stock-text{font-weight:700;}
+    html.embedded .product-card.out-of-stock::after{content:'Out of Stock';background:#d1d5db;color:#6b7280;}
+    html.embedded .services-panel, html.embedded .inspection-panel{padding:2px 2px .5rem;}
+    html.embedded #service-list-container{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.6rem;}
+    html.embedded .service-item{margin-bottom:0;}
+    html.embedded .quote-panel{height:auto;min-height:0;border:1px solid var(--border);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
   </style>
   <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
 </head>
 <body>
+
+<div class="page-header">
+  {% if booking %}
+  <div class="page-title">Quotation for booking <span class="accent">#{{ booking.ref }}</span></div>
+  <div class="page-sub">Status: Inspection &amp; Estimation. Add what the mechanic found, parts and services, then send the quotation to the customer.</div>
+  {% else %}
+  <div class="page-title">New <span class="accent">Quotation</span></div>
+  <div class="page-sub">Build an estimate for a walk-in customer. Pick the parts and services, then save the quotation.</div>
+  {% endif %}
+</div>
 
 <header class="topbar">
   {% if booking %}
@@ -290,7 +333,7 @@
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#111827;">₱{{ (p.price)|money }}</div>
-          <div class="stock-text" style="font-size:.68rem;color:{% if p.stock == 0 %}#fca5a5{% elif p.stock <= 5 %}#fbbf24{% else %}var(--muted){% endif %};">
+          <div class="stock-text" style="font-size:.68rem;color:{% if p.stock == 0 %}#b91c1c{% elif p.stock <= 5 %}#b45309{% else %}#16a34a{% endif %};">
             {% if p.stock == 0 %}Out of stock{% elif p.stock <= 5 %}{{ p.stock }} left{% else %}{{ p.stock }} in stock{% endif %}
           </div>
         </div>
@@ -603,7 +646,7 @@
     currentTab = tab;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('products-panel').style.display = tab === 'products' ? 'flex' : 'none';
+    document.getElementById('products-panel').style.display = tab === 'products' ? '' : 'none';
     document.getElementById('services-panel').style.display  = tab === 'services'  ? 'block' : 'none';
     document.getElementById('product-controls').style.display = tab === 'products' ? 'block' : 'none';
     const insp = document.getElementById('inspection-panel');
@@ -1139,13 +1182,13 @@
       const el = card.querySelector('.stock-text');
       if (!el) return;
       if (stock === 0) {
-        el.textContent = 'Out of stock'; el.style.color = '#fca5a5';
+        el.textContent = 'Out of stock'; el.style.color = '#b91c1c'; card.classList.add('out-of-stock');
         card.style.opacity = '.4'; card.style.cursor = 'not-allowed'; card.style.pointerEvents = 'none';
       } else if (stock <= 5) {
-        el.textContent = stock + ' left'; el.style.color = '#fbbf24';
+        el.textContent = stock + ' left'; el.style.color = '#b45309'; card.classList.remove('out-of-stock');
         card.style.opacity = ''; card.style.cursor = 'pointer'; card.style.pointerEvents = '';
       } else {
-        el.textContent = stock + ' in stock'; el.style.color = 'var(--muted)';
+        el.textContent = stock + ' in stock'; el.style.color = '#16a34a'; card.classList.remove('out-of-stock');
         card.style.opacity = ''; card.style.cursor = 'pointer'; card.style.pointerEvents = '';
       }
     });

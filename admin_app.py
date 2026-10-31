@@ -5739,6 +5739,57 @@ def ship_cancel(oid):
     return jsonify({'success': True, 'status': order.status})
 
 
+@admin_app.route('/order/<int:oid>/cancel', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def order_cancel(oid):
+    """The shop cancels a Shop Pickup order (e.g. the part is out of stock or not available after all).
+    Cash / not yet paid: it is simply cancelled, nothing was charged. Paid by GCash: the full amount goes back to the
+    customer's GCash through PayMongo. The customer gets the reason in their notification and email."""
+    order = Order.query.get_or_404(oid)
+    if order.is_instore or order.walkin_customer_id:
+        return jsonify({'success': False, 'error': 'In-store sales are already paid at the counter.'}), 400
+    if order.delivery_method == 'ship':
+        return jsonify({'success': False, 'error': 'Ship to Address orders are cancelled from their own status box.'}), 400
+    if order.status in ('completed', 'cancelled', 'refunded'):
+        return jsonify({'success': False, 'error': 'This order is already finished.'}), 400
+    d = request.get_json(silent=True) or {}
+    reason = clean_str(d.get('reason', ''), max_len=300)
+    if len(reason) < 3:
+        return jsonify({'success': False, 'error': 'Choose or type the reason. The customer will see it.'}), 400
+    restock = bool(d.get('restock', True))
+    ref = f'ORD-{order.id:03d}'
+    paid_gcash = (order.payment_method or '').lower() == 'gcash' and order.status not in ('pending', 'awaiting_payment')
+    if paid_gcash:
+        ok, why = paymongo_refund(order, reason)
+        if not ok:
+            return jsonify({'success': False, 'error': why}), 502
+        order.status = 'refunded'
+        order.refunded_at = ph_now()
+        order.refund_amount = _ship_grand_total(order)
+        order.refund_reason = reason
+        title, body, status = ship_notice('refunded', ref, reason=reason, amount=order.refund_amount)
+        extra = ship_email_extra('refunded', items_total=order.total_amount, shipping_fee=order.shipping_fee or 0, amount=order.refund_amount)
+    else:
+        order.status = 'cancelled'
+        title, body, status = ship_notice('cancelled', ref, by='shop', reason=reason)
+        extra = ''
+    order.cancelled_by = 'shop'
+    order.cancel_reason = reason
+    if restock:
+        _restock_order(order)
+    else:
+        order.stock_restocked = False
+    db.session.commit()
+    _notify_order_customer(order, title, body, status=status, extra_html=extra)
+    stock_note = 'Items put back in stock.' if restock else 'Items NOT put back in stock.'
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(admin.id, f'{ref} ' + ('refunded' if order.status == 'refunded' else 'cancelled'),
+            (f'{ref} refunded \u00b7 \u20b1{order.refund_amount:,.2f} back to GCash via PayMongo. Reason: {reason}. ' if order.status == 'refunded'
+             else f'{ref} cancelled by the shop \u00b7 not charged. Reason: {reason}. ') + stock_note, type='order', status=order.status, order_id=order.id)
+    return jsonify({'success': True, 'status': order.status})
+
+
 def _notify_order_status_change(order_id, new_status, is_pickup):
     """Tells the customer an order moved to a new step (runs in a background thread, after the status is saved).
     A problem here is logged and never reaches the staff member who pressed Save."""

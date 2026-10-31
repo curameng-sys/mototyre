@@ -164,6 +164,8 @@
     .main { padding: 5rem 2rem 1.75rem; overflow-x: hidden; background: var(--ink); }
     .page-section { display: none; }
     .page-section.active { display: block; }
+    .order-cancel-btn { background: #fff; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; padding: 0.3rem 0.65rem; font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer; margin-left: 0.35rem; white-space: nowrap; }
+    .order-cancel-btn:hover { background: #fef2f2; border-color: #f87171; }
 
     /* Billing, Quotations and Walk-In are shown inside the dashboard: the frame fills the space under the top bar, and only its own content scrolls. */
     body.embed-lock { overflow: hidden; }
@@ -1821,7 +1823,7 @@
                   {% endif %}
                 </td>
                 <td>
-                {% set o_final = o.is_instore or o.refund_status_label == 'Refunded' or o.status in ['completed', 'cancelled'] or (sh and o.status == 'refunded') %}
+                {% set o_final = o.is_instore or o.refund_status_label == 'Refunded' or o.status in ['completed', 'cancelled', 'refunded'] %}
                 {% if o.is_instore %}
                   <span style="font-size:0.7rem;color:var(--muted);">Paid at the counter</span>
                 {% elif o_final %}
@@ -1907,6 +1909,9 @@
                     {% endif %}
                   </select>
                   <button type="submit" disabled>Save</button>
+                  {% if o.delivery_method != 'ship' %}
+                  <button type="button" class="order-cancel-btn" onclick="openOrderCancel(this)" data-oid="{{ o.id }}" data-ref="ORD-{{ '%03d'|format(o.id) }}" data-customer="{{ (o.customer.fullname if o.customer else '')|e }}" data-total="{{ o.total_amount or 0 }}" data-paid="{{ 1 if ((o.payment_method or '')|lower == 'gcash' and o.status not in ['pending','awaiting_payment']) else 0 }}">Cancel order</button>
+                  {% endif %}
                   {% if o.delivery_method != 'ship' and o.status == 'shipped' %}
                     <span class="status-note" style="font-size:0.62rem;color:var(--muted);">Complete on Billing page</span>
                   {% endif %}
@@ -3220,6 +3225,34 @@
     <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
       <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-ship-cancel')">Keep order</button>
       <button type="button" class="btn-primary-custom" id="sx-go" onclick="shipSubmitCancel()">Cancel and refund</button>
+    </div>
+  </div>
+</div>
+
+<!-- CANCEL A SHOP PICKUP ORDER (part out of stock / not available) -->
+<div class="modal-overlay" id="modal-order-cancel">
+  <div class="modal-box" style="width:500px;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Cancel order</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;line-height:1.5;" id="oc-sub"></div>
+    <input type="hidden" id="oc-oid">
+    <div class="form-group"><label>Reason (the customer will see this)</label>
+      <select id="oc-reason" onchange="orderCancelReasonChanged()">
+        <option value="">Choose a reason</option>
+        <option>The part is out of stock</option>
+        <option>The part is not available right now</option>
+        <option>The part does not match what was listed</option>
+        <option>The customer asked to cancel</option>
+        <option value="__other">Other</option>
+      </select>
+      <input type="text" id="oc-reason-custom" maxlength="120" placeholder="Type the reason" style="display:none;margin-top:0.4rem;" oninput="this.classList.remove('so-err-field')"></div>
+    <div id="oc-pay" style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.85rem;font-size:0.8rem;color:#374151;margin-bottom:0.9rem;line-height:1.6;"></div>
+    <label style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.82rem;font-weight:600;color:var(--text);cursor:pointer;margin-bottom:0.2rem;">
+      <input type="checkbox" id="oc-restock" checked style="margin-top:3px;"><span>Put the items back in stock</span></label>
+    <div id="oc-restock-note" style="display:none;font-size:0.72rem;color:#92400e;margin:0 0 0.8rem 1.4rem;">Unticked because the part is not in the shop. Tick it only if it can still be sold.</div>
+    <div id="oc-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin:0.8rem 0;"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;margin-top:1rem;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-order-cancel')">Keep order</button>
+      <button type="button" class="btn-primary-custom" id="oc-go" onclick="submitOrderCancel()">Cancel order</button>
     </div>
   </div>
 </div>
@@ -8660,6 +8693,45 @@ async function shipPost(oid, step, body) {
   } catch (e) { return {ok: false, data: {error: 'Could not reach the server. Please try again.'}}; }
 }
 function shipReload(msg) { showToast(msg, 'success'); setTimeout(() => { window.location.hash = 'orders'; window.location.reload(); }, 700); }
+
+// ── Cancel a Shop Pickup order when the part is out of stock or not available ──
+function openOrderCancel(btn) {
+  const d = btn.dataset, money = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits: 2});
+  document.getElementById('oc-oid').value = d.oid;
+  document.getElementById('oc-sub').textContent = d.ref + ' · ' + d.customer + ' · ' + money(d.total);
+  document.getElementById('oc-reason').value = ''; document.getElementById('oc-reason-custom').value = ''; document.getElementById('oc-reason-custom').style.display = 'none';
+  document.getElementById('oc-restock').checked = true; document.getElementById('oc-restock-note').style.display = 'none';
+  document.getElementById('oc-pay').innerHTML = d.paid === '1'
+    ? '<b>Already paid by GCash.</b> The full ' + money(d.total) + ' goes back to their GCash through PayMongo. It may take a few days to show.'
+    : '<b>Nothing was charged yet.</b> The order is simply cancelled and the customer is told why.';
+  document.getElementById('oc-go').textContent = d.paid === '1' ? 'Cancel and refund' : 'Cancel order';
+  shipErr('oc-err', '');
+  openModal('modal-order-cancel');
+}
+function orderCancelReasonChanged() {
+  const v = document.getElementById('oc-reason').value;
+  const custom = document.getElementById('oc-reason-custom');
+  custom.style.display = v === '__other' ? 'block' : 'none';
+  const gone = v === 'The part is out of stock' || v === 'The part is not available right now';
+  document.getElementById('oc-restock').checked = !gone;           // a part that is not in the shop must not go back on sale
+  document.getElementById('oc-restock-note').style.display = gone ? 'block' : 'none';
+}
+async function submitOrderCancel() {
+  const sel = document.getElementById('oc-reason').value, custom = document.getElementById('oc-reason-custom');
+  const reason = sel === '__other' ? custom.value.trim() : sel;
+  if (!reason) { shipErr('oc-err', 'Choose or type the reason. The customer will see it.'); if (sel === '__other') custom.classList.add('so-err-field'); return; }
+  const btn = document.getElementById('oc-go'), label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Cancelling…'; shipErr('oc-err', '');
+  try {
+    const res = await fetch('/order/' + document.getElementById('oc-oid').value + '/cancel', {
+      method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+      body: JSON.stringify({reason, restock: document.getElementById('oc-restock').checked}) });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) { closeModal('modal-order-cancel'); shipReload(data.status === 'refunded' ? 'Order cancelled and refunded to GCash. The customer was notified.' : 'Order cancelled. The customer was notified.'); return; }
+    shipErr('oc-err', data.error || 'Could not cancel the order.');
+  } catch (e) { shipErr('oc-err', 'Network error. Please try again.'); }
+  btn.disabled = false; btn.textContent = label;
+}
 
 function shipSelectChanged(sel) {
   sel.parentElement.querySelector('.ship-save').disabled = (sel.value === sel.dataset.current);
