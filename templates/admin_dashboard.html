@@ -247,7 +247,12 @@
       body.ds-lock #cap-mechanic-note { font-size: 0.72rem !important; margin-top: 0.3rem !important; }
       body.ds-lock .ds-right > div:nth-child(2) { margin-bottom: 0.55rem !important; }
       body.ds-lock .ds-day-card { background: transparent; border: 0; box-shadow: none; margin-bottom: 0 !important; }
-      body.ds-lock #day-schedule-body { padding: 0 0.3rem 1rem 0; }
+      /* the date, the status counts and the tabs stay put; only the open tab's content (the time slots, etc.) scrolls */
+      body.ds-lock #day-schedule-body { padding: 0 !important; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+      body.ds-lock #day-schedule-body > * { flex-shrink: 0; }
+      body.ds-lock #day-schedule-body > .ds-tabs { position: static; padding: 0.2rem 0 0.7rem; }
+      body.ds-lock #day-schedule-body > .ds-sec.ds-on { flex: 1 1 0; min-height: 0; overflow-y: auto; margin-bottom: 0 !important; }
+      body.ds-lock #day-schedule-body > .ds-foot.ds-on { margin-top: 0.6rem !important; padding-top: 0.6rem !important; }
       /* one part of the day at a time (tabs), shown as a card */
       body.ds-lock #day-schedule-body > .ds-sec { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.15rem; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
       body.ds-lock #day-schedule-body > div:nth-child(1) { margin-bottom: 0.7rem !important; }
@@ -261,7 +266,7 @@
       body.ds-lock #ds-selected-label { display: none; }
       body.ds-lock .ds-right { display: flex; flex-direction: column; min-height: 0; }
       body.ds-lock .ds-right > div:nth-child(2) { flex-shrink: 0; margin-bottom: 0.85rem !important; }
-      body.ds-lock .ds-day-card { flex: 1; min-height: 0; overflow-y: auto; }
+      body.ds-lock .ds-day-card { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
       body.ds-lock #ds-view-list { flex: 1; min-height: 0; display: flex; flex-direction: column; }
       body.ds-lock #ds-view-list > .card { flex: 1; min-height: 0; overflow: auto; }
       body.ds-lock #ds-view-list thead th { position: sticky; top: 0; z-index: 2; background-color: #f9fafb !important; box-shadow: 0 1px 0 var(--border); }
@@ -4943,7 +4948,7 @@
     if (kids.length < 6) return;
     const [bay, clashes, timeline, slots] = kids.slice(2, 6);
     [['bay', bay], ['clashes', clashes], ['timeline', timeline], ['slots', slots]].forEach(([k, el]) => { el.classList.add('ds-sec'); el.dataset.tab = k; });
-    kids.slice(6).forEach(el => el.classList.add('ds-foot'));
+    kids.slice(6).forEach(el => timeline.appendChild(el));        // the colour key belongs to the timeline: it moves inside it
     const nClash = (data.clashes || []).length, nBay = (data.bay || []).length + (data.bay_now || []).length;
     const tabs = [['slots', 'Time Slots', data.booked_count, false], ['clashes', 'Clashes', nClash, nClash > 0],
                   ['timeline', 'Mechanic Timeline', (data.timeline || []).length, false], ['bay', 'In the Bay', nBay, false]];
@@ -4958,7 +4963,6 @@
     const body = document.getElementById('day-schedule-body');
     body.querySelectorAll('.ds-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === k));
     body.querySelectorAll('.ds-sec').forEach(el => el.classList.toggle('ds-on', el.dataset.tab === k));
-    body.querySelectorAll('.ds-foot').forEach(el => el.classList.toggle('ds-on', k === 'timeline'));      // the colour key belongs to the timeline
   }
 
   function renderDayPanelHeader(data) {
