@@ -1695,7 +1695,8 @@ def customer_dashboard():
 
     bookings = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
     orders   = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
-    products = Product.query.filter(Product.stock > 0).order_by(Product.id).all()
+    # Out-of-stock parts stay in the catalog (labelled "Out of Stock", not buyable); they are listed after the ones in stock
+    products = Product.query.order_by(db.case((Product.stock > 0, 0), else_=1), Product.id).all()
     services = Service.query.filter_by(is_active=True).order_by(Service.name).all()
     returns  = ReturnRequest.query.filter_by(user_id=current_user.id).order_by(ReturnRequest.created_at.desc()).all()
     for r in returns:
@@ -2922,6 +2923,8 @@ MAX_ONLINE_QTY = 10      # one courier delivery: up to 10 of each item online
 
 def _check_online_qty(product, qty):
     """The same limit the cart enforces, checked again when the order is placed. Returns an error text or None."""
+    if (product.stock or 0) <= 0:
+        return f'{product.name} is out of stock right now, so it can\'t be ordered. Please check again later.'
     if qty < 1:
         return 'Type how many you want. You need at least 1 to check out.'
     if qty > MAX_ONLINE_QTY:
@@ -2931,6 +2934,29 @@ def _check_online_qty(product, qty):
     if qty > (product.stock or 0):
         return f'Only {product.stock or 0} left in stock of {product.name}. Please lower the amount.'
     return None
+
+
+@app.route('/api/products/stock')
+@login_required
+def api_products_stock():
+    """How many of each part are left right now. The catalog page asks for this so a part somebody else just bought the last
+    of shows as Out of Stock without the customer having to reload."""
+    return jsonify({str(pid): int(stock or 0) for pid, stock in db.session.query(Product.id, Product.stock).all()})
+
+
+@app.route('/api/cart/stock')
+@login_required
+def api_cart_stock():
+    """Current stock of the parts in the customer's cart, so the cart can say "out of stock" / "no longer available" before
+    checkout. A part that no longer exists comes back as null."""
+    ids = []
+    for x in (request.args.get('ids') or '').split(','):
+        x = x.strip()
+        if x.isdigit() and int(x) not in ids:
+            ids.append(int(x))
+    ids = ids[:100]
+    found = {p.id: p for p in Product.query.filter(Product.id.in_(ids)).all()} if ids else {}
+    return jsonify({str(i): ({'stock': int(found[i].stock or 0), 'name': found[i].name} if i in found else None) for i in ids})
 
 
 @app.route('/customer/cart/checkout', methods=['POST'])

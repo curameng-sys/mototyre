@@ -95,6 +95,11 @@
     .product-price{font-family:var(--font-display);font-size:22px;letter-spacing:0.02em;color:var(--brand-red);margin-top:auto}
 
     .product-fit{font-size:11px;color:var(--fg-3);line-height:1.4}
+    .product-img{position:relative}
+    .oos-note{font-size:11px;line-height:1.4;color:#b91c1c;font-weight:600}
+    .oos-badge{position:absolute;top:8px;right:8px;z-index:2;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;font-family:var(--font-label);font-weight:700;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+    .product-card.out-of-stock .product-img img,.product-card.out-of-stock .product-img i,.product-card.out-of-stock .product-img svg{filter:grayscale(1);opacity:.5}
+    .product-card.out-of-stock .product-name,.product-card.out-of-stock .product-price{opacity:.6}
     .add-cart{margin-top:6px;padding:10px;border:none;border-radius:8px;background:var(--fg-1);color:#fff;font-family:var(--font-label);font-weight:700;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:background 120ms var(--ease)}
     .add-cart:hover:not(:disabled){background:var(--brand-red)}
     .add-cart:disabled{background:var(--line-2);color:var(--fg-3);cursor:not-allowed}
@@ -271,8 +276,10 @@
   <div class="products-grid" id="productsGrid">
     {% for p in products %}
     {% set src = p|product_img %}
-    <div class="product-card" data-cat="{{ p.category|trim|lower }}">
+    {% set _oos = not (p.stock and p.stock > 0) %}
+    <div class="product-card{{ ' out-of-stock' if _oos }}" data-cat="{{ p.category|trim|lower }}">
       <div class="product-img">
+        {% if _oos %}<span class="oos-badge">Out of Stock</span>{% endif %}
         {% if src %}<img src="{{ src }}" alt="{{ p.name }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
         {% else %}<i data-lucide="package" style="width:40px;height:40px"></i>{% endif %}
       </div>
@@ -280,6 +287,7 @@
       <div class="product-name" title="{{ p.name }}">{{ p.name }}</div>
       {% if p.motor_model %}<div class="product-fit">Fits: {{ p.motor_model }}</div>{% endif %}
       <div class="product-price">₱{{ '{:,.2f}'.format(p.price) }}</div>
+      {% if _oos %}<div class="oos-note">Currently unavailable. Please check back soon.</div>{% endif %}
       {% if p.stock and p.stock > 0 %}
       <button type="button" class="add-cart" data-id="{{ p.id }}" data-name="{{ p.name }}" data-price="{{ p.price }}" data-stock="{{ p.stock }}" data-category="{{ p.category }}" onclick="addToCart(this)">Add to Cart</button>
       {% else %}

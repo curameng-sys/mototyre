@@ -2420,6 +2420,37 @@
                     GCash
                   </button>
                 </div>
+
+                <!-- CASH: take the money, count the change -->
+                <div id="parts-pay-cash" style="margin-top:0.65rem;padding:0.7rem 0.8rem;border:1px solid #fecaca;background:#fef2f2;border-radius:8px;">
+                  <div style="font-size:0.74rem;color:#7f1d1d;line-height:1.5;margin-bottom:0.55rem;"><b>Cash at the counter.</b> Ask for the amount, type what the customer hands over, then give back the change shown.</div>
+                  <label style="font-size:0.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">Cash received (₱)</label>
+                  <input type="text" id="parts-cash-received" inputmode="decimal" placeholder="0.00" oninput="this.value=this.value.replace(/[^0-9.]/g,''); onPartsCartChange()"
+                    style="width:100%;padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:0.9rem;outline:none;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.55rem;">
+                    <span style="font-size:0.78rem;color:var(--muted);">Change to give</span>
+                    <span id="parts-cash-change" style="font-weight:800;font-size:1.1rem;color:var(--text);">₱0.00</span>
+                  </div>
+                  <div id="parts-cash-short" style="display:none;color:var(--red);font-size:0.72rem;margin-top:0.3rem;">Cash received is less than the total.</div>
+                </div>
+
+                <!-- GCASH: customer pays from their phone, cashier checks it arrived and records the reference no. -->
+                <div id="parts-pay-gcash" style="display:none;margin-top:0.65rem;padding:0.7rem 0.8rem;border:1px solid #bfdbfe;background:#eff6ff;border-radius:8px;">
+                  <div style="font-size:0.74rem;color:#1e3a8a;line-height:1.55;margin-bottom:0.55rem;">
+                    <b>GCash payment.</b>
+                    <ol style="margin:0.3rem 0 0 1.1rem;padding:0;">
+                      <li>Let the customer send the exact total to the shop's GCash.</li>
+                      <li>Check the payment in the shop's GCash app.</li>
+                      <li>Type the 13-digit reference no. from the customer's receipt.</li>
+                    </ol>
+                  </div>
+                  <label style="font-size:0.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">GCash reference no. *</label>
+                  <input type="text" id="parts-gcash-ref" inputmode="numeric" maxlength="13" placeholder="13 digits" oninput="this.value=this.value.replace(/\D/g,'').slice(0,13); onPartsCartChange()"
+                    style="width:100%;padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:0.9rem;letter-spacing:0.08em;outline:none;">
+                  <label style="display:flex;align-items:flex-start;gap:0.4rem;margin-top:0.55rem;font-size:0.76rem;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="parts-gcash-ok" onchange="onPartsCartChange()" style="margin-top:0.15rem;"> I checked that the full amount arrived in the shop's GCash.
+                  </label>
+                </div>
               </div>
 
               <!-- Process button -->
@@ -9070,7 +9101,18 @@ function _renderPartsCart() {
 function onPartsCartChange() {
   const btn  = document.getElementById('parts-process-btn');
   const name = document.getElementById('parts-customer').value.trim();
-  const ok   = _partsCart.length > 0 && !!name;
+  // each payment method has its own requirement before the sale can be processed
+  const total = _partsCart.reduce((s, i) => s + i.price * i.qty, 0);
+  let payOk;
+  if (_partsPayment === 'cash') {
+    const got = parseFloat(document.getElementById('parts-cash-received').value) || 0;
+    payOk = got + 0.0001 >= total && total > 0;
+    document.getElementById('parts-cash-change').textContent = '₱' + Math.max(0, got - total).toLocaleString('en-PH', {minimumFractionDigits:2});
+    document.getElementById('parts-cash-short').style.display = (got > 0 && !payOk) ? 'block' : 'none';
+  } else {
+    payOk = /^\d{13}$/.test(document.getElementById('parts-gcash-ref').value) && document.getElementById('parts-gcash-ok').checked;
+  }
+  const ok   = _partsCart.length > 0 && !!name && payOk;
   btn.disabled = !ok;
   btn.style.opacity = ok ? '1' : '0.5';
   btn.style.cursor  = ok ? 'pointer' : 'not-allowed';
@@ -9088,6 +9130,9 @@ function setPartsPayment(method) {
     gcash.style.cssText = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid var(--blue);background:var(--blue);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;';
     cash.style.cssText  = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid var(--border);background:#f9fafb;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;';
   }
+  document.getElementById('parts-pay-cash').style.display  = method === 'cash' ? 'block' : 'none';
+  document.getElementById('parts-pay-gcash').style.display = method === 'gcash' ? 'block' : 'none';
+  onPartsCartChange();
 }
 
 function processPartsTxn() {
@@ -9107,7 +9152,12 @@ function processPartsTxn() {
     services: [],
     payment_method: _partsPayment,
     customer_name: customerName,
+    cash_received: _partsPayment === 'cash' ? (parseFloat(document.getElementById('parts-cash-received').value) || 0) : null,
+    gcash_ref: _partsPayment === 'gcash' ? document.getElementById('parts-gcash-ref').value : null,
   };
+  const paidNote = _partsPayment === 'cash'
+    ? `Paid via Cash · received ₱${payload.cash_received.toLocaleString('en-PH', {minimumFractionDigits:2})} · change ₱${Math.max(0, payload.cash_received - total).toLocaleString('en-PH', {minimumFractionDigits:2})}`
+    : `Paid via GCash · ref ${payload.gcash_ref}`;
   fetch('/pos/checkout', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -9117,7 +9167,7 @@ function processPartsTxn() {
   .then(data => {
     btn.textContent = 'Process Transaction';
     if (!data.success) { showToast(data.error || 'Transaction failed.', 'error'); btn.disabled = false; return; }
-    _showPartsReceipt(data.order_id, cartSnapshot, total, customerName);
+    _showPartsReceipt(data.order_id, cartSnapshot, total, customerName, paidNote);
     clearPartsCart();
     loadPartsProducts(); // refresh stock
   })
@@ -9128,11 +9178,11 @@ function processPartsTxn() {
   });
 }
 
-function _showPartsReceipt(orderId, items, total, customerName) {
+function _showPartsReceipt(orderId, items, total, customerName, paidNote) {
   document.getElementById('receipt-order-ref').textContent  = orderId ? `SALE-${String(orderId).padStart(3,'0')}` : 'In-Store Sale';
   document.getElementById('receipt-customer').textContent   = customerName;
   document.getElementById('receipt-total').textContent      = '₱' + total.toLocaleString('en-PH', {minimumFractionDigits:2});
-  document.getElementById('receipt-payment').textContent    = _partsPayment === 'cash' ? 'Paid via Cash' : 'Paid via GCash';
+  document.getElementById('receipt-payment').textContent    = paidNote || (_partsPayment === 'cash' ? 'Paid via Cash' : 'Paid via GCash');
   document.getElementById('receipt-items').innerHTML = items.map(i =>
     `<div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
       <span>${i.name} × ${i.qty}</span>
@@ -9146,6 +9196,9 @@ function _showPartsReceipt(orderId, items, total, customerName) {
 function newPartsTxn() {
   document.getElementById('parts-receipt-modal').style.display = 'none';
   document.getElementById('parts-customer').value = '';
+  document.getElementById('parts-cash-received').value = '';
+  document.getElementById('parts-gcash-ref').value = '';
+  document.getElementById('parts-gcash-ok').checked = false;
   setPartsPayment('cash');
 }
 
