@@ -225,7 +225,12 @@
       .info-grid{grid-template-columns:1fr;}
       .modal-foot{flex-direction:column;}
     }
+    /* Shown inside the dashboard: it already has the top bar, so the layout takes the whole frame. */
+    html.embedded .topbar{display:none;}
+    html.embedded .wrap{height:100vh;}
+    html.embedded .quote-panel{height:100vh;}
   </style>
+  <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
 </head>
 <body>
 

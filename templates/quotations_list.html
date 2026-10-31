@@ -153,7 +153,14 @@
     .profile-menu-item:hover{background:#f9fafb;}
     #admin-notif-panel{display:none;position:fixed;top:4rem;right:1.75rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,.1);border-radius:16px;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden;font-family:'DM Sans',sans-serif;}
     @media(max-width:640px){ #admin-notif-panel,#admin-profile-menu{right:.75rem;width:calc(100vw - 1.5rem);} }
+    /* Shown inside the dashboard: it already has the top bar and the profile menu. */
+    /* the top bar goes, but its "New quotation" button stays, as a small strip above the page title */
+    html.embedded .topbar{background:transparent;border:0;height:auto;min-height:0;position:static;padding:.75rem 2rem 0;}
+    html.embedded .topbar-brand, html.embedded .topbar-right > :not(.btn-primary){display:none;}
+    html.embedded .main{max-width:none;padding:0 2rem 1.5rem;}
+    html.embedded body{background:transparent;}
   </style>
+  <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
 </head>
 <body>
 

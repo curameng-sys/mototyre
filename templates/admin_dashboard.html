@@ -165,12 +165,12 @@
     .page-section { display: none; }
     .page-section.active { display: block; }
 
-    /* Billing is shown inside the dashboard: the frame fills the space under the top bar, and only its own content scrolls. */
-    body.billing-lock { overflow: hidden; }
-    body.billing-lock .admin-wrap { height: 100vh; min-height: 0; }
-    body.billing-lock .main { height: 100vh; box-sizing: border-box; overflow: hidden; padding-bottom: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
-    body.billing-lock #billing-frame { height: calc(100vh - 5rem); }
-    @media (max-width: 900px) { body.billing-lock #billing-frame { height: calc(100vh - 4.5rem); } }
+    /* Billing, Quotations and Walk-In are shown inside the dashboard: the frame fills the space under the top bar, and only its own content scrolls. */
+    body.embed-lock { overflow: hidden; }
+    body.embed-lock .admin-wrap { height: 100vh; min-height: 0; }
+    body.embed-lock .main { height: 100vh; box-sizing: border-box; overflow: hidden; padding-bottom: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
+    body.embed-lock .embed-frame { height: calc(100vh - 5rem); }
+    @media (max-width: 900px) { body.embed-lock .embed-frame { height: calc(100vh - 4.5rem); } }
 
     /* In-Store Parts Purchase on a computer: the page itself never scrolls. The product cards fill the space under the
        search bar (the number per page is worked out from that space), the paging stays at the bottom, and the cart on
@@ -785,10 +785,10 @@
     <a href="#" onclick="showSection('users', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Users</a>
     <a href="#" onclick="showSection('mechanics', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Mechanics</a>
     <a href="#" onclick="showSection('services', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span> Services</a>
-    <a href="{{ url_for('quotations_list') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Quotations</a>
+    <a href="#" onclick="showSection('quotations', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Quotations</a>
     <a href="{{ url_for('job_orders') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span> Job Orders</a>
     <a href="#" onclick="showSection('billing', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing {% set billing_badge = (pending_billing_count or 0) + (billing_new_count or 0) %}{% if billing_badge %}<span title="{{ pending_billing_count or 0 }} to collect · {{ billing_new_count or 0 }} new in History" style="margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;">{{ billing_badge }}</span>{% endif %}</a>
-    <a href="{{ url_for('walk_in') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Walk-In</a>
+    <a href="#" onclick="showSection('walkin', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Walk-In</a>
     <a href="#" onclick="showSection('parts', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span> Parts Purchase</a>
     <a href="#" onclick="showSection('transactions', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Transactions</a>
     {% set unread_feedback_count = all_feedback|selectattr('is_read', 'equalto', false)|list|length %}
@@ -1201,7 +1201,7 @@
                         <span class="badge" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;">Quotation approved</span>
                         <div style="margin-top:0.3rem;">
                           <a href="{{ url_for('quotation_new') }}?booking_id={{ b.id }}"
-                             style="font-size:0.72rem;font-weight:700;color:var(--red);text-decoration:none;" onclick="event.stopPropagation()">View quotation →</a>
+                             style="font-size:0.72rem;font-weight:700;color:var(--red);text-decoration:none;" onclick="event.stopPropagation(); openEmbedded('quotations', 'booking_id={{ b.id }}', '/quotation/new'); return false;">View quotation →</a>
                         </div>
                       {% elif b.quotation and b.quotation.status == 'declined' %}
                         <span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">Quotation declined</span>
@@ -1209,7 +1209,7 @@
                         <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Inspection &amp; Estimation</span>
                         <div style="margin-top:0.3rem;">
                           <a href="{{ url_for('quotation_new') }}?booking_id={{ b.id }}"
-                             style="font-size:0.72rem;font-weight:700;color:var(--red);text-decoration:none;" onclick="event.stopPropagation()">Create quotation →</a>
+                             style="font-size:0.72rem;font-weight:700;color:var(--red);text-decoration:none;" onclick="event.stopPropagation(); openEmbedded('quotations', 'booking_id={{ b.id }}', '/quotation/new'); return false;">Create quotation →</a>
                         </div>
                       {% endif %}
                     {% elif b_wait %}
@@ -2383,9 +2383,15 @@
       </div>
     </section>
 
-    <!-- BILLING: the Billing Center lives inside the dashboard (it is loaded into this frame the first time it is opened) -->
+    <!-- Billing, Quotations and Walk-In live inside the dashboard: each one is loaded into its frame the first time it is opened -->
     <section id="sec-billing" class="page-section">
-      <iframe id="billing-frame" title="Billing" data-src="{{ url_for('payments') }}?embed=1" style="display:block;width:100%;border:0;background:transparent;"></iframe>
+      <iframe id="billing-frame" class="embed-frame" title="Billing" data-src="{{ url_for('payments') }}?embed=1" style="display:block;width:100%;border:0;background:transparent;"></iframe>
+    </section>
+    <section id="sec-quotations" class="page-section">
+      <iframe id="quotations-frame" class="embed-frame" title="Quotations" data-src="{{ url_for('quotations_list') }}?embed=1" style="display:block;width:100%;border:0;background:transparent;"></iframe>
+    </section>
+    <section id="sec-walkin" class="page-section">
+      <iframe id="walkin-frame" class="embed-frame" title="Walk-In" data-src="{{ url_for('walk_in') }}?embed=1" style="display:block;width:100%;border:0;background:transparent;"></iframe>
     </section>
 
     <!-- IN-STORE PARTS PURCHASE -->
@@ -3802,6 +3808,18 @@
     return p.startsWith('http') ? p : `${CUSTOMER_ORIGIN}/static/return_evidence/${p}`;
   }
 
+  // Billing, Quotations and Walk-In open inside the dashboard (a frame), never as a page of their own.
+  const EMBEDS = { billing: { frame: 'billing-frame', path: '/payments' }, quotations: { frame: 'quotations-frame', path: '/quotations' }, walkin: { frame: 'walkin-frame', path: '/walk-in' } };
+  // Opens one of them, optionally on a specific view, e.g. openEmbedded('billing', 'tab=pending&collect=12')
+  // or openEmbedded('quotations', 'booking_id=5', '/quotation/new').
+  function openEmbedded(name, query, path) {
+    const f = document.getElementById(EMBEDS[name].frame);
+    window._embedJustPointed = !!(query || path);
+    if (query || path) f.setAttribute('src', (path || EMBEDS[name].path) + '?' + (query ? query + '&' : '') + 'embed=1');
+    showSection(name, document.querySelector(`.sidebar a[onclick*="'${name}'"]`));
+    window._embedJustPointed = false;
+  }
+  function openBilling(query) { openEmbedded('billing', query); }
   function showSection(name, el) {
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
@@ -3809,11 +3827,11 @@
     if (el) el.classList.add('active');
     sessionStorage.setItem('adminSection', name);
     document.body.classList.toggle('parts-lock', name === 'parts');
-    document.body.classList.toggle('billing-lock', name === 'billing');
-    if (name === 'billing') {
-      const f = document.getElementById('billing-frame');
+    document.body.classList.toggle('embed-lock', !!EMBEDS[name]);
+    if (EMBEDS[name]) {
+      const f = document.getElementById(EMBEDS[name].frame);
       if (!f.getAttribute('src')) f.setAttribute('src', f.dataset.src);
-      else { try { f.contentWindow.location.reload(); } catch (e) {} }      // opening Billing again shows the latest
+      else if (!window._embedJustPointed) { try { f.contentWindow.location.reload(); } catch (e) {} }      // opening it again shows the latest
     }
     if (name === 'parts') loadPartsProducts();
     if (name === 'transactions') loadTxns();
@@ -7249,7 +7267,8 @@
   }
   function finishAtShop() {
     if (!_finish) return;
-    window.location.href = `/payments?tab=pending&collect=${_finish.bookingId}`;
+    closeModal('modal-ship-finish');
+    openBilling(`tab=pending&collect=${_finish.bookingId}`);       // opens inside the dashboard, no new page
   }
   function finishAway() {
     if (!_finish) return;
@@ -7615,6 +7634,12 @@
   // Init on load
   document.addEventListener('DOMContentLoaded', () => {
     renderProductPage();
+    const _qs = new URLSearchParams(location.search);
+    if (EMBEDS[_qs.get('section')] && _qs.get('frame')) {                  // an old /payments, /quotations or /walk-in link: open that same view here
+      const _u = new URL(_qs.get('frame'), location.origin);
+      history.replaceState(null, '', location.pathname);
+      openEmbedded(_qs.get('section'), _u.search.slice(1), _u.pathname); return;
+    }
     const _want = new URLSearchParams(location.search).get('section');          // e.g. an old /payments link sends you to ?section=billing
     if (_want && document.getElementById('sec-' + _want)) sessionStorage.setItem('adminSection', _want);
     const saved = sessionStorage.getItem('adminSection');

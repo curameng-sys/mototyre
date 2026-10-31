@@ -6767,6 +6767,8 @@ def pos():
 @login_required
 @require_admin_or_staff
 def quotation_new():
+    if _opened_as_page():
+        return _into_dashboard('quotations')
     products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
     services = Service.query.filter_by(is_active=True).order_by(Service.name).all()
     mechanics = Mechanic.query.order_by(Mechanic.name).all()
@@ -7018,6 +7020,8 @@ def quotations_list():
     counter, so the admin records it here). They use different status
     vocabularies and never cross over — a booking quotation never becomes a
     Job Order, a walk-in one never touches a booking."""
+    if _opened_as_page():
+        return _into_dashboard('quotations')
     section = request.args.get('section', 'online')
     if section not in ('online', 'walkin'):
         section = 'online'
@@ -7270,14 +7274,27 @@ def _billing_new_count(user):
     return bq.count() + oq.count() + jq.count()
 
 
+def _opened_as_page():
+    """True when the browser is loading this as a whole page (typed address, bookmark, old link) and not inside the
+    dashboard's frame (the browser says 'iframe' there, so a frame never loops)."""
+    return request.method == 'GET' and request.headers.get('Sec-Fetch-Dest') == 'document'
+
+
+def _into_dashboard(section):
+    """Billing, Quotations and Walk-In have no page of their own: send the visitor to that section of the dashboard,
+    on the same view (path and query) they asked for."""
+    frame = request.path + ('?' + request.query_string.decode() if request.query_string else '')
+    return redirect(url_for('admin_dashboard', section=section, frame=frame))
+
+
 @admin_app.route('/payments')
 @login_required
 @require_admin_or_staff
 def payments():
     # Billing lives inside the dashboard: opened as a page of its own (typed address, bookmark, old link) it goes
     # there instead. Inside the dashboard's frame the browser says 'iframe', so this never loops.
-    if request.headers.get('Sec-Fetch-Dest') == 'document':
-        return redirect(url_for('admin_dashboard', section='billing'))
+    if _opened_as_page():
+        return _into_dashboard('billing')
     tab = request.args.get('tab', 'pending')
 
     # Bookings that went through Inspection & Estimation have a Quotation row
@@ -7884,6 +7901,8 @@ def pos_transactions():
 @login_required
 @require_admin_or_staff
 def walk_in():
+    if _opened_as_page():
+        return _into_dashboard('walkin')
     products  = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
     mechanics = Mechanic.query.order_by(Mechanic.name).all()
     services  = Service.query.filter_by(is_active=True).order_by(Service.name).all()
