@@ -87,6 +87,17 @@
       color: #6b7280;
     }
 
+    /* The sidebar fits the screen without scrolling: spacing shrinks with the window height (it only scrolls on a very short
+       window, where the categories can be folded). */
+    @media (min-width: 901px) {
+      .sidebar { overflow-y: auto; scrollbar-width: none; }
+      .sidebar::-webkit-scrollbar { display: none; }
+      .sidebar a { line-height: 1.3; }
+      .sidebar > a { padding-top: clamp(0.14rem, calc((100vh - 540px) / 65), 0.5rem); padding-bottom: clamp(0.14rem, calc((100vh - 540px) / 65), 0.5rem); margin-top: 0.05rem; margin-bottom: 0.05rem; }
+      .sidebar .sidebar-group > a { padding-top: clamp(0.14rem, calc((100vh - 540px) / 65), 0.5rem); padding-bottom: clamp(0.14rem, calc((100vh - 540px) / 65), 0.5rem); margin-top: 0.05rem; margin-bottom: 0.05rem; }
+      .sidebar .sidebar-label { padding-top: clamp(0.35rem, calc((100vh - 540px) / 40), 0.9rem); padding-bottom: 0.2rem; }
+      .sidebar .sidebar-logo { padding-top: clamp(0.6rem, 2vh, 1.1rem); padding-bottom: clamp(0.5rem, 1.8vh, 1rem); }
+    }
     .sidebar-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; padding-right: 1.1rem; transition: color 0.15s; }
     .sidebar-toggle:hover { color: #d1d5db; }
     .sidebar-toggle .sb-chev { transition: transform 0.18s ease; }
@@ -177,6 +188,29 @@
     .order-cancel-btn { background: #fff; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; padding: 0.3rem 0.65rem; font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer; margin-left: 0.35rem; white-space: nowrap; }
     .order-cancel-btn:hover { background: #fef2f2; border-color: #f87171; }
 
+    /* Day Schedule on a computer: the page does not scroll. The calendar sits on the left, the capacity controls and the
+       day's panel on the right, and only the day's panel (or the list) scrolls inside itself. */
+    @media (min-width: 901px) {
+      body.ds-lock { overflow: hidden; }
+      body.ds-lock .admin-wrap { height: 100vh; min-height: 0; }
+      body.ds-lock .main { height: 100vh; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 1rem; }
+      body.ds-lock #sec-day-schedule.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      body.ds-lock #sec-day-schedule .page-header { margin-bottom: 0.6rem; }
+      body.ds-lock #sec-day-schedule > div:nth-child(2) { margin-bottom: 0.7rem !important; }
+      body.ds-lock #ds-view-calendar { flex: 1; min-height: 0; }
+      body.ds-lock .ds-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 1.25rem; height: 100%; }
+      body.ds-lock .ds-left { overflow-y: auto; min-height: 0; }
+      body.ds-lock .ds-layout { grid-template-columns: 360px minmax(0, 1fr); }
+      /* the month fits the left column: equal columns, shorter day boxes (the day's bookings are in the panel on the right) */
+      body.ds-lock #ds-cal-grid { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: 4px !important; }
+      body.ds-lock #ds-cal-grid > div { min-height: 0 !important; min-width: 0; overflow: hidden; height: clamp(42px, calc((100vh - 500px) / 6), 84px); }
+      body.ds-lock .ds-right { display: flex; flex-direction: column; min-height: 0; }
+      body.ds-lock .ds-right > div:nth-child(2) { flex-shrink: 0; margin-bottom: 0.85rem !important; }
+      body.ds-lock .ds-day-card { flex: 1; min-height: 0; overflow-y: auto; }
+      body.ds-lock #ds-view-list { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+      body.ds-lock #ds-view-list > .card { flex: 1; min-height: 0; overflow: auto; }
+      body.ds-lock #ds-view-list thead th { position: sticky; top: 0; z-index: 1; }
+    }
     /* Billing, Quotations and Walk-In are shown inside the dashboard: the frame fills the space under the top bar, and only its own content scrolls. */
     body.embed-lock { overflow: hidden; }
     body.embed-lock .admin-wrap { height: 100vh; min-height: 0; }
@@ -1359,6 +1393,8 @@
 
       <!-- CALENDAR VIEW -->
       <div id="ds-view-calendar">
+        <div class="ds-layout">
+        <div class="ds-left">
         <div class="card" style="margin-bottom:1rem;">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.85rem;">
             <div style="display:flex;align-items:center;gap:0.5rem;">
@@ -1375,6 +1411,8 @@
         </div>
 
         <div id="ds-selected-label" style="font-size:0.85rem;color:var(--muted);margin-bottom:0.7rem;font-weight:600;"></div>
+        </div>{# /ds-left #}
+        <div class="ds-right">
         <input type="date" id="day-schedule-date" style="display:none;">
 
         <!-- CAPACITY CONTROLS -->
@@ -1405,11 +1443,13 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card ds-day-card">
           <div id="day-schedule-body" class="card-body">
             <div class="empty-state"><p>Loading…</p></div>
           </div>
         </div>
+        </div>{# /ds-right #}
+        </div>{# /ds-layout #}
       </div>
 
       <!-- LIST VIEW -->
@@ -3879,6 +3919,7 @@
     if (el) el.classList.add('active');
     sessionStorage.setItem('adminSection', name);
     document.body.classList.toggle('parts-lock', name === 'parts');
+    document.body.classList.toggle('ds-lock', name === 'day-schedule');
     openSidebarGroupOfActive();
     document.body.classList.toggle('embed-lock', !!EMBEDS[name]);
     if (EMBEDS[name]) {
@@ -5030,7 +5071,8 @@
         </div>
       </div>`;
 
-    const rows = data.timeline.map(t => rowHTML(t.mechanic, t.specialization, t.bars)).join('');
+    const rows = data.timeline.map(t => rowHTML(t.mechanic, t.timed_in === false ? 'Not timed in' : t.specialization, t.bars)).join('');
+    const noOne = (!data.timeline.length && !data.unassigned_bars.length) ? '<div style="font-size:0.82rem;color:var(--muted);">No mechanic has timed in yet.</div>' : '';
     const unassignedRow = data.unassigned_bars.length ? rowHTML('Unassigned', null, data.unassigned_bars) : '';
     const freeLine = data.free_all_day.length
       ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">${data.free_all_day.length} mechanic${data.free_all_day.length === 1 ? '' : 's'} free all day: ${data.free_all_day.join(', ')}.</div>`
@@ -5039,12 +5081,13 @@
     return `
       <div style="margin-bottom:1.3rem;">
         <div style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Mechanic Timeline</div>
-        ${hourHeader}${rows}${unassignedRow}${freeLine}
+        ${noOne || hourHeader}${rows}${unassignedRow}${freeLine}
       </div>`;
   }
 
   function renderTimeSlotsPanel(data) {
-    const blocks = data.slots.map(s => `
+    const shownSlots = data.slots.filter(s => s.booked_count > 0 || s.cards.length || s.blocked);     // empty slots are not listed
+    const blocks = !shownSlots.length ? '<div style="font-size:0.82rem;color:var(--muted);">No bookings on this day.</div>' : shownSlots.map(s => `
       <div style="border:1px solid var(--border);border-radius:10px;padding:0.8rem 0.9rem;margin-bottom:0.7rem;${s.blocked ? 'background:#f3f4f6;' : ''}">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;${s.cards.length ? 'margin-bottom:0.7rem;' : ''}">
           <div>

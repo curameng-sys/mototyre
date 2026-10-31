@@ -3856,10 +3856,18 @@ def api_day_panel():
                             'customer': w['customer'] or 'Walk-in customer', 'until': minutes_to_ampm(w['end']), 'start': w['start']})
         bay_now.sort(key=lambda x: x['start'])
 
-    # ── Mechanic timeline ──
+    # ── Mechanic timeline: only the mechanics who timed in that day (a mechanic who has a booking assigned but has not
+    # timed in is kept too, marked as such, so no booking ever disappears from the timeline) ──
+    timed_in_ids = {r[0] for r in db.session.query(MechanicAttendance.mechanic_id).filter(
+        MechanicAttendance.date == the_date, MechanicAttendance.time_in.isnot(None),
+        db.or_(MechanicAttendance.is_absent == False, MechanicAttendance.is_absent.is_(None))).all()}
+    _assigned_names = {b.assigned_mechanic_name for b in active if b.assigned_mechanic_name}
+    _walkin_names = {w['mechanic'] for w in walkin_w}
+    timeline_mechanics = [m for m in Mechanic.query.order_by(Mechanic.name).all()
+                          if m.id in timed_in_ids or m.name in _assigned_names or m.name in _walkin_names]
     timeline = []
     free_all_day = []
-    for m in on_duty:
+    for m in timeline_mechanics:
         m_bookings = [b for b in active if b.assigned_mechanic_name == m.name]
         bars = []
         for w in walkin_w:
@@ -3879,8 +3887,9 @@ def api_day_panel():
                 'overrunning': (b.overrun_minutes or 0) > 0,
                 'status': b.status,
             })
-        timeline.append({'mechanic_id': m.id, 'mechanic': m.name, 'specialization': m.specialization, 'bars': bars})
-        if not bars:
+        timeline.append({'mechanic_id': m.id, 'mechanic': m.name, 'specialization': m.specialization, 'bars': bars,
+                         'timed_in': m.id in timed_in_ids})
+        if not bars and m.id in timed_in_ids:
             free_all_day.append(m.name)
 
     unassigned_bars = []
