@@ -106,6 +106,28 @@
     .recent-item .ri-time{font-size:.66rem;color:var(--muted);margin-top:.1rem;}
     .recent-all{display:block;width:100%;padding:.75rem;border:none;background:none;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--red);cursor:pointer;text-align:center;text-decoration:none;}
     @media (max-width:1000px){.bill-layout{grid-template-columns:1fr;}.recent-panel{position:static;}}
+    button.tab{background:transparent;cursor:pointer;}
+    .pend-box{display:none;}
+    .pend-box.active{display:block;}
+    .bill-box.hist-box{max-width:1100px;width:94%;height:88%;display:flex;flex-direction:column;}
+    .hist-body{flex:1;min-height:0;overflow:auto;padding:1rem 1.25rem;display:flex;flex-direction:column;}
+    .hist-body .tbl-wrap{margin-bottom:0;}
+    .hist-body thead th{position:sticky;top:0;z-index:1;}
+    /* The Billing page never scrolls as a whole: the box of payments scrolls inside itself, and so does the recent list. */
+    html.embedded, html.embedded body{height:100vh;overflow:hidden;}
+    html.embedded .main{height:100vh;box-sizing:border-box;display:flex;flex-direction:column;padding:0 2rem 1.25rem;}
+    html.embedded .page-header{margin-bottom:.9rem;flex-shrink:0;}
+    html.embedded .bill-layout{flex:1;min-height:0;align-items:stretch;}
+    html.embedded .bill-left{display:flex;flex-direction:column;min-height:0;}
+    html.embedded .tab-bar{flex-shrink:0;margin-bottom:.9rem;}
+    html.embedded .filter-row, html.embedded .match-bar{flex-shrink:0;}
+    html.embedded .pend-box.active{display:flex;flex-direction:column;flex:1;min-height:0;}
+    html.embedded .pend-box .tbl-wrap{flex:1 1 0;min-height:0;overflow:auto;margin-bottom:0;}
+    html.embedded .pend-box thead th{position:sticky;top:0;z-index:1;}
+    html.embedded .recent-panel{position:static;display:flex;flex-direction:column;min-height:0;}
+    html.embedded .recent-head, html.embedded .recent-all{flex-shrink:0;}
+    html.embedded .recent-scroll{flex:1;min-height:0;overflow-y:auto;}
+    html.embedded .recent-all{border-top:1px solid var(--border);}
     .filter-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.75rem;}
     .filter-row .search-box{flex:1;min-width:220px;max-width:340px;}
     .filter-row select{padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.84rem;outline:none;}
@@ -241,7 +263,7 @@
     }
       /* Shown inside the dashboard's Billing section: the dashboard already has the top bar and the profile menu. */
     html.embedded .topbar{display:none;}
-    html.embedded .main{max-width:none;padding:0 2rem 1.5rem;}
+    html.embedded .main{max-width:none;}
     html.embedded body{background:transparent;}
   </style>
   <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
@@ -266,19 +288,14 @@
 
   <div class="bill-layout">
   <div class="bill-left">
-  <!-- TABS -->
-  <div class="tab-bar">
-    <a href="?tab=pending" class="tab {% if tab=='pending' %}active{% endif %}">
-      Pending
-      {% set cnt = pending_bookings|length + pending_jos|length + pending_orders|length %}
-      {% if cnt > 0 %}<span style="margin-left:.4rem;background:var(--red);color:#fff;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ cnt }}</span>{% endif %}
-    </a>
-    <a href="?tab=history" class="tab {% if tab=='history' %}active{% endif %}">
-      History
-      <span style="margin-left:.4rem;background:rgba(107,114,128,.18);color:#374151;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ history_count }}</span>
-      {% if instore_unseen_count > 0 %}<span title="New payments since you last opened History" style="margin-left:.3rem;background:var(--red);color:#fff;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ instore_unseen_count }}</span>{% endif %}
-    </a>
+  {% if tab == 'pending' %}
+  <!-- one box at a time: pick what to collect -->
+  <div class="tab-bar" id="pend-tabs">
+    <button type="button" class="tab" data-box="booking" onclick="showPendBox('booking')">Customer Bookings <span class="sec-count" data-sec="booking">{{ pending_bookings|length }}</span></button>
+    <button type="button" class="tab" data-box="joborder" onclick="showPendBox('joborder')">Job Orders <span class="sec-count" data-sec="joborder">{{ pending_jos|length }}</span></button>
+    <button type="button" class="tab" data-box="online" onclick="showPendBox('online')">Online Pick-ups <span class="sec-count" data-sec="online">{{ pending_orders|length }}</span></button>
   </div>
+  {% endif %}
 
   {% if tab == 'pending' %}
 
@@ -287,19 +304,12 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="text" id="pending-search" placeholder="Search customer, reference, invoice no.…" oninput="applyBillingFilters()">
     </div>
-    <select id="type-filter" onchange="applyBillingFilters()">
-      <option value="">All types ({{ pending_bookings|length + pending_jos|length + pending_orders|length }})</option>
-      <option value="booking">Bookings ({{ pending_bookings|length }})</option>
-      <option value="joborder">Job orders ({{ pending_jos|length }})</option>
-      <option value="online">Online orders ({{ pending_orders|length }})</option>
-      <option value="instore">In-store sales (0)</option>
-    </select>
     <a class="clear-filters" id="clear-filters" onclick="clearBillingFilters()">Clear filters</a>
   </div>
   <div class="match-bar"><span id="match-count"></span><span id="match-total"></span></div>
 
   {# ── CUSTOMER BOOKINGS ── #}
-  <div class="sec-label">Customer Bookings <span class="sec-count" data-sec="booking">{{ pending_bookings|length }}</span></div>
+  <div class="pend-box" data-box="booking">
   <div class="tbl-wrap">
     {% if pending_bookings %}
     <table id="pending-bkg-table">
@@ -369,9 +379,10 @@
     <div class="empty"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg><p>No bookings awaiting payment.</p></div>
     {% endif %}
   </div>
+  </div>{# /pend-box #}
 
   {# ── JOB ORDERS ── #}
-  <div class="sec-label">Job Orders <span class="sec-count" data-sec="joborder">{{ pending_jos|length }}</span></div>
+  <div class="pend-box" data-box="joborder">
   <div class="tbl-wrap">
     {% if pending_jos %}
     <table>
@@ -413,9 +424,10 @@
     <div class="empty"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><p>No job orders awaiting payment.</p></div>
     {% endif %}
   </div>
+  </div>{# /pend-box #}
 
   {# ── ONLINE PICK-UPS ── #}
-  <div class="sec-label">Online Pick-ups <span class="sec-count" data-sec="online">{{ pending_orders|length }}</span></div>
+  <div class="pend-box" data-box="online">
   <div class="tbl-wrap">
     {% if pending_orders %}
     <table>
@@ -471,6 +483,7 @@
     <div class="empty"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><p>No cash pick-up orders awaiting collection.</p></div>
     {% endif %}
   </div>
+  </div>{# /pend-box #}
 
   {% else %}
 
@@ -597,6 +610,7 @@
       <div class="rh-total">₱{{ '{:,.2f}'.format(recent_today_total) }}</div>
       <div class="rh-sub">Collected today · {{ recent_today_count }} payment{{ '' if recent_today_count == 1 else 's' }}</div>
     </div>
+    <div class="recent-scroll">
     {% for g in recent_groups %}
       <div class="recent-day">{{ g.label }}</div>
       {% for r in g['items'] %}
@@ -616,12 +630,24 @@
     {% else %}
       <div class="empty" style="padding:1.5rem;"><p>No payments yet.</p></div>
     {% endfor %}
-    <a class="recent-all" href="?tab=history">View all in History</a>
+    </div>
+    <button type="button" class="recent-all" onclick="openHistory()">View all in History <span style="margin-left:.3rem;background:rgba(107,114,128,.18);color:#374151;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ history_count }}</span>{% if instore_unseen_count > 0 %}<span title="New payments since you last opened History" style="margin-left:.3rem;background:var(--red);color:#fff;border-radius:99px;padding:.05rem .45rem;font-size:.6rem;font-weight:700;">{{ instore_unseen_count }}</span>{% endif %}</button>
   </aside>
   </div>{# /bill-layout #}
 </div>
 
 <!-- ── BILLING MODAL ── -->
+<!-- HISTORY: every payment ever collected, in a window -->
+<div class="bill-overlay" id="hist-overlay" onclick="if(event.target===this)closeHistory()">
+  <div class="bill-box hist-box">
+    <div class="bill-head">
+      <div class="bill-head-title">Payment History</div>
+      <button class="bill-close" onclick="closeHistory()" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="hist-body" id="hist-body"><div class="empty"><p>Loading…</p></div></div>
+  </div>
+</div>
+
 <div class="bill-overlay" id="bill-overlay" onclick="if(event.target===this)closeBillingModal()">
   <div class="bill-box">
     <div class="bill-head">
@@ -987,40 +1013,89 @@ async function submitPickedUp() {
   }
 }
 
-// Search + Type apply together on whichever tab is open (Pending or History).
 const _peso = n => '₱' + n.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+// Pending: one box at a time (Customer Bookings / Job Orders / Online Pick-ups), the search works inside that box.
+window._pendBox = window._pendBox || null;
+function showPendBox(key) {
+  const boxes = [...document.querySelectorAll('.pend-box')];
+  if (!boxes.length) return;
+  if (!boxes.some(b => b.dataset.box === key)) key = boxes[0].dataset.box;
+  window._pendBox = key;
+  boxes.forEach(b => b.classList.toggle('active', b.dataset.box === key));
+  document.querySelectorAll('#pend-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.box === key));
+  applyBillingFilters();
+}
+// first time: the first box that has something to collect
+function pickStartBox() {
+  if (new URLSearchParams(location.search).get('collect')) return 'booking';
+  const rows = [...document.querySelectorAll('.pending-row')];
+  const first = ['booking', 'joborder', 'online'].find(k => rows.some(r => r.dataset.type === k));
+  return first || 'booking';
+}
 function applyBillingFilters() {
-  const searchEl = document.getElementById('pending-search') || document.getElementById('hist-search');
-  const q    = searchEl.value.toLowerCase().trim();
-  const type = document.getElementById('type-filter').value;
-  const isPending = !!document.getElementById('pending-search');
-  const rows = [...document.querySelectorAll(isPending ? '.pending-row' : '.hist-row')];
-  const secCounts = {};
+  const searchEl = document.getElementById('pending-search');
+  if (!searchEl) return;
+  const q = searchEl.value.toLowerCase().trim();
+  const box = window._pendBox || 'booking';
+  const counts = {}, boxRows = [];
+  let shown = 0, total = 0;
+  document.querySelectorAll('.pending-row').forEach(r => {
+    const ok = !q || r.dataset.s.includes(q);
+    r.style.display = ok ? '' : 'none';
+    if (ok) counts[r.dataset.type] = (counts[r.dataset.type] || 0) + 1;
+    if (r.dataset.type === box) { boxRows.push(r); if (ok) { shown++; total += parseFloat(r.dataset.amount) || 0; } }
+  });
+  document.querySelectorAll('.sec-count[data-sec]').forEach(el => { el.textContent = counts[el.dataset.sec] || 0; });
+  document.getElementById('match-count').innerHTML = `Showing <b>${shown}</b> of ${boxRows.length} pending payment${boxRows.length === 1 ? '' : 's'}`;
+  document.getElementById('match-total').innerHTML = `Total due: <b>${_peso(total)}</b>`;
+  document.getElementById('clear-filters').style.display = q ? 'inline' : 'none';
+}
+function clearBillingFilters() {
+  const el = document.getElementById('pending-search'); if (el) el.value = '';
+  applyBillingFilters();
+}
+document.addEventListener('DOMContentLoaded', () => { if (document.getElementById('pending-search')) showPendBox(pickStartBox()); });
+
+// ── History in a window: loaded fresh each time it is opened (that also marks new in-store sales as seen) ──
+function applyHistoryFilters() {
+  const body = document.getElementById('hist-body');
+  const searchEl = body.querySelector('#m-hist-search'); if (!searchEl) return;
+  const q = searchEl.value.toLowerCase().trim(), type = body.querySelector('#m-type-filter').value;
+  const rows = [...body.querySelectorAll('.hist-row')];
   let shown = 0, total = 0;
   rows.forEach(r => {
     const ok = (!q || r.dataset.s.includes(q)) && (!type || r.dataset.type === type);
     r.style.display = ok ? '' : 'none';
-    if (ok) { shown++; total += parseFloat(r.dataset.amount) || 0; secCounts[r.dataset.type] = (secCounts[r.dataset.type] || 0) + 1; }
+    if (ok) { shown++; total += parseFloat(r.dataset.amount) || 0; }
   });
-  document.querySelectorAll('.sec-count[data-sec]').forEach(el => { el.textContent = secCounts[el.dataset.sec] || 0; });
-  document.getElementById('match-count').innerHTML = `Showing <b>${shown}</b> of ${rows.length} ${isPending ? 'pending ' : ''}payment${rows.length === 1 ? '' : 's'}`;
-  document.getElementById('match-total').innerHTML = `${isPending ? 'Total due' : 'Total collected'}: <b>${_peso(total)}</b>`;
-  document.getElementById('clear-filters').style.display = (q || type) ? 'inline' : 'none';
+  body.querySelector('#m-match-count').innerHTML = `Showing <b>${shown}</b> of ${rows.length} payment${rows.length === 1 ? '' : 's'}`;
+  body.querySelector('#m-match-total').innerHTML = `Total collected: <b>${_peso(total)}</b>`;
+  body.querySelector('#m-clear-filters').style.display = (q || type) ? 'inline' : 'none';
 }
-function clearBillingFilters() {
-  (document.getElementById('pending-search') || document.getElementById('hist-search')).value = '';
-  document.getElementById('type-filter').value = '';
-  applyBillingFilters();
+function clearHistoryFilters() {
+  const body = document.getElementById('hist-body');
+  body.querySelector('#m-hist-search').value = ''; body.querySelector('#m-type-filter').value = '';
+  applyHistoryFilters();
 }
-// History is newest-first across all payment types, whichever list a row came from.
-(function sortHistoryNewestFirst() {
-  const body = document.querySelector('#hist-table tbody');
-  if (!body) return;
-  [...body.querySelectorAll('tr.hist-row')]
-    .sort((a, b) => (b.dataset.ts || '').localeCompare(a.dataset.ts || ''))
-    .forEach(r => body.appendChild(r));
-})();
-document.addEventListener('DOMContentLoaded', () => { if (document.getElementById('type-filter')) applyBillingFilters(); });
+async function openHistory() {
+  const body = document.getElementById('hist-body');
+  document.getElementById('hist-overlay').classList.add('open');
+  body.innerHTML = '<div class="empty"><p>Loading…</p></div>';
+  try {
+    const res = await fetch('?tab=history', { credentials: 'same-origin' });
+    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+    const left = doc.querySelector('.bill-left');
+    let html = left ? left.innerHTML : '<div class="empty"><p>Could not load the history.</p></div>';
+    html = html.replace(/id="(hist-search|type-filter|match-count|match-total|clear-filters)"/g, 'id="m-$1"')
+               .replace(/applyBillingFilters\(\)/g, 'applyHistoryFilters()').replace(/clearBillingFilters\(\)/g, 'clearHistoryFilters()');
+    body.innerHTML = html;
+    const tb = body.querySelector('#hist-table tbody');           // newest first across every kind of payment
+    if (tb) [...tb.querySelectorAll('tr.hist-row')].sort((a, b) => (b.dataset.ts || '').localeCompare(a.dataset.ts || '')).forEach(r => tb.appendChild(r));
+    applyHistoryFilters();
+  } catch (e) { body.innerHTML = '<div class="empty"><p>Could not load the history.</p></div>'; }
+}
+function closeHistory() { document.getElementById('hist-overlay').classList.remove('open'); }
 
 function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
   const w = window.open('', '_blank', 'width=400,height=600');
@@ -1168,7 +1243,7 @@ async function submitRecordCash() {
     const data = await res.json();
     if (data.success) {
       const toast = `Payment recorded. ${data.customer_first_name} was notified.`;
-      window.location.href = `?tab=history&highlight=${_rcBooking.booking_id}&toast=${encodeURIComponent(toast)}`;
+      window.location.href = `?tab=pending&highlight=${_rcBooking.booking_id}&toast=${encodeURIComponent(toast)}`;
     } else {
       document.getElementById('rc-error-banner').textContent = data.error || 'Could not record this payment.';
       document.getElementById('rc-error-banner').style.display = 'flex';
@@ -1252,12 +1327,12 @@ function printReceipt() {
       const nowPending = new Set(ids(doc, '.pending-row[data-bid]')), nowHist = new Set(ids(doc, '.hist-row[data-bid]'));
       const paid = [...new Set([...pendingIds].filter(i => !nowPending.has(i)).concat([...nowHist].filter(i => !histIds.has(i))))];
       pendingIds = nowPending; histIds = nowHist;
-      const q = (document.getElementById('pending-search') || document.getElementById('hist-search') || {}).value || '';
+      const q = (document.getElementById('pending-search') || {}).value || '';
       document.querySelector('.bill-left').innerHTML = doc.querySelector('.bill-left').innerHTML;
       const recent = doc.getElementById('recent-panel'), here = document.getElementById('recent-panel');
       if (recent && here) here.innerHTML = recent.innerHTML;
-      const box = document.getElementById('pending-search') || document.getElementById('hist-search');
-      if (box) { box.value = q; applyBillingFilters(); }
+      const box = document.getElementById('pending-search');
+      if (box) { box.value = q; showPendBox(window._pendBox); }
       for (const id of paid) {                                                          // tell the cashier what just got paid
         const inv = await (await fetch(`/api/booking/${id}/invoice-data`)).json().catch(() => null);
         if (!inv || !inv.paid) continue;
