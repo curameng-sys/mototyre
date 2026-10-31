@@ -188,9 +188,11 @@
       body.parts-lock #parts-pagination { flex-shrink: 0; margin-top: 0 !important; padding: 0.6rem 0 0 !important; min-height: 44px; box-sizing: border-box; }
       /* the cart card ends where the last row of product cards ends (the paging strip under the cards is left out) */
       body.parts-lock .parts-right { position: static !important; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 44px; box-sizing: border-box; }
+      /* only the list of parts in the cart scrolls; the total, name, payment and the Process button stay put */
       body.parts-lock .parts-right > .card { flex: 1 0 auto; display: flex; flex-direction: column; margin-bottom: 0; }
       body.parts-lock .parts-right .card-body { flex: 1; display: flex; flex-direction: column; }
-      body.parts-lock #parts-cart-items { flex: 1; min-height: 36px; overflow-y: auto; margin-bottom: 0.5rem !important; }
+      body.parts-lock #parts-cart-items { flex: 1 1 auto; min-height: 36px; overflow-y: auto; margin-bottom: 0.5rem !important; }   /* its max-height is set by fitPartsCartList() */
+      @media (max-height: 820px) { body.parts-lock #parts-pay-cash > div:first-child { display: none; } }
       body.parts-lock #parts-cart-empty { padding: 0.5rem 0 !important; }
       body.parts-lock .parts-right .card-head { padding-top: 0.7rem; padding-bottom: 0.7rem; }
       body.parts-lock #parts-pay-cash, body.parts-lock #parts-pay-gcash { padding: 0.5rem 0.7rem !important; margin-top: 0.5rem !important; }
@@ -9056,6 +9058,7 @@ function loadPartsProducts() {
       _syncPartsCartStock(products);
       _buildCatFilter(products);
       filterPartsProducts(_partsPage);          // keeps the search, the category and the page the cashier is on
+      fitPartsCartList();
     })
     .catch(() => {
       document.getElementById('parts-product-grid').innerHTML =
@@ -9185,6 +9188,20 @@ function clearPartsCart() {
   _renderPartsCart();
 }
 
+// The list of parts in the cart takes whatever height the rest of the cart (total, name, payment, button) leaves free;
+// past that only the list scrolls, never the whole cart.
+function fitPartsCartList() {
+  const list = document.getElementById('parts-cart-items'), panel = document.querySelector('.parts-right');
+  if (!list || !panel) return;
+  if (!document.body.classList.contains('parts-lock')) { list.style.maxHeight = ''; return; }
+  list.style.maxHeight = 'none';
+  const card = panel.querySelector('.card');
+  const others = card.offsetHeight - list.offsetHeight;
+  const free = panel.clientHeight - parseFloat(getComputedStyle(panel).paddingBottom) - others - 8;
+  list.style.maxHeight = Math.max(72, Math.floor(free)) + 'px';
+}
+window.addEventListener('resize', () => fitPartsCartList());
+
 function _renderPartsCart() {
   const wrap  = document.getElementById('parts-cart-items');
   const empty = document.getElementById('parts-cart-empty');
@@ -9192,6 +9209,7 @@ function _renderPartsCart() {
     wrap.innerHTML = '<div id="parts-cart-empty" style="text-align:center;padding:1.25rem 0;color:var(--muted);font-size:0.82rem;">Cart is empty</div>';
     document.getElementById('parts-total').textContent = '₱0.00';
     onPartsCartChange();
+    fitPartsCartList();
     return;
   }
   wrap.innerHTML = _partsCart.map(item => {
@@ -9213,6 +9231,7 @@ function _renderPartsCart() {
   const total = _partsCart.reduce((s, i) => s + i.price * i.qty, 0);
   document.getElementById('parts-total').textContent = '₱' + total.toLocaleString('en-PH', {minimumFractionDigits:2});
   onPartsCartChange();
+  fitPartsCartList();
 }
 
 function onPartsCartChange() {
@@ -9250,6 +9269,7 @@ function setPartsPayment(method) {
   document.getElementById('parts-pay-cash').style.display  = method === 'cash' ? 'block' : 'none';
   document.getElementById('parts-pay-gcash').style.display = method === 'gcash' ? 'block' : 'none';
   onPartsCartChange();
+  fitPartsCartList();
 }
 
 function processPartsTxn() {
