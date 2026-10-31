@@ -188,6 +188,27 @@
     .order-cancel-btn { background: #fff; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; padding: 0.3rem 0.65rem; font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer; margin-left: 0.35rem; white-space: nowrap; }
     .order-cancel-btn:hover { background: #fef2f2; border-color: #f87171; }
 
+    /* Services, Mechanics, Users and Products on a computer: the page does not scroll. The table sits in its card and only
+       the rows scroll inside it (the header row stays), and Products keeps its page numbers under the card. */
+    @media (min-width: 901px) {
+      body.tbl-lock { overflow: hidden; }
+      body.tbl-lock .admin-wrap { height: 100vh; min-height: 0; }
+      body.tbl-lock .main { height: 100vh; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 1rem; }
+      body.tbl-lock #sec-services.active, body.tbl-lock #sec-mechanics.active, body.tbl-lock #sec-users.active, body.tbl-lock #sec-products.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      body.tbl-lock .page-section.active > * { flex-shrink: 0; }
+      body.tbl-lock .page-section.active .page-header { margin-bottom: 0.9rem; }
+      body.tbl-lock #sec-services > .card, body.tbl-lock #sec-users > .card, body.tbl-lock #sec-products > .card,
+      body.tbl-lock #mech-view-roster > .card, body.tbl-lock #mech-view-attendance > .card { flex: 1 1 0; min-height: 0; overflow: auto; margin-bottom: 0; }
+      body.tbl-lock #mech-view-roster, body.tbl-lock #mech-view-attendance { flex: 1 1 0; min-height: 0; flex-direction: column; }
+      body.tbl-lock #mech-view-roster:not([style*="none"]), body.tbl-lock #mech-view-attendance:not([style*="none"]) { display: flex; }
+      body.tbl-lock .page-section.active > .card > div[style*="overflow-x"], body.tbl-lock #mech-view-roster > .card > div, body.tbl-lock #mech-view-attendance > .card > div { overflow: visible !important; }
+      body.tbl-lock .page-section.active .table thead th { position: sticky; top: 0; z-index: 2; background: #fff; }
+      body.tbl-lock .mech-card { padding: 0.5rem 0.9rem !important; min-height: 0 !important; }
+      body.tbl-lock .mech-card .n { font-size: 1.35rem !important; line-height: 1.1; }
+      body.tbl-lock #mech-view-roster > div:first-child { margin-bottom: 0.5rem !important; }
+      body.tbl-lock #mech-view-roster > div:nth-child(2) { margin-bottom: 0.6rem !important; }
+      body.tbl-lock #products-pagination { flex-shrink: 0; margin-top: 0.7rem !important; min-height: 32px; }
+    }
     /* Day Schedule on a computer: the page does not scroll. The calendar sits on the left, the capacity controls and the
        day's panel on the right, and only the day's panel (or the list) scrolls inside itself. */
     @media (min-width: 901px) {
@@ -3920,6 +3941,7 @@
     sessionStorage.setItem('adminSection', name);
     document.body.classList.toggle('parts-lock', name === 'parts');
     document.body.classList.toggle('ds-lock', name === 'day-schedule');
+    document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products'].includes(name));
     openSidebarGroupOfActive();
     document.body.classList.toggle('embed-lock', !!EMBEDS[name]);
     if (EMBEDS[name]) {
