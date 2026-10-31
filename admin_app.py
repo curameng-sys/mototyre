@@ -7274,6 +7274,10 @@ def _billing_new_count(user):
 @login_required
 @require_admin_or_staff
 def payments():
+    # Billing lives inside the dashboard: opened as a page of its own (typed address, bookmark, old link) it goes
+    # there instead. Inside the dashboard's frame the browser says 'iframe', so this never loops.
+    if request.headers.get('Sec-Fetch-Dest') == 'document':
+        return redirect(url_for('admin_dashboard', section='billing'))
     tab = request.args.get('tab', 'pending')
 
     # Bookings that went through Inspection & Estimation have a Quotation row
@@ -7713,8 +7717,9 @@ def api_products():
 @login_required
 @require_admin_or_staff
 def pos_products():
-    products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
-    return jsonify([{'id': p.id, 'name': p.name, 'motor_model': p.motor_model or '', 'price': p.price, 'stock': p.stock, 'category': p.category} for p in products])
+    # Out-of-stock parts are listed too (greyed out, cannot be added); the ones in stock come first.
+    products = Product.query.order_by(db.case((Product.stock > 0, 0), else_=1), Product.category, Product.name).all()
+    return jsonify([{'id': p.id, 'name': p.name, 'motor_model': p.motor_model or '', 'price': p.price, 'stock': int(p.stock or 0), 'category': p.category} for p in products])
 
 
 @admin_app.route('/pos/checkout', methods=['POST'])
@@ -7753,8 +7758,10 @@ def pos_checkout():
             product = Product.query.get(item['product_id'])
             if not product:
                 return jsonify({'success': False, 'error': f'Product not found'}), 400
+            if (product.stock or 0) <= 0:
+                return jsonify({'success': False, 'error': f'{product.name} is out of stock.'}), 400
             if product.stock < item['quantity']:
-                return jsonify({'success': False, 'error': f'Insufficient stock for {product.name}'}), 400
+                return jsonify({'success': False, 'error': f'Only {product.stock} left of {product.name}.'}), 400
 
     order_id = None
     completed_order_ids = set()
@@ -7794,7 +7801,13 @@ def pos_checkout():
         for item in new_cart_items:
             product = Product.query.get(item['product_id'])
             db.session.add(OrderItem(order_id=order.id, product_id=product.id, quantity=item['quantity'], unit_price=float(item['unit_price'])))
-            product.stock -= item['quantity']
+            # one atomic step: it only takes the stock if it is still there, so an online order placed a moment ago
+            # (or another cashier) can never push the number below zero
+            taken = Product.query.filter(Product.id == product.id, Product.stock >= item['quantity']).update(
+                {Product.stock: Product.stock - item['quantity']}, synchronize_session=False)
+            if taken != 1:
+                db.session.rollback()
+                return jsonify({'success': False, 'error': f'{product.name} was just bought by someone else. Its stock has been updated.'}), 409
         if customer_id:
             send_notification(int(customer_id), 'Order Completed (In-Store)',
                 f'Your in-store order ORD-{order.id:03d} worth ₱{new_total:,.2f} has been completed.',

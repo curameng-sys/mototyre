@@ -239,7 +239,12 @@
       .tab-bar{flex-wrap:wrap;}
       .bill-box{max-width:100%;}
     }
+      /* Shown inside the dashboard's Billing section: the dashboard already has the top bar and the profile menu. */
+    html.embedded .topbar{display:none;}
+    html.embedded .main{max-width:none;padding:0 2rem 1.5rem;}
+    html.embedded body{background:transparent;}
   </style>
+  <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
 </head>
 <body>
 

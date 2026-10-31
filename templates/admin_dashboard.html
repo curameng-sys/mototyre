@@ -165,6 +165,13 @@
     .page-section { display: none; }
     .page-section.active { display: block; }
 
+    /* Billing is shown inside the dashboard: the frame fills the space under the top bar, and only its own content scrolls. */
+    body.billing-lock { overflow: hidden; }
+    body.billing-lock .admin-wrap { height: 100vh; min-height: 0; }
+    body.billing-lock .main { height: 100vh; box-sizing: border-box; overflow: hidden; padding-bottom: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
+    body.billing-lock #billing-frame { height: calc(100vh - 5rem); }
+    @media (max-width: 900px) { body.billing-lock #billing-frame { height: calc(100vh - 4.5rem); } }
+
     /* In-Store Parts Purchase on a computer: the page itself never scrolls. The product cards fill the space under the
        search bar (the number per page is worked out from that space), the paging stays at the bottom, and the cart on
        the right scrolls inside itself if the screen is short. */
@@ -179,8 +186,17 @@
       body.parts-lock .parts-left > div:first-child { flex-shrink: 0; margin-bottom: 0.75rem !important; }
       body.parts-lock #parts-product-grid { flex: 1; min-height: 0; overflow: hidden; grid-auto-rows: 156px; align-content: start; }
       body.parts-lock #parts-pagination { flex-shrink: 0; margin-top: 0 !important; padding: 0.6rem 0 0 !important; min-height: 44px; box-sizing: border-box; }
-      body.parts-lock .parts-right { position: static !important; min-height: 0; overflow-y: auto; }
-      body.parts-lock #parts-cart-items { max-height: 22vh; overflow-y: auto; }
+      /* the cart card ends where the last row of product cards ends (the paging strip under the cards is left out) */
+      body.parts-lock .parts-right { position: static !important; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 44px; box-sizing: border-box; }
+      body.parts-lock .parts-right > .card { flex: 1 0 auto; display: flex; flex-direction: column; margin-bottom: 0; }
+      body.parts-lock .parts-right .card-body { flex: 1; display: flex; flex-direction: column; }
+      body.parts-lock #parts-cart-items { flex: 1; min-height: 36px; overflow-y: auto; margin-bottom: 0.5rem !important; }
+      body.parts-lock #parts-cart-empty { padding: 0.5rem 0 !important; }
+      body.parts-lock .parts-right .card-head { padding-top: 0.7rem; padding-bottom: 0.7rem; }
+      body.parts-lock #parts-pay-cash, body.parts-lock #parts-pay-gcash { padding: 0.5rem 0.7rem !important; margin-top: 0.5rem !important; }
+      body.parts-lock #parts-pay-cash > div:first-child { margin-bottom: 0.35rem !important; }
+      body.parts-lock .parts-right .card-body > div { margin-bottom: 0.6rem !important; }
+      body.parts-lock .parts-right .card-body > div:last-child { margin-bottom: 0 !important; }
     }
 
     /* Page header row */
@@ -771,7 +787,7 @@
     <a href="#" onclick="showSection('services', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span> Services</a>
     <a href="{{ url_for('quotations_list') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Quotations</a>
     <a href="{{ url_for('job_orders') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span> Job Orders</a>
-    <a href="{{ url_for('payments') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing {% set billing_badge = (pending_billing_count or 0) + (billing_new_count or 0) %}{% if billing_badge %}<span title="{{ pending_billing_count or 0 }} to collect · {{ billing_new_count or 0 }} new in History" style="margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;">{{ billing_badge }}</span>{% endif %}</a>
+    <a href="#" onclick="showSection('billing', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing {% set billing_badge = (pending_billing_count or 0) + (billing_new_count or 0) %}{% if billing_badge %}<span title="{{ pending_billing_count or 0 }} to collect · {{ billing_new_count or 0 }} new in History" style="margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;">{{ billing_badge }}</span>{% endif %}</a>
     <a href="{{ url_for('walk_in') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Walk-In</a>
     <a href="#" onclick="showSection('parts', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span> Parts Purchase</a>
     <a href="#" onclick="showSection('transactions', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Transactions</a>
@@ -2367,6 +2383,11 @@
       </div>
     </section>
 
+    <!-- BILLING: the Billing Center lives inside the dashboard (it is loaded into this frame the first time it is opened) -->
+    <section id="sec-billing" class="page-section">
+      <iframe id="billing-frame" title="Billing" data-src="{{ url_for('payments') }}?embed=1" style="display:block;width:100%;border:0;background:transparent;"></iframe>
+    </section>
+
     <!-- IN-STORE PARTS PURCHASE -->
     <section id="sec-parts" class="page-section">
       <div class="page-header">
@@ -3788,6 +3809,12 @@
     if (el) el.classList.add('active');
     sessionStorage.setItem('adminSection', name);
     document.body.classList.toggle('parts-lock', name === 'parts');
+    document.body.classList.toggle('billing-lock', name === 'billing');
+    if (name === 'billing') {
+      const f = document.getElementById('billing-frame');
+      if (!f.getAttribute('src')) f.setAttribute('src', f.dataset.src);
+      else { try { f.contentWindow.location.reload(); } catch (e) {} }      // opening Billing again shows the latest
+    }
     if (name === 'parts') loadPartsProducts();
     if (name === 'transactions') loadTxns();
     if (name === 'day-schedule') { initDaySchedule(); if (dsView === 'list') loadBookingList(); }
@@ -7588,6 +7615,8 @@
   // Init on load
   document.addEventListener('DOMContentLoaded', () => {
     renderProductPage();
+    const _want = new URLSearchParams(location.search).get('section');          // e.g. an old /payments link sends you to ?section=billing
+    if (_want && document.getElementById('sec-' + _want)) sessionStorage.setItem('adminSection', _want);
     const saved = sessionStorage.getItem('adminSection');
     if (saved && document.getElementById('sec-' + saved)) {
       const link = document.querySelector(`.sidebar a[onclick*="'${saved}'"]`);
@@ -8999,9 +9028,9 @@ function loadPartsProducts() {
     .then(r => r.json())
     .then(products => {
       _partsAll = products;
+      _syncPartsCartStock(products);
       _buildCatFilter(products);
-      _partsPage = 1;
-      _applyPartsPagination(products);
+      filterPartsProducts(_partsPage);          // keeps the search, the category and the page the cashier is on
     })
     .catch(() => {
       document.getElementById('parts-product-grid').innerHTML =
@@ -9011,49 +9040,71 @@ function loadPartsProducts() {
   _partsRefreshTimer = setInterval(() => {
     if (document.getElementById('sec-parts').classList.contains('active')) loadPartsProducts();
     else { clearInterval(_partsRefreshTimer); _partsRefreshTimer = null; }
-  }, 60000);
+  }, 15000);
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && document.getElementById('sec-parts').classList.contains('active')) loadPartsProducts();
+});
+
+// The stock may have changed since the part was added to the cart (an online order, another cashier, a restock):
+// bring the cart in line with the real number and say so.
+function _syncPartsCartStock(products) {
+  if (!_partsCart.length) return;
+  const byId = new Map(products.map(p => [p.id, p]));
+  let changed = false;
+  _partsCart = _partsCart.filter(i => {
+    const p = byId.get(i.id);
+    if (!p || p.stock <= 0) { showToast(`${i.name} just ran out of stock and was removed from the cart.`, 'error'); changed = true; return false; }
+    if (p.stock !== i.stock) { i.stock = p.stock; changed = true; }
+    if (i.qty > p.stock) { i.qty = p.stock; showToast(`Only ${p.stock} left of ${i.name}. Quantity changed.`, 'error'); }
+    return true;
+  });
+  if (changed) _renderPartsCart();
 }
 
 function _buildCatFilter(products) {
   const sel = document.getElementById('parts-cat');
   const cats = [...new Set(products.map(p => p.category))].sort();
+  const keep = sel.value;
   sel.innerHTML = '<option value="">All Categories</option>' +
     cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (cats.includes(keep)) sel.value = keep;
 }
 
 function _renderPartsGrid(products) {
   const grid = document.getElementById('parts-product-grid');
   if (!products.length) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted);font-size:0.85rem;">No products in stock.</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted);font-size:0.85rem;">No products found.</div>';
     return;
   }
   grid.innerHTML = products.map(p => {
-    const stockColor = p.stock < 5 ? 'var(--warning)' : 'var(--green)';
+    const out = p.stock <= 0;
+    const stockColor = out ? '#b91c1c' : (p.stock < 5 ? 'var(--warning)' : 'var(--green)');
     const safeName = p.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.6rem 0.85rem;display:flex;flex-direction:column;gap:0.25rem;min-height:0;overflow:hidden;transition:border-color 0.15s,box-shadow 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.08);"
+    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.6rem 0.85rem;display:flex;flex-direction:column;gap:0.25rem;min-height:0;overflow:hidden;${out ? 'opacity:0.6;' : ''}transition:border-color 0.15s,box-shadow 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.08);"
         onmouseover="this.style.borderColor='var(--red)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.13)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'">
-      <div style="font-size:0.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">${p.category}</div>
+      <div style="font-size:0.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;display:flex;justify-content:space-between;align-items:center;gap:0.4rem;"><span>${p.category}</span>${out ? '<span style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:99px;padding:0 0.45rem;font-size:0.62rem;font-weight:700;white-space:nowrap;">Out of stock</span>' : ''}</div>
       <div style="font-weight:700;font-size:0.88rem;color:var(--text);line-height:1.25;flex:1;min-height:0;overflow:hidden;" title="${p.name.replace(/"/g, '&quot;')}${p.motor_model ? ' · ' + p.motor_model.replace(/"/g, '&quot;') : ''}"><div style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</div>${p.motor_model ? `<div style="font-weight:500;font-size:0.74rem;color:var(--muted);margin-top:0.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.motor_model}</div>` : ''}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span style="font-weight:800;font-family:inherit;font-size:1.15rem;color:var(--red);">₱${p.price.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
-        <span style="font-size:0.7rem;color:${stockColor};">${p.stock} left</span>
+        <span style="font-size:0.7rem;color:${stockColor};font-weight:${out ? '700' : '400'};">${out ? 'Out of stock' : p.stock + ' left'}</span>
       </div>
-      <button onclick="addToPartsCart(${p.id},'${safeName}',${p.price},${p.stock})"
-        style="width:100%;padding:0.32rem;border:none;border-radius:6px;background:var(--red);color:#fff;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;">
-        + Add
+      <button ${out ? 'disabled' : ''} onclick="addToPartsCart(${p.id},'${safeName}',${p.price},${p.stock})"
+        style="width:100%;padding:0.32rem;border:none;border-radius:6px;background:${out ? '#d1d5db' : 'var(--red)'};color:${out ? '#6b7280' : '#fff'};font-size:0.78rem;font-weight:600;cursor:${out ? 'not-allowed' : 'pointer'};font-family:inherit;">
+        ${out ? 'Out of Stock' : '+ Add'}
       </button>
     </div>`;
   }).join('');
 }
 
-function filterPartsProducts() {
+function filterPartsProducts(keepPage) {
   const q   = document.getElementById('parts-search').value.toLowerCase();
   const cat = document.getElementById('parts-cat').value;
   const filtered = _partsAll.filter(p =>
     (!cat || p.category === cat) &&
     (!q   || (p.name + ' ' + (p.motor_model || '')).toLowerCase().includes(q))
   );
-  _partsPage = 1;
+  _partsPage = typeof keepPage === 'number' ? keepPage : 1;
   _applyPartsPagination(filtered);
 }
 
@@ -9081,6 +9132,7 @@ function goPartsPage(p) {
 }
 
 function addToPartsCart(id, name, price, stock) {
+  if (!(stock > 0)) { showToast(`${name} is out of stock.`, 'error'); return; }
   const existing = _partsCart.find(i => i.id === id);
   if (existing) {
     if (existing.qty >= stock) { showToast(`Max stock reached for ${name}`, 'error'); return; }
