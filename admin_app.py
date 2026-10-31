@@ -7717,8 +7717,25 @@ def pos_checkout():
     customer_id = data.get('customer_id')
     total       = float(data.get('total', 0))
     payment_method = data.get('payment_method', 'cash')
+    if payment_method not in ('cash', 'gcash'):
+        return jsonify({'success': False, 'error': 'Choose Cash or GCash.'}), 400
     if not cart and not services:
         return jsonify({'success': False, 'error': 'Cart is empty'}), 400
+    # In-store parts sale: each method has its own check (the walk-in/billing flows send neither field).
+    gcash_ref = None
+    if any(not i.get('source_order_id') for i in cart) and 'cash_received' in data:
+        if payment_method == 'cash':
+            try:
+                received = float(data.get('cash_received') or 0)
+            except (TypeError, ValueError):
+                received = 0
+            sale_total = sum(int(i['quantity']) * float(i['unit_price']) for i in cart if not i.get('source_order_id'))
+            if received + 0.005 < sale_total:
+                return jsonify({'success': False, 'error': 'Cash received is less than the total.'}), 400
+        else:
+            gcash_ref = str(data.get('gcash_ref') or '').strip()
+            if not (gcash_ref.isdigit() and len(gcash_ref) == 13):
+                return jsonify({'success': False, 'error': 'Enter the 13-digit GCash reference no.'}), 400
     for item in cart:
         if not item.get('source_order_id'):
             product = Product.query.get(item['product_id'])
@@ -7757,7 +7774,8 @@ def pos_checkout():
         new_total = sum(item['quantity'] * float(item['unit_price']) for item in new_cart_items)
         order = Order(user_id=uid, total_amount=new_total, status='completed', payment_method=payment_method,
                       delivered_at=ph_now(), is_instore=True, instore_seen=False,
-                      contact_name=None if customer_id else customer_name)
+                      contact_name=None if customer_id else customer_name,
+                      payment_ref=gcash_ref)
         db.session.add(order)
         db.session.flush()
         order_id = order.id

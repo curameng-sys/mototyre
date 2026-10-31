@@ -9168,6 +9168,9 @@ function processPartsTxn() {
     btn.textContent = 'Process Transaction';
     if (!data.success) { showToast(data.error || 'Transaction failed.', 'error'); btn.disabled = false; return; }
     _showPartsReceipt(data.order_id, cartSnapshot, total, customerName, paidNote);
+    document.getElementById('parts-cash-received').value = '';
+    document.getElementById('parts-gcash-ref').value = '';
+    document.getElementById('parts-gcash-ok').checked = false;
     clearPartsCart();
     loadPartsProducts(); // refresh stock
   })

@@ -562,6 +562,7 @@
           <td><span class="amount">₱{{ '{:,.2f}'.format(o_total) }}</span></td>
           <td>
             <span class="badge b-{{ o.payment_method }}">{{ o.payment_method|upper }}</span>
+            {% if o.payment_method == 'gcash' and o.is_instore and o.payment_ref %}<div class="sub">GCash ref · {{ o.payment_ref }}</div>{% endif %}
             {% if o.payment_method == 'gcash' and not o.is_instore %}<div class="sub">PayMongo{% if o.payment_ref %} · {{ o.payment_ref[:16] }}{% if o.payment_ref|length > 16 %}…{% endif %}{% endif %}</div>{% endif %}
           </td>
           <td class="date-cell">{% set o_paid = (o.paid_at if o.delivery_method == 'ship' and o.paid_at else None) or o.delivered_at or o.created_at %}{{ o_paid.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o_paid.strftime('%I:%M %p') }}</span></td>
