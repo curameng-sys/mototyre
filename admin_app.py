@@ -6032,6 +6032,14 @@ def _product_change_response(product, saved_msg):
     return redirect(url_for('admin_dashboard'))
 
 
+def _product_description_error():
+    msg = 'Add a description with the product’s specifications (at least 10 characters).'
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': False, 'error': msg})
+    flash(msg, 'danger')
+    return redirect(url_for('admin_dashboard'))
+
+
 @admin_app.route('/product/add', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -6040,6 +6048,8 @@ def add_product():
     _img = _save_product_image(_file)
     if _file and _file.filename and not _img:
         return _product_photo_error()
+    if len((request.form.get('description') or '').strip()) < 10:
+        return _product_description_error()
     new_p = Product(
         name=request.form['name'], category=request.form['category'],
         motor_model=clean_str(request.form.get('motor_model', ''), max_len=255) or None,
@@ -6060,6 +6070,8 @@ def edit_product(pid):
         flash('Access denied.', 'danger')
         return redirect(url_for('admin_dashboard'))
     p             = Product.query.get_or_404(pid)
+    if len((request.form.get('description') or '').strip()) < 10:
+        return _product_description_error()
     p.barcode     = request.form.get('barcode', '').strip() or None
     p.name        = request.form['name']
     p.motor_model = clean_str(request.form.get('motor_model', ''), max_len=255) or None

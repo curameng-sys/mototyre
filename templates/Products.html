@@ -286,6 +286,7 @@
       <div class="product-cat">{{ p.category }}</div>
       <div class="product-name" title="{{ p.name }}">{{ p.name }}</div>
       {% if p.motor_model %}<div class="product-fit">Fits: {{ p.motor_model }}</div>{% endif %}
+      {% if p.description %}<div class="product-fit" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ p.description.split('\n')[0] }}</div>{% endif %}
       <div class="product-price">₱{{ '{:,.2f}'.format(p.price) }}</div>
       {% if _oos %}<div class="oos-note">Currently unavailable. Please check back soon.</div>{% endif %}
       {% if p.stock and p.stock > 0 %}

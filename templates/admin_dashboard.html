@@ -2915,7 +2915,7 @@
       </div>
       <div class="form-group"><label>Price (₱)</label><input type="number" name="price" step="0.01" min="0" placeholder="0.00" required></div>
       <div class="form-group"><label>Stock Quantity</label><input type="number" name="stock" min="0" placeholder="0" required></div>
-      <div class="form-group"><label>Description (optional)</label><textarea name="description" rows="2" placeholder="Brief description..."></textarea></div>
+      <div class="form-group"><label>Description and specifications *</label><textarea name="description" rows="5" minlength="10" maxlength="1500" required placeholder="What it is, in one sentence.&#10;Specifications:&#10;• Size: 90/80-14&#10;• Brand: Vee Rubber&#10;• Fits: Click 125i / Beat"></textarea></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-add-product')">Cancel</button>
         <button type="submit" class="btn-primary-custom">Add Product</button>
@@ -2968,7 +2968,7 @@
       <div class="form-group"><label>Stock Quantity</label><input type="number" name="stock" id="edit-product-stock" min="0" required oninput="updateStockPreview()">
         <div style="margin-top:0.35rem;font-size:0.7rem;color:var(--muted);">Will show as: <span id="edit-stock-preview"></span></div>
       </div>
-      <div class="form-group"><label>Description (optional)</label><textarea name="description" id="edit-product-desc" rows="2"></textarea></div>
+      <div class="form-group"><label>Description and specifications *</label><textarea name="description" id="edit-product-desc" rows="5" minlength="10" maxlength="1500" required placeholder="What it is, in one sentence.&#10;Specifications:&#10;• Size: 90/80-14&#10;• Brand: Vee Rubber"></textarea></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeModal('modal-edit-product')">Cancel</button>
         <button type="submit" class="btn-primary-custom">Save Changes</button>
