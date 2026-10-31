@@ -7558,7 +7558,9 @@ def payments():
     recent_today_total = sum(r['amount'] or 0 for r in _today_rows)
     recent_today_count = len(_today_rows)
     recent_groups = []
-    for r in _recent[:25]:
+    # Recent Transactions only keeps the last 3 days; anything older drops off this list but stays in History
+    _recent_cutoff = _today_d - timedelta(days=3)
+    for r in [x for x in _recent if x['paid_at'].date() >= _recent_cutoff][:100]:
         dd = r['paid_at'].date()
         label = 'Today' if dd == _today_d else ('Yesterday' if dd == _today_d - timedelta(days=1) else dd.strftime('%b %d, %Y'))
         r['time'] = r['paid_at'].strftime('%I:%M %p')

@@ -110,8 +110,12 @@
     .pend-box{display:none;}
     .pend-box.active{display:block;}
     .bill-box.hist-box{max-width:1100px;width:94%;height:88%;display:flex;flex-direction:column;}
-    .hist-body{flex:1;min-height:0;overflow:auto;padding:1rem 1.25rem;display:flex;flex-direction:column;}
-    .hist-body .tbl-wrap{margin-bottom:0;}
+    .hist-body{flex:1;min-height:0;overflow:hidden;padding:1rem 1.25rem;display:flex;flex-direction:column;}
+    .hist-body > *{flex-shrink:0;}
+    /* search and type filter stay on top; the payments scroll inside their box */
+    .hist-body .tbl-wrap{margin-bottom:0;flex:1 1 0;min-height:0;overflow:auto;}
+    .hist-body tbody td:first-child, .hist-body tbody td:nth-child(5){white-space:nowrap;}
+    .hist-body .ref{white-space:nowrap;}
     .hist-body thead th{position:sticky;top:0;z-index:2;background:#f9fafb !important;box-shadow:0 1px 0 var(--border);}
     /* The Billing page never scrolls as a whole: the box of payments scrolls inside itself, and so does the recent list. */
     html.embedded, html.embedded body{height:100vh;overflow:hidden;}
