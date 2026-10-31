@@ -165,6 +165,24 @@
     .page-section { display: none; }
     .page-section.active { display: block; }
 
+    /* In-Store Parts Purchase on a computer: the page itself never scrolls. The product cards fill the space under the
+       search bar (the number per page is worked out from that space), the paging stays at the bottom, and the cart on
+       the right scrolls inside itself if the screen is short. */
+    @media (min-width: 901px) {
+      body.parts-lock { overflow: hidden; }
+      body.parts-lock .admin-wrap { height: 100vh; min-height: 0; }
+      body.parts-lock .main { height: 100vh; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 1rem; }
+      body.parts-lock #sec-parts.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      body.parts-lock #sec-parts .page-header { margin-bottom: 0.75rem; }
+      body.parts-lock #parts-layout { flex: 1; min-height: 0; align-items: stretch !important; grid-template-rows: minmax(0, 1fr); }
+      body.parts-lock .parts-left { display: flex; flex-direction: column; min-height: 0; }
+      body.parts-lock .parts-left > div:first-child { flex-shrink: 0; margin-bottom: 0.75rem !important; }
+      body.parts-lock #parts-product-grid { flex: 1; min-height: 0; overflow: hidden; grid-auto-rows: 156px; align-content: start; }
+      body.parts-lock #parts-pagination { flex-shrink: 0; margin-top: 0 !important; padding: 0.6rem 0 0 !important; min-height: 44px; box-sizing: border-box; }
+      body.parts-lock .parts-right { position: static !important; min-height: 0; overflow-y: auto; }
+      body.parts-lock #parts-cart-items { max-height: 22vh; overflow-y: auto; }
+    }
+
     /* Page header row */
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; }
 
@@ -2358,10 +2376,10 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
+      <div id="parts-layout" style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
 
         <!-- LEFT: Product catalog -->
-        <div>
+        <div class="parts-left">
           <!-- Search + category filter -->
           <div style="display:flex;gap:0.65rem;margin-bottom:1rem;flex-wrap:wrap;">
             <input type="text" id="parts-search" placeholder="Search products..." oninput="filterPartsProducts()"
@@ -2380,7 +2398,7 @@
         </div>
 
         <!-- RIGHT: Cart panel -->
-        <div style="position:sticky;top:1.5rem;">
+        <div class="parts-right" style="position:sticky;top:1.5rem;">
           <div class="card">
             <div class="card-head">
               <h5>Cart</h5>
@@ -3769,6 +3787,7 @@
     document.getElementById('sec-' + name).classList.add('active');
     if (el) el.classList.add('active');
     sessionStorage.setItem('adminSection', name);
+    document.body.classList.toggle('parts-lock', name === 'parts');
     if (name === 'parts') loadPartsProducts();
     if (name === 'transactions') loadTxns();
     if (name === 'day-schedule') { initDaySchedule(); if (dsView === 'list') loadBookingList(); }
@@ -8951,7 +8970,27 @@ let _partsCart = [];          // {id, name, price, stock, qty}
 let _partsPayment = 'cash';
 let _partsFiltered = [];
 let _partsPage = 1;
-const PARTS_PER_PAGE = 28;
+const PARTS_PER_PAGE = 28;          // used when the screen is small and the page scrolls normally
+
+// On a computer the cards fill the space under the search bar: columns x rows that really fit (a row is at least 156px).
+function _partsPerPage() {
+  if (!document.body.classList.contains('parts-lock')) return PARTS_PER_PAGE;
+  const grid = document.getElementById('parts-product-grid');
+  if (!grid || !grid.clientHeight) return PARTS_PER_PAGE;
+  const gap = parseFloat(getComputedStyle(grid).rowGap) || 12;
+  const cols = Math.max(1, Math.floor((grid.clientWidth + gap) / (170 + gap)));
+  const rows = Math.max(1, Math.floor((grid.clientHeight + gap) / (156 + gap)));
+  grid.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;     // the rows share the height, so nothing is left empty at the bottom
+  return cols * rows;
+}
+window.addEventListener('resize', () => {
+  if (document.body.classList.contains('parts-lock') && typeof _partsFiltered !== 'undefined') {
+    const first = (_partsPage - 1) * _partsPerPageUsed;       // keep the first card on screen where it was
+    _partsPage = Math.floor(first / _partsPerPage()) + 1;
+    _applyPartsPagination(_partsFiltered);
+  }
+});
+let _partsPerPageUsed = PARTS_PER_PAGE;
 
 let _partsRefreshTimer = null;
 
@@ -8991,16 +9030,16 @@ function _renderPartsGrid(products) {
   grid.innerHTML = products.map(p => {
     const stockColor = p.stock < 5 ? 'var(--warning)' : 'var(--green)';
     const safeName = p.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.9rem;display:flex;flex-direction:column;gap:0.4rem;transition:border-color 0.15s,box-shadow 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.08);"
+    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.6rem 0.85rem;display:flex;flex-direction:column;gap:0.25rem;min-height:0;overflow:hidden;transition:border-color 0.15s,box-shadow 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.08);"
         onmouseover="this.style.borderColor='var(--red)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.13)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'">
       <div style="font-size:0.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">${p.category}</div>
-      <div style="font-weight:700;font-size:0.88rem;color:var(--text);line-height:1.3;flex:1;">${p.name}${p.motor_model ? `<div style="font-weight:500;font-size:0.74rem;color:var(--muted);margin-top:0.15rem;">${p.motor_model}</div>` : ''}</div>
+      <div style="font-weight:700;font-size:0.88rem;color:var(--text);line-height:1.25;flex:1;min-height:0;overflow:hidden;" title="${p.name.replace(/"/g, '&quot;')}${p.motor_model ? ' · ' + p.motor_model.replace(/"/g, '&quot;') : ''}"><div style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</div>${p.motor_model ? `<div style="font-weight:500;font-size:0.74rem;color:var(--muted);margin-top:0.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.motor_model}</div>` : ''}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span style="font-weight:800;font-family:inherit;font-size:1.15rem;color:var(--red);">₱${p.price.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
         <span style="font-size:0.7rem;color:${stockColor};">${p.stock} left</span>
       </div>
       <button onclick="addToPartsCart(${p.id},'${safeName}',${p.price},${p.stock})"
-        style="width:100%;padding:0.38rem;border:none;border-radius:6px;background:var(--red);color:#fff;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;">
+        style="width:100%;padding:0.32rem;border:none;border-radius:6px;background:var(--red);color:#fff;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;">
         + Add
       </button>
     </div>`;
@@ -9020,10 +9059,11 @@ function filterPartsProducts() {
 
 function _applyPartsPagination(products) {
   _partsFiltered = products;
-  const totalPages = Math.max(1, Math.ceil(products.length / PARTS_PER_PAGE));
+  const per = _partsPerPageUsed = _partsPerPage();
+  const totalPages = Math.max(1, Math.ceil(products.length / per));
   _partsPage = Math.min(_partsPage, totalPages);
-  const start = (_partsPage - 1) * PARTS_PER_PAGE;
-  _renderPartsGrid(products.slice(start, start + PARTS_PER_PAGE));
+  const start = (_partsPage - 1) * per;
+  _renderPartsGrid(products.slice(start, start + per));
   const pg = document.getElementById('parts-pagination');
   if (totalPages <= 1) { pg.innerHTML = ''; return; }
   let html = `<button class="parts-page-btn" onclick="goPartsPage(${_partsPage-1})" ${_partsPage===1?'disabled':''}>←</button>`;
@@ -9037,7 +9077,7 @@ function _applyPartsPagination(products) {
 function goPartsPage(p) {
   _partsPage = p;
   _applyPartsPagination(_partsFiltered);
-  document.getElementById('parts-product-grid').scrollIntoView({behavior:'smooth',block:'start'});
+  if (!document.body.classList.contains('parts-lock')) document.getElementById('parts-product-grid').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function addToPartsCart(id, name, price, stock) {
