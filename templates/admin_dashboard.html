@@ -210,6 +210,14 @@
       body.tbl-lock #products-pagination { flex-shrink: 0; margin-top: 0.7rem !important; min-height: 32px; }
     }
     .ds-count { display: none; }
+    .ds-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; position: sticky; top: 0; z-index: 3; background: var(--ink); padding: 0.35rem 0 0.7rem; }
+    .ds-tab { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: #6b7280; font-family: 'Syne', sans-serif; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+    .ds-tab:hover { color: var(--text); border-color: #d1d5db; }
+    .ds-tab.on { background: var(--red); border-color: var(--red); color: #fff; }
+    .ds-tab .n { font-size: 0.66rem; min-width: 18px; text-align: center; padding: 0.05rem 0.4rem; border-radius: 99px; background: rgba(0,0,0,0.07); color: #374151; }
+    .ds-tab.on .n { background: rgba(255,255,255,0.25); color: #fff; }
+    .ds-tab .n.alert { background: #dc2626; color: #fff; }
+    #day-schedule-body > .ds-sec:not(.ds-on), #day-schedule-body > .ds-foot:not(.ds-on) { display: none !important; }
     /* Day Schedule on a computer: the page does not scroll. The calendar sits on the left, the capacity controls and the
        day's panel on the right, and only the day's panel (or the list) scrolls inside itself. */
     @media (min-width: 901px) {
@@ -232,17 +240,18 @@
       body.ds-lock #ds-cal-grid > div > div:not(:first-child):not(.ds-count) { display: none; }
       body.ds-lock #ds-cal-grid > div { padding: 0.4rem 0.45rem !important; gap: 0.2rem !important; border-radius: 10px !important; }
       body.ds-lock .ds-right > div:nth-child(2) { gap: 0.75rem !important; }
-      body.ds-lock .ds-right > div:nth-child(2) > .card { padding: 0.85rem 1.05rem !important; }
+      body.ds-lock .ds-right > div:nth-child(2) > .card { padding: 0.6rem 0.9rem !important; }
+      body.ds-lock .ds-right > div:nth-child(2) > .card > div:first-child { margin-bottom: 0.3rem !important; }
+      body.ds-lock .ds-right > div:nth-child(2) > .card > div:nth-child(2):not(#cap-bottleneck-text) { margin-bottom: 0.3rem !important; font-size: 0.66rem !important; }
+      body.ds-lock #cap-bottleneck-text { font-size: 0.78rem !important; line-height: 1.4 !important; }
+      body.ds-lock #cap-mechanic-note { font-size: 0.72rem !important; margin-top: 0.3rem !important; }
+      body.ds-lock .ds-right > div:nth-child(2) { margin-bottom: 0.55rem !important; }
       body.ds-lock .ds-day-card { background: transparent; border: 0; box-shadow: none; margin-bottom: 0 !important; }
-      body.ds-lock #day-schedule-body { padding: 0 0.3rem 1rem 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 0.9rem; align-content: start; }
-      body.ds-lock #day-schedule-body > div { grid-column: 1 / -1; }
-      body.ds-lock #day-schedule-body > div:nth-child(3), body.ds-lock #day-schedule-body > div:nth-child(4) { grid-column: auto; }
-      /* the day's bookings (time slots) come before the mechanic timeline, so they are what you see first */
-      body.ds-lock #day-schedule-body > div:nth-child(5) { order: 2; }
-      body.ds-lock #day-schedule-body > div:nth-child(n+7) { order: 3; }
-      body.ds-lock #day-schedule-body > div:nth-child(n+3):nth-child(-n+6) { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 0.9rem !important; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+      body.ds-lock #day-schedule-body { padding: 0 0.3rem 1rem 0; }
+      /* one part of the day at a time (tabs), shown as a card */
+      body.ds-lock #day-schedule-body > .ds-sec { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.15rem; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
       body.ds-lock #day-schedule-body > div:nth-child(1) { margin-bottom: 0.7rem !important; }
-      body.ds-lock #day-schedule-body > div:nth-child(2) { margin: 0 0 1rem !important; }
+      body.ds-lock #day-schedule-body > div:nth-child(2) { margin: 0 0 0.9rem !important; }
       /* the month fits the left column: equal columns, shorter day boxes (the day's bookings are in the panel on the right) */
       body.ds-lock #ds-cal-grid { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: 4px !important; }
       body.ds-lock .ds-left { display: flex; flex-direction: column; }
@@ -4923,6 +4932,33 @@
       renderTimeSlotsPanel(data) +
       renderDayPanelFooter();
     populateCardMechanicSelects(data);
+    dsApplyTabs(data);
+  }
+
+  // The day's panel is split into tabs: Time Slots, Clashes, Mechanic Timeline, In the Bay. Only the chosen one shows; the
+  // choice is remembered while you move between days.
+  function dsApplyTabs(data) {
+    const body = document.getElementById('day-schedule-body');
+    const kids = [...body.children];                       // header, status chips, bay, clashes, timeline, slots, legend, dev result
+    if (kids.length < 6) return;
+    const [bay, clashes, timeline, slots] = kids.slice(2, 6);
+    [['bay', bay], ['clashes', clashes], ['timeline', timeline], ['slots', slots]].forEach(([k, el]) => { el.classList.add('ds-sec'); el.dataset.tab = k; });
+    kids.slice(6).forEach(el => el.classList.add('ds-foot'));
+    const nClash = (data.clashes || []).length, nBay = (data.bay || []).length + (data.bay_now || []).length;
+    const tabs = [['slots', 'Time Slots', data.booked_count, false], ['clashes', 'Clashes', nClash, nClash > 0],
+                  ['timeline', 'Mechanic Timeline', (data.timeline || []).length, false], ['bay', 'In the Bay', nBay, false]];
+    const bar = document.createElement('div');
+    bar.className = 'ds-tabs';
+    bar.innerHTML = tabs.map(([k, label, n, alert]) => `<button type="button" class="ds-tab" data-tab="${k}" onclick="setDsTab('${k}')">${label} <span class="n${alert ? ' alert' : ''}">${n}</span></button>`).join('');
+    body.insertBefore(bar, bay);
+    setDsTab(window._dsTab || 'slots');
+  }
+  function setDsTab(k) {
+    window._dsTab = k;
+    const body = document.getElementById('day-schedule-body');
+    body.querySelectorAll('.ds-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === k));
+    body.querySelectorAll('.ds-sec').forEach(el => el.classList.toggle('ds-on', el.dataset.tab === k));
+    body.querySelectorAll('.ds-foot').forEach(el => el.classList.toggle('ds-on', k === 'timeline'));      // the colour key belongs to the timeline
   }
 
   function renderDayPanelHeader(data) {
