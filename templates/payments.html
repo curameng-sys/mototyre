@@ -112,7 +112,7 @@
     .bill-box.hist-box{max-width:1100px;width:94%;height:88%;display:flex;flex-direction:column;}
     .hist-body{flex:1;min-height:0;overflow:auto;padding:1rem 1.25rem;display:flex;flex-direction:column;}
     .hist-body .tbl-wrap{margin-bottom:0;}
-    .hist-body thead th{position:sticky;top:0;z-index:1;}
+    .hist-body thead th{position:sticky;top:0;z-index:2;background:#f9fafb !important;box-shadow:0 1px 0 var(--border);}
     /* The Billing page never scrolls as a whole: the box of payments scrolls inside itself, and so does the recent list. */
     html.embedded, html.embedded body{height:100vh;overflow:hidden;}
     html.embedded .main{height:100vh;box-sizing:border-box;display:flex;flex-direction:column;padding:0 2rem 1.25rem;}
@@ -123,7 +123,7 @@
     html.embedded .filter-row, html.embedded .match-bar{flex-shrink:0;}
     html.embedded .pend-box.active{display:flex;flex-direction:column;flex:1;min-height:0;}
     html.embedded .pend-box .tbl-wrap{flex:1 1 0;min-height:0;overflow:auto;margin-bottom:0;}
-    html.embedded .pend-box thead th{position:sticky;top:0;z-index:1;}
+    html.embedded .pend-box thead th{position:sticky;top:0;z-index:2;background:#f9fafb !important;box-shadow:0 1px 0 var(--border);}
     html.embedded .recent-panel{position:static;display:flex;flex-direction:column;min-height:0;}
     html.embedded .recent-head, html.embedded .recent-all{flex-shrink:0;}
     html.embedded .recent-scroll{flex:1;min-height:0;overflow-y:auto;}

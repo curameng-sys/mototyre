@@ -202,13 +202,14 @@
       body.tbl-lock #mech-view-roster, body.tbl-lock #mech-view-attendance { flex: 1 1 0; min-height: 0; flex-direction: column; }
       body.tbl-lock #mech-view-roster:not([style*="none"]), body.tbl-lock #mech-view-attendance:not([style*="none"]) { display: flex; }
       body.tbl-lock .page-section.active > .card > div[style*="overflow-x"], body.tbl-lock #mech-view-roster > .card > div, body.tbl-lock #mech-view-attendance > .card > div { overflow: visible !important; }
-      body.tbl-lock .page-section.active .table thead th { position: sticky; top: 0; z-index: 2; background: #fff; }
+      body.tbl-lock .page-section.active .table thead th { position: sticky; top: 0; z-index: 2; background-color: #f9fafb !important; box-shadow: 0 1px 0 var(--border); }
       body.tbl-lock .mech-card { padding: 0.5rem 0.9rem !important; min-height: 0 !important; }
       body.tbl-lock .mech-card .n { font-size: 1.35rem !important; line-height: 1.1; }
       body.tbl-lock #mech-view-roster > div:first-child { margin-bottom: 0.5rem !important; }
       body.tbl-lock #mech-view-roster > div:nth-child(2) { margin-bottom: 0.6rem !important; }
       body.tbl-lock #products-pagination { flex-shrink: 0; margin-top: 0.7rem !important; min-height: 32px; }
     }
+    .ds-count { display: none; }
     /* Day Schedule on a computer: the page does not scroll. The calendar sits on the left, the capacity controls and the
        day's panel on the right, and only the day's panel (or the list) scrolls inside itself. */
     @media (min-width: 901px) {
@@ -221,16 +222,40 @@
       body.ds-lock #ds-view-calendar { flex: 1; min-height: 0; }
       body.ds-lock .ds-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 1.25rem; height: 100%; }
       body.ds-lock .ds-left { overflow-y: auto; min-height: 0; }
-      body.ds-lock .ds-layout { grid-template-columns: 360px minmax(0, 1fr); }
+      /* roomier: a wider calendar whose days show a count (the bookings themselves are listed on the right), and the day's
+         panel split into separate cards */
+      body.ds-lock .ds-layout { grid-template-columns: 400px minmax(0, 1fr); gap: 1.5rem; }
+      body.ds-lock .ds-left > .card { padding: 1.1rem; }
+      body.ds-lock .ds-left > .card > div:first-child { flex-wrap: nowrap !important; gap: 0.4rem !important; }
+      body.ds-lock #ds-cal-label { min-width: 0 !important; flex: 1; font-size: 1rem !important; }
+      body.ds-lock .ds-count { display: flex; align-items: center; justify-content: center; align-self: flex-start; min-width: 20px; height: 20px; font-size: 0.68rem; font-weight: 700; color: #fff; background: #2563eb; border-radius: 99px; padding: 0 0.4rem; margin-top: auto; }
+      body.ds-lock #ds-cal-grid > div > div:not(:first-child):not(.ds-count) { display: none; }
+      body.ds-lock #ds-cal-grid > div { padding: 0.4rem 0.45rem !important; gap: 0.2rem !important; border-radius: 10px !important; }
+      body.ds-lock .ds-right > div:nth-child(2) { gap: 0.75rem !important; }
+      body.ds-lock .ds-right > div:nth-child(2) > .card { padding: 0.85rem 1.05rem !important; }
+      body.ds-lock .ds-day-card { background: transparent; border: 0; box-shadow: none; }
+      body.ds-lock #day-schedule-body { padding: 0 0.3rem 1rem 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 0.9rem; align-content: start; }
+      body.ds-lock #day-schedule-body > div { grid-column: 1 / -1; }
+      body.ds-lock #day-schedule-body > div:nth-child(3), body.ds-lock #day-schedule-body > div:nth-child(4) { grid-column: auto; }
+      /* the day's bookings (time slots) come before the mechanic timeline, so they are what you see first */
+      body.ds-lock #day-schedule-body > div:nth-child(5) { order: 2; }
+      body.ds-lock #day-schedule-body > div:nth-child(n+7) { order: 3; }
+      body.ds-lock #day-schedule-body > div:nth-child(n+3):nth-child(-n+6) { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 0.9rem !important; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+      body.ds-lock #day-schedule-body > div:nth-child(1) { margin-bottom: 0.7rem !important; }
+      body.ds-lock #day-schedule-body > div:nth-child(2) { margin: 0 0 1rem !important; }
       /* the month fits the left column: equal columns, shorter day boxes (the day's bookings are in the panel on the right) */
       body.ds-lock #ds-cal-grid { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: 4px !important; }
-      body.ds-lock #ds-cal-grid > div { min-height: 0 !important; min-width: 0; overflow: hidden; height: clamp(42px, calc((100vh - 500px) / 6), 84px); }
+      body.ds-lock .ds-left { display: flex; flex-direction: column; }
+      body.ds-lock .ds-left > .card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0 !important; }
+      body.ds-lock #ds-cal-grid { flex: 1; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+      body.ds-lock #ds-cal-grid > div { min-height: 0 !important; min-width: 0; overflow: hidden; }
+      body.ds-lock #ds-selected-label { display: none; }
       body.ds-lock .ds-right { display: flex; flex-direction: column; min-height: 0; }
       body.ds-lock .ds-right > div:nth-child(2) { flex-shrink: 0; margin-bottom: 0.85rem !important; }
       body.ds-lock .ds-day-card { flex: 1; min-height: 0; overflow-y: auto; }
       body.ds-lock #ds-view-list { flex: 1; min-height: 0; display: flex; flex-direction: column; }
       body.ds-lock #ds-view-list > .card { flex: 1; min-height: 0; overflow: auto; }
-      body.ds-lock #ds-view-list thead th { position: sticky; top: 0; z-index: 1; }
+      body.ds-lock #ds-view-list thead th { position: sticky; top: 0; z-index: 2; background-color: #f9fafb !important; box-shadow: 0 1px 0 var(--border); }
     }
     /* Billing, Quotations and Walk-In are shown inside the dashboard: the frame fills the space under the top bar, and only its own content scrolls. */
     body.embed-lock { overflow: hidden; }
@@ -4691,6 +4716,11 @@
           more.textContent = `+${info.more} more`;
           cell.appendChild(more);
         }
+        const pill = document.createElement('div');            // shown instead of the tiny chips on a computer
+        pill.className = 'ds-count';
+        const nBk = info.bookings.length + (info.more || 0);
+        pill.textContent = nBk; pill.title = nBk + (nBk === 1 ? ' booking' : ' bookings');
+        cell.appendChild(pill);
       }
       grid.appendChild(cell);
     }
