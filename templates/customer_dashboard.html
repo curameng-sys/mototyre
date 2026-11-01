@@ -10887,6 +10887,9 @@ updateMechNote();
   // "Book Again": start a fresh booking with everything of an earlier (cancelled) one. If its date and time are still ahead and still
   // free, those are filled in too and the customer lands on the last step (Review) to check it; otherwise they pick a new date and time.
   window.bwBookAgain = async function (b) {
+    try { await bookAgainFill(b); } catch (e) { const n = document.getElementById('bw-again-note'); if (n) n.textContent = n.textContent.replace(' Filling in your old date and time…', '') + ' Could not fill in the old date and time (' + (e && e.message || e) + '). Pick them again.'; }
+  };
+  async function bookAgainFill(b) {
     try { closeModal('modal-booking-details'); } catch (e) {}
     showSection('book', null);
     reviewing = false; bookingQueue = [];
@@ -10931,14 +10934,17 @@ updateMechNote();
     const giveUp = why => { if (note) note.textContent = note.textContent.replace(' Filling in your old date and time…', '') + ' ' + why; };
     if (note) note.textContent += ' Filling in your old date and time…';
     const [yy, mm, dd] = b.date_iso.split('-').map(Number);
-    currentYear = yy; currentMonth = mm - 1;
-    await renderCalendar();
-    const cell = [...document.querySelectorAll('#cal-grid .cal-day:not(.empty)')].find(c => parseInt(c.textContent, 10) === dd && typeof c.onclick === 'function');
+    // the calendar on screen is already the right month most of the time: use it as it is (drawing it again asks the server for the whole
+    // month, which is slow); only move to the old booking's month when it is a different one
+    const findCell = () => (currentYear === yy && currentMonth === mm - 1)
+      ? [...document.querySelectorAll('#cal-grid .cal-day:not(.empty)')].find(c => parseInt(c.textContent, 10) === dd && typeof c.onclick === 'function') : null;
+    let cell = findCell();
+    if (!cell) { currentYear = yy; currentMonth = mm - 1; await renderCalendar(); cell = findCell(); }
     if (!cell) return giveUp('Your old date is not open any more. Pick a new date.');
     cell.onclick();
-    // the times come from the server: on a slow connection this can take a while, so wait for them (up to ~20 s)
+    // the times come from the server: on a slow connection this can take a while, so wait for them (up to ~30 s)
     let btn = null, anySlots = false;
-    for (let i = 0; i < 200 && !btn; i++) {
+    for (let i = 0; i < 300 && !btn; i++) {
       await wait(100);
       const all = [...document.querySelectorAll('#time-slots-wrap .time-slot-btn')];
       anySlots = all.length > 0;
@@ -10956,7 +10962,7 @@ updateMechNote();
     if (note) note.textContent = 'Booking again (BKG-' + String(b.id).padStart(3, '0') + '): everything is filled in from your earlier booking, including the date and time. '
       + 'Check it here. To change something, press Back or tap a step above.';
     window.bwReview();
-  };
+  }
   paintMech();
   show(1);
 })();
