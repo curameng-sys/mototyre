@@ -63,6 +63,10 @@
     .badge{display:inline-flex;align-items:center;gap:.25rem;padding:.22rem .6rem;border-radius:99px;font-family:'Syne',sans-serif;font-size:.63rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
     .b-cash   {background:rgba(22,163,74,.15);color:#86efac;border:1px solid rgba(22,163,74,.3);}
     .b-gcash  {background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);}
+    .due-badge{display:inline-flex;align-items:center;gap:.25rem;margin-left:.35rem;padding:.12rem .5rem;border-radius:99px;font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:#fef3c7;color:#92400e;border:1px solid #f59e0b;vertical-align:middle;}
+    .due-badge.last{background:#fee2e2;color:#991b1b;border-color:#f87171;}
+    .due-note{font-size:.68rem;color:#92400e;margin-top:.25rem;line-height:1.4;}
+    .due-note.last{color:#991b1b;font-weight:600;}
     .b-split  {background:rgba(124,58,237,.12);color:#6d28d9;border:1px solid rgba(124,58,237,.3);}
     .b-booking{background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.3);}
     .b-order  {background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);}
@@ -452,7 +456,8 @@
           </td>
           <td><span class="amount">₱{{ '{:,.2f}'.format(o.total_amount) }}</span></td>
           <td>
-            <span class="badge b-pending">{{ 'Ready For Pickup' if o.status == 'shipped' else o.status|replace('_',' ')|title }}</span>
+            <span class="badge b-pending">{{ 'Ready For Pickup' if o.status == 'shipped' else o.status|replace('_',' ')|title }}</span>{% if o.pickup_due %}<span class="due-badge{{ ' last' if o.pickup_due.last_day else '' }}">Due{{ ' · last day' if o.pickup_due.last_day else '' }}</span>{% endif %}
+            {% if o.pickup_due %}<div class="due-note{{ ' last' if o.pickup_due.last_day else '' }}">Waiting {{ o.pickup_due.days_label }} · auto-cancels {{ o.pickup_due.cancel_at }}</div>{% endif %}
             {% if (o.payment_method or '')|lower == 'gcash' %}<div class="sub" style="margin-top:.2rem;">GCash · already paid</div>{% endif %}
           </td>
           <td>

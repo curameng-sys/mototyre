@@ -194,10 +194,10 @@
       body.tbl-lock { overflow: hidden; }
       body.tbl-lock .admin-wrap { height: 100vh; min-height: 0; }
       body.tbl-lock .main { height: 100vh; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 1rem; }
-      body.tbl-lock #sec-services.active, body.tbl-lock #sec-mechanics.active, body.tbl-lock #sec-users.active, body.tbl-lock #sec-products.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      body.tbl-lock #sec-services.active, body.tbl-lock #sec-mechanics.active, body.tbl-lock #sec-users.active, body.tbl-lock #sec-products.active, body.tbl-lock #sec-bookings.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
       body.tbl-lock .page-section.active > * { flex-shrink: 0; }
       body.tbl-lock .page-section.active .page-header { margin-bottom: 0.9rem; }
-      body.tbl-lock #sec-services > .card, body.tbl-lock #sec-users > .card, body.tbl-lock #sec-products > .card,
+      body.tbl-lock #sec-services > .card, body.tbl-lock #sec-users > .card, body.tbl-lock #sec-products > .card, body.tbl-lock #sec-bookings > .card,
       body.tbl-lock #mech-view-roster > .card, body.tbl-lock #mech-view-attendance > .card { flex: 1 1 0; min-height: 0; overflow: auto; margin-bottom: 0; }
       body.tbl-lock #mech-view-roster, body.tbl-lock #mech-view-attendance { flex: 1 1 0; min-height: 0; flex-direction: column; }
       body.tbl-lock #mech-view-roster:not([style*="none"]), body.tbl-lock #mech-view-attendance:not([style*="none"]) { display: flex; }
@@ -665,6 +665,10 @@
     }
     .btn-primary-custom:hover { background: #1f2937; color: #fff; }
     /* the light "go back / keep" button that sits beside a primary one (it had no style, so it showed as a plain browser button) */
+    .due-badge{display:inline-flex;align-items:center;gap:.25rem;margin-left:.35rem;padding:.12rem .5rem;border-radius:99px;font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:#fef3c7;color:#92400e;border:1px solid #f59e0b;vertical-align:middle;}
+    .due-badge.last{background:#fee2e2;color:#991b1b;border-color:#f87171;}
+    .due-note{font-size:.68rem;color:#92400e;margin-top:.25rem;line-height:1.4;}
+    .due-note.last{color:#991b1b;font-weight:600;}
     .btn-secondary-custom {
       background: #fff; color: var(--text); border: 1px solid var(--border);
       padding: 0.5rem 1rem; border-radius: 7px;
@@ -1940,7 +1944,8 @@
                   {% elif o.refund_status_label == 'Item Received' %}
                     <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Item Received</span>
                   {% elif o.delivery_method != 'ship' and o.status == 'shipped' %}
-                    <span class="badge badge-shipped">Ready For Pickup</span>
+                    <span class="badge badge-shipped">Ready For Pickup</span>{% if o.pickup_due %}<span class="due-badge{{ ' last' if o.pickup_due.last_day else '' }}" title="Ready since {{ o.ready_at.strftime('%b %d, %I:%M %p') }}">Due{{ ' · last day' if o.pickup_due.last_day else '' }}</span>
+                    <div class="due-note{{ ' last' if o.pickup_due.last_day else '' }}">Not picked up for {{ o.pickup_due.days_label }}. Cancels by itself on {{ o.pickup_due.cancel_at }}.</div>{% endif %}
                   {% elif o.delivery_method == 'ship' and o.status == 'completed' %}
                     <span class="badge badge-completed">Delivered</span>
                   {% else %}
@@ -2749,6 +2754,7 @@
           <option value="">Payment ▼</option>
           <option value="CASH">Cash</option>
           <option value="GCASH">GCash</option>
+          <option value="CASH + GCASH">Cash + GCash</option>
         </select>
         <select id="txn-date" onchange="filterTxns()">
           <option value="">Date ▼</option>
@@ -4044,7 +4050,7 @@
     document.body.classList.toggle('parts-lock', name === 'parts');
     document.body.classList.toggle('ds-lock', name === 'day-schedule');
     document.body.classList.toggle('dash-lock', name === 'dashboard');
-    document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products'].includes(name));
+    document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products', 'bookings'].includes(name));
     openSidebarGroupOfActive();
     document.body.classList.toggle('embed-lock', !!EMBEDS[name]);
     if (EMBEDS[name]) {
@@ -9735,6 +9741,7 @@ function _applyTxnPagination(filtered) {
   const payColors = {
     'CASH':  'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0',
     'GCASH': 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe',
+    'CASH + GCASH': 'background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe',
   };
 
   if (!filtered.length) {

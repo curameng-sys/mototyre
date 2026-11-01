@@ -1487,6 +1487,7 @@ def admin_dashboard():
         ).order_by(ReturnRequest.created_at.asc()).all():
             _refund_claims[rr.order_id] = rr  # last one wins if more than one over time
     for o in all_orders + archived_orders:
+        o.pickup_due = _pickup_due(o)
         rr = _refund_claims.get(o.id)
         o.refund_status_label = None
         if rr and rr.status == 'resolved':
@@ -5448,6 +5449,23 @@ def _order_pay_detail(o):
     return o.payment_method
 
 
+def _pickup_due(o):
+    """A Shop Pickup order that has been Ready to Pick Up for a day or more is DUE. After PICKUP_HOLD_DAYS (3) the customer
+    app cancels it by itself, so this also says when. None when the order is not waiting at the counter or is under a day old."""
+    if o.delivery_method == 'ship' or o.is_instore or o.status != 'shipped' or not o.ready_at:
+        return None
+    now = ph_now()
+    waited = now - o.ready_at
+    if waited < timedelta(days=1):
+        return None
+    cancel_at = o.ready_at + timedelta(days=PICKUP_HOLD_DAYS)
+    last_day = (cancel_at - now) <= timedelta(days=1)
+    days = max(1, waited.days)
+    return {'days': days, 'days_label': f"{days} day{'' if days == 1 else 's'}", 'last_day': last_day,
+            'cancel_at': f"{cancel_at.strftime('%b')} {cancel_at.day}, {cancel_at.strftime('%I:%M %p').lstrip('0')}",
+            'hold_days': PICKUP_HOLD_DAYS}
+
+
 def _ship_grand_total(o):
     return round((o.total_amount or 0) + (o.shipping_fee or 0), 2)
 
@@ -7441,6 +7459,8 @@ def payments():
             Order.walkin_customer_id == None,
             Order.is_archived == False,
         ).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
+        for _po in pending_orders:
+            _po.pickup_due = _pickup_due(_po)
 
         history_jos      = []
         history_bookings = []
