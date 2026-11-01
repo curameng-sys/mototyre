@@ -106,7 +106,9 @@
     .nav-logout-btn:hover { background: var(--brand-red); color: #fff; }
 
     /* ── PAGE WRAP ── */
-    .page-wrap { width: 100%; padding: 0 1.25rem 4rem; overflow-anchor: none; }
+    .page-wrap { width: 100%; padding: 0 clamp(1.25rem, 4vw, 4.5rem) 4rem; overflow-anchor: none; }
+    body.is-book .page-wrap { padding-left: 1.25rem; padding-right: 1.25rem; }      /* Appointment: unchanged */
+    #sec-bookings, #sec-orders, #sec-transactions, #sec-returns { padding-left: 0 !important; padding-right: 0 !important; }
     .c-section.active { padding-top: 0.5rem; }
 
     .c-section { display: none; }
@@ -793,9 +795,15 @@
     @media (min-width: 861px) {
       body.pg-lock { overflow: hidden; }
       body.pg-lock .page-wrap { padding-bottom: 0; }
-      #sec-bookings.active, #sec-orders.active, #sec-transactions.active, #sec-returns.active {
-        height: calc(100vh - var(--nav-h, 72px)); height: calc(100dvh - var(--nav-h, 72px)); display: flex; flex-direction: column; box-sizing: border-box; padding: 1.25rem clamp(1rem, 3vw, 2rem) 1rem !important; }
-      #sec-bookings.active > *, #sec-orders.active > *, #sec-transactions.active > *, #sec-returns.active > * { flex-shrink: 0; }
+      #sec-overview.active, #sec-bookings.active, #sec-orders.active, #sec-transactions.active, #sec-returns.active {
+        height: calc(100vh - var(--nav-h, 72px)); height: calc(100dvh - var(--nav-h, 72px)); display: flex; flex-direction: column; box-sizing: border-box; padding: 1.25rem 0 1rem !important; }
+      #sec-overview.active > *, #sec-bookings.active > *, #sec-orders.active > *, #sec-transactions.active > *, #sec-returns.active > * { flex-shrink: 0; }
+      #sec-overview .hero-banner { padding: 1.5rem 2rem; margin-bottom: 1rem; gap: 1.5rem; }
+      #sec-overview .two-col { flex: 1 1 0; min-height: 0; grid-template-rows: minmax(0, 1fr); margin-bottom: 0; }
+      #sec-overview .two-col > .card { min-height: 0; overflow: auto; margin-bottom: 0; }
+      #sec-overview .two-col > .card > div[style*="overflow-x"] { overflow: visible !important; }
+      #sec-overview .two-col .card-head { position: sticky; top: 0; z-index: 3; background: var(--bg-page, #fff); }
+      #sec-overview .two-col .table thead th { position: sticky; top: 0; z-index: 2; background-color: #fff !important; box-shadow: 0 1px 0 var(--line-1); }
       #sec-bookings > .card, #sec-orders > .card { flex: 1 1 0; min-height: 0; overflow: auto; margin-bottom: 0; }
       #sec-bookings > .card > div[style*="overflow-x"], #sec-orders > .card > div[style*="overflow-x"] { overflow: visible !important; }
       #sec-bookings .table thead th, #sec-orders .table thead th { position: sticky; top: 0; z-index: 2; background-color: #fff !important; box-shadow: 0 1px 0 var(--line-1); }
@@ -819,7 +827,7 @@
 
     /* ── PARTS CATALOG: the page itself does not scroll; only the cards do ── */
     #sec-shop.active { height: calc(100vh - var(--nav-h, 72px)); height: calc(100dvh - var(--nav-h, 72px)); display: flex; flex-direction: column; box-sizing: border-box;
-                       padding: 0.5rem clamp(0.4rem, 1vw, 0.9rem) 0.5rem !important; }
+                       padding: 0.5rem 0 0.5rem !important; }
     #sec-shop .section-head { flex: 0 0 auto; margin-bottom: 0.5rem !important; }
     #sec-shop .section-title { font-size: clamp(1.4rem, 2.2vw, 1.8rem); }
     #sec-shop .section-sub { display: none; }
@@ -1327,43 +1335,6 @@
           <div class="hero-stat-chip-key">My Vehicle</div>
         </div>
       </div>
-    </div>
-
-    <div class="section-head">
-      <div class="section-title">QUICK <span>ACTIONS</span></div>
-    </div>
-    <div class="quick-actions">
-      <a class="quick-card red" href="#" onclick="showSection('book', null)">
-        <div class="quick-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="10" y1="17" x2="14" y2="17"/></svg></div>
-        <div><div class="quick-label">Book Appointment</div><div class="quick-sub">Schedule a service visit</div></div>
-        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
-      </a>
-      <a class="quick-card blue" href="#" onclick="showSection('bookings', null)">
-        <div class="quick-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></div>
-        <div><div class="quick-label">My Bookings</div><div class="quick-sub">Track all your appointments</div></div>
-        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
-      </a>
-      <a class="quick-card green" href="#" onclick="showSection('shop', null)">
-        <div class="quick-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
-        <div><div class="quick-label">Parts Catalog</div><div class="quick-sub">Browse parts &amp; accessories</div></div>
-        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
-      </a>
-      <a class="quick-card orange" href="#" onclick="showSection('orders', null)">
-        <div class="quick-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
-        <div><div class="quick-label">My Orders</div><div class="quick-sub">Track your parts orders</div></div>
-        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
-      </a>
-      <a class="quick-card purple" href="#" onclick="openCart(); return false;">
-        <div class="quick-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
-        <div><div class="quick-label">Cart</div><div class="quick-sub" id="qc-cart-sub">Your cart is empty</div></div>
-        <span class="quick-count" id="qc-cart-count"></span>
-        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
-      </a>
-      <a class="quick-card teal" href="#" onclick="showSection('transactions', null)">
-        <div class="quick-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l3-2 2.5 2L12 20l2.5 2L17 20l3 2V2l-3 2-2.5-2L12 4 9.5 2 7 4z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="14" y2="13"/></svg></div>
-        <div><div class="quick-label">Transactions</div><div class="quick-sub">Your payments and refunds</div></div>
-        <div class="quick-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
-      </a>
     </div>
 
     {# Queue no. cell: the number while Confirmed, "Your turn" once the service starts, a dash for cancelled / completed. The same rules
@@ -10911,7 +10882,7 @@ updateMechNote();
     const nav = document.querySelector('.top-nav');
     document.documentElement.style.setProperty('--nav-h', (nav ? nav.offsetHeight : 72) + 'px');
   }
-  function lock(name) { document.body.classList.toggle('book-lock', name === 'book' || name === 'shop'); document.body.classList.toggle('pg-lock', ['bookings', 'orders', 'transactions', 'returns'].includes(name)); fit(); if (name === 'shop') { if (typeof renderShopPage === 'function') setTimeout(renderShopPage, 30); if (typeof refreshCatalogStock === 'function') refreshCatalogStock(); } }
+  function lock(name) { document.body.classList.toggle('is-book', name === 'book'); document.body.classList.toggle('book-lock', name === 'book' || name === 'shop'); document.body.classList.toggle('pg-lock', ['overview', 'bookings', 'orders', 'transactions', 'returns'].includes(name)); fit(); if (name === 'shop') { if (typeof renderShopPage === 'function') setTimeout(renderShopPage, 30); if (typeof refreshCatalogStock === 'function') refreshCatalogStock(); } }
   const _show = window.showSection;
   window.showSection = function (name, el) { const r = _show.apply(this, arguments); lock(name); return r; };
   window.addEventListener('resize', fit);
