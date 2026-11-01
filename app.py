@@ -3836,12 +3836,32 @@ def get_booked_slots():
         b_end   = compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)
         by_date.setdefault(b.date, []).append((b_start, b_end))
 
+    # Everything the month needs is read ONCE here. Asking the database day by day (roster, capacity, blocked times,
+    # walk-in jobs: about 4 queries a day, 120 for the month) is what made the calendar slow to appear on a database that
+    # is not on the same machine.
+    roster = Mechanic.query.order_by(Mechanic.id).all()
+    capacity = {c.date: c for c in DailyCapacity.query.filter(DailyCapacity.date >= start, DailyCapacity.date < end).all()}
+    blocked = {}
+    for bs in BlockedSlot.query.filter(BlockedSlot.date >= start, BlockedSlot.date < end).all():
+        m = bs.time.hour * 60 + bs.time.minute
+        blocked.setdefault(bs.date, []).append((m, m + SLOT_GRANULARITY_MIN))
+    walkin = {}
+    month_start = datetime.combine(start, datetime.min.time())
+    for jo in JobOrder.query.filter(
+            JobOrder.mechanic_name.isnot(None), JobOrder.start_at.isnot(None),
+            JobOrder.start_at >= month_start, JobOrder.start_at < datetime.combine(end, datetime.min.time()),
+            JobOrder.mechanic_done_at.is_(None), JobOrder.status.in_(['pending', 'in_progress'])).all():
+        m = jo.start_at.hour * 60 + jo.start_at.minute
+        walkin.setdefault(jo.start_at.date(), []).append((m, m + (jo.est_minutes or 30)))
+
     fully_booked = []
     d = start
     while d < end:
-        intervals = list(by_date.get(d, [])) + _gather_blocked_intervals(d)
-        _, _, on_duty = get_on_duty_mechanics(d)
-        if day_fully_booked(intervals, len(on_duty)):
+        cap_row = capacity.get(d)
+        n = cap_row.mechanic_count if (cap_row and cap_row.mechanic_count is not None) else len(roster)
+        on_duty_count = sum(1 for m in roster[:max(n, 0)] if m.status == 'available')    # same rule as get_on_duty_mechanics()
+        intervals = list(by_date.get(d, [])) + blocked.get(d, []) + walkin.get(d, [])
+        if day_fully_booked(intervals, on_duty_count):
             fully_booked.append(d.strftime('%Y-%m-%d'))
         d += timedelta(days=1)
     return jsonify({'fully_booked': fully_booked})

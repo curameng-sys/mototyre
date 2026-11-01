@@ -4706,9 +4706,17 @@ async function submitAllBookings() {
   }
 }
 
-async function fetchBookedSlots(year, month) {
-  try { const res = await fetch(`/api/booked-slots?year=${year}&month=${month+1}`); bookedData = await res.json(); }
-  catch(e) { bookedData = { fully_booked: [] }; }
+// Which days are fully booked, per month. The calendar is redrawn many times (every pick, every queue change): asking the server each time made the
+// dates slow to appear, so the answer for a month is reused for 30 seconds, and two asks at once share one request.
+const _bookedCache = {};
+function fetchBookedSlots(year, month) {
+  const key = year + '-' + month, hit = _bookedCache[key], now = Date.now();
+  if (hit && now - hit.ts < 30000) { bookedData = hit.data; return hit.promise || Promise.resolve(); }
+  const promise = fetch(`/api/booked-slots?year=${year}&month=${month+1}`).then(r => r.json())
+    .then(d => { bookedData = d; _bookedCache[key] = { ts: Date.now(), data: d }; })
+    .catch(() => { bookedData = { fully_booked: [] }; delete _bookedCache[key]; });
+  _bookedCache[key] = { ts: now, data: bookedData, promise };
+  return promise;
 }
 function isFullyBooked(dateStr) { return (bookedData.fully_booked || []).includes(dateStr); }
 
