@@ -1013,6 +1013,8 @@
     #booking-queue-list input[type="checkbox"] { display: none; }
     #booking-queue-list { max-height: none !important; }
     /* Step 7: the details on the left, the policy and Confirm on the right, so it fits one screen */
+    /* Always take up its line (it is empty once the box is ticked) so the Confirm button does not jump when ticking */
+    #policy-hint { display: block !important; min-height: 1.1rem; }
     @media (min-width: 861px) {
       .bw-pane[data-bstep="7"] .bw-narrow { max-width: 1120px; }
       .bw-pane[data-bstep="7"] .bw-q { max-width: 1120px; }
