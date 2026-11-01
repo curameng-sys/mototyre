@@ -1018,9 +1018,9 @@
     @media (min-width: 861px) {
       .bw-pane[data-bstep="7"] .bw-narrow { max-width: 1120px; }
       .bw-pane[data-bstep="7"] .bw-q { max-width: 1120px; }
-      .bw-pane[data-bstep="7"] #booking-queue-panel { display: grid !important; grid-template-columns: minmax(0, 1.2fr) minmax(300px, 1fr); column-gap: clamp(1rem, 2.2vw, 2rem); align-items: start; margin-top: 0 !important; }
+      .bw-pane[data-bstep="7"] #booking-queue-panel { display: grid !important; grid-template-columns: minmax(0, 1.2fr) minmax(300px, 1fr); column-gap: clamp(1rem, 2.2vw, 2rem); align-items: start; margin-top: 0 !important; grid-template-rows: auto auto auto auto 1fr; }   /* the last row soaks up the extra height of a long details list, so the right side stays together */
       .bw-pane[data-bstep="7"] #booking-queue-panel > .appt-section-label { grid-column: 1; grid-row: 1; }
-      .bw-pane[data-bstep="7"] #booking-queue-list { grid-column: 1; grid-row: 2 / span 3; }
+      .bw-pane[data-bstep="7"] #booking-queue-list { grid-column: 1; grid-row: 2 / span 4; }
       .bw-pane[data-bstep="7"] #cancel-policy-section { grid-column: 2; grid-row: 1 / span 2; margin-top: 0 !important; }
       .bw-pane[data-bstep="7"] #btn-confirm-all-bottom { grid-column: 2; grid-row: 3; margin-top: 0.9rem !important; padding: 0.95rem 1rem !important; font-size: 0.95rem !important; }
       .bw-pane[data-bstep="7"] #policy-hint { grid-column: 2; grid-row: 4; }
@@ -11073,8 +11073,8 @@ updateMechNote();
         ${q.odometer ? row('Odometer', esc(Number(q.odometer).toLocaleString('en-US')) + ' km') : ''}
         ${row('Mechanic', q.mechanic_name ? esc(q.mechanic_name) : 'The shop will assign one')}
         ${q.notes ? row('Notes', esc(q.notes)) : ''}
-        ${svcTotalOf(svcs) > 0 ? row('Total to pay', '<span style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:1.2rem;color:var(--brand-red);">' + fmtPeso(svcTotalOf(svcs)) + '</span><div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.25rem;line-height:1.45;">Nothing is charged now. You pay at the shop after the service. If the mechanic finds more work, the shop sends you a quotation first and you decide.</div>') : ''}
         ${q.own_parts ? row('Own parts', esc(q.own_parts_note || 'You are bringing your own parts') + '<div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.2rem;">Labor only. Not covered by the shop\'s replacement.</div>') : ''}
+        ${svcTotalOf(svcs) > 0 ? row('Total to pay', '<span style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:1.2rem;color:var(--brand-red);">' + fmtPeso(svcTotalOf(svcs)) + '</span><div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.25rem;line-height:1.45;">Nothing is charged now. You pay at the shop after the service. If the mechanic finds more work, the shop sends you a quotation first and you decide.</div>') : ''}
         ${q._mechIssue && typeof issueBlockHTML === 'function' ? `<div style="padding:0.6rem 1rem;">${issueBlockHTML(q, 0)}</div>` : ''}
       </div>
       <div class="rv-note"><b>Not booked yet.</b> Your slot is only reserved when you press <b>Confirm</b>. You can go back and change anything, or leave without confirming and nothing will be booked.</div>`;
