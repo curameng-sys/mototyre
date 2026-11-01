@@ -10928,19 +10928,24 @@ updateMechNote();
     if (!offered.length || !(startMs > shopNowMs())) return;
     const hhmm = String(Math.floor(hhmmFromLabel(b.time) / 60)).padStart(2, '0') + ':' + String(hhmmFromLabel(b.time) % 60).padStart(2, '0');
     const wait = ms => new Promise(r => setTimeout(r, ms));
-    const giveUp = why => { if (note) note.textContent += ' ' + why; };
+    const giveUp = why => { if (note) note.textContent = note.textContent.replace(' Filling in your old date and time…', '') + ' ' + why; };
+    if (note) note.textContent += ' Filling in your old date and time…';
     const [yy, mm, dd] = b.date_iso.split('-').map(Number);
     currentYear = yy; currentMonth = mm - 1;
     await renderCalendar();
     const cell = [...document.querySelectorAll('#cal-grid .cal-day:not(.empty)')].find(c => parseInt(c.textContent, 10) === dd && typeof c.onclick === 'function');
     if (!cell) return giveUp('Your old date is not open any more. Pick a new date.');
     cell.onclick();
-    let btn = null;
-    for (let i = 0; i < 40 && !btn; i++) {
+    // the times come from the server: on a slow connection this can take a while, so wait for them (up to ~20 s)
+    let btn = null, anySlots = false;
+    for (let i = 0; i < 200 && !btn; i++) {
       await wait(100);
-      btn = [...document.querySelectorAll('#time-slots-wrap .time-slot-btn')].find(x => x.dataset.time === hhmm && !x.disabled);
+      const all = [...document.querySelectorAll('#time-slots-wrap .time-slot-btn')];
+      anySlots = all.length > 0;
+      btn = all.find(x => x.dataset.time === hhmm && !x.disabled);
+      if (!btn && anySlots && i > 3) break;                        // the times are in and the old one is not free
     }
-    if (!btn) { show(3); return giveUp('Your old time is not free any more. Pick another time.'); }
+    if (!btn) { show(3); return giveUp(anySlots ? 'Your old time is not free any more. Pick another time.' : 'The times took too long to load. Pick a time.'); }
     btn.click();
     mechChosen = true; setMechanicMode('shop');
     if (bkDirty) {
