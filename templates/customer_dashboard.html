@@ -788,6 +788,29 @@
 
   
 
+    /* ── MY BOOKINGS / MY ORDERS / TRANSACTIONS / RETURNS & WARRANTY on a computer: the browser page does not scroll; only the
+       list inside its box does (the header row of a table stays) ── */
+    @media (min-width: 861px) {
+      body.pg-lock { overflow: hidden; }
+      body.pg-lock .page-wrap { padding-bottom: 0; }
+      #sec-bookings.active, #sec-orders.active, #sec-transactions.active, #sec-returns.active {
+        height: calc(100vh - var(--nav-h, 72px)); height: calc(100dvh - var(--nav-h, 72px)); display: flex; flex-direction: column; box-sizing: border-box; padding: 1.25rem clamp(1rem, 3vw, 2rem) 1rem !important; }
+      #sec-bookings.active > *, #sec-orders.active > *, #sec-transactions.active > *, #sec-returns.active > * { flex-shrink: 0; }
+      #sec-bookings > .card, #sec-orders > .card { flex: 1 1 0; min-height: 0; overflow: auto; margin-bottom: 0; }
+      #sec-bookings > .card > div[style*="overflow-x"], #sec-orders > .card > div[style*="overflow-x"] { overflow: visible !important; }
+      #sec-bookings .table thead th, #sec-orders .table thead th { position: sticky; top: 0; z-index: 2; background-color: #fff !important; box-shadow: 0 1px 0 var(--line-1); }
+      #sec-transactions .tx-panel { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
+      #sec-transactions .tx-toolbar { flex-shrink: 0; }
+      #sec-transactions #tx-list { flex: 1 1 0; min-height: 0; overflow: auto; }
+      #sec-transactions #tx-list table thead th, #sec-transactions #tx-list .tx-head { position: sticky; top: 0; z-index: 2; }
+      #sec-returns #returns-tab-requests { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 2px 4px 1rem 2px; }
+      #sec-returns #returns-tab-claim[style*="block"] { display: flex !important; flex-direction: column; flex: 1 1 0; min-height: 0; }
+      #sec-returns.active > * { width: 100%; box-sizing: border-box; }      /* keep the centred 1200px column (its children centre themselves) */
+      #sec-returns .rw-subtabs { flex-shrink: 0; }
+      #sec-returns .rw-pane { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 2px 4px 1rem 2px; }
+      #sec-returns .rw-pane[style*="none"] { display: none !important; }
+    }
+
     /* ── PARTS CATALOG: the page itself does not scroll; only the cards do ── */
     #sec-shop.active { height: calc(100vh - var(--nav-h, 72px)); height: calc(100dvh - var(--nav-h, 72px)); display: flex; flex-direction: column; box-sizing: border-box;
                        padding: 0.5rem clamp(0.4rem, 1vw, 0.9rem) 0.5rem !important; }
@@ -820,6 +843,10 @@
     @media (max-width: 900px) { .acct-layout { grid-template-columns: 1fr; } .acct-side { position: static; } }
     /* ── Returns & Warranty: narrower page, cards two per row ── */
     #sec-returns > * { max-width: 1200px; margin-left: auto; margin-right: auto; }
+    .rw-sub:hover { color: var(--fg-1) !important; border-color: var(--line-3, #d1d5db) !important; }
+    .rw-sub.on { background: var(--brand-red) !important; border-color: var(--brand-red) !important; color: #fff !important; }
+    .rw-sub .rw-n { min-width: 20px; height: 18px; padding: 0 0.35rem; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; font-size: 0.62rem; border-radius: 99px; background: rgba(0,0,0,0.07); color: var(--fg-2); }
+    .rw-sub.on .rw-n { background: rgba(255,255,255,0.25); color: #fff; }
     .rw-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
     .rw-grid > .card { margin-bottom: 0; display: flex; flex-direction: column; }
     .rw-grid > .card .rw-foot { margin-top: auto; }
@@ -2056,6 +2083,21 @@
 
   <!-- Screen 1 -->
   <div id="returns-tab-claim">
+    <!-- one box at a time: spare parts, completed services, or how returns work -->
+    <div class="rw-subtabs" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.9rem;">
+      <button type="button" class="rw-sub on" data-pane="parts" onclick="setRwPane('parts')" style="padding:0.5rem 1.1rem;border-radius:99px;border:1px solid var(--line-2);background:#fff;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:0.45rem;">Spare Parts Orders <span class="rw-n" id="rw-n-parts">0</span></button>
+      <button type="button" class="rw-sub" data-pane="services" onclick="setRwPane('services')" style="padding:0.5rem 1.1rem;border-radius:99px;border:1px solid var(--line-2);background:#fff;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:0.45rem;">Completed Services <span class="rw-n" id="rw-n-services">0</span></button>
+      <button type="button" class="rw-sub" data-pane="info" onclick="setRwPane('info')" style="padding:0.5rem 1.1rem;border-radius:99px;border:1px solid var(--line-2);background:#fff;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:0.45rem;">How returns work</button>
+    </div>
+
+    <div class="rw-pane" id="rw-pane-parts">
+      <div style="background:#fefce8;border:1px solid #eab308;border-radius:10px;padding:0.55rem 0.85rem;margin-bottom:0.85rem;font-size:0.78rem;color:#854d0e;line-height:1.5;"><strong>Replacement limit: 2 requests per item.</strong> Parts can be returned within 7 days of delivery or pickup. <a href="#" onclick="setRwPane('info'); return false;" style="color:#854d0e;font-weight:700;">Read more</a></div>
+      <div id="claimable-orders-list" class="rw-grid"></div>
+    </div>
+    <div class="rw-pane" id="rw-pane-services" style="display:none;">
+      <div id="claimable-bookings-list" class="rw-grid"></div>
+    </div>
+    <div class="rw-pane" id="rw-pane-info" style="display:none;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.85rem;">
       <div class="card" style="padding:1rem 1.1rem;display:flex;gap:0.85rem;margin-bottom:0;">
         <span style="flex-shrink:0;width:38px;height:38px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>
@@ -2086,18 +2128,13 @@
       <span style="display:inline-flex;align-items:center;gap:0.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Services have a <strong style="color:var(--fg-1);">15-day warranty</strong> from the day the job was done</span>
     </div>
 
-    <div style="background:#fefce8;border:1px solid #eab308;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.5rem;">
+    <div style="background:#fefce8;border:1px solid #eab308;border-radius:10px;padding:0.85rem 1rem;margin-bottom:0;">
       <div style="display:flex;align-items:center;gap:0.45rem;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:#713f12;margin-bottom:0.3rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#b45309;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Replacement limit: 2 requests per item</div>
       <div style="font-size:0.78rem;color:#854d0e;line-height:1.55;">
         If a part is defective, you can ask for a replacement up to <strong>2 times</strong>. Only <strong>approved</strong> replacements count — if the shop declines a request (for example, because the damage came from misuse or improper installation), it doesn't use up one of your chances. If the same item is defective a third time after 2 approved replacements, you won't be able to submit a request online anymore — you and the shop will need to talk it over and agree on what to do next.
       </div>
     </div>
-
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Spare Parts Orders</div>
-    <div id="claimable-orders-list" class="rw-grid" style="margin-bottom:1.85rem;"></div>
-
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg-2);margin-bottom:0.65rem;">Completed Services</div>
-    <div id="claimable-bookings-list" class="rw-grid"></div>
+    </div>
   </div>
 
   <!-- Screen 3: My Requests -->
@@ -6991,6 +7028,22 @@ function setReturnsTab(tab) {
   if (isClaim) renderClaimableLists(); else renderMyRequests();
 }
 
+// Returns & Warranty > What Can Be Claimed: one box at a time (spare parts, completed services, how returns work)
+function setRwPane(k) {
+  window._rwPane = k;
+  document.querySelectorAll('#returns-tab-claim .rw-pane').forEach(p => { p.style.display = p.id === 'rw-pane-' + k ? 'block' : 'none'; });
+  document.querySelectorAll('#returns-tab-claim .rw-sub').forEach(b => b.classList.toggle('on', b.dataset.pane === k));
+}
+(function rwCounts() {
+  const watch = (listId, nId) => {
+    const list = document.getElementById(listId), n = document.getElementById(nId);
+    if (!list || !n) return;
+    const upd = () => { n.textContent = [...list.querySelectorAll(':scope > .card')].filter(c => c.querySelector('button, .rw-foot')).length; };      // an empty-list message is not an item
+    new MutationObserver(upd).observe(list, { childList: true }); upd();
+  };
+  watch('claimable-orders-list', 'rw-n-parts'); watch('claimable-bookings-list', 'rw-n-services');
+})();
+
 function renderClaimableLists() {
   renderClaimableOrders();
   renderClaimableBookings();
@@ -10853,7 +10906,7 @@ updateMechNote();
     const nav = document.querySelector('.top-nav');
     document.documentElement.style.setProperty('--nav-h', (nav ? nav.offsetHeight : 72) + 'px');
   }
-  function lock(name) { document.body.classList.toggle('book-lock', name === 'book' || name === 'shop'); fit(); if (name === 'shop') { if (typeof renderShopPage === 'function') setTimeout(renderShopPage, 30); if (typeof refreshCatalogStock === 'function') refreshCatalogStock(); } }
+  function lock(name) { document.body.classList.toggle('book-lock', name === 'book' || name === 'shop'); document.body.classList.toggle('pg-lock', ['bookings', 'orders', 'transactions', 'returns'].includes(name)); fit(); if (name === 'shop') { if (typeof renderShopPage === 'function') setTimeout(renderShopPage, 30); if (typeof refreshCatalogStock === 'function') refreshCatalogStock(); } }
   const _show = window.showSection;
   window.showSection = function (name, el) { const r = _show.apply(this, arguments); lock(name); return r; };
   window.addEventListener('resize', fit);
