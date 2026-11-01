@@ -382,7 +382,9 @@ class Order(db.Model):
     total_amount    = db.Column(db.Float, nullable=False)
     status          = db.Column(db.String(20), default='pending')
     payment_method  = db.Column(db.String(20), default='cash')
-    payment_ref     = db.Column(db.String(80), nullable=True)  # PayMongo checkout id for GCash orders
+    payment_ref     = db.Column(db.String(80), nullable=True)  # PayMongo checkout id for GCash orders (an in-store GCash sale keeps its reference no. here)
+    cash_amount     = db.Column(db.Float, nullable=True)       # only for an in-store sale paid part cash, part GCash (payment_method 'split')
+    gcash_amount    = db.Column(db.Float, nullable=True)
     delivery_method = db.Column(db.String(20), default='pickup')
     ship_address    = db.Column(db.Text)
     created_at      = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
@@ -1201,7 +1203,7 @@ def _revenue_transactions(date_from=None, date_to=None):
         txns.append({
             'ref': (f'SALE-{o.id:03d}' if is_sale else f'ORD-{o.id:03d}'),
             'type': ('sale' if is_sale else 'online'), 'customer': cust,
-            'payment': (o.payment_method or 'cash').upper(),
+            'payment': _order_pay_label(o),
             'amount': (o.total_amount or 0) + ((o.shipping_fee or 0) if o.delivery_method == 'ship' else 0),
             'date': d, 'status': 'Completed', 'record_id': o.id,
         })
@@ -5432,6 +5434,20 @@ def _ship_prices(o):
         return {}
 
 
+def _order_pay_label(o):
+    """'CASH', 'GCASH', or for a split in-store sale 'CASH + GCASH'."""
+    if (o.payment_method or '') == 'split':
+        return 'CASH + GCASH'
+    return (o.payment_method or 'cash').upper()
+
+
+def _order_pay_detail(o):
+    """For a split sale: 'Cash P300.00 + GCash P200.00' (used on receipts). Otherwise just the method."""
+    if (o.payment_method or '') == 'split':
+        return f"Cash \u20b1{(o.cash_amount or 0):,.2f} + GCash \u20b1{(o.gcash_amount or 0):,.2f}"
+    return o.payment_method
+
+
 def _ship_grand_total(o):
     return round((o.total_amount or 0) + (o.shipping_fee or 0), 2)
 
@@ -7327,7 +7343,7 @@ def _billing_new_count(user):
         func.coalesce(Booking.invoice_paid_at, Booking.completed_at, Booking.created_at) > seen)
     if quoted:
         bq = bq.filter(db.or_(~Booking.id.in_(quoted), Booking.invoice_paid == True))
-    oq = (Order.query.filter(Order.payment_method.in_(['cash', 'gcash']), Order.status == 'completed')
+    oq = (Order.query.filter(Order.payment_method.in_(['cash', 'gcash', 'split']), Order.status == 'completed')
           .filter(Order.items.any())
           .filter(func.coalesce(Order.delivered_at, Order.created_at) > seen))
     jq = JobOrder.query.join(Payment, Payment.job_order_id == JobOrder.id).filter(Payment.paid_at > seen)
@@ -7472,7 +7488,7 @@ def payments():
                     b.bj_state = 'none'
 
         history_orders = (Order.query
-                          .filter(Order.payment_method.in_(['cash', 'gcash']), Order.status == 'completed')
+                          .filter(Order.payment_method.in_(['cash', 'gcash', 'split']), Order.status == 'completed')
                           .filter(Order.items.any())
                           .order_by(func.coalesce(Order.delivered_at, Order.created_at).desc()).limit(50).all())
 
@@ -7508,7 +7524,7 @@ def payments():
     _history_count = (
         JobOrder.query.join(Payment, Payment.job_order_id == JobOrder.id).count()
         + _booking_history_count_q.count()
-        + Order.query.filter(Order.payment_method.in_(['cash', 'gcash']), Order.status == 'completed')
+        + Order.query.filter(Order.payment_method.in_(['cash', 'gcash', 'split']), Order.status == 'completed')
                      .filter(Order.items.any()).count()
     )
     # Recomputed after the baseline moves, so opening History reads 0.
@@ -7535,7 +7551,7 @@ def payments():
                         'customer': b.contact_name or (b.customer.fullname if b.customer else 'Customer'),
                         'amount': b.total_amount, 'method': (b.invoice_payment_method or b.payment_method or 'cash').lower(),
                         'paid_at': b.invoice_paid_at or b.completed_at or b.created_at})
-    for o in (Order.query.filter(Order.payment_method.in_(['cash', 'gcash']), Order.status == 'completed')
+    for o in (Order.query.filter(Order.payment_method.in_(['cash', 'gcash', 'split']), Order.status == 'completed')
               .filter(Order.items.any()).order_by(Order.created_at.desc()).limit(100).all()):
         _name = o.contact_name if o.is_instore else o.customer.fullname
         _ref = f'SALE-{o.id:03d}' if o.is_instore else f'ORD-{o.id:03d}'
@@ -7548,7 +7564,7 @@ def payments():
         _recent.append({'tag': 'SALE' if o.is_instore else 'ORD', 'kind': 'ord', 'id': o.id, 'ref': _ref, 'customer': _name,
                         'amount': _amt, 'method': (o.payment_method or 'cash').lower(), 'paid_at': _when,
                         'ord': {'ref': _ref, 'customer': _name, 'phone': '' if o.is_instore else (o.customer.phone or ''),
-                                'amount': _amt, 'method': o.payment_method,
+                                'amount': _amt, 'method': _order_pay_detail(o),
                                 'date': _when.strftime('%b %d, %Y %I:%M %p'),
                                 'items': _items,
                                 'delivery': o.delivery_method, 'is_instore': bool(o.is_instore)}})
@@ -7813,13 +7829,28 @@ def pos_checkout():
     customer_id = data.get('customer_id')
     total       = float(data.get('total', 0))
     payment_method = data.get('payment_method', 'cash')
-    if payment_method not in ('cash', 'gcash'):
-        return jsonify({'success': False, 'error': 'Choose Cash or GCash.'}), 400
+    if payment_method not in ('cash', 'gcash', 'split'):
+        return jsonify({'success': False, 'error': 'Choose Cash, GCash or Cash + GCash.'}), 400
     if not cart and not services:
         return jsonify({'success': False, 'error': 'Cart is empty'}), 400
     # In-store parts sale: each method has its own check (the walk-in/billing flows send neither field).
     gcash_ref = None
-    if any(not i.get('source_order_id') for i in cart) and 'cash_received' in data:
+    split_cash = split_gcash = None
+    if payment_method == 'split':
+        sale_total = round(sum(int(i['quantity']) * float(i['unit_price']) for i in cart if not i.get('source_order_id')), 2)
+        try:
+            split_cash = round(float(data.get('cash_amount') or 0), 2)
+            split_gcash = round(float(data.get('gcash_amount') or 0), 2)
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'Enter the cash and GCash amounts.'}), 400
+        if split_cash <= 0 or split_gcash <= 0:
+            return jsonify({'success': False, 'error': 'A split payment needs both a cash amount and a GCash amount. For one method only, choose Cash or GCash.'}), 400
+        if abs(split_cash + split_gcash - sale_total) > 0.009:
+            return jsonify({'success': False, 'error': f'Cash and GCash must add up to the total (\u20b1{sale_total:,.2f}).'}), 400
+        gcash_ref = str(data.get('gcash_ref') or '').strip()
+        if not (gcash_ref.isdigit() and len(gcash_ref) == 13):
+            return jsonify({'success': False, 'error': 'Enter the 13-digit GCash reference no. for the GCash part.'}), 400
+    elif any(not i.get('source_order_id') for i in cart) and 'cash_received' in data:
         if payment_method == 'cash':
             try:
                 received = float(data.get('cash_received') or 0)
@@ -7873,7 +7904,7 @@ def pos_checkout():
         order = Order(user_id=uid, total_amount=new_total, status='completed', payment_method=payment_method,
                       delivered_at=ph_now(), is_instore=True, instore_seen=False,
                       contact_name=None if customer_id else customer_name,
-                      payment_ref=gcash_ref)
+                      payment_ref=gcash_ref, cash_amount=split_cash, gcash_amount=split_gcash)
         db.session.add(order)
         db.session.flush()
         order_id = order.id
@@ -8876,7 +8907,7 @@ def _order_report_data(first, last, include_cancelled):
             continue
         status = 'Completed' if done else 'Cancelled'
         items_total = round(float(o.total_amount or 0), 2)
-        method = 'GCash' if (o.payment_method or '').lower() == 'gcash' or kind == 'ship' else 'Cash'
+        method = 'Cash + GCash' if (o.payment_method or '').lower() == 'split' else ('GCash' if (o.payment_method or '').lower() == 'gcash' or kind == 'ship' else 'Cash')
         if done:
             completed_n += 1
             counts[kind] += 1
@@ -9309,6 +9340,12 @@ def generate_report():
     for o in orders:
         if o.status == 'cancelled':
             continue
+        if (o.payment_method or '') == 'split':
+            for method, part in (('CASH', o.cash_amount or 0), ('GCASH', o.gcash_amount or 0)):
+                payment_split[method][0] += 1
+                if order_counts_as_revenue(o):
+                    payment_split[method][1] += part
+            continue
         method = (o.payment_method or 'cash').upper()
         payment_split[method][0] += 1
         if order_counts_as_revenue(o):
@@ -9690,6 +9727,8 @@ with admin_app.app_context():
         "ALTER TABLE `user` ADD COLUMN profile_pic_mime VARCHAR(40) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN billing_seen_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN payment_ref VARCHAR(80) DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN cash_amount FLOAT DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN paid_at DATETIME",
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",

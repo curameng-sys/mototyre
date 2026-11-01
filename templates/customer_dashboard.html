@@ -806,7 +806,13 @@
       #sec-returns #returns-tab-requests { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 2px 4px 1rem 2px; }
       #sec-returns #returns-tab-claim[style*="block"] { display: flex !important; flex-direction: column; flex: 1 1 0; min-height: 0; }
       #sec-returns.active > * { width: 100%; box-sizing: border-box; }      /* keep the centred 1200px column (its children centre themselves) */
-      #sec-returns .rw-subtabs { flex-shrink: 0; }
+      #sec-returns .rw-info { flex-shrink: 0; margin-bottom: 0.7rem; }
+      #sec-returns .rw-info > div:first-child { gap: 0.75rem !important; margin-bottom: 0.5rem !important; }
+      #sec-returns .rw-info > div:first-child > .card { padding: 0.65rem 0.85rem !important; gap: 0.65rem !important; }
+      #sec-returns .rw-info > div:first-child > .card > span { width: 30px !important; height: 30px !important; }
+      #sec-returns .rw-info > div:nth-child(2) { margin-bottom: 0.5rem !important; }
+      #sec-returns .rw-info > div:nth-child(3) { padding: 0.55rem 0.8rem !important; margin-bottom: 0 !important; }
+      #sec-returns .rw-subtabs { flex-shrink: 0; margin-bottom: 0.6rem !important; }
       #sec-returns .rw-pane { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 2px 4px 1rem 2px; }
       #sec-returns .rw-pane[style*="none"] { display: none !important; }
     }
@@ -2083,21 +2089,7 @@
 
   <!-- Screen 1 -->
   <div id="returns-tab-claim">
-    <!-- one box at a time: spare parts, completed services, or how returns work -->
-    <div class="rw-subtabs" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.9rem;">
-      <button type="button" class="rw-sub on" data-pane="parts" onclick="setRwPane('parts')" style="padding:0.5rem 1.1rem;border-radius:99px;border:1px solid var(--line-2);background:#fff;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:0.45rem;">Spare Parts Orders <span class="rw-n" id="rw-n-parts">0</span></button>
-      <button type="button" class="rw-sub" data-pane="services" onclick="setRwPane('services')" style="padding:0.5rem 1.1rem;border-radius:99px;border:1px solid var(--line-2);background:#fff;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:0.45rem;">Completed Services <span class="rw-n" id="rw-n-services">0</span></button>
-      <button type="button" class="rw-sub" data-pane="info" onclick="setRwPane('info')" style="padding:0.5rem 1.1rem;border-radius:99px;border:1px solid var(--line-2);background:#fff;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:0.45rem;">How returns work</button>
-    </div>
-
-    <div class="rw-pane" id="rw-pane-parts">
-      <div style="background:#fefce8;border:1px solid #eab308;border-radius:10px;padding:0.55rem 0.85rem;margin-bottom:0.85rem;font-size:0.78rem;color:#854d0e;line-height:1.5;"><strong>Replacement limit: 2 requests per item.</strong> Parts can be returned within 7 days of delivery or pickup. <a href="#" onclick="setRwPane('info'); return false;" style="color:#854d0e;font-weight:700;">Read more</a></div>
-      <div id="claimable-orders-list" class="rw-grid"></div>
-    </div>
-    <div class="rw-pane" id="rw-pane-services" style="display:none;">
-      <div id="claimable-bookings-list" class="rw-grid"></div>
-    </div>
-    <div class="rw-pane" id="rw-pane-info" style="display:none;">
+    <div class="rw-info">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.85rem;">
       <div class="card" style="padding:1rem 1.1rem;display:flex;gap:0.85rem;margin-bottom:0;">
         <span style="flex-shrink:0;width:38px;height:38px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>
@@ -2134,6 +2126,19 @@
         If a part is defective, you can ask for a replacement up to <strong>2 times</strong>. Only <strong>approved</strong> replacements count — if the shop declines a request (for example, because the damage came from misuse or improper installation), it doesn't use up one of your chances. If the same item is defective a third time after 2 approved replacements, you won't be able to submit a request online anymore — you and the shop will need to talk it over and agree on what to do next.
       </div>
     </div>
+    </div>
+
+    <!-- one box at a time: spare parts or completed services -->
+    <div class="rw-subtabs" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.9rem;">
+      <button type="button" class="rw-sub on" data-pane="parts" onclick="setRwPane('parts')" style="padding:0.5rem 1.1rem;border-radius:99px;border:1px solid var(--line-2);background:#fff;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:0.45rem;">Spare Parts Orders <span class="rw-n" id="rw-n-parts">0</span></button>
+      <button type="button" class="rw-sub" data-pane="services" onclick="setRwPane('services')" style="padding:0.5rem 1.1rem;border-radius:99px;border:1px solid var(--line-2);background:#fff;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:0.45rem;">Completed Services <span class="rw-n" id="rw-n-services">0</span></button>
+    </div>
+
+    <div class="rw-pane" id="rw-pane-parts">
+      <div id="claimable-orders-list" class="rw-grid"></div>
+    </div>
+    <div class="rw-pane" id="rw-pane-services" style="display:none;">
+      <div id="claimable-bookings-list" class="rw-grid"></div>
     </div>
   </div>
 
@@ -7028,7 +7033,7 @@ function setReturnsTab(tab) {
   if (isClaim) renderClaimableLists(); else renderMyRequests();
 }
 
-// Returns & Warranty > What Can Be Claimed: one box at a time (spare parts, completed services, how returns work)
+// Returns & Warranty > What Can Be Claimed: one box at a time (spare parts or completed services)
 function setRwPane(k) {
   window._rwPane = k;
   document.querySelectorAll('#returns-tab-claim .rw-pane').forEach(p => { p.style.display = p.id === 'rw-pane-' + k ? 'block' : 'none'; });

@@ -298,7 +298,9 @@
       body.parts-lock .parts-right > .card { flex: 1 0 auto; display: flex; flex-direction: column; margin-bottom: 0; }
       body.parts-lock .parts-right .card-body { flex: 1; display: flex; flex-direction: column; }
       body.parts-lock #parts-cart-items { flex: 1 1 auto; min-height: 36px; overflow-y: auto; margin-bottom: 0.5rem !important; }   /* its max-height is set by fitPartsCartList() */
-      @media (max-height: 820px) { body.parts-lock #parts-pay-cash > div:first-child { display: none; } }
+      @media (max-height: 820px) { body.parts-lock #parts-pay-cash > div:first-child, body.parts-lock #parts-pay-split > div:first-child { display: none; } }
+      body.parts-lock #parts-pay-split { padding: 0.5rem 0.7rem !important; margin-top: 0.5rem !important; }
+      body.parts-lock #parts-btn-split { padding-top: 0.3rem !important; padding-bottom: 0.3rem !important; }
       body.parts-lock #parts-cart-empty { padding: 0.5rem 0 !important; }
       body.parts-lock .parts-right .card-head { padding-top: 0.7rem; padding-bottom: 0.7rem; }
       body.parts-lock #parts-pay-cash, body.parts-lock #parts-pay-gcash { padding: 0.5rem 0.7rem !important; margin-top: 0.5rem !important; }
@@ -626,6 +628,16 @@
       display: inline-flex; align-items: center; gap: 0.4rem;
     }
     .btn-primary-custom:hover { background: #1f2937; color: #fff; }
+    /* the light "go back / keep" button that sits beside a primary one (it had no style, so it showed as a plain browser button) */
+    .btn-secondary-custom {
+      background: #fff; color: var(--text); border: 1px solid var(--border);
+      padding: 0.5rem 1rem; border-radius: 7px;
+      font-size: 0.78rem; font-weight: 600; font-family: inherit; cursor: pointer;
+      transition: all 0.15s; text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+    }
+    .btn-secondary-custom:hover { background: #f3f4f6; border-color: #d1d5db; }
+    .btn-secondary-custom:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-action-edit { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.72rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
     .btn-action-edit:hover { background: #dbeafe; }
     .btn-action-delete { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.72rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
@@ -2580,6 +2592,10 @@
               <div style="margin-bottom:1rem;">
                 <label style="font-size:0.72rem;color:var(--muted);font-family:inherit;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.4rem;">Payment</label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                  <button id="parts-btn-split" onclick="setPartsPayment('split')" title="The customer pays part in cash and the rest by GCash"
+                    style="grid-column:1/-1;padding:0.45rem;border-radius:8px;border:2px solid var(--border);background:#ffffff;color:var(--muted);font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;order:3;">
+                    Split: Cash + GCash
+                  </button>
                   <button id="parts-btn-cash" onclick="setPartsPayment('cash')"
                     style="padding:0.5rem;border-radius:8px;border:2px solid var(--red);background:var(--red);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">
                     Cash
@@ -2601,6 +2617,29 @@
                     <span id="parts-cash-change" style="font-weight:800;font-size:1.1rem;color:var(--text);">₱0.00</span>
                   </div>
                   <div id="parts-cash-short" style="display:none;color:var(--red);font-size:0.72rem;margin-top:0.3rem;">Cash received is less than the total.</div>
+                </div>
+
+                <!-- SPLIT: part cash, part GCash (e.g. the customer ran out of cash) -->
+                <div id="parts-pay-split" style="display:none;margin-top:0.65rem;padding:0.7rem 0.8rem;border:1px solid #ddd6fe;background:#f5f3ff;border-radius:8px;">
+                  <div style="font-size:0.74rem;color:#4c1d95;line-height:1.55;margin-bottom:0.55rem;"><b>Cash + GCash.</b> Take the cash first, then the customer sends the rest by GCash. The two parts must add up to the total.</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;align-items:end;">
+                    <div>
+                      <label style="font-size:0.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">Cash part (₱)</label>
+                      <input type="text" id="parts-split-cash" inputmode="decimal" placeholder="0.00" oninput="this.value=this.value.replace(/[^0-9.]/g,''); onPartsCartChange()"
+                        style="width:100%;padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:0.9rem;outline:none;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">GCash part (rest)</label>
+                      <div id="parts-split-gcash" style="padding:0.4rem 0.75rem;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;font-weight:800;font-size:0.95rem;color:var(--blue);">₱0.00</div>
+                    </div>
+                  </div>
+                  <div id="parts-split-err" style="display:none;color:var(--red);font-size:0.72rem;margin-top:0.35rem;"></div>
+                  <label style="font-size:0.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin:0.5rem 0 0.25rem;">GCash reference no. *</label>
+                  <input type="text" id="parts-split-ref" inputmode="numeric" maxlength="13" placeholder="13 digits" oninput="this.value=this.value.replace(/\D/g,'').slice(0,13); onPartsCartChange()"
+                    style="width:100%;padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:0.9rem;letter-spacing:0.08em;outline:none;">
+                  <label style="display:flex;align-items:flex-start;gap:0.4rem;margin-top:0.55rem;font-size:0.76rem;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" id="parts-split-ok" onchange="onPartsCartChange()" style="margin-top:0.15rem;"> I received the cash part and checked that the GCash part arrived.
+                  </label>
                 </div>
 
                 <!-- GCASH: customer pays from their phone, cashier checks it arrived and records the reference no. -->
@@ -9423,7 +9462,7 @@ function fitPartsCartList() {
   const card = panel.querySelector('.card');
   const others = card.offsetHeight - list.offsetHeight;
   const free = panel.clientHeight - parseFloat(getComputedStyle(panel).paddingBottom) - others - 8;
-  list.style.maxHeight = Math.max(72, Math.floor(free)) + 'px';
+  list.style.maxHeight = Math.max(44, Math.floor(free)) + 'px';
 }
 window.addEventListener('resize', () => fitPartsCartList());
 
@@ -9470,6 +9509,16 @@ function onPartsCartChange() {
     payOk = got + 0.0001 >= total && total > 0;
     document.getElementById('parts-cash-change').textContent = '₱' + Math.max(0, got - total).toLocaleString('en-PH', {minimumFractionDigits:2});
     document.getElementById('parts-cash-short').style.display = (got > 0 && !payOk) ? 'block' : 'none';
+  } else if (_partsPayment === 'split') {
+    // part cash, part GCash: the two must add up to the total, and the GCash part needs its reference no.
+    const cashPart = Math.round((parseFloat(document.getElementById('parts-split-cash').value) || 0) * 100) / 100;
+    const gPart = Math.round((total - cashPart) * 100) / 100;
+    document.getElementById('parts-split-gcash').textContent = '₱' + Math.max(0, gPart).toLocaleString('en-PH', {minimumFractionDigits:2});
+    const err = document.getElementById('parts-split-err');
+    let msg = '';
+    if (cashPart > 0 && gPart <= 0) msg = 'The cash part must be less than the total. For cash only, choose Cash.';
+    err.textContent = msg; err.style.display = msg ? 'block' : 'none';
+    payOk = total > 0 && cashPart > 0 && gPart > 0 && /^\d{13}$/.test(document.getElementById('parts-split-ref').value) && document.getElementById('parts-split-ok').checked;
   } else {
     payOk = /^\d{13}$/.test(document.getElementById('parts-gcash-ref').value) && document.getElementById('parts-gcash-ok').checked;
   }
@@ -9482,17 +9531,15 @@ function onPartsCartChange() {
 
 function setPartsPayment(method) {
   _partsPayment = method;
-  const cash  = document.getElementById('parts-btn-cash');
-  const gcash = document.getElementById('parts-btn-gcash');
-  if (method === 'cash') {
-    cash.style.cssText  = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid var(--red);background:var(--red);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;';
-    gcash.style.cssText = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid var(--border);background:#f9fafb;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;';
-  } else {
-    gcash.style.cssText = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid var(--blue);background:var(--blue);color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;';
-    cash.style.cssText  = 'flex:1;padding:0.5rem;border-radius:8px;border:2px solid var(--border);background:#f9fafb;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;';
-  }
+  const base = 'padding:0.5rem;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;';
+  const on  = c => `${base}border:2px solid ${c};background:${c};color:#fff;`;
+  const off = `${base}border:2px solid var(--border);background:#f9fafb;color:var(--muted);`;
+  document.getElementById('parts-btn-cash').style.cssText  = method === 'cash'  ? on('var(--red)')  : off;
+  document.getElementById('parts-btn-gcash').style.cssText = method === 'gcash' ? on('var(--blue)') : off;
+  document.getElementById('parts-btn-split').style.cssText = 'grid-column:1/-1;order:3;' + (method === 'split' ? on('#6d28d9') : off).replace('padding:0.5rem', 'padding:0.45rem').replace('font-size:0.82rem', 'font-size:0.78rem');
   document.getElementById('parts-pay-cash').style.display  = method === 'cash' ? 'block' : 'none';
   document.getElementById('parts-pay-gcash').style.display = method === 'gcash' ? 'block' : 'none';
+  document.getElementById('parts-pay-split').style.display = method === 'split' ? 'block' : 'none';
   onPartsCartChange();
   fitPartsCartList();
 }
@@ -9515,11 +9562,19 @@ function processPartsTxn() {
     payment_method: _partsPayment,
     customer_name: customerName,
     cash_received: _partsPayment === 'cash' ? (parseFloat(document.getElementById('parts-cash-received').value) || 0) : null,
-    gcash_ref: _partsPayment === 'gcash' ? document.getElementById('parts-gcash-ref').value : null,
+    gcash_ref: _partsPayment === 'gcash' ? document.getElementById('parts-gcash-ref').value : (_partsPayment === 'split' ? document.getElementById('parts-split-ref').value : null),
   };
-  const paidNote = _partsPayment === 'cash'
+  if (_partsPayment === 'split') {
+    payload.cash_amount = Math.round((parseFloat(document.getElementById('parts-split-cash').value) || 0) * 100) / 100;
+    payload.gcash_amount = Math.round((total - payload.cash_amount) * 100) / 100;
+    delete payload.cash_received;
+  }
+  const _php = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits:2});
+  const paidNote = _partsPayment === 'split'
+    ? `Paid by Cash ${_php(payload.cash_amount)} + GCash ${_php(payload.gcash_amount)} · ref ${payload.gcash_ref}`
+    : (_partsPayment === 'cash'
     ? `Paid via Cash · received ₱${payload.cash_received.toLocaleString('en-PH', {minimumFractionDigits:2})} · change ₱${Math.max(0, payload.cash_received - total).toLocaleString('en-PH', {minimumFractionDigits:2})}`
-    : `Paid via GCash · ref ${payload.gcash_ref}`;
+    : `Paid via GCash · ref ${payload.gcash_ref}`);
   fetch('/pos/checkout', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -9533,6 +9588,7 @@ function processPartsTxn() {
     document.getElementById('parts-cash-received').value = '';
     document.getElementById('parts-gcash-ref').value = '';
     document.getElementById('parts-gcash-ok').checked = false;
+    document.getElementById('parts-split-cash').value = ''; document.getElementById('parts-split-ref').value = ''; document.getElementById('parts-split-ok').checked = false;
     clearPartsCart();
     loadPartsProducts(); // refresh stock
   })
@@ -9564,6 +9620,7 @@ function newPartsTxn() {
   document.getElementById('parts-cash-received').value = '';
   document.getElementById('parts-gcash-ref').value = '';
   document.getElementById('parts-gcash-ok').checked = false;
+  document.getElementById('parts-split-cash').value = ''; document.getElementById('parts-split-ref').value = ''; document.getElementById('parts-split-ok').checked = false;
   setPartsPayment('cash');
 }
 

@@ -63,6 +63,7 @@
     .badge{display:inline-flex;align-items:center;gap:.25rem;padding:.22rem .6rem;border-radius:99px;font-family:'Syne',sans-serif;font-size:.63rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
     .b-cash   {background:rgba(22,163,74,.15);color:#86efac;border:1px solid rgba(22,163,74,.3);}
     .b-gcash  {background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);}
+    .b-split  {background:rgba(124,58,237,.12);color:#6d28d9;border:1px solid rgba(124,58,237,.3);}
     .b-booking{background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.3);}
     .b-order  {background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);}
     .b-jo     {background:rgba(37,99,235,.15);color:#93c5fd;border:1px solid rgba(37,99,235,.3);}
@@ -583,13 +584,14 @@
           </td>
           <td><span class="amount">₱{{ '{:,.2f}'.format(o_total) }}</span></td>
           <td>
-            <span class="badge b-{{ o.payment_method }}">{{ o.payment_method|upper }}</span>
+            <span class="badge b-{{ o.payment_method }}">{{ 'CASH + GCASH' if o.payment_method == 'split' else o.payment_method|upper }}</span>
+            {% if o.payment_method == 'split' %}<div class="sub">Cash ₱{{ '{:,.2f}'.format(o.cash_amount or 0) }} · GCash ₱{{ '{:,.2f}'.format(o.gcash_amount or 0) }}{% if o.payment_ref %} · Ref {{ o.payment_ref }}{% endif %}</div>{% endif %}
             {% if o.payment_method == 'gcash' and o.is_instore and o.payment_ref %}<div class="sub">GCash ref · {{ o.payment_ref }}</div>{% endif %}
             {% if o.payment_method == 'gcash' and not o.is_instore %}<div class="sub">PayMongo{% if o.payment_ref %} · {{ o.payment_ref[:16] }}{% if o.payment_ref|length > 16 %}…{% endif %}{% endif %}</div>{% endif %}
           </td>
           <td class="date-cell">{% set o_paid = (o.paid_at if o.delivery_method == 'ship' and o.paid_at else None) or o.delivered_at or o.created_at %}{{ o_paid.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ o_paid.strftime('%I:%M %p') }}</span></td>
           <td>
-            <button class="btn-receipt" onclick="printOrdReceipt('{{ o_ref }}', {{ (o_name)|tojson|forceescape }}, '{{ o_phone }}', {{ o_total }}, {{ (o.payment_method)|tojson|forceescape }}, {{ (o_paid.strftime('%b %d, %Y %I:%M %p'))|tojson|forceescape }}, [{% for item in o.items %}{'name':{{ (item.product.name)|tojson|forceescape }},'qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}{% if o.delivery_method == 'ship' and o.shipping_fee %},{'name':'Shipping fee ({{ (o.shipping_option or '')|title }} · Courier {{ o.shipping_vehicle or '' }})','qty':1,'price':{{ o.shipping_fee }}}{% endif %}], {{ (o.delivery_method)|tojson|forceescape }}, {{ 'true' if o.is_instore else 'false' }})">
+            <button class="btn-receipt" onclick="printOrdReceipt('{{ o_ref }}', {{ (o_name)|tojson|forceescape }}, '{{ o_phone }}', {{ o_total }}, {{ (('Cash ₱' ~ '{:,.2f}'.format(o.cash_amount or 0) ~ ' + GCash ₱' ~ '{:,.2f}'.format(o.gcash_amount or 0)) if o.payment_method == 'split' else o.payment_method)|tojson|forceescape }}, {{ (o_paid.strftime('%b %d, %Y %I:%M %p'))|tojson|forceescape }}, [{% for item in o.items %}{'name':{{ (item.product.name)|tojson|forceescape }},'qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}{% if o.delivery_method == 'ship' and o.shipping_fee %},{'name':'Shipping fee ({{ (o.shipping_option or '')|title }} · Courier {{ o.shipping_vehicle or '' }})','qty':1,'price':{{ o.shipping_fee }}}{% endif %}], {{ (o.delivery_method)|tojson|forceescape }}, {{ 'true' if o.is_instore else 'false' }})">
               {{ rcpt_icon }} Receipt
             </button>
           </td>

@@ -22,22 +22,49 @@ TIRE_RE = re.compile(r'(\d{2,3})/(\d{2,3})\s*-\s*(\d{2})')
 GRADE_RE = re.compile(r'\b(\d{1,2}W-?\d{2,3})\b', re.I)
 VOLUME_RE = re.compile(r'\b(\d+(?:\.\d+)?)\s?(L|LT|LTR|ML)\b', re.I)
 
-BLURB = {
-    'TIRE': 'A motorcycle tire for everyday riding.',
-    'BRAKE PARTS': 'A brake part for reliable stopping power.',
-    'ENGINE PARTS': 'An engine part for your motorcycle.',
-    'CHAIN & SPROCKETS': 'A drive part that carries power from the engine to the rear wheel.',
-    'FILTERS': 'A filter that keeps dirt out of your engine.',
-    'LUBRICANTS': 'A lubricant that protects moving engine parts.',
-    'ACCESSORIES': 'An accessory for your motorcycle.',
-    'OTHER SPARE PARTS': 'A spare part for your motorcycle.',
-}
+# (words to look for in the category + name, what the part is, what it does). The first rule that matches is used.
+TYPE_RULES = [
+    (('AIR FILTER', 'AIR CLEANER'), 'Air filter', 'Keeps dust and dirt out of the engine so it breathes clean air.'),
+    (('OIL FILTER',), 'Oil filter', 'Catches dirt and metal particles so the engine oil stays clean.'),
+    (('SPARK PLUG',), 'Spark plug', 'Ignites the fuel and air mix inside the cylinder.'),
+    (('BATTERY',), 'Battery', 'Powers the starter, lights and electrical parts.'),
+    (('BRAKE PAD', 'DISC PAD'), 'Brake pad', 'Presses on the disc to stop the wheel.'),
+    (('BRAKE SHOE',), 'Brake shoe', 'Presses on the drum to stop the wheel.'),
+    (('BRAKE',), 'Brake part', 'Part of the braking system that helps the motorcycle stop.'),
+    (('BALL RACE',), 'Ball race', 'Steering bearing set that lets the handlebar turn smoothly.'),
+    (('BEARING',), 'Bearing', 'Lets a wheel or shaft spin smoothly with less friction.'),
+    (('GASKET',), 'Gasket', 'Seals two engine surfaces together to prevent leaks.'),
+    (('ROCKER',), 'Rocker arm', 'Part of the valve train that opens and closes the engine valves.'),
+    (('AIR SCREW',), 'Air screw', 'Adjusting screw on the carburetor that sets the air and fuel mix.'),
+    (('CHAIN', 'SPROCKET'), 'Drive part', 'Carries power from the engine to the rear wheel.'),
+    (('CVT', 'PULLEY', 'ROLLER', 'DRIVE BELT'), 'CVT part', 'Part of the scooter transmission (CVT) that moves power to the rear wheel.'),
+    (('CLUTCH',), 'Clutch part', 'Connects and disconnects engine power to the transmission.'),
+    (('PISTON',), 'Piston part', 'Part of the piston and cylinder assembly of the engine.'),
+    (('BULB', 'HEADLIGHT', 'LED'), 'Lighting', 'Gives light for the road and keeps you visible.'),
+    (('WIRE', 'CABLE'), 'Wire / cable', 'Electrical wire or control cable for repairs and installation.'),
+    (('MIRROR',), 'Mirror', 'Lets the rider see traffic behind.'),
+    (('GRIP',), 'Handle grip', 'Rubber grip for a firm hold on the handlebar.'),
+    (('YAMALUBE', 'ENGINE OIL', 'GEAR OIL', 'LUBRICANT', 'OIL'), 'Lubricant', 'Lubricates and protects moving engine parts.'),
+    (('TIRE', 'TYRE'), 'Tire', 'A motorcycle tire for everyday riding.'),
+    (('BACK PLATE',), 'Back plate', 'Replacement back plate. Check the "Fits" line before you buy.'),
+]
+PART_NO_RE = re.compile(r'\b(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{5,}\b', re.I)
 
 
 def draft(name, category, motor_model):
-    cat = (category or '').strip().upper()
-    lines = [BLURB.get(cat, f'{(category or "A motorcycle part").strip().capitalize()} for your motorcycle.')]
-    specs = [('Product', name.strip()), ('Category', (category or '').strip().title())]
+    haystack = f'{category or ""} {name}'.upper()
+    label, sentence = None, None
+    if TIRE_RE.search(name):
+        label, sentence = 'Tire', 'A motorcycle tire for everyday riding.'
+    else:
+        for words, lab, sent in TYPE_RULES:
+            if any(w in haystack for w in words):
+                label, sentence = lab, sent
+                break
+    if not label:
+        label = (category or 'Spare part').strip().title()
+        sentence = 'A spare part for your motorcycle.' if 'spare' in label.lower() or not category else f'{label} for your motorcycle.'
+    specs = [('Product', name.strip()), ('Type', label), ('Category', (category or '').strip().title())]
     t = TIRE_RE.search(name)
     if t:
         w, a, rim = t.groups()
@@ -45,6 +72,10 @@ def draft(name, category, motor_model):
         if brand and brand != name.strip():
             specs.insert(1, ('Brand', brand))
         specs += [('Size', f'{w}/{a}-{rim}'), ('Section width', f'{w} mm'), ('Aspect ratio', f'{a}%'), ('Rim size', f'{rim} inch')]
+    else:
+        m = [x for x in PART_NO_RE.findall(name) if not GRADE_RE.fullmatch(x)]
+        if m:
+            specs.append(('Part no.', m[0].upper()))
     g = GRADE_RE.search(name)
     if g:
         specs.append(('Viscosity grade', g.group(1).upper()))
@@ -54,7 +85,7 @@ def draft(name, category, motor_model):
         specs.append(('Volume', f'{v.group(1)} {unit}'))
     if motor_model and motor_model.strip():
         specs.append(('Fits', motor_model.strip()))
-    return '\n'.join(lines + ['Specifications:'] + [f'• {k}: {val}' for k, val in specs])[:1500]
+    return '\n'.join([sentence, 'Specifications:'] + [f'• {k}: {val}' for k, val in specs])[:1500]
 
 
 def main():
