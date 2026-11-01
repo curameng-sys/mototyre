@@ -537,6 +537,8 @@
     .svc-row.disabled { opacity: 0.5; cursor: not-allowed; background: var(--bg-subtle); }
     .svc-row.disabled:hover { background: var(--bg-subtle); }
     .svc-row.disabled .svc-why { opacity: 1; }
+    .svc-row .svc-price { flex-shrink: 0; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.9rem; color: var(--fg-1); white-space: nowrap; margin-right: 0.45rem; }
+    .svc-row .svc-price.ask { font-weight: 600; font-size: 0.72rem; color: var(--fg-3); }
     .svc-row .svc-dur.multi { color: #92400e; background: #fef3c7; border-color: #fcd34d; }
     .svc-row.selected .svc-dur { color: var(--brand-red); border-color: var(--brand-red-border); background: var(--bg-page); }
     .mech-toggle-card.active .mech-card-title { color: var(--brand-red); }
@@ -1025,6 +1027,7 @@
     #own-parts-fields { margin-top: 0.7rem; }
     #own-parts-fields input[type="text"] { width: 100%; }
     .own-parts-hint { margin-top: 0.5rem; font-size: 0.76rem; color: var(--fg-3); line-height: 1.5; }
+    .rv-note { margin-top: 0.75rem; padding: 0.7rem 0.9rem; border-radius: 10px; background: #fffbeb; border: 1px solid #fcd34d; color: #78350f; font-size: 0.82rem; line-height: 1.5; }
     .rv-card { border: 1px solid #bfdbfe; border-radius: 14px; overflow: hidden; background: #fff; }
     .rv-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.1rem; background: #eff6ff; color: #1d4ed8; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
     .rv-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 1rem; padding: 0.8rem 1.1rem; border-top: 1px solid var(--line-1); align-items: start; }
@@ -5947,6 +5950,12 @@ function currentServiceFilterItems() {
   return q ? SERVICES_DATA.filter(s => s.name.toLowerCase().includes(q)) : SERVICES_DATA;
 }
 
+// Prices of the services (what the shop set in Manage Services). The total is an estimate: extra work the mechanic finds is
+// quoted to the customer first, and the customer pays after the service.
+function fmtPeso(n) { return '\u20b1' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function svcPriceOf(name) { const sv = SERVICES_DATA.find(x => x.name === name); return sv ? Number(sv.price || 0) : 0; }
+function svcTotalOf(names) { return (names || []).reduce((t, n) => t + svcPriceOf(n), 0); }
+
 function renderServiceChecklist(items) {
   const wrap = document.getElementById('service-checklist');
   wrap.innerHTML = '';
@@ -6006,7 +6015,12 @@ function renderServiceChecklist(items) {
 
     label.appendChild(cb);
     label.appendChild(checkBox);
+    const priceSpan = document.createElement('span');
+    priceSpan.className = 'svc-price' + (svcPriceOf(s.name) > 0 ? '' : ' ask');
+    priceSpan.textContent = svcPriceOf(s.name) > 0 ? fmtPeso(svcPriceOf(s.name)) : 'Ask the shop';
+
     label.appendChild(textWrap);
+    label.appendChild(priceSpan);
     label.appendChild(durSpan);
     wrap.appendChild(label);
   });
@@ -10951,7 +10965,7 @@ updateMechNote();
       const dur = name => { const sv = SERVICES_DATA.find(x => x.name === name); return sv ? (sv.is_multiday ? (sv.duration_label || '3–5 working days') : formatDurationJS(sv.duration_minutes)) : ''; };
       const when = q.is_multiday ? `${minutesToAmpmJS(hhmmToMinutes(q.time))} drop-off` : (q._displayTime || '');
       const row = (label, html) => `<div class="rv-row"><div class="rv-k">${label}</div><div class="rv-v">${html}</div></div>`;
-      const svcHtml = svcs.map(n => `<div class="rv-svc"><span>${esc(n)}</span><small>${esc(dur(n))}</small></div>`).join('')
+      const svcHtml = svcs.map(n => `<div class="rv-svc"><span>${esc(n)}</span><small>${svcPriceOf(n) > 0 ? '<b style="color:var(--fg-1);">' + fmtPeso(svcPriceOf(n)) + '</b> \u00b7 ' : ''}${esc(dur(n))}</small></div>`).join('')
         + (!q.is_multiday && q.duration_minutes ? `<div class="rv-total">Total: ${esc(formatDurationJS(q.duration_minutes))}</div>` : '');
       const bike = q.motorcycle_model || '';
       list.innerHTML = `<div class="rv-card">
@@ -10962,9 +10976,11 @@ updateMechNote();
         ${q.odometer ? row('Odometer', esc(Number(q.odometer).toLocaleString('en-US')) + ' km') : ''}
         ${row('Mechanic', q.mechanic_name ? esc(q.mechanic_name) : 'The shop will assign one')}
         ${q.notes ? row('Notes', esc(q.notes)) : ''}
+        ${svcTotalOf(svcs) > 0 ? row('Total to pay', '<span style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:1.2rem;color:var(--brand-red);">' + fmtPeso(svcTotalOf(svcs)) + '</span><div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.25rem;line-height:1.45;">Nothing is charged now. You pay at the shop after the service. If the mechanic finds more work, the shop sends you a quotation first and you decide.</div>') : ''}
         ${q.own_parts ? row('Own parts', esc(q.own_parts_note || 'You are bringing your own parts') + '<div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.2rem;">Labor only. Not covered by the shop\'s replacement.</div>') : ''}
         ${q._mechIssue && typeof issueBlockHTML === 'function' ? `<div style="padding:0.6rem 1rem;">${issueBlockHTML(q, 0)}</div>` : ''}
-      </div>`;
+      </div>
+      <div class="rv-note"><b>Not booked yet.</b> Your slot is only reserved when you press <b>Confirm</b>. You can go back and change anything, or leave without confirming and nothing will be booked.</div>`;
     }
     window.renderBookingQueue = function () {
       const r = _render.apply(this, arguments);

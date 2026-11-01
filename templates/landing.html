@@ -160,6 +160,7 @@
     .svc-icon{width:44px;height:44px;border-radius:10px;background:var(--brand-red-soft);color:var(--brand-red);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
     .svc-name{font-family:var(--font-display);font-size:22px;letter-spacing:0.04em;color:var(--fg-1)}
     .svc-desc{font-family:var(--font-body);font-size:14px;color:var(--fg-2);line-height:1.55}
+    .svc-price{font-family:var(--font-display);font-size:24px;letter-spacing:0.03em;color:var(--brand-red);margin-top:auto}
     .services-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
 
     /* Pagination */
@@ -546,6 +547,7 @@
         <div class="svc-icon"><i data-lucide="{{ sv.name|service_icon }}" style="width:22px;height:22px"></i></div>
         <div class="svc-name">{{ sv.name|upper }}</div>
         {% if sv.description %}<p class="svc-desc">{{ sv.description }}</p>{% endif %}
+        {% if sv.price and sv.price > 0 %}<div class="svc-price">₱{{ '{:,.2f}'.format(sv.price) }}</div>{% endif %}
       </div>
       {% endfor %}
     </div>
