@@ -4141,7 +4141,7 @@ function minutesToAmpmJS(m) {
 }
 
 // ── Booking rules the queue follows (the server enforces the same ones) ──
-//  1. One booking per motorcycle per day — more services for the same bike are added to it.
+//  1. The same motorcycle cannot be in two bookings at the same time (any number of bookings a day otherwise).
 //  A customer can have as many bookings as the shop's schedule allows (no per-account limit), each for a different motorcycle.
 function motoKeyJS(model) { return (model || '').trim().toLowerCase().replace(/\s*\(\d{4}\)\s*$/, '').replace(/\s+/g, ' ') || 'unspecified'; }
 function plateKeyJS(p) { return String(p || '').replace(/[\s\-]+/g, '').toLowerCase(); }
@@ -4152,22 +4152,13 @@ function currentMotoKey() {
 }
 function finishMinutesJS(start, dur) { return (start < 720 && start + dur > 720) ? start + dur + 30 : start + dur; }
 
-function checkBookingRulesJS(dateVal, key) {
-  const todayIso = new Date(shopNowMs()).toISOString().slice(0, 10);   // shop time
-  const live = Object.values(bookingsData).filter(b => b.status !== 'cancelled');
-  const sameDay = live.filter(b => b.date_iso === dateVal);
-  const queueDay = bookingQueue.filter(q => q.date === dateVal);
-
-  const qm = queueDay.find(q => bookingMotoKey(q) === key);
-  if (qm) return { merge: 'queue', target: qm };
-  const bm = sameDay.find(b => bookingMotoKey(b) === key);
-  if (bm) {
-    if (bm.status === 'confirmed' || bm.status === 'pending') return { merge: 'booking', target: bm };
-    return { code: 'A', started: true, error: 'That motorcycle already has a booking on that day that has started or finished — only one booking per motorcycle per day.' };
-  }
-  if (false) {
-    return { code: 'C', error: `You can have up to ${MAX_UPCOMING_BOOKINGS} upcoming bookings at a time, and bookings in your queue count too. A spot frees up when one is completed or cancelled, or when you remove one from the queue.` };
-  }
+function checkBookingRulesJS(dateVal, key, startMin, endMin) {
+  // Any number of bookings, even for the same motorcycle: only an overlap in time for the same motorcycle is refused.
+  const overlap = (s, e) => startMin < e && s < endMin;
+  const liveDay = Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.date_iso === dateVal && bookingMotoKey(b) === key);
+  const hit = liveDay.find(b => overlap(hhmmFromLabel(b.time), (b.end_time ? hhmmFromLabel(b.end_time) : hhmmFromLabel(b.time) + 30)))
+           || bookingQueue.find(q => q.date === dateVal && bookingMotoKey(q) === key && overlap(hhmmToMinutes(q.time), hhmmToMinutes(q.time) + (q.duration_minutes || 60)));
+  if (key !== 'unspecified' && hit) return { error: 'That motorcycle already has a booking at that time. Pick a time that does not overlap it.' };
   return {};
 }
 
@@ -4419,7 +4410,7 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
 
   // 2. Everything filled in: same motorcycle that day (A) → 2 bookings that day (B) → 3 upcoming (C).
   const motoKey = currentMotoKey();
-  const rule = checkBookingRulesJS(dateVal, motoKey);
+  const rule = checkBookingRulesJS(dateVal, motoKey, hhmmToMinutes(timeVal), hhmmToMinutes(timeVal) + (currentJobDuration || 60));
   if (rule.merge && !mergeMode) {
     const plan = mergePlan(rule, timeVal);
     openMergeChoiceModal(plan, dateVal, motoKey, timeVal);   // case 1 (different time) or case 2 (same time)
@@ -5036,7 +5027,7 @@ function renderUpcomingBookings() {
 }
 
 // Booking Limits — three small cards that show where the customer stands against the rules:
-//   1 booking per motorcycle per day, and which motorcycles already have a booking on the picked day.
+//   which motorcycles already have a booking on the picked day (there is no limit on how many).
 // Real bookings and the Booking Queue both count; cancelled ones don't.
 function bookingsOnDate(dateIso) {
   const real = Object.values(bookingsData).filter(b => b.date_iso === dateIso && b.status !== 'cancelled');
@@ -5068,17 +5059,6 @@ function refreshBookingLimits() {
   const bar = (used, total) => `<div style="display:flex;gap:3px;margin-top:0.35rem;">${
     Array.from({ length: total }, (_, i) => `<span style="flex:1;height:5px;border-radius:99px;background:${i < used ? 'var(--brand-red)' : '#e5e7eb'};"></span>`).join('')}</div>`;
 
-  // 1. one booking per motorcycle per day
-  let c1;
-  if (!dateIso) {
-    c1 = card('1 booking per motorcycle per day', '—', 'var(--fg-3)', 'Pick a date to check.');
-  } else {
-    const day = bookingsOnDate(dateIso);
-    const taken = !!_m && (day.real.some(b => bookingMotoKey(b) === key) || day.queued.some(q => bookingMotoKey(q) === key));
-    c1 = !_m ? card('1 booking per motorcycle per day', '—', 'var(--fg-3)', 'Pick a motorcycle to check.')
-             : card('1 booking per motorcycle per day', taken ? 'Already booked' : 'Free', taken ? '#dc2626' : '#16a34a', `${motoName} on ${dateLabel}`, '', taken);
-  }
-
   // 2. what the customer already has on that day (there is no limit, this is just so nothing is booked twice by accident)
   let c2;
   if (!dateIso) {
@@ -5089,7 +5069,7 @@ function refreshBookingLimits() {
     const motos = [...day.real, ...day.queued.filter(q => !q._mergesInto)].map(b => (b.motorcycle_model || '').trim()).filter(Boolean);
     c2 = card(`Your bookings on ${dateLabel}`, n ? String(n) : 'None yet', 'var(--fg-1)', n ? ([...new Set(motos)].join(', ') || 'Booked') : 'You have nothing booked on this day.');
   }
-  el.innerHTML = c1 + c2;
+  el.innerHTML = c2;
   if (typeof refreshMotoBookedNote === 'function') refreshMotoBookedNote();
 }
 

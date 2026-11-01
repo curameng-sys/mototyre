@@ -2070,20 +2070,23 @@ def _service_selection_error(names):
     return None
 
 
-def _booking_rule_decision(user_id, booking_date, moto_key):
-    """Rules 1–3 for a new request. Returns ('merge', existing_booking, None) when this motorcycle
-    already has a booking that day (services get added to it), ('error', None, message) when a limit
-    is hit, or ('ok', None, None). Bookings made earlier in the same batch are already flushed, so
-    they count."""
+def _booking_rule_decision(user_id, booking_date, moto_key, start_min=None, end_min=None):
+    """The one per-customer rule left: the same motorcycle cannot be in two bookings at the same time (it can only be in
+    one place). Any number of bookings a day, even for the same motorcycle, as long as their times do not overlap.
+    Returns ('error', None, message) or ('ok', None, None). Bookings made earlier in the same batch are already
+    flushed, so they count."""
+    if start_min is None or end_min is None or moto_key == 'unspecified':
+        return 'ok', None, None
     day = Booking.query.filter(Booking.user_id == user_id, Booking.date == booking_date,
                                Booking.status != 'cancelled', Booking.is_archived == False).all()
-    date_label = booking_date.strftime('%b %d, %Y')
     for b in day:
-        if _moto_key(b.motorcycle_model, b.motorcycle_plate) == moto_key:
-            if b.status in ('confirmed', 'pending'):
-                return 'merge', b, None
-            return 'error', None, (f'That motorcycle already has a booking on {date_label} that has started or finished — '
-                                    f'only one booking per motorcycle per day.')
+        if _moto_key(b.motorcycle_model, b.motorcycle_plate) != moto_key:
+            continue
+        b_start = b.time.hour * 60 + b.time.minute
+        b_end = compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)
+        if start_min < b_end and b_start < end_min:
+            return 'error', None, (f'That motorcycle already has a booking from {minutes_to_ampm(b_start)} to {minutes_to_ampm(b_end)} on '
+                                   f'{booking_date.strftime("%b %d, %Y")}. Pick a time that does not overlap it.')
     return 'ok', None, None
 
 
@@ -2382,7 +2385,7 @@ def book_service():
             return redirect(url_for('customer_dashboard'))
         moto_key = _moto_key(request.form.get('motorcycle_model') or current_user.motorcycle_model,
                              request.form.get('motorcycle_plate'))
-        decision, existing_b, rule_err = _booking_rule_decision(current_user.id, booking_date, moto_key)
+        decision, existing_b, rule_err = _booking_rule_decision(current_user.id, booking_date, moto_key, start_min, end_min)
         if decision == 'error':
             flash(rule_err, 'danger')
             return redirect(url_for('customer_dashboard'))
@@ -2976,7 +2979,9 @@ def _book_multiple_impl():
                 errors.append(f'Booking {idx+1}: {sel_err}')
                 continue
             moto_key = _moto_key(b.get('motorcycle_model') or current_user.motorcycle_model, b.get('motorcycle_plate'))
-            decision, existing_b, rule_err = _booking_rule_decision(current_user.id, booking_date, moto_key)
+            _s_min = booking_time.hour * 60 + booking_time.minute
+            decision, existing_b, rule_err = _booking_rule_decision(current_user.id, booking_date, moto_key, _s_min,
+                                                                    compute_finish_minutes(_s_min, combo['total_minutes']))
             if decision == 'error':
                 errors.append(f'Booking {idx+1}: {rule_err}')
                 continue
