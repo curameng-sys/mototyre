@@ -86,6 +86,20 @@
       .nav-links a { padding: 0.45rem 0.8rem; font-size: 0.85rem; }
     }
     @media (max-width: 768px) { .nav-cart .nav-cart-txt { display: none; } .nav-cart { padding: 0 0.7rem; } }
+    /* ── SIDE MENU: on a computer the page links (Home, Appointments, ...) sit in a menu on the left, not in the top bar ── */
+    @media (min-width: 861px) {
+      .top-nav { flex-wrap: nowrap !important; height: 72px !important; padding: 0 1.25rem !important; row-gap: 0 !important; }
+      .nav-logo { order: 0 !important; }
+      .nav-right { order: 0 !important; margin-left: auto !important; }
+      .top-nav { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: #fff !important; }      /* a blur would make the fixed side menu measure itself against the top bar */
+      .nav-links { position: fixed; top: var(--nav-h, 72px); left: 0; bottom: 0; width: 230px; z-index: 90; flex: none !important;
+                   flex-direction: column; align-items: stretch; justify-content: flex-start !important; flex-wrap: nowrap !important; gap: 0.35rem !important;
+                   padding: 1.1rem 0.85rem !important; background: #fff; border-right: 1px solid var(--line-1); overflow-y: auto; }
+      .nav-links a { padding: 0.72rem 0.95rem !important; font-size: 0.9rem !important; }
+      body .page-wrap { padding-left: calc(230px + clamp(1.5rem, 4vw, 5rem)); padding-right: clamp(1.5rem, 4vw, 5rem); }
+      html body.is-book .page-wrap { padding-left: calc(230px + 1.25rem); padding-right: 1.25rem; }
+    }
+    @media (max-width: 860px) { .nav-links { display: none !important; } .nav-hamburger { display: flex !important; } }
     .nav-avatar {
       width: 40px; height: 40px; border-radius: 50%;
       background: var(--brand-red); display: flex; align-items: center; justify-content: center;
@@ -106,9 +120,9 @@
     .nav-logout-btn:hover { background: var(--brand-red); color: #fff; }
 
     /* ── PAGE WRAP ── */
-    .page-wrap { width: 100%; padding: 0 clamp(1.25rem, 4vw, 4.5rem) 4rem; overflow-anchor: none; }
-    body.is-book .page-wrap { padding-left: 1.25rem; padding-right: 1.25rem; }      /* Appointment: unchanged */
-    #sec-bookings, #sec-orders, #sec-transactions, #sec-returns { padding-left: 0 !important; padding-right: 0 !important; }
+    .page-wrap { width: 100%; padding: 0 clamp(1.25rem, 6.5vw, 8rem) 4rem; overflow-anchor: none; }
+    body.is-book .page-wrap { padding-left: 1.25rem; padding-right: 1.25rem; }      /* Appointment: unchanged (on a computer the side menu rule below adds the menu's width) */
+    #sec-bookings, #sec-orders, #sec-transactions, #sec-returns, #sec-profile { padding-left: 0 !important; padding-right: 0 !important; }
     .c-section.active { padding-top: 0.5rem; }
 
     .c-section { display: none; }
@@ -795,13 +809,19 @@
     @media (min-width: 861px) {
       body.pg-lock { overflow: hidden; }
       body.pg-lock .page-wrap { padding-bottom: 0; }
-      #sec-overview.active, #sec-bookings.active, #sec-orders.active, #sec-transactions.active, #sec-returns.active {
+      #sec-overview.active, #sec-bookings.active, #sec-orders.active, #sec-transactions.active, #sec-returns.active, #sec-profile.active {
         height: calc(100vh - var(--nav-h, 72px)); height: calc(100dvh - var(--nav-h, 72px)); display: flex; flex-direction: column; box-sizing: border-box; padding: 1.25rem 0 1rem !important; }
-      #sec-overview.active > *, #sec-bookings.active > *, #sec-orders.active > *, #sec-transactions.active > *, #sec-returns.active > * { flex-shrink: 0; }
+      #sec-overview.active > *, #sec-bookings.active > *, #sec-orders.active > *, #sec-transactions.active > *, #sec-returns.active > *, #sec-profile.active > * { flex-shrink: 0; }
+      /* Account Settings: the picture stays on the left, and the forms on the right scroll inside their own column */
+      #sec-profile .acct-layout { flex: 1 1 0; min-height: 0; align-items: stretch; flex-shrink: 1; grid-template-rows: minmax(0, 1fr); }
+      #sec-profile .acct-side { position: static; overflow-y: auto; min-height: 0; }
+      #sec-profile .acct-main { overflow-y: auto; min-height: 0; padding: 2px 6px 1rem 2px; }
+      #sec-profile .acct-main > .card { flex-shrink: 0; }
       #sec-overview .hero-banner { padding: 1.5rem 2rem; margin-bottom: 1rem; gap: 1.5rem; }
       #sec-overview .two-col { flex: 1 1 0; min-height: 0; grid-template-rows: minmax(0, 1fr); margin-bottom: 0; }
       #sec-overview .two-col > .card { min-height: 0; overflow: auto; margin-bottom: 0; }
       #sec-overview .two-col > .card > div[style*="overflow-x"] { overflow: visible !important; }
+      #sec-overview .two-col .table td:not(:first-child) { white-space: nowrap; }
       #sec-overview .two-col .card-head { position: sticky; top: 0; z-index: 3; background: var(--bg-page, #fff); }
       #sec-overview .two-col .table thead th { position: sticky; top: 0; z-index: 2; background-color: #fff !important; box-shadow: 0 1px 0 var(--line-1); }
       #sec-bookings > .card, #sec-orders > .card { flex: 1 1 0; min-height: 0; overflow: auto; margin-bottom: 0; }
@@ -10882,7 +10902,7 @@ updateMechNote();
     const nav = document.querySelector('.top-nav');
     document.documentElement.style.setProperty('--nav-h', (nav ? nav.offsetHeight : 72) + 'px');
   }
-  function lock(name) { document.body.classList.toggle('is-book', name === 'book'); document.body.classList.toggle('book-lock', name === 'book' || name === 'shop'); document.body.classList.toggle('pg-lock', ['overview', 'bookings', 'orders', 'transactions', 'returns'].includes(name)); fit(); if (name === 'shop') { if (typeof renderShopPage === 'function') setTimeout(renderShopPage, 30); if (typeof refreshCatalogStock === 'function') refreshCatalogStock(); } }
+  function lock(name) { document.body.classList.toggle('is-book', name === 'book'); document.body.classList.toggle('book-lock', name === 'book' || name === 'shop'); document.body.classList.toggle('pg-lock', ['overview', 'bookings', 'orders', 'transactions', 'returns', 'profile'].includes(name)); fit(); if (name === 'shop') { if (typeof renderShopPage === 'function') setTimeout(renderShopPage, 30); if (typeof refreshCatalogStock === 'function') refreshCatalogStock(); } }
   const _show = window.showSection;
   window.showSection = function (name, el) { const r = _show.apply(this, arguments); lock(name); return r; };
   window.addEventListener('resize', fit);
