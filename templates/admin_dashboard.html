@@ -537,7 +537,43 @@
     .inv-card .ic-bar { height:4px; border-radius:99px; background:rgba(255,255,255,0.3); margin-top:0.5rem; overflow:hidden; }
     .inv-card .ic-bar > div { height:100%; background:#fff; border-radius:99px; }
     .inv-out { background:#dc2626; } .inv-low { background:#f59e0b; } .inv-ok { background:#15803d; } .inv-all { background:#2563eb; }
-    .inv-grid { display:grid; grid-template-columns:1.6fr 1fr; gap:1rem; margin-bottom:1rem; align-items:start; }
+    .inv-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; align-items:stretch; }
+    .inv-grid > .card { margin-bottom:0; }
+    .dash-tabs { display:flex; gap:0.5rem; flex-wrap:wrap; margin:0 0 0.9rem; }
+    .dash-tab { height:34px; padding:0 1rem; border-radius:8px; border:1px solid var(--border); background:#fff; color:#6b7280; font-family:'Syne',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; cursor:pointer; transition:all 0.15s; }
+    .dash-tab:hover { color:var(--text); border-color:#d1d5db; }
+    .dash-tab.on { background:var(--red); border-color:var(--red); color:#fff; }
+    .dash-pane { display:none; }
+    .dash-pane.dash-on { display:block; }
+    .dash-pane[data-pane="bookings"].dash-on { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:1rem; align-items:start; }
+    .dash-pane[data-pane="bookings"] .card { margin-bottom:0; }
+    @media (max-width: 1100px) { .dash-pane[data-pane="bookings"].dash-on { grid-template-columns:1fr; } }
+    /* Dashboard on a computer: the browser page does not scroll. The numbers stay on top; the open tab scrolls inside itself. */
+    @media (min-width: 901px) {
+      body.dash-lock { overflow:hidden; }
+      body.dash-lock .admin-wrap { height:100vh; min-height:0; }
+      body.dash-lock .main { height:100vh; box-sizing:border-box; overflow:hidden; display:flex; flex-direction:column; padding-bottom:1rem; }
+      body.dash-lock #sec-dashboard.active { display:flex; flex-direction:column; flex:1; min-height:0; }
+      body.dash-lock #sec-dashboard.active > * { flex-shrink:0; }
+      body.dash-lock #sec-dashboard .page-header { margin-bottom:0.6rem; }
+      body.dash-lock #sec-dashboard .stats-grid { margin-bottom:0.7rem; }
+      body.dash-lock #sec-dashboard .stat-card { padding:0.65rem 1rem; display:grid; grid-template-columns:auto 1fr; column-gap:0.9rem; align-items:center; }
+      body.dash-lock #sec-dashboard .stat-card .stat-icon { grid-area:1 / 1 / span 2 / 2; margin:0; }
+      body.dash-lock #sec-dashboard .stat-card .stat-value { grid-area:1 / 2; margin:0; line-height:1.1; }
+      body.dash-lock #sec-dashboard .stat-card .stat-label { grid-area:2 / 2; margin:0; }
+      body.dash-lock #sec-dashboard .inv-head { margin-bottom:0.4rem; }
+      body.dash-lock #sec-dashboard .inv-cards { margin-bottom:0.7rem; gap:0.75rem; }
+      body.dash-lock #sec-dashboard .inv-card { padding:0.6rem 0.95rem; }
+      body.dash-lock #sec-dashboard .inv-card .ic-count { font-size:1.5rem; margin:0.15rem 0; }
+      body.dash-lock #sec-dashboard .inv-card .ic-bar { margin-top:0.35rem; }
+      body.dash-lock #sec-dashboard .dash-tabs { margin-bottom:0.6rem; }
+      body.dash-lock #sec-dashboard .dash-pane.dash-on { flex:1 1 0; min-height:0; overflow-y:auto; padding:2px 4px 0.5rem 2px; }
+      body.dash-lock #sec-dashboard .pending-box { padding:0.45rem 0.9rem; margin-bottom:0.45rem; }
+      body.dash-lock #sec-dashboard #pending-actions-body { padding:0.7rem 0.9rem; }
+      body.dash-lock #sec-dashboard .inv-grid > .card > .card-body { padding-top:0.7rem; padding-bottom:0.7rem; }
+      body.dash-lock #sec-dashboard .inv-donut-wrap { width:120px; height:120px; margin-bottom:0.5rem; }
+      body.dash-lock #sec-dashboard .inv-donut-wrap svg { width:120px; height:120px; }
+    }
     /* the category list is shown 10 at a time, with Previous / Next, so the page never stretches */
     .inv-pager { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; margin-top:0.9rem; padding-top:0.8rem; border-top:1px solid var(--border); font-size:0.76rem; color:var(--muted); }
     .inv-pager .pg-btns { display:flex; gap:0.4rem; align-items:center; }
@@ -975,70 +1011,53 @@
       {% set inv_low = all_products|selectattr('stock','gt',0)|selectattr('stock','lt',5)|list|length %}
       {% set inv_ok  = inv_total - inv_out - inv_low %}
       {% set inv_cats = all_products|groupby('category') %}
+      {% set inv_cat_counts = {} %}
+      {% for cname, items in inv_cats %}
+        {% set co = items|selectattr('stock','le',0)|list|length %}
+        {% set cl = items|selectattr('stock','gt',0)|selectattr('stock','lt',5)|list|length %}
+        {% set _u = inv_cat_counts.update({ (cname or ''): [co, cl, items|length - co - cl, items|length] }) %}
+      {% endfor %}
       <div class="inv-head">
-        <div><h4>Inventory</h4><div class="inv-sub">{{ inv_total }} products. Low stock means 4 or fewer left.</div></div>
-        <a onclick="goToSection('products')">Manage products</a>
+        <div><h4>Inventory</h4><div class="inv-sub" id="inv-sub">{{ inv_total }} products. Low stock means 4 or fewer left.</div></div>
+        <div style="display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;">
+          <select id="inv-cat-select" onchange="setInvCategory(this.value)" title="Show the numbers of one category"
+            style="padding:0.4rem 0.7rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-family:inherit;font-size:0.78rem;font-weight:600;max-width:240px;">
+            <option value="">All categories ({{ inv_cats|length }})</option>
+            {% for cname, items in inv_cats %}<option value="{{ (cname or '')|e }}">{{ cname or 'Uncategorized' }} ({{ items|length }})</option>{% endfor %}
+          </select>
+          <a onclick="goToSection('products')">Manage products</a>
+        </div>
       </div>
+      {# per category: [out of stock, low stock, in stock, total] (the cards and the donut follow the picked category) #}
+      <script>
+        const INV_BY_CAT = {{ inv_cat_counts|tojson }};
+        const INV_ALL = [{{ inv_out }}, {{ inv_low }}, {{ inv_ok }}, {{ inv_total }}];
+        const INV_CAT_COUNT = {{ inv_cats|length }};
+      </script>
       <div class="inv-cards">
         {% for key, cls, label, n in [('out','inv-out','Out of stock',inv_out),('low','inv-low','Low stock',inv_low),('in','inv-ok','In stock',inv_ok),('all','inv-all','Total products',inv_total)] %}
         {% set pct = ((n / inv_total * 100)|round|int) if inv_total else 0 %}
         <button type="button" class="inv-card {{ cls }}" onclick="openProductsFiltered('{{ key }}')">
           <div class="ic-label">{{ label }}</div>
-          <div class="ic-count">{{ n }}</div>
-          <div class="ic-pct">{% if key == 'all' %}in {{ inv_cats|length }} categor{{ 'y' if inv_cats|length == 1 else 'ies' }}{% else %}{{ pct }}% of products{% endif %}</div>
-          <div class="ic-bar"><div style="width:{{ pct if key != 'all' else 100 }}%;"></div></div>
+          <div class="ic-count" id="inv-count-{{ key }}">{{ n }}</div>
+          <div class="ic-pct" id="inv-pct-{{ key }}">{% if key == 'all' %}in {{ inv_cats|length }} categor{{ 'y' if inv_cats|length == 1 else 'ies' }}{% else %}{{ pct }}% of products{% endif %}</div>
+          <div class="ic-bar"><div id="inv-bar-{{ key }}" style="width:{{ pct if key != 'all' else 100 }}%;"></div></div>
         </button>
         {% endfor %}
       </div>
+      <div class="dash-tabs" id="dash-tabs">
+        <button type="button" class="dash-tab on" data-pane="stock" onclick="setDashPane('stock')">Stock &amp; Actions</button>
+        <button type="button" class="dash-tab" data-pane="restock" onclick="setDashPane('restock')">Needs Restocking</button>
+        <button type="button" class="dash-tab" data-pane="bookings" onclick="setDashPane('bookings')">Bookings</button>
+      </div>
+      <div class="dash-pane dash-on" data-pane="stock">
       <div class="inv-grid">
-        <div class="card">
-          <div class="card-head"><h5>Stock by Category</h5><button type="button" class="inv-toggle" id="inv-cat-toggle" onclick="toggleInvCatView()">Table</button></div>
-          <div class="card-body">
-            <div id="inv-cat-chart">
-              <div class="inv-legend"><span><i style="background:#dc2626"></i>Out of stock</span><span><i style="background:#f59e0b"></i>Low stock</span><span><i style="background:#15803d"></i>In stock</span></div>
-              {% set cat_max = namespace(v=1) %}
-              {% for cname, items in inv_cats %}{% if items|length > cat_max.v %}{% set cat_max.v = items|length %}{% endif %}{% endfor %}
-              {% for cname, items in inv_cats %}
-                {% set co = items|selectattr('stock','le',0)|list|length %}
-                {% set cl = items|selectattr('stock','gt',0)|selectattr('stock','lt',5)|list|length %}
-                {% set ci = items|length - co - cl %}
-                <div class="inv-cat-row">
-                  <span class="cat-name">{{ cname or 'Uncategorized' }}</span>
-                  <div class="cat-track" style="width:{{ (items|length / cat_max.v * 100)|round|int }}%;max-width:100%;flex:none;">
-                    {% if co %}<div style="background:#dc2626;flex:{{ co }};"></div>{% endif %}
-                    {% if cl %}<div style="background:#f59e0b;flex:{{ cl }};"></div>{% endif %}
-                    {% if ci %}<div style="background:#15803d;flex:{{ ci }};"></div>{% endif %}
-                  </div>
-                  <span class="cat-note">{{ items|length }} <span>({% for t in [(co,'out'),(cl,'low'),(ci,'in')] if t[0] %}{{ t[0] }} {{ t[1] }}{{ ', ' if not loop.last }}{% endfor %})</span></span>
-                </div>
-              {% endfor %}
-            </div>
-            <table class="table" id="inv-cat-table" style="display:none;">
-              <thead><tr><th>Category</th><th>Out</th><th>Low</th><th>In stock</th><th>Total</th></tr></thead>
-              <tbody>
-                {% for cname, items in inv_cats %}
-                {% set co = items|selectattr('stock','le',0)|list|length %}
-                {% set cl = items|selectattr('stock','gt',0)|selectattr('stock','lt',5)|list|length %}
-                <tr><td>{{ cname or 'Uncategorized' }}</td><td>{{ co }}</td><td>{{ cl }}</td><td>{{ items|length - co - cl }}</td><td>{{ items|length }}</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-            <div class="inv-pager" id="inv-cat-pager">
-              <span id="inv-cat-pager-info"></span>
-              <span class="pg-btns">
-                <button type="button" id="inv-cat-prev" onclick="invCatGo(-1)">‹ Previous</button>
-                <span id="inv-cat-pager-page"></span>
-                <button type="button" id="inv-cat-next" onclick="invCatGo(1)">Next ›</button>
-              </span>
-            </div>
-          </div>
-        </div>
         <div class="card">
           <div class="card-head"><h5>Stock Status</h5></div>
           <div class="card-body">
             {% set circ = 251.33 %}
             <div class="inv-donut-wrap">
-              <svg viewBox="0 0 100 100" width="170" height="170" style="transform:rotate(-90deg);">
+              <svg id="inv-donut" viewBox="0 0 100 100" width="170" height="170" style="transform:rotate(-90deg);">
                 <circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" stroke-width="16"/>
                 {% set off = namespace(v=0) %}
                 {% for n, col in [(inv_out,'#dc2626'),(inv_low,'#f59e0b'),(inv_ok,'#15803d')] if n and inv_total %}
@@ -1047,14 +1066,34 @@
                   {% set off.v = off.v + seg %}
                 {% endfor %}
               </svg>
-              <div class="donut-mid"><b>{{ inv_total }}</b><span>products</span></div>
+              <div class="donut-mid"><b id="inv-donut-total">{{ inv_total }}</b><span>products</span></div>
             </div>
-            {% for n, col, label in [(inv_out,'#dc2626','Out of stock'),(inv_low,'#f59e0b','Low stock'),(inv_ok,'#15803d','In stock')] %}
-            <div class="inv-status-row" style="--c:{{ col }};"><span class="sr-name">{{ label }}</span><span><b>{{ n }}</b> &nbsp;<span style="color:var(--muted);">{{ ((n / inv_total * 100)|round|int) if inv_total else 0 }}%</span></span></div>
+            {% for n, col, label, k in [(inv_out,'#dc2626','Out of stock','out'),(inv_low,'#f59e0b','Low stock','low'),(inv_ok,'#15803d','In stock','in')] %}
+            <div class="inv-status-row" style="--c:{{ col }};"><span class="sr-name">{{ label }}</span><span><b id="inv-row-{{ k }}">{{ n }}</b> &nbsp;<span id="inv-row-{{ k }}-pct" style="color:var(--muted);">{{ ((n / inv_total * 100)|round|int) if inv_total else 0 }}%</span></span></div>
             {% endfor %}
           </div>
         </div>
+        <div class="card">
+          <div class="card-head"><h5>Pending Actions</h5></div>
+          <div class="card-body" id="pending-actions-body">
+            <div class="pending-box{% if awaiting_quotation_count > 0 %} amber-highlight{% endif %}" id="pending-box-quotation" onclick="goToBookingsTab('inspection')">
+              <div><span>Awaiting Quotation Answer</span><div class="pending-sub">Quotations sent, waiting for the customer</div></div>
+              <span class="pending-num" id="pending-num-quotation" style="color:#b45309;">{{ awaiting_quotation_count }}</span>
+            </div>
+            <div class="pending-box" onclick="goToBookingsTab('inprogress')">
+              <span>In Progress Bookings</span><span class="pending-num" id="pending-num-inprogress" style="color:var(--warning);">{{ booking_status_counts.get('in_progress', 0) }}</span>
+            </div>
+            <div class="pending-box" onclick="goToSection('orders')">
+              <span>Pending Orders</span><span class="pending-num" id="pending-num-orders" style="color:var(--blue);">{{ order_status_counts.get('pending', 0) }}</span>
+            </div>
+            <div class="pending-box" onclick="goToSection('users')">
+              <span>New Users Today</span><span class="pending-num" id="pending-num-users" style="color:var(--green);">{{ new_users_today }}</span>
+            </div>
+          </div>
+        </div>
       </div>
+      </div>{# /pane stock #}
+      <div class="dash-pane" data-pane="restock">
       {% set restock_all = all_products|selectattr('stock','lt',5)|sort(attribute='stock')|list %}
       <div class="card" style="margin-bottom:1rem;">
         <div class="card-head"><h5>Needs Restocking</h5><span style="font-size:0.7rem;color:var(--muted);">Out of stock first, then lowest stock</span></div>
@@ -1073,7 +1112,9 @@
         <div class="empty-state"><p>Every product is well stocked.</p></div>
         {% endif %}
       </div>
-      <div class="charts-grid">
+      </div>{# /pane restock #}
+      <div class="dash-pane" data-pane="bookings">
+      <div class="charts-grid" style="grid-template-columns:1fr;">
         <div class="card">
           <div class="card-head">
             <h5>Bookings by Status</h5>
@@ -1091,24 +1132,6 @@
                   <span class="bar-val" id="bk-count-{{ status }}">{{ count }}</span>
                 </div>
               {% endfor %}
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h5>Pending Actions</h5></div>
-          <div class="card-body" id="pending-actions-body">
-            <div class="pending-box{% if awaiting_quotation_count > 0 %} amber-highlight{% endif %}" id="pending-box-quotation" onclick="goToBookingsTab('inspection')">
-              <div><span>Awaiting Quotation Answer</span><div class="pending-sub">Quotations sent, waiting for the customer</div></div>
-              <span class="pending-num" id="pending-num-quotation" style="color:#b45309;">{{ awaiting_quotation_count }}</span>
-            </div>
-            <div class="pending-box" onclick="goToBookingsTab('inprogress')">
-              <span>In Progress Bookings</span><span class="pending-num" id="pending-num-inprogress" style="color:var(--warning);">{{ booking_status_counts.get('in_progress', 0) }}</span>
-            </div>
-            <div class="pending-box" onclick="goToSection('orders')">
-              <span>Pending Orders</span><span class="pending-num" id="pending-num-orders" style="color:var(--blue);">{{ order_status_counts.get('pending', 0) }}</span>
-            </div>
-            <div class="pending-box" onclick="goToSection('users')">
-              <span>New Users Today</span><span class="pending-num" id="pending-num-users" style="color:var(--green);">{{ new_users_today }}</span>
             </div>
           </div>
         </div>
@@ -1157,6 +1180,7 @@
         <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings yet.</p></div>
         {% endif %}
       </div>
+      </div>{# /pane bookings #}
     </section>
 
     <!-- BOOKINGS -->
@@ -4019,6 +4043,7 @@
     sessionStorage.setItem('adminSection', name);
     document.body.classList.toggle('parts-lock', name === 'parts');
     document.body.classList.toggle('ds-lock', name === 'day-schedule');
+    document.body.classList.toggle('dash-lock', name === 'dashboard');
     document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products'].includes(name));
     openSidebarGroupOfActive();
     document.body.classList.toggle('embed-lock', !!EMBEDS[name]);
@@ -7705,6 +7730,8 @@
     goToSection('products');
     productStockFilter = f;
     currentProductPage = 1;
+    const box = document.getElementById('products-search-input');
+    if (typeof invCategory !== 'undefined' && invCategory) { productSearchQuery = invCategory.toLowerCase(); if (box) box.value = invCategory; }
     renderProductPage();
   }
 
@@ -7721,35 +7748,36 @@
     if (input) { input.focus(); input.select(); }
   }
 
-  // Category list: 10 per page, the chart and the table share the same page.
-  let invCatPage = 0;
-  const INV_CAT_PAGE_SIZE = 10;
-  function invCatGo(d) { invCatPage += d; renderInvCatPage(); }
-  function renderInvCatPage() {
-    const rows = Array.from(document.querySelectorAll('#inv-cat-table tbody tr'));
-    const bars = Array.from(document.querySelectorAll('#inv-cat-chart .inv-cat-row'));
-    const total = rows.length || bars.length;
-    const pages = Math.max(1, Math.ceil(total / INV_CAT_PAGE_SIZE));
-    invCatPage = Math.min(Math.max(0, invCatPage), pages - 1);
-    const from = invCatPage * INV_CAT_PAGE_SIZE, to = from + INV_CAT_PAGE_SIZE;
-    rows.forEach((r, i) => { r.style.display = (i >= from && i < to) ? '' : 'none'; });
-    bars.forEach((r, i) => { r.style.display = (i >= from && i < to) ? '' : 'none'; });
-    document.getElementById('inv-cat-pager-info').textContent = total ? `${from + 1}–${Math.min(to, total)} of ${total} categories` : 'No categories';
-    document.getElementById('inv-cat-pager-page').textContent = `Page ${invCatPage + 1} of ${pages}`;
-    document.getElementById('inv-cat-prev').disabled = invCatPage === 0;
-    document.getElementById('inv-cat-next').disabled = invCatPage >= pages - 1;
-    document.getElementById('inv-cat-pager').style.display = pages > 1 ? 'flex' : 'none';
+  // The lower part of the dashboard: one tab at a time (Stock & Actions, Needs Restocking, Bookings).
+  function setDashPane(k) {
+    window._dashPane = k;
+    document.querySelectorAll('#dash-tabs .dash-tab').forEach(t => t.classList.toggle('on', t.dataset.pane === k));
+    document.querySelectorAll('#sec-dashboard .dash-pane').forEach(p => p.classList.toggle('dash-on', p.dataset.pane === k));
   }
-  document.addEventListener('DOMContentLoaded', renderInvCatPage);
-  if (document.readyState !== 'loading') renderInvCatPage();
+  document.body.classList.toggle('dash-lock', !!document.querySelector('#sec-dashboard.active'));
 
-  function toggleInvCatView() {
-    const table = document.getElementById('inv-cat-table');
-    const chart = document.getElementById('inv-cat-chart');
-    const showTable = table.style.display === 'none';
-    table.style.display = showTable ? '' : 'none';
-    chart.style.display = showTable ? 'none' : '';
-    document.getElementById('inv-cat-toggle').textContent = showTable ? 'Chart' : 'Table';
+  // Inventory category picker: the four cards and the Stock Status donut show the numbers of the chosen category.
+  let invCategory = '';
+  function setInvCategory(cat) {
+    invCategory = cat;
+    const c = cat ? (INV_BY_CAT[cat] || [0, 0, 0, 0]) : null;
+    const out = c ? c[0] : INV_ALL[0], low = c ? c[1] : INV_ALL[1], ok = c ? c[2] : INV_ALL[2], total = c ? c[3] : INV_ALL[3];
+    const pct = n => total ? Math.round(n / total * 100) : 0;
+    [['out', out], ['low', low], ['in', ok]].forEach(([k, n]) => {
+      document.getElementById('inv-count-' + k).textContent = n;
+      document.getElementById('inv-pct-' + k).textContent = pct(n) + '% of products';
+      document.getElementById('inv-bar-' + k).style.width = pct(n) + '%';
+      document.getElementById('inv-row-' + k).textContent = n;
+      document.getElementById('inv-row-' + k + '-pct').textContent = pct(n) + '%';
+    });
+    document.getElementById('inv-count-all').textContent = total;
+    document.getElementById('inv-pct-all').textContent = cat ? 'in this category' : 'in ' + INV_CAT_COUNT + ' categor' + (INV_CAT_COUNT === 1 ? 'y' : 'ies');
+    document.getElementById('inv-sub').textContent = total + ' product' + (total === 1 ? '' : 's') + (cat ? ' in ' + (cat || 'Uncategorized') : '') + '. Low stock means 4 or fewer left.';
+    document.getElementById('inv-donut-total').textContent = total;
+    const circ = 251.33; let off = 0;
+    const segs = [[out, '#dc2626'], [low, '#f59e0b'], [ok, '#15803d']].filter(x => x[0] && total);
+    document.getElementById('inv-donut').innerHTML = '<circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" stroke-width="16"/>' +
+      segs.map(([n, col]) => { const seg = n / total * circ; const h = `<circle cx="50" cy="50" r="40" fill="none" stroke="${col}" stroke-width="16" stroke-dasharray="${seg} ${circ - seg}" stroke-dashoffset="${-off}"/>`; off += seg; return h; }).join('');
   }
 
   function setStockFilter(f) {
