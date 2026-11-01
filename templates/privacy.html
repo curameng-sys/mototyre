@@ -199,11 +199,12 @@
         .contact-grid { grid-template-columns: 1fr; }
       }
     </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 <div class="page-wrap">
 
-  <a href="{{ url_for('home') }}" class="auth-logo">MOTO<span>TYRES</span></a>
+  <a href="{{ url_for('home') }}" class="auth-logo"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span></a>
 
   <div>
     <span class="badge-pill">Privacy</span>

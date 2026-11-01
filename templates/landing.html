@@ -401,6 +401,7 @@
       #how .step-desc { font-size: clamp(14px, 2vh, 18px); }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
@@ -758,7 +759,7 @@
 <!-- FOOTER -->
 <footer class="footer">
   <div class="footer-left">
-    <div class="footer-logo">MOTO<span>TYRES</span></div>
+    <div class="footer-logo"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span></div>
     <span class="footer-copy">© <span id="footer-year"></span> MotoTyres North Caloocan. All rights reserved.</span>
   </div>
   <div class="footer-links">

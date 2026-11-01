@@ -1260,7 +1260,7 @@
 
 <!-- ═══ TOP NAVBAR ═══ -->
 <nav class="top-nav">
-  <div class="nav-logo"><img class="nav-logo-img" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'">MOTO<span>TYRES</span></div>
+  <div class="nav-logo"><img class="nav-logo-img" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span style="color:var(--fg-1)">MOTO<span>TYRES</span></span></div>
 
   <div class="nav-links">
     <a href="#" class="active" onclick="showSection('overview', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
@@ -2449,6 +2449,7 @@
     </div>
 
     <div id="bd-cancel-wrap" style="display:none;margin-top:1rem;">
+      <button type="button" id="bd-resched-btn" onclick="openReschedule()" style="width:100%;padding:0.65rem;margin-bottom:0.5rem;background:#fff;border:1px solid var(--line-2);border-radius:10px;color:var(--fg-1);font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Change Date / Time</button>
       <button type="button" id="bd-cancel-btn" onclick="openCancelMyBooking()" style="width:100%;padding:0.65rem;background:#fff;border:1px solid #fecaca;border-radius:10px;color:#b91c1c;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Cancel Booking</button>
       <div id="bd-cancel-note" style="display:none;font-size:0.78rem;color:var(--fg-2);text-align:center;padding:0.65rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;">The shop has started work on this booking, so it can no longer be cancelled online. Please contact the shop.</div>
     </div>
@@ -2460,6 +2461,24 @@
 
     <div class="modal-actions" style="margin-top:1.5rem;">
       <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-booking-details')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CHANGE DATE / TIME OF MY BOOKING ═══ -->
+<div class="modal-overlay" id="modal-reschedule" onclick="if (event.target === this) closeModal('modal-reschedule')">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-label="Change date or time" style="width:460px;max-width:94vw;padding:1.4rem 1.3rem;">
+    <h5 id="rs-title" style="margin:0 0 0.2rem;font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--fg-1);">Change date / time</h5>
+    <p id="rs-sub" style="font-size:0.78rem;color:var(--fg-3);margin:0 0 0.9rem;line-height:1.45;"></p>
+    <label for="rs-date" style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--fg-3);margin-bottom:0.3rem;">New date</label>
+    <input type="date" id="rs-date" onchange="loadRescheduleSlots()" style="width:100%;padding:0.55rem 0.7rem;border:1px solid var(--line-2);border-radius:8px;font-size:0.9rem;margin-bottom:0.8rem;">
+    <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--fg-3);margin-bottom:0.3rem;">New time</div>
+    <div id="rs-slots" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;max-height:200px;overflow-y:auto;min-height:48px;"></div>
+    <div id="rs-msg" style="display:none;margin-top:0.7rem;font-size:0.78rem;color:#b91c1c;line-height:1.4;"></div>
+    <div style="margin-top:0.8rem;font-size:0.74rem;color:var(--fg-3);line-height:1.45;">Your services, mechanic and price stay the same. You can move a booking up to 2 times, and not within 2 hours of its start.</div>
+    <div class="modal-actions" style="margin-top:1.1rem;display:flex;gap:0.5rem;">
+      <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-reschedule')" style="flex:1;">Keep current time</button>
+      <button type="button" id="rs-confirm" onclick="doReschedule()" disabled style="flex:1;padding:0.65rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;opacity:0.45;">Move booking</button>
     </div>
   </div>
 </div>
@@ -6433,10 +6452,76 @@ function openBookingDetails(bookingId) {
   const started = ['inspection', 'in_progress', 'inprogress'].includes(booking.status);
   cw.style.display = (booking.status === 'confirmed' || started) ? 'block' : 'none';
   document.getElementById('bd-cancel-btn').style.display  = booking.status === 'confirmed' ? 'block' : 'none';
+  document.getElementById('bd-resched-btn').style.display = booking.status === 'confirmed' ? 'block' : 'none';
   document.getElementById('bd-cancel-note').style.display = started ? 'block' : 'none';
   document.getElementById('bd-again-wrap').style.display = booking.status === 'cancelled' ? 'block' : 'none';
 
   document.getElementById('modal-booking-details').classList.add('open');
+}
+
+// Change the date / time of a Confirmed booking: the page asks the server which times really work (the same shop rules as a new booking).
+let _rsPick = null, _rsId = null;
+function openReschedule() {
+  const id = _currentBookingDetailId, b = bookingsData[id];
+  if (!b || b.status !== 'confirmed') return;
+  _rsId = id; _rsPick = null;
+  const ref = 'BKG-' + String(id).padStart(3, '0');
+  document.getElementById('rs-title').textContent = `Change ${ref}`;
+  document.getElementById('rs-sub').textContent = `Now: ${b.date} at ${b.time}${b.mechanic_name ? ' · ' + b.mechanic_name : ''}. Pick the new date and time.`;
+  const d = document.getElementById('rs-date');
+  const t = new Date(); const iso = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  d.min = iso; d.value = b.date_iso;
+  document.getElementById('rs-msg').style.display = 'none';
+  setRsConfirm(false);
+  document.getElementById('modal-reschedule').classList.add('open');
+  loadRescheduleSlots();
+}
+function setRsConfirm(on) {
+  const btn = document.getElementById('rs-confirm');
+  btn.disabled = !on; btn.style.opacity = on ? '1' : '0.45'; btn.style.cursor = on ? 'pointer' : 'not-allowed';
+}
+async function loadRescheduleSlots() {
+  const box = document.getElementById('rs-slots'), msg = document.getElementById('rs-msg');
+  const date = document.getElementById('rs-date').value;
+  _rsPick = null; setRsConfirm(false); msg.style.display = 'none';
+  if (!date) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="grid-column:1/-1;font-size:0.78rem;color:var(--fg-3);">Checking the shop schedule…</div>';
+  try {
+    const res = await fetch(`/customer/booking/${_rsId}/reschedule-slots?date=${encodeURIComponent(date)}`);
+    const data = await res.json();
+    if (data.error) { box.innerHTML = ''; msg.textContent = data.error; msg.style.display = 'block'; return; }
+    const slots = data.slots || [];
+    if (!slots.some(s => s.available)) {
+      msg.textContent = 'No free time on this day. Try another date.'; msg.style.display = 'block';
+    }
+    box.innerHTML = slots.map(s => `<button type="button" class="rs-slot" data-time="${s.time}" ${s.available ? '' : 'disabled'} title="${s.available ? '' : String(s.reason || 'Not available').replace(/"/g, '&quot;')}" onclick="pickRsSlot('${s.time}')" style="padding:0.5rem 0.2rem;border:1.5px solid var(--line-2);border-radius:8px;background:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;cursor:${s.available ? 'pointer' : 'not-allowed'};opacity:${s.available ? 1 : 0.4};">${s.label}</button>`).join('');
+  } catch (e) { box.innerHTML = ''; msg.textContent = 'Network error. Please try again.'; msg.style.display = 'block'; }
+}
+function pickRsSlot(t) {
+  _rsPick = t;
+  document.querySelectorAll('#rs-slots .rs-slot').forEach(b => {
+    const on = b.dataset.time === t;
+    b.style.borderColor = on ? 'var(--brand-red)' : 'var(--line-2)'; b.style.background = on ? 'rgba(208,0,25,0.08)' : '#fff';
+  });
+  setRsConfirm(true);
+}
+async function doReschedule() {
+  if (!_rsPick) return;
+  const msg = document.getElementById('rs-msg'); msg.style.display = 'none';
+  setRsConfirm(false);
+  try {
+    const res = await fetch(`/customer/booking/${_rsId}/reschedule`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: document.getElementById('rs-date').value, time: _rsPick }) });
+    const data = await res.json();
+    if (data.success) {
+      closeModal('modal-reschedule'); closeModal('modal-booking-details');
+      showCartToast('Booking moved. We sent you the new schedule.');
+      setTimeout(() => location.reload(), 900);
+      return;
+    }
+    await loadRescheduleSlots();                 // the times may have changed: show the fresh list, then say why it failed
+    msg.textContent = data.error || 'Could not move this booking.'; msg.style.display = 'block';
+  } catch (e) { msg.textContent = 'Network error. Please try again.'; msg.style.display = 'block'; setRsConfirm(true); }
 }
 
 // Modal F: "Cancel BKG-405?" for a Confirmed booking (from Your Upcoming Bookings, My Bookings or the booking details).

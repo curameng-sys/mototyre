@@ -264,6 +264,7 @@
     html.embedded .quote-panel{height:auto;min-height:0;border:1px solid var(--border);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
   </style>
   <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
@@ -287,7 +288,7 @@
       <a href="{{ url_for('admin_dashboard') }}" class="btn-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> <span>Manage Bookings</span></a>
     </div>
   {% else %}
-    <div class="topbar-brand">MOTO<span>TYRES</span> <span class="badge-pill">New Quotation</span></div>
+    <div class="topbar-brand"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span> <span class="badge-pill">New Quotation</span></div>
     <div class="topbar-right">
       <a href="{{ url_for('quotations_list') }}" class="btn-view-all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> <span>All Quotations</span></a>
       <a href="{{ url_for('admin_dashboard') }}" class="btn-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> <span>Dashboard</span></a>

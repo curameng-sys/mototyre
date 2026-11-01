@@ -461,6 +461,7 @@
       .otp-cell { height: 50px; font-size: 1.3rem; }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
@@ -472,7 +473,7 @@
     <div class="photo-scrim"></div>
     <div class="photo-content">
       <!-- Logo -->
-      <div class="photo-logo">MOTO<span class="accent">TYRES</span></div>
+      <div class="photo-logo"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span class="accent">TYRES</span></span></div>
 
       <!-- Tagline -->
       <div class="photo-tagline">

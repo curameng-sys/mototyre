@@ -860,12 +860,13 @@
       .page-title { font-size: 1.4rem; }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
 <!-- MOBILE TOPBAR -->
 <div class="mobile-topbar">
-  <div class="mobile-topbar-logo">MOTO<span>TYRES</span></div>
+  <div class="mobile-topbar-logo"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span></div>
   <div class="hamburger" onclick="toggleAdminSidebar()">
     <span></span><span></span><span></span>
   </div>
@@ -928,7 +929,7 @@
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <div class="sidebar-logo">MOTO<span>TYRES</span> <span class="sidebar-badge">Admin</span></div>
+    <div class="sidebar-logo"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span> <span class="sidebar-badge">Admin</span></div>
 
     <div class="sidebar-search">
       <input type="text" placeholder="Search..." oninput="sidebarSearch(this.value)">

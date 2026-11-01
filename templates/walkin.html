@@ -575,6 +575,7 @@
     html.embedded .returning-badge{color:#15803d;}
   </style>
   <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
@@ -585,7 +586,7 @@
 
 <header class="topbar">
   <div class="topbar-brand">
-    MOTO<span>TYRES</span>
+    <img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span>
     <span class="pos-badge">Walk-In</span>
   </div>
   <div class="topbar-right">

@@ -127,11 +127,12 @@
       .modal-foot{flex-direction:column;}
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
 <header class="topbar">
-  <div class="topbar-brand">MOTO<span>TYRES</span></div>
+  <div class="topbar-brand"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span></div>
   <a href="{{ url_for('payments') }}" class="btn-back"><i class="fas fa-arrow-left"></i> Back</a>
 </header>
 

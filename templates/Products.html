@@ -212,12 +212,13 @@
     @media (max-width: 640px) { .page-hero p, .page-hero .eyebrow, .footer-links { display: none; } .footer { justify-content: center; } }
     @media (max-height: 640px) { .page-hero p, .page-hero .eyebrow { display: none; } .footer { display: none; } }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
 <!-- NAV -->
 <nav class="nav-bar">
-  <span class="nav-logo">MOTO<span>TYRES</span></span>
+  <span class="nav-logo"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span></span>
   <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
     <i data-lucide="menu" style="width:22px;height:22px"></i>
   </button>

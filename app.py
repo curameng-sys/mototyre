@@ -550,6 +550,7 @@ class Booking(db.Model):
     own_parts_note   = db.Column(db.String(200), nullable=True)      # which parts (typed by the customer)
     no_show          = db.Column(db.Boolean, default=False)          # cancelled because the customer did not come
     quoted_price     = db.Column(db.Float, nullable=True)            # the services' price when it was booked: a later price change does not touch it
+    reschedule_count = db.Column(db.Integer, default=0)              # how many times the CUSTOMER moved this booking (limited)
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
@@ -2503,6 +2504,130 @@ def customer_cancel_booking(bid):
                           f'{current_user.fullname} cancelled {ref} ({b.service}) on {b.date.strftime("%b %d, %Y")} at {b.time.strftime("%I:%M %p")}.',
                           type='booking', status='cancelled')
     return jsonify({'success': True})
+
+
+MAX_CUSTOMER_RESCHEDULES = 2        # how many times a customer can move one booking on their own
+RESCHEDULE_CUTOFF_HOURS = 2         # and not any closer to the start than this (after that, call the shop)
+
+
+def _reschedule_block_reason(b):
+    """Why this customer can't move this booking on their own, or None when they can."""
+    if b.status != 'confirmed':
+        return ('The shop has already started this booking, so it can no longer be moved online. Please contact the shop.'
+                if b.status in ('inspection', 'in_progress', 'inprogress', 'completed') else 'This booking can no longer be moved.')
+    if (b.reschedule_count or 0) >= MAX_CUSTOMER_RESCHEDULES:
+        return f'You already moved this booking {MAX_CUSTOMER_RESCHEDULES} times. Please contact the shop if you need another change.'
+    if datetime.combine(b.date, b.time) - ph_now() < timedelta(hours=RESCHEDULE_CUTOFF_HOURS):
+        return f'It is less than {RESCHEDULE_CUTOFF_HOURS} hours before your appointment, so it can no longer be moved online. Please contact the shop.'
+    return None
+
+
+def _reschedule_duration(b):
+    from service_duration import MULTIDAY_INTAKE_MIN
+    return MULTIDAY_INTAKE_MIN if b.is_multiday else (b.duration_minutes or DEFAULT_DURATION_MIN)
+
+
+def _reschedule_slot_error(b, new_date, start_min):
+    """The same shop rules a new booking goes through, for moving this one (its own current time does not count against it)."""
+    mech = Mechanic.query.filter_by(name=b.assigned_mechanic_name).first() if b.assigned_mechanic_name else None
+    _, err = _check_booking_request(str(mech.id) if mech else '', new_date, start_min, _reschedule_duration(b), exclude_id=b.id)
+    return err
+
+
+@app.route('/customer/booking/<int:bid>/reschedule-slots')
+@login_required
+@require_active_account
+def customer_reschedule_slots(bid):
+    """The start times this booking could really move to on a day: free in the shop's queue (its own slot does not
+    count against it), not blocked, in the future and, if it has a mechanic, free for them."""
+    b = Booking.query.filter_by(id=bid, user_id=current_user.id).first_or_404()
+    block = _reschedule_block_reason(b)
+    if block:
+        return jsonify({'slots': [], 'error': block})
+    try:
+        the_date = datetime.strptime(request.args.get('date', '').strip(), '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'slots': [], 'error': 'Invalid date'}), 400
+    if the_date < ph_now().date():
+        return jsonify({'slots': []})
+    duration = _reschedule_duration(b)
+    intervals = []
+    for o in Booking.query.filter(Booking.date == the_date, Booking.status != 'cancelled', Booking.id != b.id).all():
+        o_start = o.time.hour * 60 + o.time.minute
+        intervals.append((o_start, compute_finish_minutes(o_start, o.duration_minutes or DEFAULT_DURATION_MIN)))
+    intervals += _gather_blocked_intervals(the_date)
+    now_minutes = None
+    if the_date == ph_now().date():
+        n = ph_now()
+        now_minutes = n.hour * 60 + n.minute
+    _, _, on_duty = get_on_duty_mechanics(the_date)
+    out = []
+    for sl in slot_statuses(duration, intervals, now_minutes, on_duty_count=len(on_duty)):
+        ok, why = sl['available'], sl['reason']
+        if ok:
+            err = _reschedule_slot_error(b, the_date, sl['start'])
+            if err:
+                ok, why = False, err
+        out.append({'time': minutes_to_hhmm(sl['start']), 'label': minutes_to_ampm(sl['start']), 'end_label': minutes_to_ampm(sl['end']),
+                    'available': bool(ok), 'reason': why})
+    return jsonify({'slots': out, 'mechanic': b.assigned_mechanic_name or ''})
+
+
+@app.route('/customer/booking/<int:bid>/reschedule', methods=['POST'])
+@login_required
+@require_active_account
+def customer_reschedule_booking(bid):
+    """A customer moves their own Confirmed booking to another day or time: through the same shop rules as a new
+    booking, at most MAX_CUSTOMER_RESCHEDULES times, and not within RESCHEDULE_CUTOFF_HOURS of the start. The price,
+    services and mechanic stay as they are."""
+    data = request.get_json(silent=True) or {}
+    try:
+        new_date = datetime.strptime(clean_str(data.get('date', ''), max_len=10), '%Y-%m-%d').date()
+        new_time = datetime.strptime(clean_str(data.get('time', ''), max_len=5), '%H:%M').time()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Please pick a date and a time.'}), 400
+    b = Booking.query.filter_by(id=bid, user_id=current_user.id).first_or_404()
+    old_date, old_time = b.date, b.time
+    _q_before = None
+    with _booking_day_lock({old_date, new_date}, user_id=current_user.id):
+        db.session.refresh(b)
+        block = _reschedule_block_reason(b)
+        if block:
+            return jsonify({'success': False, 'error': block}), 400
+        if (new_date, new_time) == (b.date, b.time):
+            return jsonify({'success': False, 'error': 'That is the time your booking already has. Pick a different one.'}), 400
+        if datetime.combine(new_date, new_time) <= ph_now():
+            return jsonify({'success': False, 'error': 'Please pick a time that has not passed yet.'}), 400
+        start_min = new_time.hour * 60 + new_time.minute
+        err = _reschedule_slot_error(b, new_date, start_min)
+        if err:
+            return jsonify({'success': False, 'error': err}), 400
+        try:
+            _q_before = _queue_day_numbers(old_date)
+        except Exception:
+            _q_before = None
+        b.date, b.time = new_date, new_time
+        b.end_time = minutes_to_time(compute_finish_minutes(start_min, b.duration_minutes or DEFAULT_DURATION_MIN))
+        b.overrun_minutes = 0
+        b.was_rescheduled = True
+        b.reschedule_count = (b.reschedule_count or 0) + 1
+        db.session.commit()
+    if _q_before is not None:
+        try:
+            _notify_queue_moved(old_date, _q_before)
+        except Exception:
+            db.session.rollback()
+    ref = f'BKG-{b.id:03d}'
+    send_booking_confirmation_email(b)
+    send_notification(current_user.id, f"Moved to {b.date.strftime('%b %d')} at {b.time.strftime('%I:%M %p')}",
+                      f"You moved your {b.service} booking ({ref}) from {old_date.strftime('%b %d, %Y')} at {old_time.strftime('%I:%M %p')} "
+                      f"to {b.date.strftime('%b %d, %Y')} at {b.time.strftime('%I:%M %p')}. Mechanic: {b.assigned_mechanic_name or 'the shop will assign one'}.",
+                      type='booking', status='confirmed', booking_id=b.id)
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(admin.id, 'Booking moved by customer',
+                          f"{current_user.fullname} moved {ref} ({b.service}) from {old_date.strftime('%b %d')} {old_time.strftime('%I:%M %p')} "
+                          f"to {b.date.strftime('%b %d')} {b.time.strftime('%I:%M %p')}.", type='booking', status='confirmed')
+    return jsonify({'success': True, 'left': MAX_CUSTOMER_RESCHEDULES - b.reschedule_count, 'booking': _booking_client_dict(b)})
 
 
 # ═══════════════ TRANSACTIONS — every payment and refund the customer has ═══════════════
@@ -4996,6 +5121,7 @@ with app.app_context():
         "ALTER TABLE booking ADD COLUMN own_parts_note VARCHAR(200) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN no_show TINYINT(1) DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN quoted_price DOUBLE DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN reschedule_count INT DEFAULT 0",
         "ALTER TABLE user ADD COLUMN address VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN motorcycle_model VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN motorcycle_year VARCHAR(4) DEFAULT NULL",

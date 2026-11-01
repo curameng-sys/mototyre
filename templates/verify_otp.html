@@ -306,6 +306,7 @@
         .otp-box { height: 46px; font-size: 1.3rem; }
       }
     </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
@@ -315,7 +316,7 @@
   <div class="auth-left">
     <div class="auth-left-bg"></div>
     <div class="auth-left-content">
-      <a href="{{ url_for('home') }}" class="auth-logo">MOTO<span>TYRES</span></a>
+      <a href="{{ url_for('home') }}" class="auth-logo"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span></a>
       <h2>
         CHECK<br>
         <span class="accent">YOUR</span><br>

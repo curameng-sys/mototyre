@@ -149,11 +149,12 @@
     html.embedded body{background:transparent;}
   </style>
   <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
 <header class="topbar">
-  <div class="topbar-brand">MOTO<span>TYRES</span> <span class="badge-pill">Job Orders</span></div>
+  <div class="topbar-brand"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span> <span class="badge-pill">Job Orders</span></div>
   <div class="topbar-right" style="align-items:center;">
     <a href="{{ url_for('walk_in') }}" class="btn-action btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Walk-In</a>
     <a href="{{ url_for('admin_dashboard') }}" class="btn-action btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Dashboard</a>

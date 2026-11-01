@@ -27,10 +27,11 @@
     a.cancel { display:block; box-sizing:border-box; width:100%; text-align:center; margin-top:0.7rem; padding:0.8rem; border:1.5px solid var(--line-2); border-radius:10px; background:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; color:var(--fg-2, #5a5149); text-decoration:none; transition:border-color .2s, color .2s, background .2s; }
     a.cancel:hover { border-color:var(--fg-3); color:#1a1613; background:#faf8f5; }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
   <div class="card">
-    <div class="logo">MOTO<span>TYRES</span></div>
+    <div class="logo"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span></div>
     <div class="eyebrow">Almost done</div>
     <h1>One more step</h1>
     <p class="sub">Google confirmed your email. We just need your mobile number so the shop can reach you about your bookings and orders.</p>

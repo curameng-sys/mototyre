@@ -256,6 +256,7 @@ class Booking(db.Model):
     own_parts_note   = db.Column(db.String(200), nullable=True)      # which parts (typed by the customer)
     no_show          = db.Column(db.Boolean, default=False)          # cancelled because the customer did not come
     quoted_price     = db.Column(db.Float, nullable=True)            # the services' price when it was booked: a later price change does not touch it
+    reschedule_count = db.Column(db.Integer, default=0)              # how many times the CUSTOMER moved this booking (limited)
     is_archived     = db.Column(db.Boolean, default=False)
     total_amount    = db.Column(db.Float, default=0)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
@@ -9880,6 +9881,7 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN own_parts_note VARCHAR(200) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN no_show TINYINT(1) DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN quoted_price DOUBLE DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN reschedule_count INT DEFAULT 0",
         "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN recorded_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN voided_at DATETIME DEFAULT NULL",

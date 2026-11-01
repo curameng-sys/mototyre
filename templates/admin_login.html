@@ -347,6 +347,7 @@
       .otp-cell { max-width: 44px; font-size: 1.3rem; }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>
 
@@ -359,7 +360,7 @@
   <!-- Logo -->
   <div class="logo-area">
     <div class="logo-mark">
-      <div class="logo-name">MOTO<span>TYRES</span></div>
+      <div class="logo-name"><img class="brand-logo" src="{{ url_for('static', filename='images/mototyres-logo.png') }}" alt="" onerror="this.style.display='none'"><span class="brand-word" style="color:inherit">MOTO<span>TYRES</span></span></div>
     </div>
   </div>
 

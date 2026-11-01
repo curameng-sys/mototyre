@@ -1,0 +1,4 @@
+/* The MotoTyres logo next to the MOTOTYRES wordmark, the same on every page.
+   .brand-word keeps "MOTO" and "TYRES" together as ONE item, so a flex parent with a gap cannot push them apart. */
+.brand-logo { width: 1.7em; height: 1.7em; border-radius: 50%; object-fit: contain; flex-shrink: 0; vertical-align: middle; margin-right: 0.35em; }
+.brand-word { white-space: nowrap; color: inherit; }
