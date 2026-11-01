@@ -1019,6 +1019,12 @@
       .bw-pane[data-bstep="7"] #btn-confirm-all-bottom { grid-column: 2; grid-row: 3; margin-top: 0.9rem !important; padding: 0.95rem 1rem !important; font-size: 0.95rem !important; }
       .bw-pane[data-bstep="7"] #policy-hint { grid-column: 2; grid-row: 4; }
     }
+    .own-parts-box { margin-top: 0.9rem; padding: 0.85rem 1rem; border: 1px solid var(--line-2); border-radius: 12px; background: #fff; }
+    .own-parts-check { display: flex; align-items: center; gap: 0.55rem; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem; color: var(--fg-1); cursor: pointer; margin: 0; text-transform: none; letter-spacing: 0; }
+    .own-parts-check input { width: 18px; height: 18px; accent-color: var(--brand-red); }
+    #own-parts-fields { margin-top: 0.7rem; }
+    #own-parts-fields input[type="text"] { width: 100%; }
+    .own-parts-hint { margin-top: 0.5rem; font-size: 0.76rem; color: var(--fg-3); line-height: 1.5; }
     .rv-card { border: 1px solid #bfdbfe; border-radius: 14px; overflow: hidden; background: #fff; }
     .rv-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.1rem; background: #eff6ff; color: #1d4ed8; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
     .rv-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 1rem; padding: 0.8rem 1.1rem; border-top: 1px solid var(--line-1); align-items: start; }
@@ -1727,6 +1733,15 @@
           <div class="form-group">
             <label>Additional Notes</label>
             <textarea id="booking-notes" rows="2" placeholder="Describe your concern or any special requests..."></textarea>
+          </div>
+
+          <!-- Customer brings their own parts: the shop does the work (labor only) -->
+          <div class="own-parts-box">
+            <label class="own-parts-check"><input type="checkbox" id="own-parts-check" onchange="toggleOwnParts()"> I'm bringing my own parts</label>
+            <div id="own-parts-fields" style="display:none;">
+              <input type="text" id="own-parts-note" maxlength="200" placeholder="Which parts? e.g. brake pads for Honda Click 125i">
+              <div class="own-parts-hint">The shop charges <b>labor only</b> and does not sell you parts for this booking. The shop's replacement does not cover parts you bring, but the work itself keeps the 15-day service warranty.</div>
+            </div>
           </div>
 
           <!-- Contact: no longer asked here. The name and mobile number come from the account the customer registered with. -->
@@ -3146,6 +3161,7 @@
         <div id="pi-stock" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:#4ade80;"></div>
       </div>
     </div>
+    <div id="pi-fit-note" role="alert" style="display:none;margin-bottom:0.8rem;padding:0.7rem 0.85rem;border-radius:10px;font-size:0.8rem;line-height:1.5;background:#fffbeb;border:1px solid #fcd34d;color:#78350f;"></div>
     <div id="pi-note" role="status" style="display:none;margin-bottom:1rem;padding:0.7rem 0.85rem;border-radius:10px;font-size:0.8rem;line-height:1.5;"></div>
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
       <span style="font-size:0.78rem;color:var(--fg-3);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Qty</span>
@@ -3259,6 +3275,13 @@
       dropdown.classList.remove('open');
     }
   });
+
+  // "I'm bringing my own parts": the box for which parts shows only when it is ticked
+  function toggleOwnParts() {
+    const on = document.getElementById('own-parts-check').checked;
+    document.getElementById('own-parts-fields').style.display = on ? 'block' : 'none';
+    if (on) { const n = document.getElementById('own-parts-note'); if (n) n.focus(); }
+  }
 
   // Account Settings: Default Delivery Address and My Motorcycles are two tabs
   function setAcctTab(k) {
@@ -4453,6 +4476,8 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
     mechanic_id:      mechId,
     mechanic_name:    mechName,
     notes:            document.getElementById('booking-notes').value,
+    own_parts:        !!(document.getElementById('own-parts-check') || {}).checked,
+    own_parts_note:   ((document.getElementById('own-parts-note') || {}).value || '').trim(),
     contact_name:     nameVal,
     contact_mobile:   mobileVal,
     _displayDate:     document.getElementById('selected-date-display').value,
@@ -4644,6 +4669,7 @@ function resetBookingForm(keepDate) {
   renderServiceChecklist(SERVICES_DATA);
   updateServiceSummary();
   document.getElementById('booking-notes').value         = '';
+  { const c = document.getElementById('own-parts-check'); if (c) { c.checked = false; toggleOwnParts(); const n = document.getElementById('own-parts-note'); if (n) n.value = ''; } }
   document.getElementById('odometer').value              = '';
   selectedMechanicId = '';
   setMechanicMode('shop');
@@ -9015,12 +9041,37 @@ function openProductInfo(card) {
   document.getElementById('pi-qty').value               = 1;
   document.getElementById('pi-qty').max                 = currentProductInfo.stock;
   paintProductStockState();
+  paintFitNote();
   refreshCatalogStock();                      // the number on screen may be old: check it right now
 
   document.getElementById('modal-product-info').classList.add('open');
 }
 
 // Shows the stock state of the product in the details window: Out of Stock / Only N left / normal.
+// Does this part fit the customer's motorcycle? The "Fits" text of a part lists models (e.g. "CLICK / BEAT"). We compare it to the
+// motorcycles saved on the account; when none of them looks like a match, the customer gets a warning (it is only a warning).
+function _fitKey(x) { return String(x || '').toUpperCase().replace(/\(\d{4}\)/g, '').replace(/[^A-Z0-9]/g, ''); }
+function partFitsMyMotorcycle(fitsText) {
+  const fits = String(fitsText || '').trim();
+  const bikes = (typeof MY_MOTOS !== 'undefined' && MY_MOTOS || []).map(m => _fitKey(m.model)).filter(Boolean);
+  if (!fits || !bikes.length) return { known: false, ok: true };
+  if (/UNIVERSAL|ALL MODELS|ALL MOTORCYCLES/i.test(fits)) return { known: true, ok: true };
+  const tokens = fits.split(/[\/,&;]|\band\b/i).map(_fitKey).filter(t => t.length >= 2);
+  const ok = tokens.some(t => bikes.some(b => b.includes(t) || (b.length >= 4 && t.includes(b))));
+  return { known: true, ok };
+}
+function paintFitNote() {
+  const box = document.getElementById('pi-fit-note'), add = document.getElementById('pi-add-btn');
+  if (!box || !currentProductInfo) return;
+  const r = partFitsMyMotorcycle(currentProductInfo.fits);
+  if (r.known && !r.ok) {
+    const mine = (MY_MOTOS || []).map(m => m.model).filter(Boolean).join(', ');
+    box.style.display = 'block';
+    box.innerHTML = '<b>This part may not fit your motorcycle.</b> It lists: ' + _esc(currentProductInfo.fits) + '. Your motorcycle: ' + _esc(mine) + '. If you are not sure, ask the shop before you buy.';
+  } else { box.style.display = 'none'; box.textContent = ''; }
+}
+function _esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
 function paintProductStockState() {
   if (!currentProductInfo) return;
   const stock = currentProductInfo.stock;
@@ -10911,6 +10962,7 @@ updateMechNote();
         ${q.odometer ? row('Odometer', esc(Number(q.odometer).toLocaleString('en-US')) + ' km') : ''}
         ${row('Mechanic', q.mechanic_name ? esc(q.mechanic_name) : 'The shop will assign one')}
         ${q.notes ? row('Notes', esc(q.notes)) : ''}
+        ${q.own_parts ? row('Own parts', esc(q.own_parts_note || 'You are bringing your own parts') + '<div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.2rem;">Labor only. Not covered by the shop\'s replacement.</div>') : ''}
         ${q._mechIssue && typeof issueBlockHTML === 'function' ? `<div style="padding:0.6rem 1rem;">${issueBlockHTML(q, 0)}</div>` : ''}
       </div>`;
     }

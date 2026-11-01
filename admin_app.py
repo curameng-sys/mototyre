@@ -252,6 +252,9 @@ class Booking(db.Model):
     contact_name    = db.Column(db.String(100))
     contact_mobile  = db.Column(db.String(20))
     odometer        = db.Column(db.Integer)
+    own_parts        = db.Column(db.Boolean, default=False)          # the customer brings their own parts: labor only
+    own_parts_note   = db.Column(db.String(200), nullable=True)      # which parts (typed by the customer)
+    no_show          = db.Column(db.Boolean, default=False)          # cancelled because the customer did not come
     is_archived     = db.Column(db.Boolean, default=False)
     total_amount    = db.Column(db.Float, default=0)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
@@ -385,6 +388,10 @@ class Order(db.Model):
     payment_ref     = db.Column(db.String(80), nullable=True)  # PayMongo checkout id for GCash orders (an in-store GCash sale keeps its reference no. here)
     cash_amount     = db.Column(db.Float, nullable=True)       # only for an in-store sale paid part cash, part GCash (payment_method 'split')
     gcash_amount    = db.Column(db.Float, nullable=True)
+    recorded_by     = db.Column(db.String(100), nullable=True)   # who rang up an in-store sale
+    voided_at       = db.Column(db.DateTime, nullable=True)      # an in-store sale cancelled after it was recorded (status 'voided')
+    void_reason     = db.Column(db.String(300), nullable=True)
+    voided_by       = db.Column(db.String(100), nullable=True)
     delivery_method = db.Column(db.String(20), default='pickup')
     ship_address    = db.Column(db.Text)
     created_at      = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
@@ -1407,7 +1414,7 @@ def _reports_summary(date_from=None, date_to=None):
                    .join(ReturnRequest, ReturnRequest.id == ReturnRequestItem.return_request_id)
                    .filter(ReturnRequest.resolution == 'refund', ReturnRequest.status == 'resolved').all()):
         refunded_qty[ri.order_item_id] = refunded_qty.get(ri.order_item_id, 0) + ri.quantity
-    for o in Order.query.filter(Order.status != 'cancelled', Order.is_archived == False).all():
+    for o in Order.query.filter(Order.status.notin_(['cancelled', 'voided']), Order.is_archived == False).all():
         if not in_range(o.created_at) or o.id in fully_refunded_order_ids:
             continue
         for item in o.items:
@@ -3665,6 +3672,57 @@ def cancel_booking_day_panel(bid):
                      'message': f'Cancelled{" — customer notified." if emailed else (" — customer not notified." if not notify else " — no email on file.")}'})
 
 
+NO_SHOW_GRACE_MIN = 15          # a confirmed booking that has not started this many minutes after its time can be marked a no-show
+
+
+def _minutes_late(b):
+    """How many minutes past its time a still-Confirmed booking is (0 if it is not late enough to matter)."""
+    if b.status != 'confirmed' or not b.date or not b.time:
+        return 0
+    late = (ph_now() - datetime.combine(b.date, b.time)).total_seconds() / 60
+    return int(late) if late >= NO_SHOW_GRACE_MIN else 0
+
+
+def _no_show_count(user_id):
+    """How many of this customer's bookings were ever marked no-show."""
+    if not user_id:
+        return 0
+    return Booking.query.filter(Booking.user_id == user_id, Booking.no_show == True).count()
+
+
+@admin_app.route('/booking/<int:bid>/no-show', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def booking_no_show(bid):
+    """The customer did not come. Only a Confirmed booking that is NO_SHOW_GRACE_MIN or more past its time. It is cancelled
+    (the mechanic's time is free again), kept on record as a no-show, and the customer is told."""
+    booking = Booking.query.get_or_404(bid)
+    if booking.status != 'confirmed':
+        return jsonify({'success': False, 'error': 'Only a Confirmed booking that has not started can be marked a no-show.'}), 400
+    late = _minutes_late(booking)
+    if not late:
+        return jsonify({'success': False, 'error': f'Wait until {NO_SHOW_GRACE_MIN} minutes after the booking time before marking a no-show.'}), 400
+    try:
+        _q_before = _queue_day_numbers(booking.date)
+    except Exception:
+        _q_before = None
+    booking.status = 'cancelled'
+    booking.cancelled_at = ph_now()
+    booking.no_show = True
+    db.session.commit()
+    if _q_before is not None:
+        _notify_queue_moved(booking.date, _q_before)
+    ref = f'BKG-{booking.id:03d}'
+    n = _no_show_count(booking.user_id)
+    body = (f"We marked your {booking.service} appointment ({ref}) on {booking.date.strftime('%b %d, %Y')} at "
+            f"{booking.time.strftime('%I:%M %p')} as a no-show because we did not see you within {NO_SHOW_GRACE_MIN} minutes of your time. "
+            f"You can book again anytime. If something came up, just let the shop know."
+            + (f" This is your no-show number {n}; repeated no-shows can make it harder to get slots." if n >= 2 else ''))
+    emailed = _notify_customer(booking, f'No-show — {booking.date.strftime("%b %d")}', body, priority=True, status='cancelled', cta_label='Book Again')
+    return jsonify({'success': True, 'emailed': emailed, 'no_shows': n,
+                    'message': f'{ref} marked as a no-show' + (' — customer notified.' if emailed else '.')})
+
+
 @admin_app.route('/booking/<int:bid>/undo-status', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -4004,6 +4062,8 @@ def api_day_panel():
                 'completed_label': _t_label(b.completed_at),
                 'needs_mechanic': (not b.assigned_mechanic_name and b.status in ('confirmed', 'inspection', 'in_progress', 'inprogress')),
                 'shop_to_assign': (not b.preferred_mechanic_name and not b.assigned_mechanic_name),
+                'own_parts': bool(b.own_parts), 'own_parts_note': b.own_parts_note or '',
+                'late_min': _minutes_late(b), 'no_shows': (_no_show_count(b.user_id) if _minutes_late(b) else 0),
                 'is_new': bool(b.created_at and (ph_now() - b.created_at) < timedelta(hours=24) and b.status == 'confirmed'),
                 'assign_notice': ({'kind': b.assign_notice_kind, 'mechanic': b.assigned_mechanic_name,
                                    'sent_at': _t_label(b.assign_notice_at),
@@ -5433,6 +5493,18 @@ def _ship_prices(o):
         return json.loads(o.shipping_prices or '{}') or {}
     except ValueError:
         return {}
+
+
+def _gcash_ref_in_use(ref):
+    """The same GCash reference no. cannot pay for two sales. Returns what already used it ('SALE-012', 'BKG-004'...) or None.
+    A voided sale does not count (its payment may be recorded again correctly)."""
+    o = Order.query.filter(Order.payment_ref == ref, Order.status != 'voided').first()
+    if o:
+        return f'SALE-{o.id:03d}' if o.is_instore else f'ORD-{o.id:03d}'
+    b = Booking.query.filter(Booking.invoice_gcash_ref == ref).first()
+    if b:
+        return f'BKG-{b.id:03d}'
+    return None
 
 
 def _order_pay_label(o):
@@ -7508,7 +7580,8 @@ def payments():
                     b.bj_state = 'none'
 
         history_orders = (Order.query
-                          .filter(Order.payment_method.in_(['cash', 'gcash', 'split']), Order.status == 'completed')
+                          .filter(Order.payment_method.in_(['cash', 'gcash', 'split']),
+                                  db.or_(Order.status == 'completed', db.and_(Order.is_instore == True, Order.status == 'voided')))
                           .filter(Order.items.any())
                           .order_by(func.coalesce(Order.delivered_at, Order.created_at).desc()).limit(50).all())
 
@@ -7748,6 +7821,45 @@ def payment_receipt(pid):
     return render_template('payment_receipt.html', pmt=pmt, jo=pmt.job_order)
 
 
+@admin_app.route('/billing/order/<int:oid>/void', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def billing_order_void(oid):
+    """Cancels an in-store sale that was rung up wrongly (wrong item, wrong amount, customer changed their mind at the counter).
+    Admin only. The sale stays on record as VOIDED with who did it and why; it stops counting in sales and reports; the parts go
+    back in stock when the admin says so. Nothing is deleted."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Only an admin can void a sale.'}), 403
+    order = Order.query.get_or_404(oid)
+    if not order.is_instore:
+        return jsonify({'success': False, 'error': 'Only in-store sales can be voided here.'}), 400
+    if order.status == 'voided':
+        return jsonify({'success': False, 'error': 'This sale is already voided.'}), 400
+    if order.status != 'completed':
+        return jsonify({'success': False, 'error': 'Only a completed in-store sale can be voided.'}), 400
+    d = request.get_json(silent=True) or {}
+    reason = clean_str(d.get('reason', ''), max_len=300)
+    if len(reason) < 5:
+        return jsonify({'success': False, 'error': 'Type the reason for voiding this sale (at least 5 letters).'}), 400
+    restock = bool(d.get('restock', True))
+    order.status = 'voided'
+    order.voided_at = ph_now()
+    order.voided_by = (current_user.fullname or '')[:100]
+    order.void_reason = reason
+    if restock:
+        _restock_order(order)
+    else:
+        order.stock_restocked = False
+    db.session.commit()
+    ref = f'SALE-{order.id:03d}'
+    for adm in User.query.filter_by(role='admin').all():
+        send_notification(adm.id, f'{ref} voided',
+                          f'{ref} (\u20b1{(order.total_amount or 0):,.2f}, {_order_pay_label(order).title()}) was voided by {order.voided_by}. Reason: {reason}. '
+                          + ('Items put back in stock.' if restock else 'Items NOT put back in stock.'),
+                          type='order', status='cancelled', order_id=order.id)
+    return jsonify({'success': True, 'ref': ref, 'restocked': restock})
+
+
 @admin_app.route('/billing/order/<int:oid>/complete', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -7893,6 +8005,11 @@ def pos_checkout():
             if product.stock < item['quantity']:
                 return jsonify({'success': False, 'error': f'Only {product.stock} left of {product.name}.'}), 400
 
+    if gcash_ref:
+        _used = _gcash_ref_in_use(gcash_ref)
+        if _used:
+            return jsonify({'success': False, 'error': f'This GCash reference no. was already used for {_used}. Check the number in the shop GCash app.'}), 400
+
     order_id = None
     completed_order_ids = set()
     completed_booking_ids = set()
@@ -7924,7 +8041,8 @@ def pos_checkout():
         order = Order(user_id=uid, total_amount=new_total, status='completed', payment_method=payment_method,
                       delivered_at=ph_now(), is_instore=True, instore_seen=False,
                       contact_name=None if customer_id else customer_name,
-                      payment_ref=gcash_ref, cash_amount=split_cash, gcash_amount=split_gcash)
+                      payment_ref=gcash_ref, cash_amount=split_cash, gcash_amount=split_gcash,
+                      recorded_by=(current_user.fullname or '')[:100])
         db.session.add(order)
         db.session.flush()
         order_id = order.id
@@ -8860,7 +8978,7 @@ from order_report import build_order_report_pdf
 _ORDER_UNFINISHED = {'pending': 'Pending', 'awaiting_payment': 'Awaiting Payment', 'confirmed': 'Confirmed',
                      'in_progress': 'In Progress', 'processing': 'Processing', 'done_packaging': 'Done Packaging',
                      'shipping': 'Shipping', 'shipped': 'Ready to Pick Up', 'delivered': 'Delivered'}
-_ORDER_CANCELLED = ('cancelled', 'refunded')
+_ORDER_CANCELLED = ('cancelled', 'refunded', 'voided')
 _ORDER_TYPE_LABEL = {'ship': 'Ship to Address', 'pickup': 'Shop Pickup', 'instore': 'In-Store'}
 
 
@@ -9289,7 +9407,7 @@ def generate_report():
     def order_counts_as_revenue(o):
         if o.delivery_method == 'ship':      # Courier orders count once paid, never on hold, cancelled or refunded
             return bool(o.paid_at) and o.status in ('done_packaging', 'shipping', 'completed')
-        return (o.status not in ('cancelled', 'awaiting_payment')
+        return (o.status not in ('cancelled', 'awaiting_payment', 'voided')
                 and not (o.payment_method == 'cash' and o.delivery_method == 'pickup' and o.status != 'completed'))
 
     # Total Revenue mirrors the dashboard's definition (orders + completed bookings +
@@ -9748,7 +9866,14 @@ with admin_app.app_context():
         "ALTER TABLE `user` ADD COLUMN billing_seen_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN payment_ref VARCHAR(80) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN cash_amount FLOAT DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN own_parts TINYINT(1) DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN own_parts_note VARCHAR(200) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN no_show TINYINT(1) DEFAULT 0",
         "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN recorded_by VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN voided_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN void_reason VARCHAR(300) DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN voided_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN paid_at DATETIME",
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",

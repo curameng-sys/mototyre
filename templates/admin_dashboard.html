@@ -669,6 +669,7 @@
     .due-badge.last{background:#fee2e2;color:#991b1b;border-color:#f87171;}
     .due-note{font-size:.68rem;color:#92400e;margin-top:.25rem;line-height:1.4;}
     .due-note.last{color:#991b1b;font-weight:600;}
+    .own-parts-tag { display:inline-block; margin-left:0.3rem; padding:0.08rem 0.45rem; border-radius:99px; font-size:0.6rem; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; background:#fffbeb; color:#92400e; border:1px solid #fcd34d; vertical-align:middle; }
     .btn-secondary-custom {
       background: #fff; color: var(--text); border: 1px solid var(--border);
       padding: 0.5rem 1rem; border-radius: 7px;
@@ -1309,7 +1310,8 @@
                     {% endif %}
                   </td>
                   <td>
-                    {{ b.service }}
+                    {{ b.service }}{% if b.own_parts %} <span class="own-parts-tag" title="{{ (b.own_parts_note or 'The customer brings their own parts')|e }}">Own parts · labor only</span>{% endif %}
+                    {% if b.own_parts and b.own_parts_note %}<div style="font-size:0.68rem;color:#92400e;margin-top:0.1rem;">Parts: {{ b.own_parts_note }}</div>{% endif %}
                     <div style="font-size:0.7rem;color:var(--muted);">₱{{ (booking_service_price(b.service))|money }}</div>
                     {% if b.assigned_mechanic_name %}
                       {% if b.id in (row_mech or {}) %}
@@ -5342,7 +5344,9 @@
       return `<span class="badge" style="background:${ts.bg};color:${ts.color};border:1px solid ${ts.border};font-size:0.6rem;">${t}</span>`;
     }).join(' ');
     const extraTags = (c.is_new ? '<span class="badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-size:0.6rem;">New</span> ' : '')
-      + (c.shop_to_assign ? '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:0.6rem;">Shop to assign</span> ' : '');
+      + (c.shop_to_assign ? '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:0.6rem;">Shop to assign</span> ' : '')
+      + (c.late_min > 0 ? `<span class="badge" style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74;font-size:0.6rem;">Late ${c.late_min >= 120 ? Math.floor(c.late_min / 60) + ' h' : c.late_min + ' min'}</span> ` : '')
+      + (c.own_parts ? `<span class="own-parts-tag" style="margin-left:0;" title="${String(c.own_parts_note || '').replace(/"/g, '&quot;')}">Own parts · labor only${c.own_parts_note ? ': ' + String(c.own_parts_note).replace(/</g, '&lt;') : ''}</span> ` : '');
     const pill = cancelled ? '' : `<span class="badge" style="background:${st.bg};color:${st.color};border:1px solid ${st.border};font-size:0.64rem;display:inline-flex;align-items:center;gap:0.3rem;"><span style="width:6px;height:6px;border-radius:50%;background:${st.dot};"></span>${st.label}</span>`;
     const mechLine = c.mechanic
       ? `${c.mechanic}${c.specialization ? ` — ${c.specialization}` : ''}`
@@ -5437,6 +5441,7 @@
           <button type="button" class="btn-cancel" ${backOnTimeOn ? '' : 'disabled'} style="padding:0.3rem 0.55rem;font-size:0.71rem;${backOnTimeOn ? '' : off}" onclick="runningLong(${c.id}, 'reset')">Back on time</button>
           <button type="button" class="btn-action-edit" ${confirmedOnly ? '' : 'disabled'} style="padding:0.3rem 0.55rem;font-size:0.71rem;${moveOff}" ${confirmedOnly ? `onclick='openRescheduleModal(${c.id}, ${JSON.stringify(c.services)}, ${JSON.stringify(c.customer)}, ${JSON.stringify(c.time_label + " – " + c.end_label)})'` : ''}>Reschedule</button>
           <button type="button" class="btn-cancel" ${confirmedOnly ? '' : 'disabled'} style="padding:0.3rem 0.55rem;font-size:0.71rem;color:#b91c1c;${moveOff}" ${confirmedOnly ? `onclick="openDsCancel(${c.id})"` : ''}>Cancel</button>
+          ${(confirmedOnly && c.late_min > 0) ? `<button type="button" class="btn-cancel" style="padding:0.3rem 0.55rem;font-size:0.71rem;color:#9a3412;border-color:#fdba74;background:#fff7ed;" onclick="markNoShow(${c.id}, ${c.late_min}, ${c.no_shows || 0})">Mark no-show</button>` : ''}
           ${confirmedOnly ? `<span style="margin-left:auto;font-size:0.73rem;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:0.3rem 0.65rem;white-space:nowrap;">Start it from Bookings</span>` : ''}
         </div>
         ${started ? `<div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;align-items:center;">${primary}${undo}</div>` : ''}
@@ -5512,6 +5517,20 @@
   }
 
   // Cancel (Confirmed only): a reason is required — the customer sees it by notification and email.
+  // The customer did not come (15+ minutes after their time and still Confirmed): cancel it as a no-show
+  async function markNoShow(bid, lateMin, before) {
+    const ok = await askConfirm({ title: 'Mark as no-show?', icon: 'x', danger: true, cancelLabel: 'Go back', confirmLabel: 'Yes, mark no-show',
+      message: `The customer is ${lateMin} min late and has not been started. The booking is cancelled, the mechanic's time is freed, and the customer is told.`
+        + (before ? ` They have ${before} earlier no-show${before === 1 ? '' : 's'}.` : '') });
+    if (!ok) return;
+    try {
+      const res = await fetch(`/booking/${bid}/no-show`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const data = await res.json();
+      if (data.success) { showToast(data.message || 'Marked as a no-show.', 'success'); loadDaySchedule(); }
+      else showToast(data.error || 'Could not mark this booking.', 'error');
+    } catch (e) { showToast('Network error. Please try again.', 'error'); }
+  }
+
   let _dsCancelId = null;
   function openDsCancel(bid) {
     const c = _dsCards[bid];

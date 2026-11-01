@@ -546,6 +546,9 @@ class Booking(db.Model):
     total_amount   = db.Column(db.Float, default=0)
     booking_batch  = db.Column(db.String(36), nullable=True)
     cancellation_policy_agreed_at = db.Column(db.DateTime, nullable=True)   # when the customer ticked "I understand the cancellation policy"
+    own_parts        = db.Column(db.Boolean, default=False)          # the customer brings their own parts: labor only
+    own_parts_note   = db.Column(db.String(200), nullable=True)      # which parts (typed by the customer)
+    no_show          = db.Column(db.Boolean, default=False)          # cancelled because the customer did not come
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
@@ -2813,6 +2816,10 @@ def book_multiple_services():
                 if merge_err:
                     errors.append(f'Booking {idx+1}: {merge_err}')
                     continue
+                if b.get('own_parts'):
+                    existing_b.own_parts = True
+                    _op = clean_str(b.get('own_parts_note', ''), max_len=200)
+                    existing_b.own_parts_note = ((existing_b.own_parts_note + ' | ') if existing_b.own_parts_note and _op else '') + _op or existing_b.own_parts_note
                 db.session.flush()
                 merged.append((existing_b, [n for n in service_names], res['moved']))
                 merged_idx.append(idx)
@@ -2854,6 +2861,8 @@ def book_multiple_services():
                 odometer=int(odo_raw) if odo_raw.isdigit() else None,
                 booking_batch=batch_id,
                 cancellation_policy_agreed_at=agreed_at,
+                own_parts=bool(b.get('own_parts')),
+                own_parts_note=(clean_str(b.get('own_parts_note', ''), max_len=200) or None) if b.get('own_parts') else None,
             )
             if requested_mechanic:
                 booking.preferred_mechanic_name = requested_mechanic.name
@@ -4920,6 +4929,9 @@ with app.app_context():
         "ALTER TABLE service ADD COLUMN price FLOAT NOT NULL DEFAULT 0",
         "UPDATE service SET is_active=1 WHERE is_active IS NULL",
         "ALTER TABLE booking ADD COLUMN odometer INT DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN own_parts TINYINT(1) DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN own_parts_note VARCHAR(200) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN no_show TINYINT(1) DEFAULT 0",
         "ALTER TABLE user ADD COLUMN address VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN motorcycle_model VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN motorcycle_year VARCHAR(4) DEFAULT NULL",

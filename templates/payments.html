@@ -67,6 +67,12 @@
     .due-badge.last{background:#fee2e2;color:#991b1b;border-color:#f87171;}
     .due-note{font-size:.68rem;color:#92400e;margin-top:.25rem;line-height:1.4;}
     .due-note.last{color:#991b1b;font-weight:600;}
+    .hist-row.is-voided td{opacity:.55;}
+    .hist-row.is-voided .amount{text-decoration:line-through;}
+    .hist-row.is-voided td:last-child{opacity:1;}
+    .b-voided{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;}
+    .btn-void{display:inline-flex;align-items:center;gap:.3rem;margin-left:.35rem;padding:.3rem .65rem;border-radius:8px;border:1px solid #fecaca;background:#fff;color:#b91c1c;font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;}
+    .btn-void:hover{background:#fef2f2;border-color:#f87171;}
     .b-split  {background:rgba(124,58,237,.12);color:#6d28d9;border:1px solid rgba(124,58,237,.3);}
     .b-booking{background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.3);}
     .b-order  {background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);}
@@ -581,7 +587,8 @@
         {% set o_name = o.contact_name if o.is_instore else o.customer.fullname %}
         {% set o_phone = '' if o.is_instore else o.customer.phone %}
         {% set o_total = o.total_amount + ((o.shipping_fee or 0) if o.delivery_method == 'ship' else 0) %}
-        <tr class="hist-row{% if o.id in new_ord_ids %} is-new{% endif %}" data-type="{{ 'instore' if o.is_instore else 'online' }}" data-amount="{{ o_total }}" data-ts="{{ (o.delivered_at or o.created_at).strftime('%Y%m%d%H%M%S') }}" data-s="{{ o_name|lower }} {{ o_ref|lower }} {{ o_phone }}">
+        {% set o_void = (o.status == 'voided') %}
+        <tr class="hist-row{% if o.id in new_ord_ids %} is-new{% endif %}{% if o_void %} is-voided{% endif %}" data-type="{{ 'instore' if o.is_instore else 'online' }}" data-amount="{{ 0 if o_void else o_total }}" data-ts="{{ (o.delivered_at or o.created_at).strftime('%Y%m%d%H%M%S') }}" data-s="{{ o_name|lower }} {{ o_ref|lower }} {{ o_phone }}">
           <td><span class="h-type {{ 'h-sale' if o.is_instore else 'h-ord' }}">{{ 'SALE' if o.is_instore else 'ORD' }}</span><span class="ref {{ 'ref-sale' if o.is_instore else 'ref-ord' }}">{{ o_ref }}</span>{% if o.id in new_ord_ids %}<span class="new-tag">NEW</span>{% endif %}</td>
           <td>
             <div class="name">{{ o_name }}</div>
@@ -589,7 +596,9 @@
           </td>
           <td><span class="amount">₱{{ '{:,.2f}'.format(o_total) }}</span></td>
           <td>
+            {% if o_void %}<span class="badge b-voided">VOIDED</span><div class="sub" style="color:#991b1b;">{{ o.voided_by or '—' }} · {{ o.voided_at.strftime('%b %d, %I:%M %p') if o.voided_at else '' }}<br>Reason: {{ o.void_reason or '—' }}</div>{% endif %}
             <span class="badge b-{{ o.payment_method }}">{{ 'CASH + GCASH' if o.payment_method == 'split' else o.payment_method|upper }}</span>
+            {% if o.is_instore and o.recorded_by %}<div class="sub">Rung up by {{ o.recorded_by }}</div>{% endif %}
             {% if o.payment_method == 'split' %}<div class="sub">Cash ₱{{ '{:,.2f}'.format(o.cash_amount or 0) }} · GCash ₱{{ '{:,.2f}'.format(o.gcash_amount or 0) }}{% if o.payment_ref %} · Ref {{ o.payment_ref }}{% endif %}</div>{% endif %}
             {% if o.payment_method == 'gcash' and o.is_instore and o.payment_ref %}<div class="sub">GCash ref · {{ o.payment_ref }}</div>{% endif %}
             {% if o.payment_method == 'gcash' and not o.is_instore %}<div class="sub">PayMongo{% if o.payment_ref %} · {{ o.payment_ref[:16] }}{% if o.payment_ref|length > 16 %}…{% endif %}{% endif %}</div>{% endif %}
@@ -599,6 +608,7 @@
             <button class="btn-receipt" onclick="printOrdReceipt('{{ o_ref }}', {{ (o_name)|tojson|forceescape }}, '{{ o_phone }}', {{ o_total }}, {{ (('Cash ₱' ~ '{:,.2f}'.format(o.cash_amount or 0) ~ ' + GCash ₱' ~ '{:,.2f}'.format(o.gcash_amount or 0)) if o.payment_method == 'split' else o.payment_method)|tojson|forceescape }}, {{ (o_paid.strftime('%b %d, %Y %I:%M %p'))|tojson|forceescape }}, [{% for item in o.items %}{'name':{{ (item.product.name)|tojson|forceescape }},'qty':{{ item.quantity }},'price':{{ item.unit_price }}}{% if not loop.last %},{% endif %}{% endfor %}{% if o.delivery_method == 'ship' and o.shipping_fee %},{'name':'Shipping fee ({{ (o.shipping_option or '')|title }} · Courier {{ o.shipping_vehicle or '' }})','qty':1,'price':{{ o.shipping_fee }}}{% endif %}], {{ (o.delivery_method)|tojson|forceescape }}, {{ 'true' if o.is_instore else 'false' }})">
               {{ rcpt_icon }} Receipt
             </button>
+            {% if o.is_instore and not o_void and current_user.role == 'admin' %}<button type="button" class="btn-void" onclick="openVoid({{ o.id }}, '{{ o_ref }}', {{ o_total }})">Void</button>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -648,6 +658,35 @@
 </div>
 
 <!-- ── BILLING MODAL ── -->
+<!-- VOID an in-store sale (admin only) -->
+<div class="bill-overlay" id="void-overlay" onclick="if(event.target===this)closeVoid()" style="z-index:9500;">
+  <div class="bill-box" style="max-width:460px;">
+    <div class="bill-head">
+      <div class="bill-head-title">Void sale <span id="void-ref"></span></div>
+      <button class="bill-close" onclick="closeVoid()" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="padding:1.1rem 1.5rem 1.4rem;">
+      <div style="font-size:.82rem;color:#374151;line-height:1.55;margin-bottom:.8rem;">Use this when a sale was rung up wrongly. It stays in the list as <b>VOIDED</b> with your name and the reason, and it stops counting in sales and reports. Nothing is deleted.</div>
+      <label style="font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.3rem;">Reason *</label>
+      <select id="void-reason-sel" onchange="voidReasonChanged()" style="width:100%;padding:.5rem .7rem;border:1px solid var(--border);border-radius:8px;margin-bottom:.5rem;">
+        <option value="">Choose a reason</option>
+        <option>Wrong item or quantity was rung up</option>
+        <option>Wrong amount or wrong payment method</option>
+        <option>The customer changed their mind</option>
+        <option>The GCash payment did not arrive</option>
+        <option value="__other">Other</option>
+      </select>
+      <input type="text" id="void-reason-custom" maxlength="150" placeholder="Type the reason" style="display:none;width:100%;padding:.5rem .7rem;border:1px solid var(--border);border-radius:8px;margin-bottom:.5rem;">
+      <label style="display:flex;gap:.5rem;align-items:flex-start;font-size:.82rem;font-weight:600;color:#111827;cursor:pointer;margin:.4rem 0 .9rem;"><input type="checkbox" id="void-restock" checked style="margin-top:3px;"><span>Put the items back in stock</span></label>
+      <div id="void-err" style="display:none;color:#b91c1c;font-size:.78rem;font-weight:600;margin-bottom:.7rem;"></div>
+      <div style="display:flex;gap:.6rem;justify-content:flex-end;">
+        <button type="button" class="btn-cancel-bill" onclick="closeVoid()">Keep sale</button>
+        <button type="button" class="btn-mark-paid" id="void-go" onclick="submitVoid()" style="background:#b91c1c;">Void sale</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- HISTORY: every payment ever collected, in a window -->
 <div class="bill-overlay" id="hist-overlay" onclick="if(event.target===this)closeHistory()">
   <div class="bill-box hist-box">
@@ -1107,6 +1146,36 @@ async function openHistory() {
   } catch (e) { body.innerHTML = '<div class="empty"><p>Could not load the history.</p></div>'; }
 }
 function closeHistory() { document.getElementById('hist-overlay').classList.remove('open'); }
+
+// ── Void an in-store sale (admin only) ──
+let _voidId = null;
+function openVoid(id, ref, total) {
+  _voidId = id;
+  document.getElementById('void-ref').textContent = ref + ' · ' + _peso(Number(total));
+  document.getElementById('void-reason-sel').value = ''; document.getElementById('void-reason-custom').value = ''; document.getElementById('void-reason-custom').style.display = 'none';
+  document.getElementById('void-restock').checked = true;
+  const e = document.getElementById('void-err'); e.style.display = 'none'; e.textContent = '';
+  document.getElementById('void-overlay').classList.add('open');
+}
+function closeVoid() { document.getElementById('void-overlay').classList.remove('open'); }
+function voidReasonChanged() {
+  const v = document.getElementById('void-reason-sel').value;
+  document.getElementById('void-reason-custom').style.display = v === '__other' ? 'block' : 'none';
+}
+async function submitVoid() {
+  const sel = document.getElementById('void-reason-sel').value;
+  const reason = sel === '__other' ? document.getElementById('void-reason-custom').value.trim() : sel;
+  const err = document.getElementById('void-err');
+  if (!reason || reason.length < 5) { err.textContent = 'Choose or type the reason (at least 5 letters).'; err.style.display = 'block'; return; }
+  const btn = document.getElementById('void-go'); btn.disabled = true; btn.textContent = 'Voiding…';
+  try {
+    const res = await fetch('/billing/order/' + _voidId + '/void', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, restock: document.getElementById('void-restock').checked }) });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) { closeVoid(); showBottomToast((data.ref || 'Sale') + ' voided.'); setTimeout(() => location.reload(), 700); return; }
+    err.textContent = data.error || 'Could not void this sale.'; err.style.display = 'block';
+  } catch (e) { err.textContent = 'Network error. Please try again.'; err.style.display = 'block'; }
+  btn.disabled = false; btn.textContent = 'Void sale';
+}
 
 function printBkgReceipt(ref, customer, phone, service, amount, method, date) {
   const w = window.open('', '_blank', 'width=400,height=600');
