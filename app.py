@@ -549,6 +549,7 @@ class Booking(db.Model):
     own_parts        = db.Column(db.Boolean, default=False)          # the customer brings their own parts: labor only
     own_parts_note   = db.Column(db.String(200), nullable=True)      # which parts (typed by the customer)
     no_show          = db.Column(db.Boolean, default=False)          # cancelled because the customer did not come
+    quoted_price     = db.Column(db.Float, nullable=True)            # the services' price when it was booked: a later price change does not touch it
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
@@ -2744,10 +2745,64 @@ def _booking_client_dict(b):
     }
 
 
+def _services_price(names):
+    """The catalog price of these services right now (the price a booking locks in when it is made)."""
+    names = [n for n in (names or []) if n]
+    if not names:
+        return 0.0
+    found = {sv.name: float(sv.price or 0) for sv in Service.query.filter(Service.name.in_(names)).all()}
+    return round(sum(found.get(n, 0.0) for n in names), 2)
+
+
+# The same request arriving twice (a double click, a slow connection and a retry) must not book or order twice. The second
+# one waits for the first and gets the same answer back. Only successful answers are remembered, and only for a few seconds.
+import time as _time
+_IDEM = {}
+_IDEM_LOCK = threading.Lock()
+
+
+def _idempotent(key, work, ttl=20):
+    now = _time.time()
+    with _IDEM_LOCK:
+        for k in [k for k, v in _IDEM.items() if now - v['ts'] > ttl * 3]:
+            del _IDEM[k]
+        ent = _IDEM.get(key)
+        if ent is None or now - ent['ts'] > ttl:
+            ent = _IDEM[key] = {'ts': now, 'lock': threading.Lock(), 'resp': None}
+    with ent['lock']:
+        if ent['resp'] is not None:
+            body, code, mime = ent['resp']
+            return make_response(body, code, {'Content-Type': mime})
+        resp = make_response(work())
+        ok = False
+        if resp.status_code == 200 and resp.is_json:
+            ok = bool((resp.get_json(silent=True) or {}).get('success'))
+        if ok:
+            ent['resp'] = (resp.get_data(), resp.status_code, resp.mimetype)
+        else:
+            with _IDEM_LOCK:
+                if _IDEM.get(key) is ent:
+                    del _IDEM[key]
+        return resp
+
+
+def _payload_key(kind, data):
+    import hashlib
+    raw = _json.dumps(data, sort_keys=True, default=str)
+    return f'{kind}:{current_user.id}:{hashlib.sha1(raw.encode("utf8")).hexdigest()}'
+
+
 @app.route('/customer/book-multiple', methods=['POST'])
 @login_required
 @require_active_account
 def book_multiple_services():
+    data = request.get_json(silent=True)
+    if not data or not data.get('bookings'):
+        return jsonify({'success': False, 'error': 'No bookings provided'}), 400
+    return _idempotent(_payload_key('book', data), _book_multiple_impl)
+
+
+def _book_multiple_impl():
     import json as _json
     data = request.get_json()
     if not data or not data.get('bookings'):
@@ -2809,6 +2864,7 @@ def book_multiple_services():
                 errors.append(f'Booking {idx+1}: {rule_err}')
                 continue
             if decision == 'merge':
+                _had = split_service_names(existing_b.service)
                 res, merge_err = _merge_into_booking(existing_b, service_names, booking_time,
                                                      clean_str(b.get('notes', ''), max_len=500),
                                                      clean_str(str(b.get('odometer', '')), max_len=10),
@@ -2820,6 +2876,8 @@ def book_multiple_services():
                     existing_b.own_parts = True
                     _op = clean_str(b.get('own_parts_note', ''), max_len=200)
                     existing_b.own_parts_note = ((existing_b.own_parts_note + ' | ') if existing_b.own_parts_note and _op else '') + _op or existing_b.own_parts_note
+                _added = [n for n in service_names if n not in _had]       # a service already on the booking is not charged twice
+                existing_b.quoted_price = round(float(existing_b.quoted_price if existing_b.quoted_price is not None else _services_price(_had)) + _services_price(_added), 2)
                 db.session.flush()
                 merged.append((existing_b, [n for n in service_names], res['moved']))
                 merged_idx.append(idx)
@@ -2863,6 +2921,7 @@ def book_multiple_services():
                 cancellation_policy_agreed_at=agreed_at,
                 own_parts=bool(b.get('own_parts')),
                 own_parts_note=(clean_str(b.get('own_parts_note', ''), max_len=200) or None) if b.get('own_parts') else None,
+                quoted_price=_services_price(combo['names']),
             )
             if requested_mechanic:
                 booking.preferred_mechanic_name = requested_mechanic.name
@@ -2972,9 +3031,13 @@ def api_cart_stock():
 @login_required
 @require_active_account
 def cart_checkout():
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data or not data.get('items'):
         return jsonify({'success': False, 'error': 'Cart is empty'}), 400
+    return _idempotent(_payload_key('cart', data), lambda: _cart_checkout_impl(data))
+
+
+def _cart_checkout_impl(data):
 
     items_data      = data['items']
     delivery_method = data.get('delivery_method', 'pickup')
@@ -4266,7 +4329,7 @@ def pay_booking(bid):
     if booking.status not in ['pending', 'confirmed']:
         flash('This booking cannot be paid online.', 'warning')
         return redirect(url_for('customer_dashboard'))
-    amount = booking_service_price(booking.service)
+    amount = booking.quoted_price if booking.quoted_price is not None else booking_service_price(booking.service)
     description = f"MotoTyres Booking #{booking.id}: {booking.service}"
     result = create_gcash_payment(amount=amount, description=description, booking_id=booking.id, origin=request.host_url)
     if result["success"]:
@@ -4932,6 +4995,7 @@ with app.app_context():
         "ALTER TABLE booking ADD COLUMN own_parts TINYINT(1) DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN own_parts_note VARCHAR(200) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN no_show TINYINT(1) DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN quoted_price DOUBLE DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN address VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN motorcycle_model VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN motorcycle_year VARCHAR(4) DEFAULT NULL",

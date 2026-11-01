@@ -255,6 +255,7 @@ class Booking(db.Model):
     own_parts        = db.Column(db.Boolean, default=False)          # the customer brings their own parts: labor only
     own_parts_note   = db.Column(db.String(200), nullable=True)      # which parts (typed by the customer)
     no_show          = db.Column(db.Boolean, default=False)          # cancelled because the customer did not come
+    quoted_price     = db.Column(db.Float, nullable=True)            # the services' price when it was booked: a later price change does not touch it
     is_archived     = db.Column(db.Boolean, default=False)
     total_amount    = db.Column(db.Float, default=0)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
@@ -801,7 +802,16 @@ def booking_service_price(service_str):
     return sum(found.get(n, 0) for n in names)
 
 
+def booking_price(booking):
+    """What the booked service(s) cost: the price the customer was shown when they booked (locked in), or today's
+    catalog price for a booking made before prices were locked, or one made at the counter."""
+    if booking.quoted_price is not None:
+        return booking.quoted_price
+    return booking_service_price(booking.service)
+
+
 admin_app.jinja_env.globals['booking_service_price'] = booking_service_price
+admin_app.jinja_env.globals['booking_price'] = booking_price
 admin_app.jinja_env.globals['booking_bill'] = booking_bill
 admin_app.jinja_env.globals['booking_extras'] = booking_extras
 
@@ -2474,7 +2484,7 @@ def complete_booking_invoice(bid):
         total = (breakdown['approve_total'] if q.status == 'approved'
                  else (breakdown['booked'] if booking.service.startswith(BACKJOB_PREFIX) else breakdown['decline_total']))
     else:
-        total = booking_service_price(booking.service)
+        total = booking_price(booking)
 
     parts_used = _deduct_quotation_parts(q, booking)
     booking.status = 'completed'
@@ -6958,7 +6968,7 @@ def quotation_new():
                 'motorcycle_model': b.motorcycle_model or '',
                 'motorcycle_plate': b.motorcycle_plate or '',
                 'service_name': b.service,
-                'service_price': booking_service_price(b.service),
+                'service_price': booking_price(b),
                 'is_backjob': b.service.startswith(BACKJOB_PREFIX),
                 'regular_price': booking_service_price(b.service[len(BACKJOB_PREFIX):]) if b.service.startswith(BACKJOB_PREFIX) else 0,
                 'assigned_mechanic_name': b.assigned_mechanic_name,
@@ -7747,7 +7757,7 @@ def payment_submit(joid):
 def booking_payment_process(bid):
     booking = Booking.query.get_or_404(bid)
     # Sums every service in a combo booking — a plain name match would miss those.
-    service_price = booking_service_price(booking.service)
+    service_price = booking_price(booking)
     return render_template('booking_payment_process.html', booking=booking, service_price=service_price)
 
 
@@ -8553,7 +8563,7 @@ def pos_customer_items(cid: int):
     for b in pending_bookings:
         bookings_data.append({
             'booking_id': b.id, 'service': b.service,
-            'price': booking_service_price(b.service),
+            'price': booking_price(b),
             'date': b.date.strftime('%Y-%m-%d'), 'time': b.time.strftime('%H:%M'),
             'status': b.status, 'created_at': b.created_at.isoformat()
         })
@@ -9869,6 +9879,7 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN own_parts TINYINT(1) DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN own_parts_note VARCHAR(200) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN no_show TINYINT(1) DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN quoted_price DOUBLE DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN recorded_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN voided_at DATETIME DEFAULT NULL",
