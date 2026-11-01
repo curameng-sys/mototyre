@@ -1970,8 +1970,8 @@ def _resolve_service_combo(names):
 
 
 BOOKING_MAX_SERVICE_MIN = 240          # one booking holds at most 4 hours of services
-MAX_BOOKINGS_PER_ACCOUNT_DAY = 2       # per account per day, each for a different motorcycle
-MAX_UPCOMING_BOOKINGS = 3              # upcoming bookings per account at a time (the Booking Queue counts too)
+# No limit on how many bookings one account can have (the shop's own schedule and capacity still decide what fits);
+# the only per-customer rule left is one booking per motorcycle per day, where more services are added to it.
 
 
 MOTO_NEW_DAYS = 3                      # a saved motorcycle shows "New" for this many days
@@ -2084,15 +2084,6 @@ def _booking_rule_decision(user_id, booking_date, moto_key):
                 return 'merge', b, None
             return 'error', None, (f'That motorcycle already has a booking on {date_label} that has started or finished — '
                                     f'only one booking per motorcycle per day.')
-    if len(day) >= MAX_BOOKINGS_PER_ACCOUNT_DAY:
-        return 'error', None, (f'You can have up to {MAX_BOOKINGS_PER_ACCOUNT_DAY} bookings a day, each for a different '
-                                f'motorcycle. You already have {len(day)} on {date_label}.')
-    upcoming = Booking.query.filter(Booking.user_id == user_id, Booking.is_archived == False,
-                                    Booking.status.notin_(['cancelled', 'completed']),
-                                    Booking.date >= ph_now().date()).count()
-    if upcoming >= MAX_UPCOMING_BOOKINGS:
-        return 'error', None, (f'You can have up to {MAX_UPCOMING_BOOKINGS} upcoming bookings at a time. '
-                                f'A spot frees up when one is completed or cancelled.')
     return 'ok', None, None
 
 
@@ -2860,6 +2851,7 @@ def _booking_client_dict(b):
         'is_multiday': bool(b.is_multiday),
         'motorcycle_model': b.motorcycle_model or '', 'motorcycle_plate': b.motorcycle_plate or '',
         'odometer': b.odometer or None, 'notes': b.notes or '',
+        'own_parts': bool(b.own_parts), 'own_parts_note': b.own_parts_note or '',
         'mechanic_name': b.assigned_mechanic_name or '', 'mechanic_spec': b.assigned_mechanic_specialization or '',
         'created_at': b.created_at.strftime('%b %d, %Y at %I:%M %p'),
         'created_iso': b.created_at.strftime('%Y-%m-%dT%H:%M:%S'),

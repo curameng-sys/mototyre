@@ -4142,9 +4142,7 @@ function minutesToAmpmJS(m) {
 
 // ── Booking rules the queue follows (the server enforces the same ones) ──
 //  1. One booking per motorcycle per day — more services for the same bike are added to it.
-//  2. Up to 2 bookings per account per day, each for a different motorcycle.
-//  3. Up to 3 upcoming bookings per account; bookings waiting in the queue count too.
-const MAX_BOOKINGS_PER_DAY = 2, MAX_UPCOMING_BOOKINGS = 3;
+//  A customer can have as many bookings as the shop's schedule allows (no per-account limit), each for a different motorcycle.
 function motoKeyJS(model) { return (model || '').trim().toLowerCase().replace(/\s*\(\d{4}\)\s*$/, '').replace(/\s+/g, ' ') || 'unspecified'; }
 function plateKeyJS(p) { return String(p || '').replace(/[\s\-]+/g, '').toLowerCase(); }
 function bookingMotoKey(b) { return plateKeyJS(b.motorcycle_plate) || motoKeyJS(b.motorcycle_model); }
@@ -4167,13 +4165,7 @@ function checkBookingRulesJS(dateVal, key) {
     if (bm.status === 'confirmed' || bm.status === 'pending') return { merge: 'booking', target: bm };
     return { code: 'A', started: true, error: 'That motorcycle already has a booking on that day that has started or finished — only one booking per motorcycle per day.' };
   }
-  const newInQueue = queueDay.filter(q => !q._mergesInto).length;
-  if (sameDay.length + newInQueue >= MAX_BOOKINGS_PER_DAY) {
-    return { code: 'B', error: `You can have up to ${MAX_BOOKINGS_PER_DAY} bookings a day, each for a different motorcycle.` };
-  }
-  const upcoming = live.filter(b => b.status !== 'completed' && b.date_iso >= todayIso).length
-                 + bookingQueue.filter(q => !q._mergesInto).length;
-  if (upcoming >= MAX_UPCOMING_BOOKINGS) {
+  if (false) {
     return { code: 'C', error: `You can have up to ${MAX_UPCOMING_BOOKINGS} upcoming bookings at a time, and bookings in your queue count too. A spot frees up when one is completed or cancelled, or when you remove one from the queue.` };
   }
   return {};
@@ -5044,7 +5036,7 @@ function renderUpcomingBookings() {
 }
 
 // Booking Limits — three small cards that show where the customer stands against the rules:
-//   1 booking per motorcycle per day · 2 bookings per day · 3 upcoming bookings at a time.
+//   1 booking per motorcycle per day, and which motorcycles already have a booking on the picked day.
 // Real bookings and the Booking Queue both count; cancelled ones don't.
 function bookingsOnDate(dateIso) {
   const real = Object.values(bookingsData).filter(b => b.date_iso === dateIso && b.status !== 'cancelled');
@@ -5087,13 +5079,15 @@ function refreshBookingLimits() {
              : card('1 booking per motorcycle per day', taken ? 'Already booked' : 'Free', taken ? '#dc2626' : '#16a34a', `${motoName} on ${dateLabel}`, '', taken);
   }
 
-  // 2. two bookings a day, each for a different motorcycle
+  // 2. what the customer already has on that day (there is no limit, this is just so nothing is booked twice by accident)
   let c2;
   if (!dateIso) {
-    c2 = card('Bookings per day', '—', 'var(--fg-3)', 'Each for a different motorcycle');
+    c2 = card('Your bookings that day', '—', 'var(--fg-3)', 'Pick a date to see them.');
   } else {
-    const n = bookingsOnDate(dateIso).count;
-    c2 = card(`Bookings on ${dateLabel}`, `${n} of ${MAX_BOOKINGS_PER_DAY}`, n >= MAX_BOOKINGS_PER_DAY ? '#dc2626' : 'var(--fg-1)', 'Each for a different motorcycle', bar(n, MAX_BOOKINGS_PER_DAY), n >= MAX_BOOKINGS_PER_DAY);
+    const day = bookingsOnDate(dateIso);
+    const n = day.count;
+    const motos = [...day.real, ...day.queued.filter(q => !q._mergesInto)].map(b => (b.motorcycle_model || '').trim()).filter(Boolean);
+    c2 = card(`Your bookings on ${dateLabel}`, n ? String(n) : 'None yet', 'var(--fg-1)', n ? ([...new Set(motos)].join(', ') || 'Booked') : 'You have nothing booked on this day.');
   }
   el.innerHTML = c1 + c2;
   if (typeof refreshMotoBookedNote === 'function') refreshMotoBookedNote();
@@ -6248,6 +6242,8 @@ const bookingsData = {
     motorcycle_plate: {{ (b.motorcycle_plate or '')|tojson }},
     odometer: {{ b.odometer if b.odometer else 'null' }},
     notes: {{ (b.notes or '')|tojson }},
+    own_parts: {{ 'true' if b.own_parts else 'false' }},
+    own_parts_note: {{ (b.own_parts_note or '')|tojson }},
     mechanic_name: {{ (b.assigned_mechanic_name or '')|tojson }},
     mechanic_spec: {{ (b.assigned_mechanic_specialization or '')|tojson }},
     created_at: '{{ b.created_at.strftime("%b %d, %Y at %I:%M %p") }}',
@@ -11124,6 +11120,9 @@ updateMechNote();
     selectedServiceNames = offered;
     renderServiceChecklist(currentServiceFilterItems()); updateServiceSummary();
     document.getElementById('booking-notes').value = b.notes || '';
+    const odo = document.getElementById('odometer'); if (odo) odo.value = b.odometer || '';
+    const opc = document.getElementById('own-parts-check');
+    if (opc) { opc.checked = !!b.own_parts; document.getElementById('own-parts-note').value = b.own_parts ? (b.own_parts_note || '') : ''; if (typeof toggleOwnParts === 'function') toggleOwnParts(); }
     // the motorcycle: a saved one with that model, or the typed model (it is saved when the customer goes on)
     const full = String(b.motorcycle_model || '').trim();
     const ym = full.match(/\s*\((\d{4})\)\s*$/);
