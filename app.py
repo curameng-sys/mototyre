@@ -1971,7 +1971,7 @@ def _resolve_service_combo(names):
 
 BOOKING_MAX_SERVICE_MIN = 240          # one booking holds at most 4 hours of services
 # No limit on how many bookings one account can have (the shop's own schedule and capacity still decide what fits);
-# the only per-customer rule left is one booking per motorcycle per day, where more services are added to it.
+# the only per-customer rule left is that the same motorcycle cannot be in two bookings at the same time.
 
 
 MOTO_NEW_DAYS = 3                      # a saved motorcycle shows "New" for this many days
@@ -2070,13 +2070,12 @@ def _service_selection_error(names):
     return None
 
 
-def _booking_rule_decision(user_id, booking_date, moto_key, start_min=None, end_min=None):
-    """The one per-customer rule left: the same motorcycle cannot be in two bookings at the same time (it can only be in
-    one place). Any number of bookings a day, even for the same motorcycle, as long as their times do not overlap.
-    Returns ('error', None, message) or ('ok', None, None). Bookings made earlier in the same batch are already
-    flushed, so they count."""
-    if start_min is None or end_min is None or moto_key == 'unspecified':
-        return 'ok', None, None
+def _moto_overlap_error(user_id, booking_date, moto_key, start_min, end_min):
+    """The one per-customer booking rule: the same motorcycle cannot be in two bookings at the same time (it can only be
+    in one place). Any number of bookings a day, even for the same motorcycle, as long as their times do not overlap.
+    Returns an error text, or None. Bookings made earlier in the same batch are already flushed, so they count."""
+    if moto_key == 'unspecified':
+        return None
     day = Booking.query.filter(Booking.user_id == user_id, Booking.date == booking_date,
                                Booking.status != 'cancelled', Booking.is_archived == False).all()
     for b in day:
@@ -2085,64 +2084,9 @@ def _booking_rule_decision(user_id, booking_date, moto_key, start_min=None, end_
         b_start = b.time.hour * 60 + b.time.minute
         b_end = compute_finish_minutes(b_start, b.duration_minutes or DEFAULT_DURATION_MIN)
         if start_min < b_end and b_start < end_min:
-            return 'error', None, (f'That motorcycle already has a booking from {minutes_to_ampm(b_start)} to {minutes_to_ampm(b_end)} on '
-                                   f'{booking_date.strftime("%b %d, %Y")}. Pick a time that does not overlap it.')
-    return 'ok', None, None
-
-
-def _merge_into_booking(existing, new_names, new_time, notes='', odo_raw='', mode=None):
-    """Adds services to the motorcycle's existing booking for that day. mode 'keep' = only at its current
-    time, 'move' = only at the time the customer just picked (the customer chose which). With no mode: keeps
-    its time if the longer job still fits there; otherwise moves it to the picked time; otherwise says so."""
-    all_names = split_service_names(existing.service)
-    for n in new_names:
-        if n not in all_names:
-            all_names.append(n)
-    err = _service_selection_error(all_names)
-    if err:
-        return None, err
-    combo = _resolve_service_combo(all_names)
-    mech = Mechanic.query.filter_by(name=existing.assigned_mechanic_name).first() if existing.assigned_mechanic_name else None
-    last_err, tried = None, []
-    candidates = {'keep': (existing.time,), 'move': (new_time,)}.get(mode, (existing.time, new_time))
-    for t in candidates:
-        if t is None or t in tried:
-            continue
-        tried.append(t)
-        start_min = t.hour * 60 + t.minute
-        _, e = _check_booking_request(str(mech.id) if mech else '', existing.date, start_min,
-                                      combo['total_minutes'], exclude_id=existing.id)
-        if e:
-            last_err = e
-            continue
-        moved = (t != existing.time)
-        existing.service = combined_service_name(combo['names'])
-        existing.duration_minutes = combo['total_minutes']
-        existing.is_multiday = combo['is_multiday']
-        existing.end_time = minutes_to_time(compute_finish_minutes(start_min, combo['total_minutes']))
-        if moved:
-            existing.time = t
-            existing.was_rescheduled = True
-            existing.overrun_minutes = 0
-        if notes:
-            existing.notes = ((existing.notes + ' | ') if existing.notes else '') + notes
-        if str(odo_raw or '').isdigit():
-            existing.odometer = int(odo_raw)
-        return {'moved': moved}, None
-    return None, last_err or "Those services don't fit in that booking's time. Please pick a different time."
-
-
-def _notify_booking_merged(booking, added, moved):
-    ref = f'BKG-{booking.id:03d}'
-    cf = _booking_confirmation_facts(booking)
-    body = (f"We added {', '.join(added)} to your booking {ref}{' and moved it to ' + cf['time_str'] if moved else ''}. "
-            f"{cf['date_str']} — {cf['time_label']}. {cf['finish_label']}. It's one booking per motorcycle per day, "
-            f"so everything is done in the same visit.")
-    send_notification(booking.user_id, f'Services added to {ref}', body, type='booking', status='confirmed', booking_id=booking.id)
-    send_booking_confirmation_email(booking)
-    for admin in User.query.filter_by(role='admin').all():
-        send_notification(admin.id, 'Booking updated',
-                          f'{current_user.fullname} added {", ".join(added)} to {ref}.', type='booking', status='confirmed')
+            return (f'That motorcycle already has a booking from {minutes_to_ampm(b_start)} to {minutes_to_ampm(b_end)} on '
+                    f'{booking_date.strftime("%b %d, %Y")}. Pick a time that does not overlap it.')
+    return None
 
 
 def get_capacity_row(query_date):
@@ -2385,20 +2329,9 @@ def book_service():
             return redirect(url_for('customer_dashboard'))
         moto_key = _moto_key(request.form.get('motorcycle_model') or current_user.motorcycle_model,
                              request.form.get('motorcycle_plate'))
-        decision, existing_b, rule_err = _booking_rule_decision(current_user.id, booking_date, moto_key, start_min, end_min)
-        if decision == 'error':
+        rule_err = _moto_overlap_error(current_user.id, booking_date, moto_key, start_min, end_min)
+        if rule_err:
             flash(rule_err, 'danger')
-            return redirect(url_for('customer_dashboard'))
-        if decision == 'merge':
-            res, merge_err = _merge_into_booking(existing_b, service_names, booking_time,
-                                                 clean_str(request.form.get('notes', ''), max_len=500),
-                                                 clean_str(request.form.get('odometer', ''), max_len=10))
-            if merge_err:
-                flash(merge_err, 'danger')
-                return redirect(url_for('customer_dashboard'))
-            db.session.commit()
-            _notify_booking_merged(existing_b, list(service_names), res['moved'])
-            flash(f'Services added to your existing booking BKG-{existing_b.id:03d}.', 'success')
             return redirect(url_for('customer_dashboard'))
         requested_mechanic, request_error = _check_booking_request(mechanic_id, booking_date, start_min, combo['total_minutes'])
         if request_error:
@@ -2935,8 +2868,6 @@ def _book_multiple_impl():
     created = []
     created_bookings = []
     created_idx = []     # position in the submitted queue of each created booking
-    merged = []          # [(booking, added service names, moved?)] — same motorcycle, same day
-    merged_idx = []
     mechanic_taken = []  # queue positions that failed only because the chosen mechanic is no longer free
     errors  = []
     # Only bookings submitted together as a batch of 2+ get a shared batch id, so the
@@ -2980,29 +2911,9 @@ def _book_multiple_impl():
                 continue
             moto_key = _moto_key(b.get('motorcycle_model') or current_user.motorcycle_model, b.get('motorcycle_plate'))
             _s_min = booking_time.hour * 60 + booking_time.minute
-            decision, existing_b, rule_err = _booking_rule_decision(current_user.id, booking_date, moto_key, _s_min,
-                                                                    compute_finish_minutes(_s_min, combo['total_minutes']))
-            if decision == 'error':
+            rule_err = _moto_overlap_error(current_user.id, booking_date, moto_key, _s_min, compute_finish_minutes(_s_min, combo['total_minutes']))
+            if rule_err:
                 errors.append(f'Booking {idx+1}: {rule_err}')
-                continue
-            if decision == 'merge':
-                _had = split_service_names(existing_b.service)
-                res, merge_err = _merge_into_booking(existing_b, service_names, booking_time,
-                                                     clean_str(b.get('notes', ''), max_len=500),
-                                                     clean_str(str(b.get('odometer', '')), max_len=10),
-                                                     mode=b.get('merge_mode') if b.get('merge_mode') in ('keep', 'move') else None)
-                if merge_err:
-                    errors.append(f'Booking {idx+1}: {merge_err}')
-                    continue
-                if b.get('own_parts'):
-                    existing_b.own_parts = True
-                    _op = clean_str(b.get('own_parts_note', ''), max_len=200)
-                    existing_b.own_parts_note = ((existing_b.own_parts_note + ' | ') if existing_b.own_parts_note and _op else '') + _op or existing_b.own_parts_note
-                _added = [n for n in service_names if n not in _had]       # a service already on the booking is not charged twice
-                existing_b.quoted_price = round(float(existing_b.quoted_price if existing_b.quoted_price is not None else _services_price(_had)) + _services_price(_added), 2)
-                db.session.flush()
-                merged.append((existing_b, [n for n in service_names], res['moved']))
-                merged_idx.append(idx)
                 continue
             service = combined_service_name(combo['names'])
 
@@ -3057,7 +2968,7 @@ def _book_multiple_impl():
             created_idx.append(idx)
             created_bookings.append(booking)  # facts computed once each below, after IDs are final
 
-        if created or merged:
+        if created:
             db.session.commit()
 
     # Outside the lock — nothing below touches the day's bookings anymore,
@@ -3097,13 +3008,9 @@ def _book_multiple_impl():
                 type='booking', status='confirmed'
             )
 
-    for bk, added, moved in merged:
-        _notify_booking_merged(bk, added, moved)
-
     return jsonify({
-        'success': (len(created) + len(merged)) > 0, 'created': len(created), 'merged': len(merged), 'errors': errors,
+        'success': len(created) > 0, 'created': len(created), 'errors': errors,
         'created_items': [{'index': i, 'booking': _booking_client_dict(bk)} for i, bk in zip(created_idx, created_bookings)],
-        'merged_items': [{'index': i, 'booking': _booking_client_dict(m[0])} for i, m in zip(merged_idx, merged)],
         'mechanic_taken': mechanic_taken,
     })
 

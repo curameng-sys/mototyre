@@ -4270,133 +4270,7 @@ function schedCardFor(x) {
   return { first: svcs[0] || '', more: Math.max(0, svcs.length - 1), ref: 'BKG-' + String(b.id).padStart(3, '0'),
            meta: [short(b.date_iso), when, b.motorcycle_model, b.motorcycle_plate].filter(Boolean).join(' · ') };
 }
-function schedItemsOnDate(dateIso, key) {
-  const real = Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.date_iso === dateIso && (!key || bookingMotoKey(b) === key)).map(b => ({ booking: b }));
-  const queued = bookingQueue.filter(q => q.date === dateIso && !q._mergesInto && (!key || bookingMotoKey(q) === key)).map(q => ({ queue: q }));
-  return [...real, ...queued];
-}
-function schedUpcomingItems() {
-  const todayIso = new Date(shopNowMs()).toISOString().slice(0, 10);
-  const real = Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.status !== 'completed' && b.date_iso >= todayIso).map(b => ({ booking: b }));
-  const queued = bookingQueue.filter(q => !q._mergesInto).map(q => ({ queue: q }));
-  const dateOf = x => x.booking ? x.booking.date_iso : x.queue.date;
-  return [...real, ...queued].sort((a, b) => dateOf(a) < dateOf(b) ? -1 : 1);
-}
-
-function hhmmFromMin(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
-
-// What it would look like to put the picked services into the motorcycle's existing booking
-// (a real one or one in the queue). { err } if it can never work.
-function mergePlan(rule, timeVal) {
-  const t = rule.target;
-  const isQueue = rule.merge === 'queue';
-  const oldNames = isQueue ? (t.services || []) : (t.service || '').split(',').map(x => x.trim()).filter(Boolean);
-  const added = selectedServiceNames.filter(n => !oldNames.includes(n));
-  const all = [...oldNames, ...added];
-  const rows = SERVICES_DATA.filter(x => all.includes(x.name));
-  const total = rows.reduce((sum, x) => sum + (x.duration_minutes || 0), 0);
-  let blocked = '';
-  if (added.length && (currentJobIsMultiday || rows.some(x => x.is_multiday))) blocked = 'overhaul';
-  else if (added.length && total > MAX_SERVICE_MIN_PER_BOOKING) blocked = 'limit';
-  const oldStart = isQueue ? hhmmToMinutes(t.time) : hhmmFromLabel(t.time);
-  const newStart = hhmmToMinutes(timeVal);
-  return { isQueue, t, all, added, total, blocked, oldStart, newStart,
-           oldEnd: finishMinutesJS(oldStart, total), newEnd: finishMinutesJS(newStart, total),
-           mech: t.mechanic_name || '', ref: isQueue ? '' : 'BKG-' + String(t.id).padStart(3, '0') };
-}
-
-// Modal A, case 1: same motorcycle, same day, but a different time than the existing booking.
-async function openMergeChoiceModal(plan, dateVal, key, timeVal) {
-  const dateLabel = new Date(dateVal + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
-  const moto = (document.getElementById('moto-model').value || '').trim() || plan.t.motorcycle_model || 'motorcycle';
-  const intro0 = `You already have a booking on ${dateLabel} for your ${moto}. One motorcycle is booked once a day, so all its services are done in one visit.`;
-  const oldT = minutesToAmpmJS(plan.oldStart), newT = minutesToAmpmJS(plan.newStart);
-  const CLOSE = 1110;   // 6:30 PM
-  const canAdd = plan.oldEnd <= CLOSE;
-  const sameTime = plan.oldStart === plan.newStart;
-  let canMove = !sameTime && plan.newEnd <= CLOSE;
-  if (canMove && plan.mech) {
-    // Is the booking's own mechanic still free at the new time? (Their own current slot doesn't count against them.)
-    try {
-      const res = await fetch(`/api/mechanics?date=${encodeURIComponent(dateVal)}&time=${encodeURIComponent(timeVal)}&duration=${plan.total}`);
-      const roster = await res.json();
-      const m = roster.find(x => x.name === plan.mech);
-      if (m && m.busy && !(plan.newStart < plan.oldEnd && plan.oldStart < plan.newEnd)) canMove = false;
-    } catch (e) { /* the server checks again when the booking is confirmed */ }
-  }
-  const sel = selectedServiceNames;
-  const hrsMin = m => { const h = Math.floor(m / 60), r = m % 60; return `${h} ${h === 1 ? 'hr' : 'hrs'}` + (r ? ` ${r} min` : ''); };
-  const addedText = plan.added.join(', ');
-  const blockedModal = reason => showSchedModal({ icon: 'calendar', title: 'Already booked that day',
-    message: `${intro0} ${reason} Choose another date for the new services.`,
-    cards: schedItemsOnDate(dateVal, key).map(schedCardFor),
-    buttons: [{ label: 'Choose another date', primary: true, safe: true }] });
-  const label = sel.length === 1 ? sel[0] : `${sel.length} services`;
-  const dur = formatDurationJS(plan.total);
-  // Case 3: everything picked is already in that booking.
-  if (!plan.added.length) {
-    showSchedModal({ icon: 'calendar', title: 'Already booked that day',
-      message: `${intro0} Those services are already in that booking.`,
-      cards: schedItemsOnDate(dateVal, key).map(schedCardFor),
-      buttons: [{ label: 'Choose another date', safe: true }] });
-    return;
-  }
-  // Case 4: adding them isn't allowed.
-  if (plan.blocked === 'overhaul') { blockedModal("Overhaul is booked on its own, so it can't be combined with that booking."); return; }
-  if (plan.blocked === 'limit') { blockedModal(`Adding ${addedText} would make that booking ${hrsMin(plan.total)}, over the 4-hour limit.`); return; }
-  if (!canAdd && !canMove) { blockedModal(`Adding ${addedText} would make that booking end after 6:30 PM.`); return; }
-  const buttons = [];
-  if (canAdd) buttons.push({ label: `Add ${label} to the ${oldT} booking`, sub: `All done ${oldT} – ${minutesToAmpmJS(plan.oldEnd)} · ${dur} total`, primary: true, onClick: () => addToBookingQueue(true, 'keep') });
-  if (canMove) buttons.push({ label: `Move the booking to ${newT}`, sub: `All services ${newT} – ${minutesToAmpmJS(plan.newEnd)} · ${dur} total`, onClick: () => addToBookingQueue(true, 'move') });
-  buttons.push({ label: 'Choose another date', safe: true });
-  const intro = `You already have a booking on ${dateLabel} for your ${moto}. One motorcycle is booked once a day, so all its services are done in one visit.`;
-  const message = sameTime
-    ? `${intro} You can add the new services to that booking instead.`
-    : (canAdd || canMove)
-    ? `${intro} The time you picked (${newT}) is different, so choose: ` +
-      (canAdd && canMove ? `add them to your ${oldT} booking, or move the whole booking to ${newT}.`
-        : canAdd ? `add them to your ${oldT} booking, or choose another date.`
-        : `move the whole booking to ${newT}, or choose another date.`)
-    : intro;
-  showSchedModal({ icon: 'calendar', title: 'Already booked that day', message,
-                   cards: schedItemsOnDate(dateVal, key).map(schedCardFor), buttons });
-}
-
-// Modals A / B / C: which booking rule stopped the add.
-function openQueueRuleModal(code, ctx) {
-  ctx = ctx || {};
-  const dateLabel = selectedDate ? new Date(selectedDate + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }) : 'that day';
-  const moto = (document.getElementById('moto-model').value || '').trim() || 'This motorcycle';
-  const another = { label: 'Choose another date', primary: false };
-  if (code === 'A') {
-    const buttons = [];
-    if (ctx.canMerge) buttons.push({ label: 'Add these services to that booking', sub: 'Same motorcycle, same day', primary: true, onClick: () => addToBookingQueue(true) });
-    buttons.push(another);
-    showSchedModal({ icon: 'calendar', title: 'Already booked that day',
-      message: `${moto} already has a booking on ${dateLabel}. Each motorcycle can only have one booking a day.`,
-      cards: schedItemsOnDate(ctx.date, ctx.key).map(schedCardFor), buttons });
-  } else if (code === 'B') {
-    showSchedModal({ icon: 'calendar', title: `2 bookings on ${dateLabel} already`,
-      message: `You can book up to 2 motorcycles a day. Choose another date for your ${moto === 'This motorcycle' ? 'motorcycle' : moto}.`,
-      cards: schedItemsOnDate(ctx.date).map(schedCardFor), buttons: [{ ...another, primary: true, safe: true }] });
-  } else {
-    const items = schedUpcomingItems();
-    const nQueued = items.filter(x => x.queue).length, nBooked = items.length - nQueued;
-    const breakdown = nQueued ? `${nBooked} booked + ${nQueued} in your queue` : `${nBooked} booked`;
-    const roomLeft = ctx.date && schedItemsOnDate(ctx.date).length < MAX_BOOKINGS_PER_DAY;
-    showSchedModal({ icon: 'calendar', title: 'You have 3 upcoming bookings',
-      message: `You can have up to 3 upcoming bookings at a time, and bookings in your queue count too (${breakdown} = ${items.length}). ` +
-        (roomLeft ? `${dateLabel} still has room for another motorcycle, but you've reached the 3-booking limit. ` : '') +
-        'You can book again once one is completed or cancelled, or remove one from your queue.',
-      cards: items.map(schedCardFor),
-      buttons: [
-        { label: 'View My Bookings', primary: true, onClick: () => showSection('bookings', null) },
-        { label: 'OK', safe: true },
-      ] });
-  }
-}
-
-function addToBookingQueue(skipRuleModal, mergeMode) {
+function addToBookingQueue() {
   const nameVal   = document.getElementById('contact-name').value.trim();
   const mobileVal = document.getElementById('contact-mobile').value.trim();
   const dateVal   = document.getElementById('selected-date-value').value;
@@ -4408,58 +4282,18 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
   }
   hideQueueMissing();
 
-  // 2. Everything filled in: same motorcycle that day (A) → 2 bookings that day (B) → 3 upcoming (C).
-  const motoKey = currentMotoKey();
-  const rule = checkBookingRulesJS(dateVal, motoKey, hhmmToMinutes(timeVal), hhmmToMinutes(timeVal) + (currentJobDuration || 60));
-  if (rule.merge && !mergeMode) {
-    const plan = mergePlan(rule, timeVal);
-    openMergeChoiceModal(plan, dateVal, motoKey, timeVal);   // case 1 (different time) or case 2 (same time)
-    return;
-  }
-  if (rule.started) {
-    const dl = new Date(dateVal + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
-    const mo = (document.getElementById('moto-model').value || '').trim() || 'motorcycle';
-    showSchedModal({ icon: 'calendar', title: 'Already booked that day',
-      message: `You already have a booking on ${dl} for your ${mo}. One motorcycle is booked once a day, so all its services are done in one visit. That booking was already started by the shop, so it can't be changed. Choose another date for the new services.`,
-      cards: schedItemsOnDate(dateVal, motoKey).map(schedCardFor),
-      buttons: [{ label: 'Choose another date', primary: true, safe: true }] });
-    return;
-  }
-  if (rule.error) {
-    if (rule.code) { openQueueRuleModal(rule.code, { key: motoKey, date: dateVal }); } else { showCartToast(rule.error); }
-    return;
-  }
-  if (rule.merge === 'queue') {
-    // Same motorcycle, same day, already in the queue: the new services join that booking.
-    const t = rule.target;
-    const plan = mergePlan(rule, timeVal);
-    if (plan.blocked) return;
-    const all = plan.all, total = plan.total;
-    if (mergeMode === 'move') t.time = timeVal;
-    const st = hhmmToMinutes(t.time);
-    t.services = all;
-    t.service_display = all.join(', ');
-    t.duration_minutes = total;
-    t.duration_label = formatDurationJS(total);
-    t._displayTime = `${minutesToAmpmJS(st)} – ${minutesToAmpmJS(finishMinutesJS(st, total))}`;
-    if (document.getElementById('booking-notes').value) t.notes = (t.notes ? t.notes + ' | ' : '') + document.getElementById('booking-notes').value;
-    renderBookingQueue();
-    resetBookingForm(true);
-    const lbl = plan.added.length === 1 ? plan.added[0] : `${plan.added.length || 1} services`;
-    showCartToast(mergeMode === 'move' ? `Booking moved to ${minutesToAmpmJS(st)} with all services (in your queue)`
-                : mergeMode === 'keep' ? `${lbl} added to your ${minutesToAmpmJS(st)} booking (in your queue)`
-                : 'Added to your booking for that motorcycle on the same day — one booking per motorcycle per day.');
-    return;
-  }
-
+  // 2. Everything filled in: the same motorcycle cannot be in two bookings at the same time.
   const startMin = hhmmToMinutes(timeVal);
   const duration = currentJobDuration || 60;
+  const rule = checkBookingRulesJS(dateVal, currentMotoKey(), startMin, startMin + duration);
+  if (rule.error) { showCartToast(rule.error); return; }
+
   const endMin   = startMin + duration;
   // Two motorcycles of the same customer can be booked at the same time as long as the shop still has a
   // free mechanic for each (the server's per-slot count of open spots), and never with the same mechanic.
   const queuedHere = bookingQueue.filter(b => b.date === dateVal &&
     intervalsOverlap(startMin, endMin, hhmmToMinutes(b.time), hhmmToMinutes(b.time) + (b.duration_minutes || 60)));
-  if (queuedHere.length && !rule.merge) {
+  if (queuedHere.length) {
     const spots = _slotSpots[dateVal + ' ' + timeVal];
     if (spots === undefined || queuedHere.length >= spots) {
       showCartToast('That time overlaps a booking already in your queue, and no other mechanic is free then.'); return;
@@ -4503,28 +4337,9 @@ function addToBookingQueue(skipRuleModal, mergeMode) {
                         : `${minutesToAmpmJS(startMin)} – ${minutesToAmpmJS(endMin)}`,
   };
 
-  let mergeMsg = '';
-  if (rule.merge === 'booking') {
-    const plan = mergePlan(rule, timeVal);
-    entry._mergesInto = rule.target.id;
-    entry.service_display = `${serviceDisplay} → added to BKG-${String(rule.target.id).padStart(3, '0')}`;
-    if (mergeMode) {
-      // The customer chose: keep the booking's time, or move the whole booking to the time they picked.
-      const st = mergeMode === 'move' ? plan.newStart : plan.oldStart;
-      entry.merge_mode = mergeMode;
-      entry.time = hhmmFromMin(st);
-      entry.duration_minutes = plan.total;
-      entry._displayTime = `${minutesToAmpmJS(st)} – ${minutesToAmpmJS(finishMinutesJS(st, plan.total))}`;
-      const lbl = selectedServiceNames.length === 1 ? selectedServiceNames[0] : `${selectedServiceNames.length} services`;
-      mergeMsg = mergeMode === 'move'
-        ? `Booking moved to ${minutesToAmpmJS(st)} with all services (${plan.ref})`
-        : `${lbl} added to your ${minutesToAmpmJS(st)} booking (${plan.ref})`;
-    }
-  }
   bookingQueue.push(entry);
   renderBookingQueue();
   resetBookingForm(true);
-  if (mergeMsg || rule.merge === 'booking') showCartToast(mergeMsg || `${serviceDisplay} will be added to your existing booking BKG-${String(rule.target.id).padStart(3, '0')} for that motorcycle.`);
 }
 
 // The 3 steps at the top: Date & Time first, Details once a date and time are picked,
@@ -4583,13 +4398,13 @@ function renderBookingQueue() {
   const byDate = {};
   bookingQueue.forEach((q, i) => {
     (byDate[q.date] = byDate[q.date] || []).push({
-      q, i, start: hhmmToMinutes(q.time), merges: !!q._mergesInto,
+      q, i, start: hhmmToMinutes(q.time),
       when: q.is_multiday ? `${noZero(minutesToAmpmJS(hhmmToMinutes(q.time)))} drop-off` : noZero(q._displayTime || ''),
     });
   });
   list.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.75rem;">' + Object.keys(byDate).sort().map(date => {
     const rows = byDate[date].sort((x, y) => x.start - y.start);
-    const bookings = rows.filter(r => !r.merges);
+    const bookings = rows;
     const n = bookings.length;
     const two = n >= 2;
     const sameTime = two && bookings.every(r => r.start === bookings[0].start);
@@ -4607,7 +4422,7 @@ function renderBookingQueue() {
           const first = svcs[0] || '';
           const more = svcs.slice(1);
           const open = _queueOpen.has(r.i);
-          const showSame = two && !r.merges && sameTime;
+          const showSame = two && sameTime;
           return `
           <div style="padding:0.65rem 0.85rem;border-top:1px solid var(--line-1);background:#fff;">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;">
@@ -4616,7 +4431,6 @@ function renderBookingQueue() {
                 ${r.when}
                 ${q._selected ? '' : tag('Stays in queue', '#f3f4f6', '#4b5563')}
                 ${showSame ? tag('Same time', '#fef3c7', '#92400e') : ''}
-                ${r.merges ? tag('Adds to BKG-' + String(q._mergesInto).padStart(3, '0'), '#dbeafe', '#1d4ed8') : ''}
               </div>
               <button type="button" onclick="removeFromQueue(${r.i})" style="flex-shrink:0;font-family:'Syne',sans-serif;font-weight:700;font-size:0.66rem;padding:0.25em 0.7em;border-radius:99px;background:#fff;border:1px solid #fecaca;color:#b91c1c;cursor:pointer;">✕ Remove</button>
             </div>
@@ -4851,24 +4665,21 @@ async function submitAllBookings() {
     });
     const data = await res.json();
     const created = data.created_items || [];
-    const merged  = data.merged_items  || [];
 
     // Whatever went through leaves the queue and joins "Your Upcoming Bookings".
     created.forEach(it => { bookingsData[it.booking.id] = it.booking; });
-    merged.forEach(it  => { bookingsData[it.booking.id] = it.booking; });
-    const done = new Set([...created, ...merged].map(it => snapshot[it.index]));
+    const done = new Set(created.map(it => snapshot[it.index]));
     bookingQueue = bookingQueue.filter(e => !done.has(e));
     renderBookingQueue();
     renderCalendar();            // redraws the upcoming list, calendar dots and booking limits
 
-    if (created.length || merged.length) {
+    if (created.length) {
       resetPolicyBox();
       const bits = [];
       if (created.length) bits.push(`${created.length} booking${created.length === 1 ? '' : 's'} confirmed · we emailed your confirmation`);
       const _names = [...new Set(created.map(it => it.booking.mechanic_name).filter(Boolean))];
       if (created.some(it => !it.booking.mechanic_name)) bits.push('The shop will assign an available mechanic and let you know.');
       if (_names.length) bits.push(`${_names.join(' and ')} ${_names.length > 1 ? 'are' : 'is'} reserved for you. They'll be marked busy once the shop starts your service.`);
-      if (merged.length) bits.push(merged.length === 1 ? 'services added to your existing booking' : `services added to ${merged.length} existing bookings`);
       showCartToast(bits.join(' · '));
       if (!(data.mechanic_taken || []).length && !(data.errors && data.errors.length)) {
         // show it in My Bookings (a fresh load of the list): the new booking is Confirmed, any cancelled one it repeats stays Cancelled
@@ -4880,7 +4691,7 @@ async function submitAllBookings() {
     if ((data.mechanic_taken || []).length) {
       const taken = data.mechanic_taken.filter(t => snapshot[t.index]);
       openMechTakenModal(taken.map(t => snapshot[t.index]), taken);
-    } else if (!created.length && !merged.length) {
+    } else if (!created.length) {
       showCartToast(data.error || (data.errors && data.errors[0]) || 'Could not confirm your bookings. Please try again.');
     } else if (data.errors && data.errors.length) {
       setTimeout(() => showCartToast(data.errors[0]), 2800);
@@ -4937,23 +4748,20 @@ function renderUpcomingBookings() {
   Object.values(bookingsData).forEach(b => {
     if (b.status === 'cancelled' || b.status === 'completed' || b.date_iso < todayIso) return;
     const fresh = b.status === 'confirmed' && b.created_iso && (nowShop - Date.parse(b.created_iso + 'Z')) < 24 * 3600e3;
-    // Services added to / a move of this booking that the customer chose and has in the queue: show the new
-    // time range and services right away (they're saved when the queue is confirmed).
-    const pend = bookingQueue.find(q => q._mergesInto === b.id && q.merge_mode);
     const baseServices = (b.service || '').split(',').map(x => x.trim()).filter(Boolean);
     items.push({
-      key: 'b' + b.id, date: b.date_iso, start: pend ? hhmmToMinutes(pend.time) : hhmmFromLabel(b.time), id: b.id, queued: false, merges: false, fresh, pending: !!pend,
-      when: pend ? noZero(pend._displayTime) : (b.is_multiday ? `${noZero(b.time)} drop-off` : (b.end_time ? `${noZero(b.time)} – ${noZero(b.end_time)}` : noZero(b.time))),
-      services: pend ? [...baseServices, ...(pend.services || []).filter(n => !baseServices.includes(n))] : baseServices,
+      key: 'b' + b.id, date: b.date_iso, start: hhmmFromLabel(b.time), id: b.id, queued: false, fresh,
+      when: b.is_multiday ? `${noZero(b.time)} drop-off` : (b.end_time ? `${noZero(b.time)} – ${noZero(b.end_time)}` : noZero(b.time)),
+      services: baseServices,
       moto: [b.motorcycle_model, b.motorcycle_plate].filter(Boolean).join(' · '),
       mechanic: b.mechanic_name, status: b.status, ref: 'BKG-' + String(b.id).padStart(3, '0'),
     });
   });
-  bookingQueue.forEach((q, i) => { if (q._mergesInto && q.merge_mode) return; items.push({
-    key: 'q' + i, date: q.date, start: hhmmToMinutes(q.time), id: null, queued: true, merges: !!q._mergesInto, fresh: false,
+  bookingQueue.forEach((q, i) => { items.push({
+    key: 'q' + i, date: q.date, start: hhmmToMinutes(q.time), id: null, queued: true, fresh: false,
     when: q.is_multiday ? `${minutesToAmpmJS(hhmmToMinutes(q.time))} drop-off` : (q._displayTime || ''),
     services: (q.services || []).slice(), moto: [q.motorcycle_model, q.motorcycle_plate].filter(Boolean).join(' · '), mechanic: q.mechanic_name,
-    status: 'queued', ref: q._mergesInto ? 'Adds to BKG-' + String(q._mergesInto).padStart(3, '0') : 'In queue',
+    status: 'queued', ref: 'In queue',
   }); });
 
   if (!items.length) {
@@ -4973,7 +4781,7 @@ function renderUpcomingBookings() {
 
   wrap.innerHTML = Object.keys(byDate).sort().map(date => {
     const rows = byDate[date].sort((a, b) => a.start - b.start);
-    const bookings = rows.filter(r => !r.merges);            // what counts as a booking
+    const bookings = rows;
     const n = bookings.length;
     const two = n >= 2;                                        // two bookings: the card stands out
     const sameTime = two && bookings.every(r => r.start === bookings[0].start);
@@ -4993,14 +4801,13 @@ function renderUpcomingBookings() {
           const more = r.services.slice(1);
           const open = _upcomingOpen.has(r.key);
           const started = ['inspection', 'in_progress', 'inprogress'].includes(r.status);
-          const showSame = two && !r.merges && sameTime;
+          const showSame = two && sameTime;
           return `
           <div style="padding:0.65rem 0.85rem;border-top:1px solid var(--line-1);background:${r.fresh ? '#f0fdf4' : '#fff'};">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem;">
               <div style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:var(--fg-1);">
                 ${r.when}
                 ${showSame ? tag('Same time', '#fef3c7', '#92400e') : ''}
-                ${r.pending ? tag('Updated · confirm to save', '#dbeafe', '#1d4ed8') : ''}
               </div>
               ${r.id ? `<a href="javascript:void(0)" onclick="openBookingDetails(${r.id})" style="flex-shrink:0;font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;color:#7c3aed;text-decoration:none;">${r.ref}</a>`
                      : `<span style="flex-shrink:0;font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;color:#7c3aed;">${r.ref}</span>`}
@@ -5032,14 +4839,8 @@ function renderUpcomingBookings() {
 function bookingsOnDate(dateIso) {
   const real = Object.values(bookingsData).filter(b => b.date_iso === dateIso && b.status !== 'cancelled');
   const queued = bookingQueue.filter(q => q.date === dateIso);
-  return { real, queued, count: real.length + queued.filter(q => !q._mergesInto).length };
+  return { real, queued, count: real.length + queued.length };
 }
-function upcomingBookingCount() {
-  const todayIso = new Date(shopNowMs()).toISOString().slice(0, 10);
-  return Object.values(bookingsData).filter(b => b.status !== 'cancelled' && b.status !== 'completed' && b.date_iso >= todayIso).length
-       + bookingQueue.filter(q => !q._mergesInto).length;
-}
-
 function refreshBookingLimits() {
   const el = document.getElementById('booking-limits');
   if (!el) return;
@@ -5066,7 +4867,7 @@ function refreshBookingLimits() {
   } else {
     const day = bookingsOnDate(dateIso);
     const n = day.count;
-    const motos = [...day.real, ...day.queued.filter(q => !q._mergesInto)].map(b => (b.motorcycle_model || '').trim()).filter(Boolean);
+    const motos = [...day.real, ...day.queued].map(b => (b.motorcycle_model || '').trim()).filter(Boolean);
     c2 = card(`Your bookings on ${dateLabel}`, n ? String(n) : 'None yet', 'var(--fg-1)', n ? ([...new Set(motos)].join(', ') || 'Booked') : 'You have nothing booked on this day.');
   }
   el.innerHTML = c2;
@@ -5138,7 +4939,7 @@ async function renderCalendar() {
     if (selectedDate === dateStr) cell.classList.add('selected');
 
     const myBookings = Object.values(bookingsData).filter(b => b.date_iso === dateStr && b.status !== 'cancelled').length
-                     + bookingQueue.filter(q => q.date === dateStr && !q._mergesInto).length;
+                     + bookingQueue.filter(q => q.date === dateStr).length;
     if (myBookings > 0) {
       const dots = document.createElement('span');
       dots.className = 'cal-dots';
@@ -9740,11 +9541,9 @@ function refreshMotoBookedNote() {
   const noZero = t => (t || '').replace(/^0/, '');
   const lines = real.map(b => `${b.end_time ? noZero(b.time) + ' – ' + noZero(b.end_time) : noZero(b.time)} · ${_mmEsc(b.service)} · BKG-${String(b.id).padStart(3, '0')}`)
     .concat(queued.map(q => `In your queue · ${_mmEsc(noZero(q._displayTime || ''))} · ${_mmEsc((q.services || []).join(', ') || q.service_display || '')}`));
-  box.innerHTML = `<div style="font-weight:700;">Your ${_mmEsc(m.model)} is already booked on ${_mmLong(day)}</div>`
+  box.innerHTML = `<div style="font-weight:700;">Your ${_mmEsc(m.model)} already has a booking on ${_mmLong(day)}</div>`
     + lines.map(l => `<div>${l}</div>`).join('')
-    + `<div style="margin-top:0.2rem;">One motorcycle can only be booked once a day.</div>
-       <div style="margin-top:0.55rem;font-weight:600;">Booking another motorcycle on the same day?</div>
-       <button type="button" onclick="openMotoForm(null, true)" style="margin-top:0.35rem;padding:0.4rem 0.8rem;border-radius:8px;border:1px solid #fde68a;background:#fff;color:#1d4ed8;font-family:'Syne',sans-serif;font-weight:700;font-size:0.74rem;cursor:pointer;">+ Add a motorcycle</button>`;
+    + `<div style="margin-top:0.2rem;">You can book it again the same day, at a time that does not overlap.</div>`;
   box.style.display = 'block';
 }
 
@@ -11085,8 +10884,9 @@ updateMechNote();
   lock(active ? active.id.replace('sec-', '') : '');
 
 
-  // "Book Again": start a fresh booking with the services, motorcycle and notes of an earlier (cancelled) one.
-  window.bwBookAgain = function (b) {
+  // "Book Again": start a fresh booking with everything of an earlier (cancelled) one. If its date and time are still ahead and still
+  // free, those are filled in too and the customer lands on the last step (Review) to check it; otherwise they pick a new date and time.
+  window.bwBookAgain = async function (b) {
     try { closeModal('modal-booking-details'); } catch (e) {}
     showSection('book', null);
     reviewing = false; bookingQueue = [];
@@ -11122,6 +10922,35 @@ updateMechNote();
     }
     paintRecaps();
     show(1);
+
+    // the old date and time, when they are still ahead
+    const startMs = Date.parse(b.date_iso + 'T00:00:00Z') + hhmmFromLabel(b.time) * 60000;
+    if (!offered.length || !(startMs > shopNowMs())) return;
+    const hhmm = String(Math.floor(hhmmFromLabel(b.time) / 60)).padStart(2, '0') + ':' + String(hhmmFromLabel(b.time) % 60).padStart(2, '0');
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const giveUp = why => { if (note) note.textContent += ' ' + why; };
+    const [yy, mm, dd] = b.date_iso.split('-').map(Number);
+    currentYear = yy; currentMonth = mm - 1;
+    await renderCalendar();
+    const cell = [...document.querySelectorAll('#cal-grid .cal-day:not(.empty)')].find(c => parseInt(c.textContent, 10) === dd && typeof c.onclick === 'function');
+    if (!cell) return giveUp('Your old date is not open any more. Pick a new date.');
+    cell.onclick();
+    let btn = null;
+    for (let i = 0; i < 40 && !btn; i++) {
+      await wait(100);
+      btn = [...document.querySelectorAll('#time-slots-wrap .time-slot-btn')].find(x => x.dataset.time === hhmm && !x.disabled);
+    }
+    if (!btn) { show(3); return giveUp('Your old time is not free any more. Pick another time.'); }
+    btn.click();
+    mechChosen = true; setMechanicMode('shop');
+    if (bkDirty) {
+      const err = await bkCommit();
+      if (err) { show(4); msg.textContent = err; return; }
+    }
+    show(6);
+    if (note) note.textContent = 'Booking again (BKG-' + String(b.id).padStart(3, '0') + '): everything is filled in from your earlier booking, including the date and time. '
+      + 'Check it here. To change something, press Back or tap a step above.';
+    window.bwReview();
   };
   paintMech();
   show(1);
