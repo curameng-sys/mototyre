@@ -1016,6 +1016,7 @@
     /* Step 7: the details on the left, the policy and Confirm on the right, so it fits one screen */
     /* Always take up its line (it is empty once the box is ticked) so the Confirm button does not jump when ticking */
     #policy-hint { display: block !important; min-height: 1.1rem; }
+    .bw-pane[data-bstep="7"] #policy-hint { margin-top: 0.3rem !important; min-height: 0.95rem; }
     @media (min-width: 861px) {
       .bw-pane[data-bstep="7"] .bw-narrow { max-width: 1120px; }
       .bw-pane[data-bstep="7"] .bw-q { max-width: 1120px; }
@@ -1023,8 +1024,25 @@
       .bw-pane[data-bstep="7"] #booking-queue-panel > .appt-section-label { grid-column: 1; grid-row: 1; }
       .bw-pane[data-bstep="7"] #booking-queue-list { grid-column: 1; grid-row: 2 / span 4; }
       .bw-pane[data-bstep="7"] #cancel-policy-section { grid-column: 2; grid-row: 1 / span 2; margin-top: 0 !important; }
-      .bw-pane[data-bstep="7"] #btn-confirm-all-bottom { grid-column: 2; grid-row: 3; margin-top: 0.9rem !important; padding: 0.95rem 1rem !important; font-size: 0.95rem !important; }
+      .bw-pane[data-bstep="7"] #btn-confirm-all-bottom { grid-column: 2; grid-row: 3; margin-top: 0.6rem !important; padding: 0.75rem 1rem !important; font-size: 0.92rem !important; }
       .bw-pane[data-bstep="7"] #policy-hint { grid-column: 2; grid-row: 4; }
+      .bw-pane[data-bstep="7"] #rv-side { grid-column: 2; grid-row: 5; align-self: stretch; }
+      /* the review never scrolls as a page: the notes box takes what is left under Confirm, and only IT scrolls if a short screen cannot show every line */
+      .bw-pane[data-bstep="7"] { overflow: hidden; padding-bottom: 0.75rem; }
+      .bw-pane[data-bstep="7"] .bw-narrow { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+      .bw-pane[data-bstep="7"] #booking-queue-panel { flex: 1; min-height: 0; grid-template-rows: auto auto auto auto minmax(0, 1fr); }
+      .bw-pane[data-bstep="7"] #rv-side { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+      .bw-pane[data-bstep="7"] #rv-side .rv-info { margin-top: 0.4rem; }
+      .bw-pane[data-bstep="7"] #booking-queue-list { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+      /* a tighter details card, so the whole review fits one screen */
+      .bw-pane[data-bstep="7"] .rv-head { padding: 0.55rem 1rem; }
+      .bw-pane[data-bstep="7"] .rv-row { padding: 0.5rem 1rem; gap: 0.8rem; }
+      .bw-pane[data-bstep="7"] .rv-v { font-size: 0.9rem; line-height: 1.3; }
+      .bw-pane[data-bstep="7"] .rv-svc small { font-size: 0.76rem; }
+      .bw-pane[data-bstep="7"] .rv-info, .bw-pane[data-bstep="7"] .rv-note { margin-top: 0.7rem; }
+      .bw-pane[data-bstep="7"] .rv-info { padding: 0.45rem 0.8rem; font-size: 0.72rem; line-height: 1.32; margin-top: 0.45rem; }
+      .bw-pane[data-bstep="7"] .rv-info b.t { font-size: 0.74rem; margin-bottom: 0.15rem; }
+      .bw-pane[data-bstep="7"] .rv-info li { margin-bottom: 0.1rem; }
     }
     .own-parts-box { margin-top: 0.9rem; padding: 0.85rem 1rem; border: 1px solid var(--line-2); border-radius: 12px; background: #fff; }
     .own-parts-check { display: flex; align-items: center; gap: 0.55rem; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem; color: var(--fg-1); cursor: pointer; margin: 0; text-transform: none; letter-spacing: 0; }
@@ -1802,25 +1820,24 @@
             <span id="queue-picked-count" style="font-size:0.74rem;color:var(--fg-3);font-weight:600;"></span>
           </label>
           <div id="booking-queue-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:320px;overflow-y:auto;padding-right:0.35rem;"><div style="font-size:0.8rem;color:var(--fg-3);">No bookings in your queue yet.</div></div>
-          <div id="cancel-policy-section" style="margin-top:1.25rem;">
+          <div id="cancel-policy-section" style="margin-top:1rem;">
             <div class="appt-section-label" style="margin-top:0;">Cancellation Policy</div>
-            <div style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:12px;padding:0.85rem;display:flex;flex-direction:column;gap:0.6rem;">
-              <div style="font-size:0.8rem;font-weight:600;color:var(--fg-1);">Please read this before you confirm.</div>
-              <div style="display:flex;gap:0.65rem;align-items:flex-start;padding:0.65rem 0.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
-                <span style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <div style="background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:12px;padding:0.65rem;display:flex;flex-direction:column;gap:0.45rem;">
+              <div style="display:flex;gap:0.6rem;align-items:flex-start;padding:0.45rem 0.65rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+                <span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                 <div style="min-width:0;">
                   <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:#15803d;">Confirmed: you can cancel</div>
-                  <div style="font-size:0.74rem;color:var(--fg-3);margin-top:0.15rem;line-height:1.45;">While your booking is still Confirmed, you can cancel it anytime in My Bookings.</div>
+                  <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.1rem;line-height:1.35;">While it is still Confirmed, cancel anytime in My Bookings.</div>
                 </div>
               </div>
-              <div style="display:flex;gap:0.65rem;align-items:flex-start;padding:0.65rem 0.75rem;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;">
-                <span style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#fee2e2;color:#dc2626;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+              <div style="display:flex;gap:0.6rem;align-items:flex-start;padding:0.45rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;">
+                <span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#fee2e2;color:#dc2626;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                 <div style="min-width:0;">
                   <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;color:#b91c1c;">Inspection &amp; Estimation: you can't cancel</div>
-                  <div style="font-size:0.74rem;color:var(--fg-3);margin-top:0.15rem;line-height:1.45;">Once the shop starts inspecting your motorcycle, the booking can no longer be cancelled.</div>
+                  <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.1rem;line-height:1.35;">Once the shop starts inspecting, it can't be cancelled online.</div>
                 </div>
               </div>
-              <label id="policy-box" style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem 0.8rem;background:#fff;border:1px solid var(--line-2);border-radius:10px;cursor:pointer;font-size:0.8rem;color:var(--fg-1);font-weight:600;transition:background 0.15s,border-color 0.15s;">
+              <label id="policy-box" style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.8rem;background:#fff;border:1px solid var(--line-2);border-radius:10px;cursor:pointer;font-size:0.8rem;color:var(--fg-1);font-weight:600;transition:background 0.15s,border-color 0.15s;">
                 <input type="checkbox" id="policy-check" onclick="onPolicyToggle()" style="width:18px;height:18px;flex-shrink:0;accent-color:#dc2626;cursor:pointer;margin:0;">
                 <span>I understand the cancellation policy.</span>
               </label>
@@ -1832,6 +1849,7 @@
             Confirm Booking
           </button>
           <div id="policy-hint" style="display:none;margin-top:0.45rem;font-size:0.72rem;color:var(--fg-3);text-align:center;"></div>
+          <div id="rv-side"></div>
         </div>
 
         </div>
@@ -10923,18 +10941,18 @@ updateMechNote();
         ${row('Mechanic', q.mechanic_name ? esc(q.mechanic_name) : 'The shop will assign one')}
         ${q.notes ? row('Notes', esc(q.notes)) : ''}
         ${q.own_parts ? row('Own parts', esc(q.own_parts_note || 'You are bringing your own parts') + '<div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.2rem;">Labor only. Not covered by the shop\'s replacement.</div>') : ''}
-        ${svcTotalOf(svcs) > 0 ? row('Total to pay', '<span style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:1.2rem;color:var(--brand-red);">' + fmtPeso(svcTotalOf(svcs)) + '</span><div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.25rem;line-height:1.45;">Nothing is charged now. You pay at the shop after the service. If the mechanic finds more work, the shop sends you a quotation first and you decide.</div>') : ''}
+        ${svcTotalOf(svcs) > 0 ? row('Total to pay', '<span style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:1.2rem;color:var(--brand-red);">' + fmtPeso(svcTotalOf(svcs)) + '</span><div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.25rem;line-height:1.45;">Nothing is charged now. You pay at the shop after the service.</div>') : ''}
         ${q._mechIssue && typeof issueBlockHTML === 'function' ? `<div style="padding:0.6rem 1rem;">${issueBlockHTML(q, 0)}</div>` : ''}
-      </div>
-      <div class="rv-info"><b class="t">Good to know</b><ul>
-        <li><b>Valid only for this date and time.</b> Please arrive 10 minutes early. Your time is held for ${POLICY.grace} minutes; after that the shop may mark it a no-show and cancel it.</li>
-        <li><b>Cancelling:</b> you can cancel while the booking is Confirmed. Once the shop starts the inspection, it can no longer be cancelled online.</li>
-        <li><b>Changing it:</b> you can change the date or time up to ${POLICY.resched_max} times, and not within ${POLICY.resched_hours} hours of your appointment.</li>
-        <li><b>Payment:</b> you pay at the shop after the service, in cash or GCash. The price above is an estimate; extra work needs your approval first.</li>
-        ${q.is_multiday ? '<li><b>This service takes several days.</b> You drop off the motorcycle on this date, and the shop tells you when it is ready.</li>' : ''}
-        <li><b>After the job:</b> you have ${POLICY.service_warranty} days to report a problem with a service.</li>
-      </ul></div>
-      <div class="rv-note"><b>Not booked yet.</b> Your slot is only reserved when you press <b>Confirm</b>. You can go back and change anything, or leave without confirming and nothing will be booked.</div>`;
+      </div>`;
+      const side = document.getElementById('rv-side');
+      if (side) side.innerHTML = `<div class="rv-info"><b class="t">Good to know</b><ul>
+        <li><b>Not booked yet.</b> Your slot is reserved only when you press Confirm. Leaving now books nothing.</li>
+        <li><b>Valid only for this date and time.</b> Arrive 10 minutes early. It is held ${POLICY.grace} minutes, then the shop may mark it a no-show.</li>
+        <li><b>Changing it:</b> up to ${POLICY.resched_max} times, not within ${POLICY.resched_hours} hours of the start.</li>
+        <li><b>Payment:</b> at the shop after the service, cash or GCash. The price is an estimate; extra work needs your OK.</li>
+        ${q.is_multiday ? '<li><b>Several days:</b> you drop off the motorcycle on this date; the shop tells you when it is ready.</li>' : ''}
+        <li><b>After the job:</b> ${POLICY.service_warranty} days to report a problem with a service.</li>
+      </ul></div>`;
     }
     window.renderBookingQueue = function () {
       const r = _render.apply(this, arguments);
@@ -10984,7 +11002,7 @@ updateMechNote();
   async function bookAgainFill(b) {
     try { closeModal('modal-booking-details'); } catch (e) {}
     showSection('book', null);
-    reviewing = false; bookingQueue = [];
+    reviewing = false; bookingQueue = []; lastQueueLen = 0;     // the queue was emptied here: forget how long it was the last time
     _resetForm(false);
     mechChosen = false; selectedMotoId = null; bkDirty = false; renderMotoPicker(); setMechanicMode('shop');
     const pl = document.getElementById('policy-check'); if (pl) pl.checked = false;
@@ -11051,6 +11069,7 @@ updateMechNote();
       show(6);
       bookingQueue.push(entry);
       renderBookingQueue();                      // a new booking in the queue while on step 6 opens the review (step 7)
+      if (cur !== 7) { reviewing = true; show(7); }   // and make sure of it, whatever the queue length was before
       bookAgainSettle(b, hhmm, note).catch(() => {});
       return;
     }
