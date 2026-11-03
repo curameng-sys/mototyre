@@ -47,6 +47,8 @@ import threading
 DATABASE_URL = os.getenv('DATABASE_URL', 'mysql+pymysql://root:@localhost:3306/mototyre').strip()
 
 admin_app = Flask(__name__, template_folder='templates', static_folder='static')
+import gzip_responses
+gzip_responses.register(admin_app)          # pages and JSON are sent compressed (about 85% smaller)
 # A hosted database (Aiven, etc.) requires an SSL connection; a local XAMPP
 # one typically isn't even configured for it — so this is opt-in by host,
 # never something that has to be remembered as a separate setting.
@@ -257,6 +259,8 @@ class Booking(db.Model):
     no_show          = db.Column(db.Boolean, default=False)          # cancelled because the customer did not come
     quoted_price     = db.Column(db.Float, nullable=True)            # the services' price when it was booked: a later price change does not touch it
     reschedule_count = db.Column(db.Integer, default=0)              # how many times the CUSTOMER moved this booking (limited)
+    cancelled_by     = db.Column(db.String(12), nullable=True)       # 'customer' or 'shop' (a no-show is 'shop' with no_show set)
+    cancel_reason    = db.Column(db.String(300), nullable=True)      # why the shop cancelled it (the customer is shown this)
     is_archived     = db.Column(db.Boolean, default=False)
     total_amount    = db.Column(db.Float, default=0)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
@@ -1696,7 +1700,7 @@ def _live_signature_payload():
 
     bookings = db.session.query(Booking.id, Booking.status, Booking.date, Booking.time, Booking.assigned_mechanic_name,
                                 Booking.invoice_paid, Booking.invoice_payment_method, Booking.is_archived,
-                                Booking.overrun_minutes, Booking.total_amount).order_by(Booking.id).all()
+                                Booking.overrun_minutes, Booking.total_amount, Booking.cancelled_by, Booking.no_show).order_by(Booking.id).all()
     orders = db.session.query(Order.id, Order.status, Order.paid_at, Order.is_archived, Order.shipping_option,
                               Order.refunded_at, Order.received_at).order_by(Order.id).all()
     returns = db.session.query(ReturnRequest.id, ReturnRequest.status, ReturnRequest.resolution, ReturnRequest.item_returned,
@@ -3660,6 +3664,8 @@ def cancel_booking_day_panel(bid):
         _q_before = None
     booking.status = 'cancelled'
     booking.cancelled_at = ph_now()
+    booking.cancelled_by = 'shop'
+    booking.cancel_reason = reason or None
     db.session.commit()
     if _q_before is not None:
         _notify_queue_moved(booking.date, _q_before)
@@ -3681,6 +3687,22 @@ def cancel_booking_day_panel(bid):
                      'toast': f'Booking {booking.id} cancelled' + (f' · {_mname} is now {_mnow}' if _mnow else ''),
                      'mechanic_statuses': mechanic_status_map(),
                      'message': f'Cancelled{" — customer notified." if emailed else (" — customer not notified." if not notify else " — no email on file.")}'})
+
+
+def _cancel_note(b):
+    """'Cancelled by the customer' / 'Cancelled by the shop: reason' / 'No-show', or '' when the booking is not cancelled."""
+    if b.status != 'cancelled':
+        return ''
+    if b.no_show:
+        return 'No-show'
+    if b.cancelled_by == 'customer':
+        return 'Cancelled by the customer'
+    if b.cancelled_by == 'shop':
+        return 'Cancelled by the shop' + (f': {b.cancel_reason}' if b.cancel_reason else '')
+    return 'Cancelled'
+
+
+admin_app.jinja_env.globals['cancel_note'] = _cancel_note
 
 
 NO_SHOW_GRACE_MIN = 15          # a confirmed booking that has not started this many minutes after its time can be marked a no-show
@@ -3719,6 +3741,8 @@ def booking_no_show(bid):
         _q_before = None
     booking.status = 'cancelled'
     booking.cancelled_at = ph_now()
+    booking.cancelled_by = 'shop'
+    booking.cancel_reason = 'No-show'
     booking.no_show = True
     db.session.commit()
     if _q_before is not None:
@@ -3772,6 +3796,10 @@ def restore_booking_day_panel(bid):
     if booking.status != 'cancelled':
         return jsonify({'success': False, 'error': 'This booking is not cancelled.'}), 400
     booking.status = 'confirmed'
+    booking.cancelled_at = None
+    booking.cancelled_by = None
+    booking.cancel_reason = None
+    booking.no_show = False             # a restored booking must not keep counting as a no-show
     db.session.commit()
 
     ref = f'BKG-{booking.id:03d}'
@@ -4075,6 +4103,7 @@ def api_day_panel():
                 'shop_to_assign': (not b.preferred_mechanic_name and not b.assigned_mechanic_name),
                 'own_parts': bool(b.own_parts), 'own_parts_note': b.own_parts_note or '',
                 'late_min': _minutes_late(b), 'no_shows': (_no_show_count(b.user_id) if _minutes_late(b) else 0),
+                'cancel_note': _cancel_note(b),
                 'is_new': bool(b.created_at and (ph_now() - b.created_at) < timedelta(hours=24) and b.status == 'confirmed'),
                 'assign_notice': ({'kind': b.assign_notice_kind, 'mechanic': b.assigned_mechanic_name,
                                    'sent_at': _t_label(b.assign_notice_at),
@@ -9882,6 +9911,8 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN no_show TINYINT(1) DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN quoted_price DOUBLE DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN reschedule_count INT DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN cancelled_by VARCHAR(12) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN cancel_reason VARCHAR(300) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN recorded_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN voided_at DATETIME DEFAULT NULL",

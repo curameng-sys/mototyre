@@ -71,6 +71,8 @@ def _ensure_database():
 _ensure_database()
 
 app = Flask(__name__)
+import gzip_responses
+gzip_responses.register(app)          # pages and JSON are sent compressed (about 85% smaller)
 _secure_cookies = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
 # A hosted database (Aiven, etc.) requires an SSL connection; a local XAMPP
 # one typically isn't even configured for it — so this is opt-in by host,
@@ -445,6 +447,12 @@ def send_booking_confirmation_email(booking):
             {"<div style='margin-top:16px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;color:#92400e;font-size:13px;'>The shop will assign your mechanic. We'll email you again once a mechanic is assigned — your appointment time stays the same.</div>" if f['mechanic_pending'] else ''}
             <div style="margin-top:16px;padding-top:16px;border-top:1px dashed #e5e7eb;color:#374151;font-size:13px;">
               Please arrive 10 minutes early so we can start on time.
+              <ul style="margin:10px 0 0 18px;padding:0;color:#6b7280;font-size:12px;line-height:1.7;">
+                <li>Your booking is valid only for the date and time above. It is held for {NO_SHOW_GRACE_MIN} minutes after your time; after that the shop may mark it a no-show and cancel it.</li>
+                <li>You can cancel while it is Confirmed. Once the shop starts the inspection, it can no longer be cancelled online.</li>
+                <li>You can change the date or time up to {MAX_CUSTOMER_RESCHEDULES} times, and not within {RESCHEDULE_CUTOFF_HOURS} hours of your appointment.</li>
+                <li>You pay at the shop after the service. If the mechanic finds more work, the shop sends you a quotation first and you decide.</li>
+              </ul>
             </div>
           </div>
           <div style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 32px;text-align:center;">
@@ -551,6 +559,8 @@ class Booking(db.Model):
     no_show          = db.Column(db.Boolean, default=False)          # cancelled because the customer did not come
     quoted_price     = db.Column(db.Float, nullable=True)            # the services' price when it was booked: a later price change does not touch it
     reschedule_count = db.Column(db.Integer, default=0)              # how many times the CUSTOMER moved this booking (limited)
+    cancelled_by     = db.Column(db.String(12), nullable=True)       # 'customer' or 'shop' (a no-show is 'shop' with no_show set)
+    cancel_reason    = db.Column(db.String(300), nullable=True)      # why the shop cancelled it (the customer is shown this)
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
@@ -1799,6 +1809,9 @@ def customer_dashboard():
         db.session.rollback()
         my_motorcycles = []
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders, saved_motorcycles=saved_motorcycles,
+                           policy={'grace': NO_SHOW_GRACE_MIN, 'resched_max': MAX_CUSTOMER_RESCHEDULES, 'resched_hours': RESCHEDULE_CUTOFF_HOURS,
+                                   'pickup_days': PICKUP_HOLD_DAYS, 'gcash_minutes': 30, 'service_warranty': RETURN_WINDOW_DAYS['service'],
+                                   'part_return': RETURN_WINDOW_DAYS['product']},
                            queue_info=queue_info, my_motorcycles=my_motorcycles, today_iso=ph_now().date().isoformat(),
                            shop_now_ms=int((ph_now() - datetime(1970, 1, 1)).total_seconds() * 1000),
                            products=products, services=services, returns=returns,
@@ -2372,7 +2385,8 @@ def book_service():
         current_user.id, f"Confirmed — {cf['date_short']} at {cf['time_str']}",
         f"Your {cf['services']} appointment ({cf['ref']}) on {cf['date_str']} — {cf['time_label']}. "
         f"{cf['finish_label']}. Mechanic: {cf['mechanic_label']}. Motorcycle: {cf['motorcycle']}. "
-        f"Please arrive 10 minutes early so we can start on time.",
+        f"Please arrive 10 minutes early so we can start on time. Your time is held for {NO_SHOW_GRACE_MIN} minutes; after that the shop may mark it a no-show. "
+        f"You can cancel while it is Confirmed, or change the date or time up to {MAX_CUSTOMER_RESCHEDULES} times.",
         type='booking', status='confirmed', booking_id=booking.id,
     )
     _notify_queue_confirmed(current_user.id, [booking])
@@ -2416,6 +2430,7 @@ def customer_cancel_booking(bid):
         return refuse(b.status)
     try:                                                # best effort: never lets a queue detail break a cancel
         b.cancelled_at = ph_now()
+        b.cancelled_by = 'customer'
         db.session.commit()
         if _q_before is not None:
             _notify_queue_moved(b.date, _q_before)
@@ -2433,6 +2448,7 @@ def customer_cancel_booking(bid):
     return jsonify({'success': True})
 
 
+NO_SHOW_GRACE_MIN = 15              # a Confirmed booking not started this many minutes after its time can be marked a no-show (same number as the admin app)
 MAX_CUSTOMER_RESCHEDULES = 2        # how many times a customer can move one booking on their own
 RESCHEDULE_CUTOFF_HOURS = 2         # and not any closer to the start than this (after that, call the shop)
 
@@ -2788,6 +2804,7 @@ def _booking_client_dict(b):
         'motorcycle_model': b.motorcycle_model or '', 'motorcycle_plate': b.motorcycle_plate or '',
         'odometer': b.odometer or None, 'notes': b.notes or '',
         'own_parts': bool(b.own_parts), 'own_parts_note': b.own_parts_note or '',
+        'cancelled_by': b.cancelled_by or '', 'cancel_reason': b.cancel_reason or '', 'no_show': bool(b.no_show),
         'mechanic_name': b.assigned_mechanic_name or '', 'mechanic_spec': b.assigned_mechanic_specialization or '',
         'created_at': b.created_at.strftime('%b %d, %Y at %I:%M %p'),
         'created_iso': b.created_at.strftime('%Y-%m-%dT%H:%M:%S'),
@@ -2814,7 +2831,7 @@ _IDEM = {}
 _IDEM_LOCK = threading.Lock()
 
 
-def _idempotent(key, work, ttl=20):
+def _idempotent(key, work, ttl=20, still_valid=None):
     now = _time.time()
     with _IDEM_LOCK:
         for k in [k for k, v in _IDEM.items() if now - v['ts'] > ttl * 3]:
@@ -2825,7 +2842,11 @@ def _idempotent(key, work, ttl=20):
     with ent['lock']:
         if ent['resp'] is not None:
             body, code, mime = ent['resp']
-            return make_response(body, code, {'Content-Type': mime})
+            # The remembered answer is only good while what it created still stands. If that booking or order was cancelled in the
+            # meantime, the same request again is a NEW request (book again, order again), not a double click.
+            if still_valid is None or still_valid(body):
+                return make_response(body, code, {'Content-Type': mime})
+            ent['resp'] = None
         resp = make_response(work())
         ok = False
         if resp.status_code == 200 and resp.is_json:
@@ -2837,6 +2858,23 @@ def _idempotent(key, work, ttl=20):
                 if _IDEM.get(key) is ent:
                     del _IDEM[key]
         return resp
+
+
+def _booking_answer_still_valid(body):
+    try:
+        ids = [it['booking']['id'] for it in _json.loads(body).get('created_items', [])]
+    except Exception:
+        return False
+    return bool(ids) and Booking.query.filter(Booking.id.in_(ids), Booking.status != 'cancelled').count() == len(ids)
+
+
+def _order_answer_still_valid(body):
+    try:
+        oid = _json.loads(body).get('order_id')
+    except Exception:
+        return False
+    o = db.session.get(Order, oid) if oid else None
+    return bool(o) and o.status != 'cancelled'
 
 
 def _payload_key(kind, data):
@@ -2852,7 +2890,7 @@ def book_multiple_services():
     data = request.get_json(silent=True)
     if not data or not data.get('bookings'):
         return jsonify({'success': False, 'error': 'No bookings provided'}), 400
-    return _idempotent(_payload_key('book', data), _book_multiple_impl)
+    return _idempotent(_payload_key('book', data), _book_multiple_impl, still_valid=_booking_answer_still_valid)
 
 
 def _book_multiple_impl():
@@ -2986,7 +3024,8 @@ def _book_multiple_impl():
                 current_user.id, f"Confirmed — {cf['date_short']} at {cf['time_str']}",
                 f"Your {cf['services']} appointment ({cf['ref']}) on {cf['date_str']} — {cf['time_label']}. "
                 f"{cf['finish_label']}. Mechanic: {cf['mechanic_label']}. Motorcycle: {cf['motorcycle']}. "
-                f"Please arrive 10 minutes early so we can start on time.",
+                f"Please arrive 10 minutes early so we can start on time. Your time is held for {NO_SHOW_GRACE_MIN} minutes; after that the shop may mark it a no-show. "
+                f"You can cancel while it is Confirmed, or change the date or time up to {MAX_CUSTOMER_RESCHEDULES} times.",
                 type='booking', status='confirmed', booking_id=created_bookings[0].id,
             )
         else:
@@ -3063,7 +3102,7 @@ def cart_checkout():
     data = request.get_json(silent=True)
     if not data or not data.get('items'):
         return jsonify({'success': False, 'error': 'Cart is empty'}), 400
-    return _idempotent(_payload_key('cart', data), lambda: _cart_checkout_impl(data))
+    return _idempotent(_payload_key('cart', data), lambda: _cart_checkout_impl(data), still_valid=_order_answer_still_valid)
 
 
 def _cart_checkout_impl(data):
@@ -3156,13 +3195,13 @@ def _cart_checkout_impl(data):
                 f'New order {ref}: {current_user.fullname} · Ship to Address · GCash on hold until the customer chooses shipping. {held} held from stock.',
                 type='order', status='confirmed')
         flash(f'Order {ref} placed. Nothing was charged. We\'ll send your shipping options once it\'s packed.', 'success')
-        return jsonify({'success': True, 'gcash': False, 'placed': True, 'ref': ref})
+        return jsonify({'success': True, 'gcash': False, 'placed': True, 'ref': ref, 'order_id': order.id})
 
     if payment_method.lower() == 'gcash':
         desc   = f"MotoTyres Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
         result = create_gcash_payment(amount=total, description=desc[:100], order_id=order.id, origin=request.host_url)
         if result['success']:
-            return jsonify({'success': True, 'gcash': True, 'checkout_url': result['checkout_url']})
+            return jsonify({'success': True, 'gcash': True, 'checkout_url': result['checkout_url'], 'order_id': order.id})
         return jsonify({'success': False, 'error': 'Could not create GCash payment'}), 500
 
     send_notification(current_user.id, 'Order Placed!',
@@ -3176,7 +3215,7 @@ def _cart_checkout_impl(data):
 
     # submitCartOrder() reloads the page on success, so a flash here is picked up by that reload.
     flash('Order placed successfully!', 'success')
-    return jsonify({'success': True, 'gcash': False})
+    return jsonify({'success': True, 'gcash': False, 'order_id': order.id})
 
 
 @app.route('/customer/order', methods=['POST'])
@@ -4198,7 +4237,8 @@ def _customer_live_payload():
         return hashlib.md5(repr([tuple(str(c) for c in r) for r in rows]).encode()).hexdigest()
 
     bookings = db.session.query(Booking.id, Booking.status, Booking.date, Booking.time, Booking.assigned_mechanic_name,
-                                Booking.overrun_minutes, Booking.invoice_paid, Booking.cancelled_at).order_by(Booking.id).all()
+                                Booking.overrun_minutes, Booking.invoice_paid, Booking.cancelled_at, Booking.cancelled_by, Booking.no_show,
+                                Booking.invoice_payment_method, Booking.total_amount, Booking.end_time).order_by(Booking.id).all()
     orders = db.session.query(Order.id, Order.status, Order.paid_at, Order.shipping_option, Order.shipping_started_at,
                               Order.received_at, Order.refunded_at, Order.shipping_options_sent_at).order_by(Order.id).all()
     returns = db.session.query(ReturnRequest.id, ReturnRequest.status, ReturnRequest.resolution, ReturnRequest.item_returned,
@@ -4232,8 +4272,17 @@ def customer_poll():
         (r.id, r.status, r.resolution, r.item_returned, r.awaiting_customer_info, r.customer_at_shop,
          r.refund_amount, bool(r.refund_receipt), str(r.cash_ready_at), str(r.redo_date), str(r.redo_time))
         for r in _claims]).encode()).hexdigest()
+    # Everything else the customer sees on a booking (date, time, mechanic, price, payment, why it was cancelled). The status is
+    # applied live by the page; when one of these changes the page reloads itself (when it is safe) so both sides show the same thing.
+    _inv_sent = {r[0] for r in db.session.query(Notification.booking_id).filter(
+        Notification.user_id == current_user.id, Notification.type == 'invoice', Notification.booking_id.isnot(None)).all()}
+    _book_sigs = {b.id: hashlib.md5(repr((str(b.date), str(b.time), str(b.end_time), b.assigned_mechanic_name, bool(b.invoice_paid),
+                                          b.invoice_payment_method, b.total_amount, b.quoted_price, b.cancelled_by, b.cancel_reason,
+                                          bool(b.no_show), b.id in _inv_sent, b.reschedule_count)).encode()).hexdigest()[:12]
+                  for b in bookings}
     return jsonify({
         'bookings': [{'id': b.id, 'status': b.status} for b in bookings],
+        'booking_sigs': _book_sigs,
         'orders':   [{'id': o.id, 'status': o.status, 'ship': ship_order_state(o) if o.delivery_method == 'ship' else None} for o in orders],
         'returns_sig': _claims_sig,
         'queue': _queue_info_for(bookings),
@@ -5046,6 +5095,8 @@ with app.app_context():
         "ALTER TABLE booking ADD COLUMN no_show TINYINT(1) DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN quoted_price DOUBLE DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN reschedule_count INT DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN cancelled_by VARCHAR(12) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN cancel_reason VARCHAR(300) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN address VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN motorcycle_model VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN motorcycle_year VARCHAR(4) DEFAULT NULL",

@@ -1031,6 +1031,9 @@
     #own-parts-fields { margin-top: 0.7rem; }
     #own-parts-fields input[type="text"] { width: 100%; }
     .own-parts-hint { margin-top: 0.5rem; font-size: 0.76rem; color: var(--fg-3); line-height: 1.5; }
+    .rv-info { margin-top: 0.75rem; padding: 0.8rem 1rem; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; font-size: 0.8rem; line-height: 1.5; }
+    .rv-info b.t { display: block; font-family: 'Syne', sans-serif; font-size: 0.8rem; margin-bottom: 0.3rem; }
+    .rv-info ul { margin: 0; padding-left: 1.1rem; } .rv-info li { margin-bottom: 0.25rem; }
     .rv-note { margin-top: 0.75rem; padding: 0.7rem 0.9rem; border-radius: 10px; background: #fffbeb; border: 1px solid #fcd34d; color: #78350f; font-size: 0.82rem; line-height: 1.5; }
     .rv-card { border: 1px solid #bfdbfe; border-radius: 14px; overflow: hidden; background: #fff; }
     .rv-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.1rem; background: #eff6ff; color: #1d4ed8; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; }
@@ -2448,11 +2451,20 @@
       <div id="bd-warranty-expired-msg" style="display:none;font-size:0.78rem;color:var(--fg-2);text-align:center;padding:0.65rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;">The warranty window has closed. Message the shop directly — we'll look at it case by case.</div>
     </div>
 
+    <div id="bd-booking-notes" style="display:none;margin-top:1rem;padding:0.75rem 0.9rem;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:0.78rem;line-height:1.5;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.25rem;">Booking notes</div>
+      <div>Valid only for this date and time. Arrive 10 minutes early: your time is held for {{ policy.grace }} minutes, then the shop may mark it a no-show.</div>
+      <div style="margin-top:0.2rem;">Cancel while it is Confirmed. Change the date or time up to {{ policy.resched_max }} times, not within {{ policy.resched_hours }} hours of the start.</div>
+      <div style="margin-top:0.2rem;">You pay after the service. Extra work needs your approval first.</div>
+    </div>
+
     <div id="bd-cancel-wrap" style="display:none;margin-top:1rem;">
       <button type="button" id="bd-resched-btn" onclick="openReschedule()" style="width:100%;padding:0.65rem;margin-bottom:0.5rem;background:#fff;border:1px solid var(--line-2);border-radius:10px;color:var(--fg-1);font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Change Date / Time</button>
       <button type="button" id="bd-cancel-btn" onclick="openCancelMyBooking()" style="width:100%;padding:0.65rem;background:#fff;border:1px solid #fecaca;border-radius:10px;color:#b91c1c;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Cancel Booking</button>
       <div id="bd-cancel-note" style="display:none;font-size:0.78rem;color:var(--fg-2);text-align:center;padding:0.65rem;background:var(--bg-subtle);border:1px solid var(--line-2);border-radius:10px;">The shop has started work on this booking, so it can no longer be cancelled online. Please contact the shop.</div>
     </div>
+
+    <div id="bd-cancelinfo" style="display:none;margin-top:1rem;padding:0.7rem 0.9rem;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#7f1d1d;font-size:0.8rem;line-height:1.5;"></div>
 
     <div id="bd-again-wrap" style="display:none;margin-top:1rem;">
       <button type="button" id="bd-again-btn" onclick="bookAgain(_currentBookingDetailId)" style="width:100%;padding:0.7rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;">Book Again</button>
@@ -3002,6 +3014,16 @@
         <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(21,128,61,0.2);">
           <div style="font-size:0.75rem;color:var(--fg-3);">Operating Hours</div>
           <div style="font-size:0.82rem;color:var(--fg-1);margin-top:0.25rem;">Monday – Sunday: 8:00 AM – 6:30 PM</div>
+        </div>
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(21,128,61,0.2);">
+          <div style="font-size:0.75rem;color:var(--fg-3);margin-bottom:0.35rem;">Pickup notes</div>
+          <ul style="margin:0;padding-left:1.1rem;font-size:0.8rem;color:var(--fg-1);line-height:1.55;">
+            <li>We tell you when your order is <b>Ready to Pick Up</b>. Show your order number (ORD-…) at the counter.</li>
+            <li>We <b>hold it for {{ policy.pickup_days }} days</b> from then, and remind you one day before the last day.</li>
+            <li>Not picked up in time: the order is <b>cancelled automatically</b> and the items go back on the shelf.</li>
+            <li><b>Cash:</b> you pay at the counter when you pick up. Nothing is charged online.</li>
+            <li><b>GCash:</b> pay within {{ policy.gcash_minutes }} minutes, or the order is cancelled. If it is cancelled after you paid (for example, not picked up), the full amount is refunded to the same GCash account.</li>
+          </ul>
         </div>
       </div>
 
@@ -4733,6 +4755,13 @@ function toggleUpcomingServices(key) {
   renderUpcomingBookings();
 }
 // Cancel booking (Confirmed only) opens the same confirmation as the one in the booking's details.
+// Who cancelled a booking and why, in the customer's words (the shop's page says the same thing).
+function cancelNoteText(b) {
+  if (b.no_show) return 'The shop marked this booking as a no-show because you did not arrive within the grace time. You can book again anytime.';
+  if (b.cancelled_by === 'customer') return 'You cancelled this booking.';
+  if (b.cancelled_by === 'shop') return 'The shop cancelled this booking.' + (b.cancel_reason ? ' Reason: ' + b.cancel_reason : '');
+  return 'This booking was cancelled.';
+}
 function openCancelFor(id) { _currentBookingDetailId = id; openCancelMyBooking(); }
 function bookAgainBtnHTML(id) { return `<button type="button" class="mb-again" onclick="event.stopPropagation(); bookAgain(${id})" style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.66rem;padding:0.3em 0.8em;border-radius:99px;background:#fff;border:1px solid var(--brand-red-border);color:var(--brand-red);cursor:pointer;display:inline-flex;align-items:center;gap:0.3em;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Book Again</button>`; }
 // "Book Again": opens the booking steps with the same services, motorcycle and notes filled in; the customer only picks a new date and time.
@@ -6032,6 +6061,9 @@ const bookingsData = {
     odometer: {{ b.odometer if b.odometer else 'null' }},
     notes: {{ (b.notes or '')|tojson }},
     own_parts: {{ 'true' if b.own_parts else 'false' }},
+    cancelled_by: {{ (b.cancelled_by or '')|tojson }},
+    cancel_reason: {{ (b.cancel_reason or '')|tojson }},
+    no_show: {{ 'true' if b.no_show else 'false' }},
     own_parts_note: {{ (b.own_parts_note or '')|tojson }},
     mechanic_name: {{ (b.assigned_mechanic_name or '')|tojson }},
     mechanic_spec: {{ (b.assigned_mechanic_specialization or '')|tojson }},
@@ -6238,8 +6270,11 @@ function openBookingDetails(bookingId) {
   cw.style.display = (booking.status === 'confirmed' || started) ? 'block' : 'none';
   document.getElementById('bd-cancel-btn').style.display  = booking.status === 'confirmed' ? 'block' : 'none';
   document.getElementById('bd-resched-btn').style.display = booking.status === 'confirmed' ? 'block' : 'none';
+  document.getElementById('bd-booking-notes').style.display = booking.status === 'confirmed' ? 'block' : 'none';
   document.getElementById('bd-cancel-note').style.display = started ? 'block' : 'none';
   document.getElementById('bd-again-wrap').style.display = booking.status === 'cancelled' ? 'block' : 'none';
+  { const ci = document.getElementById('bd-cancelinfo'); const t = booking.status === 'cancelled' ? cancelNoteText(booking) : '';
+    ci.textContent = t; ci.style.display = t ? 'block' : 'none'; }
 
   document.getElementById('modal-booking-details').classList.add('open');
 }
@@ -9275,6 +9310,7 @@ function updateMechNote() {
 
 // ── My Motorcycles (Account Information) and the booking form's motorcycle picker: one list, MY_MOTOS ──
 const MOTO_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="3.5"/><circle cx="18.5" cy="17" r="3.5"/><path d="M15 6h2l3 7"/><path d="M5.5 17 9 10h6l3.5 7"/><path d="M9 10 7.5 6H5"/></svg>';
+const POLICY = {{ policy|tojson }};          // the numbers the booking and pickup notes quote (set once on the server)
 var MY_MOTOS = {{ (my_motorcycles or [])|tojson }};      // var: other code may ask before this line has run
 var selectedMotoId = null;          // the customer chooses it in the booking form; nothing is picked for them
 const _mmEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -9661,13 +9697,24 @@ function setMechanicMode(mode) {
   checkBookingReady();
 }
 
+// The same mechanics question is often asked twice in a row (picking a date, then the services, then the time each ask again): the answer is
+// reused for 3 seconds, and two asks at the same moment share one request.
+const _mechAsked = {};
+function fetchMechanicsOnce(qs) {
+  const hit = _mechAsked[qs];
+  if (hit && Date.now() - hit.ts < 3000) return hit.promise;
+  const promise = fetch('/api/mechanics' + qs).then(r => r.json());
+  _mechAsked[qs] = { ts: Date.now(), promise };
+  promise.catch(() => { delete _mechAsked[qs]; });
+  return promise;
+}
+
 async function loadMechanics(date, time, duration) {
   try {
     const qs = (date && time)
       ? `?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}&duration=${duration || currentJobDuration || 60}`
       : (date ? `?date=${encodeURIComponent(date)}` : '');      // a date alone still says who is absent that day
-    const res = await fetch('/api/mechanics' + qs);
-    mechanicsRoster = await res.json();
+    mechanicsRoster = await fetchMechanicsOnce(qs);
 
     if (selectedMechanicId) {
       const picked = mechanicsRoster.find(m => String(m.id) === String(selectedMechanicId));
@@ -10045,6 +10092,7 @@ function showToast(msg, type) {
     el.textContent = text;
   }
 
+  let _bookingSigs = null;
   async function poll() {
     try {
       const res = await fetch('/api/customer/poll');
@@ -10066,6 +10114,18 @@ function showToast(msg, type) {
         else if (data.returns_sig !== _claimsSig) {
           if (_safeToReload()) { location.reload(); return; }
           // can't refresh right now: keep the old fingerprint so the next quiet tick tries again
+        }
+      }
+
+      // ── Bookings: date, time, mechanic, price, payment, cancel reason ── (a change means the shop acted: show the same thing they see)
+      if (data.booking_sigs) {
+        if (_bookingSigs === null) _bookingSigs = data.booking_sigs;
+        else {
+          const changed = Object.keys(data.booking_sigs).some(id => _bookingSigs[id] !== data.booking_sigs[id]);
+          if (changed) {
+            if (_safeToReload()) { location.reload(); return; }
+            // can't refresh right now (a window is open, or they are typing): keep the old fingerprint so the next quiet tick tries again
+          }
         }
       }
 
@@ -10860,6 +10920,14 @@ updateMechNote();
         ${svcTotalOf(svcs) > 0 ? row('Total to pay', '<span style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:1.2rem;color:var(--brand-red);">' + fmtPeso(svcTotalOf(svcs)) + '</span><div style="font-size:0.76rem;font-weight:500;color:var(--fg-3);margin-top:0.25rem;line-height:1.45;">Nothing is charged now. You pay at the shop after the service. If the mechanic finds more work, the shop sends you a quotation first and you decide.</div>') : ''}
         ${q._mechIssue && typeof issueBlockHTML === 'function' ? `<div style="padding:0.6rem 1rem;">${issueBlockHTML(q, 0)}</div>` : ''}
       </div>
+      <div class="rv-info"><b class="t">Good to know</b><ul>
+        <li><b>Valid only for this date and time.</b> Please arrive 10 minutes early. Your time is held for ${POLICY.grace} minutes; after that the shop may mark it a no-show and cancel it.</li>
+        <li><b>Cancelling:</b> you can cancel while the booking is Confirmed. Once the shop starts the inspection, it can no longer be cancelled online.</li>
+        <li><b>Changing it:</b> you can change the date or time up to ${POLICY.resched_max} times, and not within ${POLICY.resched_hours} hours of your appointment.</li>
+        <li><b>Payment:</b> you pay at the shop after the service, in cash or GCash. The price above is an estimate; extra work needs your approval first.</li>
+        ${q.is_multiday ? '<li><b>This service takes several days.</b> You drop off the motorcycle on this date, and the shop tells you when it is ready.</li>' : ''}
+        <li><b>After the job:</b> you have ${POLICY.service_warranty} days to report a problem with a service.</li>
+      </ul></div>
       <div class="rv-note"><b>Not booked yet.</b> Your slot is only reserved when you press <b>Confirm</b>. You can go back and change anything, or leave without confirming and nothing will be booked.</div>`;
     }
     window.renderBookingQueue = function () {
