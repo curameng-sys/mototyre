@@ -116,7 +116,7 @@
 
     /* ── PAGE WRAP ── */
     .page-wrap { width: 100%; padding: 0 clamp(1.25rem, 6.5vw, 8rem) 4rem; overflow-anchor: none; }
-    body.is-book .page-wrap { padding-left: 1.25rem; padding-right: 1.25rem; }      /* Appointment: unchanged  */
+    /* Appointment now has the same side margins as Home, My Bookings and the rest (it used to have its own) */
     #sec-bookings, #sec-orders, #sec-transactions, #sec-returns, #sec-profile { padding-left: 0 !important; padding-right: 0 !important; }
     .c-section.active { padding-top: 0.5rem; }
 
@@ -1066,8 +1066,8 @@
     /* the small messages ("Added to queue") go to the top here, so they never cover the Back / Next buttons */
     body.book-lock #cart-toast { bottom: auto !important; top: 84px !important; right: 1.5rem !important; left: auto !important; max-width: min(420px, calc(100vw - 2rem)) !important; }
     body.book-lock .page-wrap { padding-bottom: 0; }
-    #sec-book.active { height: calc(100vh - var(--nav-h, 72px)); height: calc(100dvh - var(--nav-h, 72px)); padding: 1rem clamp(1rem, 5vw, 4.5rem) 1.25rem; display: flex; flex-direction: column; box-sizing: border-box; }
-    .bw { width: 100%; max-width: 1180px; margin: 0 auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+    #sec-book.active { height: calc(100vh - var(--nav-h, 72px)); height: calc(100dvh - var(--nav-h, 72px)); padding: 1rem 0 1.25rem; display: flex; flex-direction: column; box-sizing: border-box; }     /* no side padding of its own: the page's margins are the same as every other page */
+    .bw { width: 100%; margin: 0 auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.9rem; }
     .bw-head { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; flex: 0 0 auto; }
     .bw-head .section-title { font-size: clamp(1.4rem, 2.4vw, 1.9rem); }
     .bw-steps { list-style: none; display: flex; align-items: center; gap: 0.35rem; margin: 0 auto; padding: 0; }
