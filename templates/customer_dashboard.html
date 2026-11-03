@@ -68,6 +68,7 @@
       transition: all 0.15s; white-space: nowrap;
       border: 1px solid transparent;
     }
+    .nav-links a span { color: inherit; }                    /* a word wrapped in a span follows the link's colour (a global rule colours every element) */
     .nav-links a:hover { color: var(--fg-1); background: var(--bg-subtle); border-color: var(--line-2); }
     .nav-links a.active { color: var(--brand-red); background: var(--brand-red-soft); border-color: var(--brand-red-border); }
 
@@ -1061,7 +1062,12 @@
     .bw-steps li.done .d { background: #15803d; color: #fff; }
     .bw-steps li.done + li::before, .bw-steps li.active::before { background: #15803d; }
     .bw-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg-page); border: 1px solid var(--line-2); border-radius: 16px; box-shadow: 0 6px 24px rgba(28,24,20,0.18); overflow: hidden; }
-    .bw { --bw-pad: clamp(1.25rem, 3.2vw, 2.75rem); }                                     /* the same space at the left, right and bottom of the box */
+    .bw { --bw-pad: clamp(1.25rem, 3.2vw, 2.75rem); position: relative; }
+    /* "Book Again" fills the old date and time from the server: show one calm loading screen instead of the first step flashing by */
+    .bw-loading { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9rem; background: rgba(250,249,247,0.97); border-radius: inherit; font-family: 'Syne', sans-serif; font-weight: 700; color: var(--fg-2); font-size: 0.95rem; text-align: center; padding: 1rem; }
+    .bw-loading small { font-family: inherit; font-weight: 500; font-size: 0.78rem; color: var(--fg-3); max-width: 28rem; line-height: 1.5; }
+    .bw-loading .spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--line-2); border-top-color: var(--brand-red); animation: bwspin 0.8s linear infinite; }
+    @keyframes bwspin { to { transform: rotate(360deg); } }                                     /* the same space at the left, right and bottom of the box */
     .bw-pane { scrollbar-width: thin; scrollbar-gutter: stable both-edges; }                 /* a scrollbar never makes the right margin smaller than the left */
     .bw-pane { display: none; flex: 1; min-height: 0; overflow-y: auto; padding: clamp(1rem, 3vh, 1.75rem) var(--bw-pad) var(--bw-pad); box-sizing: border-box; animation: bwIn .22s ease both; }
     .bw-pane.active { display: flex; flex-direction: column; }
@@ -1269,9 +1275,9 @@
     <a href="#" class="active" onclick="showSection('overview', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
     <a href="#" onclick="showSection('book', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="10" y1="17" x2="14" y2="17"/></svg> Appointments</a>
     <a href="#" onclick="showSection('bookings', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg> My Bookings</a>
-    <a href="#" onclick="showSection('shop', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Parts Catalog</a>
     <a href="#" onclick="showSection('orders', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> My Orders</a>
-    <a href="#" onclick="showSection('returns', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Returns<span class="nav-more">&nbsp;&amp; Warranty</span></a>
+    <a href="#" onclick="showSection('shop', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Parts Catalog</a>
+    <a href="#" onclick="showSection('returns', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> <span>Returns<span class="nav-more">&nbsp;&amp; Warranty</span></span></a>
     <a href="#" onclick="showSection('transactions', this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l3-2 2.5 2L12 20l2.5 2L17 20l3 2V2l-3 2-2.5-2L12 4 9.5 2 7 4z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="14" y2="13"/></svg> Transactions</a>
   </div>
 
@@ -1305,8 +1311,8 @@
   <a href="#" class="active" onclick="showSection('overview', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Home</a>
   <a href="#" onclick="showSection('book', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="15" x2="12" y2="19"/><line x1="10" y1="17" x2="14" y2="17"/></svg> Appointments</a>
   <a href="#" onclick="showSection('bookings', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg> My Bookings</a>
-  <a href="#" onclick="showSection('shop', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Parts Catalog</a>
   <a href="#" onclick="showSection('orders', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> My Orders</a>
+  <a href="#" onclick="showSection('shop', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Parts Catalog</a>
   <a href="#" onclick="showSection('returns', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Returns &amp; Warranty</a>
   <a href="#" onclick="showSection('transactions', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l3-2 2.5 2L12 20l2.5 2L17 20l3 2V2l-3 2-2.5-2L12 4 9.5 2 7 4z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="14" y2="13"/></svg> Transactions</a>
 </div>
@@ -10962,8 +10968,18 @@ updateMechNote();
 
   // "Book Again": start a fresh booking with everything of an earlier (cancelled) one. If its date and time are still ahead and still
   // free, those are filled in too and the customer lands on the last step (Review) to check it; otherwise they pick a new date and time.
+  function bwLoading(on) {
+    const box = document.getElementById('bw'); if (!box) return;
+    let el = document.getElementById('bw-loading');
+    if (!on) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.id = 'bw-loading'; el.className = 'bw-loading'; box.appendChild(el); }
+    el.innerHTML = '<div class="spin"></div><div>Getting your booking ready…</div><small>We are filling in everything from your earlier booking, including the date and time, then taking you to the review.</small>';
+  }
   window.bwBookAgain = async function (b) {
+    // only when the old date and time are still ahead (then it goes straight to Review); otherwise the first step shows at once
+    if (Date.parse(b.date_iso + 'T00:00:00Z') + hhmmFromLabel(b.time) * 60000 > shopNowMs()) bwLoading(true);
     try { await bookAgainFill(b); } catch (e) { const n = document.getElementById('bw-again-note'); if (n) n.textContent = n.textContent.replace(' Filling in your old date and time…', '') + ' Could not fill in the old date and time (' + (e && e.message || e) + '). Pick them again.'; }
+    finally { bwLoading(false); }
   };
   async function bookAgainFill(b) {
     try { closeModal('modal-booking-details'); } catch (e) {}
@@ -11006,6 +11022,39 @@ updateMechNote();
     const startMs = Date.parse(b.date_iso + 'T00:00:00Z') + hhmmFromLabel(b.time) * 60000;
     if (!offered.length || !(startMs > shopNowMs())) return;
     const hhmm = String(Math.floor(hhmmFromLabel(b.time) / 60)).padStart(2, '0') + ':' + String(hhmmFromLabel(b.time) % 60).padStart(2, '0');
+
+    // INSTANT: everything needed is already in the old booking, so the review is built from it right now, with no waiting for the server.
+    // The form (calendar, time) is filled in behind it, and the old time is checked again there (bookAgainSettle). The server checks once
+    // more when the customer presses Confirm.
+    const svcRows = SERVICES_DATA.filter(x => offered.includes(x.name));
+    const total = svcRows.reduce((t, x) => t + (x.duration_minutes || 0), 0);
+    const modelNow = (document.getElementById('moto-model') || {}).value;
+    if (svcRows.length && !svcRows.some(x => x.is_multiday) && total > 0 && !bkDirty && modelNow) {
+      mechChosen = true; setMechanicMode('shop');
+      const [y0, m0, d0] = b.date_iso.split('-').map(Number);
+      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const startMin = hhmmToMinutes(hhmm);
+      const entry = {
+        date: b.date_iso, time: hhmm, services: [...offered], service_display: offered.join(', '),
+        duration_minutes: total, is_multiday: false, duration_label: formatDurationJS(total),
+        motorcycle_model: modelNow, motorcycle_plate: (document.getElementById('moto-plate') || {}).value || '',
+        _selected: true, odometer: (document.getElementById('odometer') || {}).value || '',
+        mechanic_id: '', mechanic_name: '', notes: document.getElementById('booking-notes').value,
+        own_parts: !!(document.getElementById('own-parts-check') || {}).checked,
+        own_parts_note: ((document.getElementById('own-parts-note') || {}).value || '').trim(),
+        contact_name: document.getElementById('contact-name').value.trim(), contact_mobile: document.getElementById('contact-mobile').value.trim(),
+        _displayDate: `${monthNames[m0 - 1]} ${d0}, ${y0}`,
+        _displayTime: `${minutesToAmpmJS(startMin)} \u2013 ${minutesToAmpmJS(startMin + total)}`,
+      };
+      if (note) note.textContent = 'Booking again (BKG-' + String(b.id).padStart(3, '0') + '): everything is filled in from your earlier booking, including the date and time. '
+        + 'Check it here. To change something, press Back or tap a step above.' + (gone.length ? ' Not offered any more: ' + gone.join(', ') + '.' : '');
+      show(6);
+      bookingQueue.push(entry);
+      renderBookingQueue();                      // a new booking in the queue while on step 6 opens the review (step 7)
+      bookAgainSettle(b, hhmm, note).catch(() => {});
+      return;
+    }
+
     const wait = ms => new Promise(r => setTimeout(r, ms));
     const giveUp = why => { if (note) note.textContent = note.textContent.replace(' Filling in your old date and time…', '') + ' ' + why; };
     if (note) note.textContent += ' Filling in your old date and time…';
@@ -11038,6 +11087,40 @@ updateMechNote();
     if (note) note.textContent = 'Booking again (BKG-' + String(b.id).padStart(3, '0') + '): everything is filled in from your earlier booking, including the date and time. '
       + 'Check it here. To change something, press Back or tap a step above.';
     window.bwReview();
+  }
+  // Runs behind the instant review: selects the old date and time in the form (so Back and the step bar show them like normal) and checks
+  // the old time is still free. If it is not, the customer is taken to the step where they pick a new one, with the reason.
+  async function bookAgainSettle(b, hhmm, note) {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const ref = 'Booking again (BKG-' + String(b.id).padStart(3, '0') + '): ';
+    const fail = (why, step) => {
+      if (cur !== 7 || !bookingQueue.length) return;               // they already moved on (or confirmed): leave it alone
+      backing = true; reviewing = false; bookingQueue = []; renderBookingQueue(); backing = false;
+      show(step);
+      if (note) note.textContent = ref + why;
+    };
+    const [yy, mm, dd] = b.date_iso.split('-').map(Number);
+    const findCell = () => (currentYear === yy && currentMonth === mm - 1)
+      ? [...document.querySelectorAll('#cal-grid .cal-day:not(.empty)')].find(c => parseInt(c.textContent, 10) === dd && typeof c.onclick === 'function') : null;
+    let cell = findCell();
+    if (!cell) { currentYear = yy; currentMonth = mm - 1; await renderCalendar(); cell = findCell(); }
+    if (!cell) return fail('Your old date is not open any more. Pick a new date.', 1);
+    cell.onclick();
+    let btn = null, anySlots = false;
+    for (let i = 0; i < 300 && !btn; i++) {
+      await wait(100);
+      const all = [...document.querySelectorAll('#time-slots-wrap .time-slot-btn')];
+      anySlots = all.length > 0;
+      btn = all.find(x => x.dataset.time === hhmm);
+      if (!btn && anySlots && i > 3) break;
+    }
+    if (!anySlots) return;                                           // the times never loaded: the server still checks when they press Confirm
+    if (!btn) return fail('Your old time is not free any more. Pick another time.', 3);
+    if (btn.disabled && !/in your queue/i.test(btn.textContent)) return fail('Your old time is not free any more. Pick another time.', 3);
+    // the slot shows as 'Already in your queue' because the booking is in the queue right now: that is this booking, so it counts as free
+    selectedTime = hhmm; selectedEndLabel = '';
+    document.getElementById('selected-time-value').value = hhmm;
+    updateServiceSummary(); checkBookingReady();
   }
   paintMech();
   show(1);
