@@ -1,13 +1,14 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response, abort
+from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response, abort, g, has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_, not_
+from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import text as _sql_text
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -176,7 +177,7 @@ def _send_gmail(to, subject, html_body):
 
 def send_otp_email(email, otp, purpose="login"):
     configs = {
-        "login": ("Your MotoTyres Admin login code", "Admin Login Verification", "complete your admin login"),
+        "login": ("Your MotoTyres Admin sign-in code", "Admin Sign-In Verification", "complete your admin sign-in"),
         "reset": ("Your MotoTyres Admin password reset code", "Admin Password Reset", "reset your admin password"),
     }
     subject, heading, action = configs.get(purpose, configs["login"])
@@ -754,11 +755,54 @@ def _line_amount(i):
     return round(float(i.unit_price or 0) * int(i.quantity or 1), 2)
 
 
+def _memo_get(fn):
+    """Remember a function's answer for the rest of a GET request (same arguments, same answer): the schedule code asks the same
+    day's walk-ins / blocked times / attendance many times over. Callers get their own copy of a list or set."""
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(*a, **k):
+        cache = _req_cache()
+        if cache is None:
+            return fn(*a, **k)
+        key = (fn.__name__, a, tuple(sorted(k.items())))
+        if key not in cache:
+            cache[key] = fn(*a, **k)
+        v = cache[key]
+        return list(v) if isinstance(v, list) else (set(v) if isinstance(v, set) else v)
+    return wrapper
+
+
+def _req_cache():
+    """A per-request memo for lookups that a page repeats for every row (the roster, a day's capacity, service prices, a booking's
+    quotation). Only on GET: a write can change what a later read in the same request should see. None when there is no cache."""
+    if has_request_context() and request.method == 'GET':
+        c = getattr(g, '_req_cache_store', None)
+        if c is None:
+            c = g._req_cache_store = {}
+        return c
+    return None
+
+
+def _latest_quotation(booking_id):
+    """The newest quotation of a booking. On a page that asks for many bookings, all quotations are read ONCE (with their items)."""
+    cache = _req_cache()
+    if cache is None:
+        return Quotation.query.filter_by(booking_id=booking_id).order_by(Quotation.created_at.desc()).first()
+    allq = cache.get('latest_quotes')
+    if allq is None:
+        allq = {}
+        for q in Quotation.query.options(selectinload(Quotation.items)).filter(Quotation.booking_id.isnot(None)).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all():
+            allq[q.booking_id] = q
+        cache['latest_quotes'] = allq
+    return allq.get(booking_id)
+
+
 def booking_bill(booking):
     """What a booking in progress really costs when the customer is billed: the booked service plus the extra work they
     approved (or, if they declined, the service plus the materials already used). None when there is no quotation, and
     then the plain service price applies. Returns (total, [(name, amount)...], number of extra items)."""
-    q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
+    q = _latest_quotation(booking.id)
     if not q or not q.items:
         return None
     rel = q.items if q.status == 'approved' else [i for i in q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))]
@@ -771,7 +815,7 @@ def booking_extras(booking):
     """What the inspection added to a booking (findings, extra services, parts), for the booking details window.
     Each line says whether it is on the bill: everything if the customer approved; only the parts already used if
     they declined; nothing yet while the quotation waits for the customer."""
-    q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
+    q = _latest_quotation(booking.id)
     if not q or not q.items:
         return None
     kinds = {'product': 'Part', 'finding': 'Finding', 'service': 'Service'}
@@ -803,6 +847,12 @@ def booking_service_price(service_str):
     names = split_service_names(service_str)
     if not names:
         return 0
+    cache = _req_cache()
+    if cache is not None:
+        prices = cache.get('service_prices')
+        if prices is None:
+            prices = cache['service_prices'] = {sv.name: sv.price for sv in Service.query.filter(Service.is_active == True).all()}
+        return sum(prices.get(n, 0) for n in names)
     found = {s.name: s.price for s in Service.query.filter(Service.name.in_(names), Service.is_active == True).all()}
     return sum(found.get(n, 0) for n in names)
 
@@ -1064,7 +1114,7 @@ def admin_verify_otp():
 def admin_resend_otp():
     email = session.get('admin_pending_login_email')
     if not email:
-        flash('Session expired. Please log in again.', 'danger')
+        flash('Session expired. Please sign in again.', 'danger')
         return redirect(url_for('admin_login'))
     otp = _save_otp(email, purpose="login")
     try:
@@ -1143,7 +1193,7 @@ def admin_reset_password():
             db.session.commit()
         session.pop('admin_pending_reset_email', None)
         session.pop('admin_reset_otp_verified', None)
-        flash('Password reset successful! You can now log in.', 'success')
+        flash('Password reset successful! You can now sign in.', 'success')
         return redirect(url_for('admin_login'))
     return render_template('admin_reset_password.html', email=email)
 
@@ -1183,7 +1233,7 @@ def _revenue_transactions(date_from=None, date_to=None):
         Notification.type == 'invoice', Notification.booking_id.isnot(None)).all()}
     if _unpaid_invoiced:
         _unpaid_invoiced = {b.id for b in Booking.query.filter(Booking.id.in_(_unpaid_invoiced), Booking.invoice_paid == False).all()}
-    for b in Booking.query.filter(Booking.status == 'completed', Booking.total_amount > 0).all():
+    for b in Booking.query.options(joinedload(Booking.customer)).filter(Booking.status == 'completed', Booking.total_amount > 0).all():
         if b.id in _unpaid_invoiced:
             continue
         d = b.invoice_paid_at or b.completed_at or b.created_at
@@ -1208,7 +1258,7 @@ def _revenue_transactions(date_from=None, date_to=None):
 
     _walkin_cache = {}
     _ship_paid = (Order.delivery_method == 'ship') & Order.paid_at.isnot(None) & Order.status.in_(['done_packaging', 'shipping', 'completed'])
-    for o in Order.query.filter(((Order.status == 'completed') & ((Order.delivery_method != 'ship') | Order.paid_at.isnot(None))) | _ship_paid).filter(Order.items.any()).all():
+    for o in Order.query.options(joinedload(Order.customer)).filter(((Order.status == 'completed') & ((Order.delivery_method != 'ship') | Order.paid_at.isnot(None))) | _ship_paid).filter(Order.items.any()).all():
         d = (o.paid_at if (o.delivery_method == 'ship' and o.paid_at) else o.created_at)
         if not in_range(d):
             continue
@@ -1232,7 +1282,7 @@ def _revenue_transactions(date_from=None, date_to=None):
 
     # A paid Ship to Address order the shop cancelled was refunded in full through PayMongo: the sale stays on
     # the books (dated when it was paid) and the refund is its own negative line, so the books show both.
-    for o in Order.query.filter(Order.status == 'refunded', Order.paid_at.isnot(None), Order.refund_amount.isnot(None)).all():
+    for o in Order.query.options(joinedload(Order.customer)).filter(Order.status == 'refunded', Order.paid_at.isnot(None), Order.refund_amount.isnot(None)).all():
         cust = o.customer.fullname if o.customer else 'Unknown'
         ref = f'ORD-{o.id:03d}'
         if in_range(o.paid_at):
@@ -1429,7 +1479,7 @@ def _reports_summary(date_from=None, date_to=None):
                    .join(ReturnRequest, ReturnRequest.id == ReturnRequestItem.return_request_id)
                    .filter(ReturnRequest.resolution == 'refund', ReturnRequest.status == 'resolved').all()):
         refunded_qty[ri.order_item_id] = refunded_qty.get(ri.order_item_id, 0) + ri.quantity
-    for o in Order.query.filter(Order.status.notin_(['cancelled', 'voided']), Order.is_archived == False).all():
+    for o in Order.query.options(selectinload(Order.items)).filter(Order.status.notin_(['cancelled', 'voided']), Order.is_archived == False).all():
         if not in_range(o.created_at) or o.id in fully_refunded_order_ids:
             continue
         for item in o.items:
@@ -1489,13 +1539,16 @@ def require_admin_or_staff(f):
 @require_admin_or_staff
 def admin_dashboard():
     cleanup_abandoned_gcash_orders()
+    # _sync_booking_tab_badges() commits. Run at the end of this function it made every booking, order and user loaded above expire and be
+    # fetched again one at a time while the page was being drawn. It runs first now, before anything is loaded.
+    _bk_unseen = _sync_booking_tab_badges(force=True)
     # Net of refunds, all-time — the same _reports_summary() the Reports &
     # Sales page and Transaction History read from, so this card can never
     # drift from either of them.
     _rpt = _reports_summary()
     _rev_period, _total_rev = _revenue_for_period(request.args.get('period', 'month'))
-    all_orders      = Order.query.filter_by(is_archived=False).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
-    archived_orders = Order.query.filter_by(is_archived=True).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
+    all_orders      = Order.query.options(selectinload(Order.items), joinedload(Order.customer)).filter_by(is_archived=False).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
+    archived_orders = Order.query.options(selectinload(Order.items), joinedload(Order.customer)).filter_by(is_archived=True).filter(Order.items.any()).order_by(Order.created_at.desc()).all()
 
     # A refund claim against an order overrides what the order's own row
     # shows in Manage Orders — the customer doesn't care that fulfillment
@@ -1603,7 +1656,7 @@ def admin_dashboard():
         all_bookings=_all_bookings_list,
         booking_days=_booking_days,
         row_mech=_row_mech,
-        bk_unseen=_sync_booking_tab_badges(),
+        bk_unseen=_bk_unseen,
         all_orders=all_orders,
         all_products=Product.query.all(),
         product_categories=product_category_options(),
@@ -1629,7 +1682,22 @@ def _tab_of(status):
     return key if key in BOOKING_TABS else None
 
 
-def _sync_booking_tab_badges():
+_BADGE_SYNC = {'t': 0.0, 'v': None}
+
+
+def _sync_booking_tab_badges(force=False):
+    """The counts of bookings that moved into each tab since the admin last looked. The live page asks for it every few seconds and
+    it costs about a dozen queries, so the answer is reused for 5 seconds (force=True, or marking a tab as seen, makes it fresh)."""
+    import time as _tm
+    now = _tm.time()
+    if not force and _BADGE_SYNC['v'] is not None and now - _BADGE_SYNC['t'] < 5:
+        return dict(_BADGE_SYNC['v'])
+    v = _sync_booking_tab_badges_now()
+    _BADGE_SYNC['t'], _BADGE_SYNC['v'] = now, dict(v)
+    return v
+
+
+def _sync_booking_tab_badges_now():
     """Count every booking that moved INTO a status since the last look (including ones the admin moved, and brand-new bookings).
     It compares each booking's status with the one remembered last time, so none of the booking / start / cancel / pay code has to
     know about it. Returns {tab: unseen}. The very first run only records the starting point, so nothing is counted for old data."""
@@ -1687,6 +1755,7 @@ def booking_tab_seen(tab):
     if row and row.unseen:
         row.unseen = 0
         db.session.commit()
+    _BADGE_SYNC['t'] = 0.0                      # the next live check reads the real numbers, not the remembered ones
     return jsonify({'success': True})
 
 
@@ -1760,7 +1829,7 @@ def api_dashboard_stats():
     if 'inprogress' in _booking_status_counts:
         _booking_status_counts['in_progress'] = _booking_status_counts.get('in_progress', 0) + _booking_status_counts.pop('inprogress')
 
-    _all_bookings_list = Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).limit(50).all()
+    _all_bookings_list = Booking.query.options(joinedload(Booking.customer)).filter_by(is_archived=False).order_by(Booking.created_at.desc()).limit(50).all()
     _q_booking_ids = [b.id for b in _all_bookings_list]
     _latest_quotations = {}
     if _q_booking_ids:
@@ -2003,7 +2072,7 @@ def _mechanic_jobs_map():
     started (Inspection & Estimation / In Progress) makes the mechanic Busy; a Confirmed one that hasn't started makes
     them Reserved. Completed and cancelled bookings free them."""
     jobs = {}
-    rows = Booking.query.filter(Booking.assigned_mechanic_name.isnot(None),
+    rows = Booking.query.options(joinedload(Booking.customer)).filter(Booking.assigned_mechanic_name.isnot(None),
                                 Booking.status.in_(('confirmed',) + STARTED_STATUSES)).order_by(Booking.date, Booking.time).all()
     for b in rows:
         d = jobs.setdefault(b.assigned_mechanic_name, {'started': [], 'reserved': []})
@@ -2040,6 +2109,7 @@ def _mechanic_effective(m, jobs_map=None, on_ids=None, walkins=None):
     return 'available'
 
 
+@_memo_get
 def _on_shift_ids(d=None):
     """Mechanic ids timed in on that day (today by default) and not yet timed out or marked absent."""
     d = d or ph_now().date()
@@ -2289,6 +2359,23 @@ def update_booking_status(bid):
             return jsonify({'success': False, 'error': msg}), 409
         flash(msg, 'danger')
         return redirect(url_for('admin_dashboard'))
+    _cancel_reason = None
+    if new_status == 'cancelled':
+        # The same rules as the Day Schedule's cancel: not once work has started, and the customer is told why.
+        _cx = None
+        if booking.status in ('inspection', 'in_progress', 'inprogress', 'completed'):
+            _cx = ("Cancel isn't available once work has started.", 400)
+        elif booking.status == 'cancelled':
+            _cx = ('This booking is already cancelled. Refresh to see its latest status.', 409)
+        else:
+            _cancel_reason = clean_str(request.form.get('reason', ''), max_len=300)
+            if not _cancel_reason:
+                _cx = ('Say why you are cancelling: the customer sees this reason.', 400)
+        if _cx:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': _cx[0]}), _cx[1]
+            flash(_cx[0], 'danger')
+            return redirect(url_for('admin_dashboard'))
     start_mechanic = None
     if is_start and booking.status == 'confirmed':
         start_mechanic, mech_err = _prepare_mechanic_for_start(booking, request.form.get('mechanic_name'))
@@ -2336,6 +2423,8 @@ def update_booking_status(bid):
         except Exception:
             _q_before = None
         booking.cancelled_at = ph_now()
+        booking.cancelled_by = 'shop'
+        booking.cancel_reason = _cancel_reason
     booking.status = new_status
     db.session.commit()
     if _q_before is not None:
@@ -2378,8 +2467,9 @@ def update_booking_status(bid):
         ),
         'cancelled': (
             f'Cancelled — {date_short} at {time_str}',
-            f"Your {booking.service} appointment ({ref}) on {date_str} at {time_str} was cancelled by the shop. "
-            f"If this was a mistake or you'd like to rebook, just get in touch.",
+            f"Your {booking.service} appointment ({ref}) on {date_str} at {time_str} was cancelled by the shop."
+            + (f" Reason: {_cancel_reason}." if _cancel_reason else '')
+            + " If this was a mistake or you'd like to rebook, just get in touch.",
             True,
         ),
     }
@@ -2684,7 +2774,7 @@ def api_booking_invoice_data(bid):
         'items': items, 'total': booking.total_amount,
         'paid': is_paid, 'payment_method': payment_method_used,
         'cash_received': booking.invoice_cash_received, 'change': booking.invoice_change,
-        'gcash_ref': booking.invoice_gcash_ref,
+        'gcash_ref': booking.invoice_gcash_ref if is_paid else None,      # before it is paid this is only the open checkout's id
         'paid_at': paid_at.strftime('%b %d, %Y %I:%M %p') if paid_at else None,
         'completed_at': booking.completed_at.strftime('%b %d, %Y %I:%M %p') if booking.completed_at else None,
     })
@@ -2780,7 +2870,26 @@ def assign_booking_mechanic(bid):
 
 
 def get_capacity_row(query_date):
-    return DailyCapacity.query.filter_by(date=query_date).first()
+    cache = _req_cache()
+    if cache is None:
+        return DailyCapacity.query.filter_by(date=query_date).first()
+    rows = cache.setdefault('capacity_rows', {})
+    if query_date not in rows:
+        rows[query_date] = DailyCapacity.query.filter_by(date=query_date).first()
+    return rows[query_date]
+
+
+def prime_capacity_rows(start, end):
+    """Read the capacity rows of a date range in ONE query (a month view asks for every day)."""
+    cache = _req_cache()
+    if cache is None:
+        return
+    rows = cache.setdefault('capacity_rows', {})
+    found = {r.date: r for r in DailyCapacity.query.filter(DailyCapacity.date >= start, DailyCapacity.date <= end).all()}
+    d = start
+    while d <= end:
+        rows[d] = found.get(d)
+        d += timedelta(days=1)
 
 
 def get_on_duty_mechanics(query_date=None):
@@ -2790,7 +2899,13 @@ def get_on_duty_mechanics(query_date=None):
     own profile — that override always applies, however high N is set. This
     is THE roster every scheduling check in both apps reads."""
     query_date = query_date or ph_now().date()
-    roster = Mechanic.query.order_by(Mechanic.id).all()
+    cache = _req_cache()
+    if cache is not None:
+        roster = cache.get('roster')
+        if roster is None:
+            roster = cache['roster'] = Mechanic.query.order_by(Mechanic.id).all()
+    else:
+        roster = Mechanic.query.order_by(Mechanic.id).all()
     cap_row = get_capacity_row(query_date)
     n = cap_row.mechanic_count if (cap_row and cap_row.mechanic_count is not None) else len(roster)
     rostered_today = roster[:max(n, 0)]
@@ -2815,6 +2930,7 @@ def _gather_intervals(query):
     return result
 
 
+@_memo_get
 def _walkin_windows(the_date, exclude_jo_id=None):
     """Walk-in jobs tying up a named mechanic on this date — still open
     (pending / in progress) and not marked done — as minute-of-day windows."""
@@ -2833,6 +2949,7 @@ def _walkin_windows(the_date, exclude_jo_id=None):
     return out
 
 
+@_memo_get
 def _gather_blocked_intervals(booking_date):
     """Admin-blocked start times for one day, as full-hour windows — folded
     into the shop's queue intervals so a blocked slot reads exactly like an
@@ -3302,6 +3419,7 @@ def _compute_day_clash_ids(the_date, bookings=None):
     return clash_ids
 
 
+@_memo_get
 def _absent_names(d):
     """Mechanics marked Absent on d (only today is ever marked)."""
     if d != ph_now().date():
@@ -3907,7 +4025,7 @@ def api_day_panel():
     except ValueError:
         return jsonify({'error': 'Invalid date'}), 400
 
-    bookings = Booking.query.filter(Booking.date == the_date).order_by(Booking.time).all()
+    bookings = Booking.query.options(joinedload(Booking.customer)).filter(Booking.date == the_date).order_by(Booking.time).all()
     active = [b for b in bookings if b.status != 'cancelled']
 
     _, _, on_duty = get_on_duty_mechanics(the_date)
@@ -4208,7 +4326,8 @@ def api_month_schedule():
     start = date(year, month, 1)
     end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
 
-    bookings = Booking.query.filter(
+    prime_capacity_rows(start, end - timedelta(days=1))          # the capacity of every day of the month in ONE query
+    bookings = Booking.query.options(joinedload(Booking.customer)).filter(
         Booking.date >= start, Booking.date < end
     ).order_by(Booking.date, Booking.time).all()
 
@@ -6761,14 +6880,14 @@ def manage_user(uid):
 
     if action == 'deactivate':
         user.account_status = 'deactivated'
-        flash(f'{user.fullname} has been deactivated and can no longer log in.', 'success')
+        flash(f'{user.fullname} has been deactivated and can no longer sign in.', 'success')
 
     elif action == 'reactivate':
         user.account_status = 'active'
         db.session.commit()
         send_notification(
             user.id, 'Account Restored ✅',
-            'Your account access has been restored. You can log in, book appointments, '
+            'Your account access has been restored. You can sign in, book appointments, '
             'and place orders again.',
             type='account', status='active')
         flash(f"{user.fullname}'s account has been reactivated.", 'success')
@@ -7522,7 +7641,7 @@ def payments():
         # in-progress booking is NOT listed here on its own. The one way in is "Complete booking → At the
         # shop" in Manage Bookings, which opens this page with ?collect=<id> for that single booking.
         _collect_id = request.args.get('collect', type=int)
-        pending_bookings = Booking.query.filter(
+        pending_bookings = Booking.query.options(joinedload(Booking.customer)).filter(
             Booking.status.in_(['in_progress', 'inprogress']),
             (Booking.id == _collect_id) if _collect_id else db.false(),
             Booking.payment_method.in_(['cash', None]),
@@ -7539,7 +7658,7 @@ def payments():
 
         # Completed-but-unpaid invoices from the Inspection & Estimation flow
         # — the customer may or may not have picked a method yet.
-        pending_invoices = Booking.query.filter(
+        pending_invoices = Booking.query.options(joinedload(Booking.customer)).filter(
             Booking.status == 'completed',
             Booking.invoice_paid == False,
             Booking.walkin_customer_id == None,
@@ -7674,7 +7793,7 @@ def payments():
         _recent.append({'tag': 'JO', 'kind': 'jo', 'id': pay.id, 'ref': f'JO-{jo.id:03d}', 'customer': jo.customer_name,
                         'amount': pay.amount, 'method': (pay.payment_method or 'cash').lower(), 'paid_at': pay.paid_at,
                         'receipt_url': url_for('payment_receipt', pid=pay.id)})
-    _rq = Booking.query.filter(Booking.status == 'completed',
+    _rq = Booking.query.options(joinedload(Booking.customer)).filter(Booking.status == 'completed',
                                db.or_(Booking.total_amount > 0, Booking.service.like(BACKJOB_PREFIX + '%')),
                                Booking.is_archived == False, Booking.walkin_customer_id == None)
     if _quoted_booking_ids:
@@ -7684,7 +7803,7 @@ def payments():
                         'customer': b.contact_name or (b.customer.fullname if b.customer else 'Customer'),
                         'amount': b.total_amount, 'method': (b.invoice_payment_method or b.payment_method or 'cash').lower(),
                         'paid_at': b.invoice_paid_at or b.completed_at or b.created_at})
-    for o in (Order.query.filter(Order.payment_method.in_(['cash', 'gcash', 'split']), Order.status == 'completed')
+    for o in (Order.query.options(joinedload(Order.customer)).filter(Order.payment_method.in_(['cash', 'gcash', 'split']), Order.status == 'completed')
               .filter(Order.items.any()).order_by(Order.created_at.desc()).limit(100).all()):
         _name = o.contact_name if o.is_instore else o.customer.fullname
         _ref = f'SALE-{o.id:03d}' if o.is_instore else f'ORD-{o.id:03d}'

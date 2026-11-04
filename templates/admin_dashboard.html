@@ -3987,11 +3987,13 @@
     <p style="color:var(--muted);font-size:0.875rem;margin-bottom:0.4rem;">You are about to cancel the booking of:</p>
     <p id="modal-cb-customer" style="color:var(--text);font-weight:700;font-size:1rem;margin-bottom:0.25rem;"></p>
     <p id="modal-cb-service" style="color:var(--red);font-size:0.875rem;margin-bottom:1.5rem;"></p>
-    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.5rem;">This action <strong style="color:var(--red);">cannot be undone</strong>. The customer will be notified.</p>
-    <p id="modal-cb-mech" style="display:none;color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;"></p>
+    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.5rem;">The customer will be notified and will see the reason you write below.</p>
+    <p id="modal-cb-mech" style="display:none;color:var(--muted);font-size:0.82rem;margin-bottom:0.75rem;"></p>
+    <textarea id="cb-reason" maxlength="300" rows="3" placeholder="Why is this booking being cancelled?" oninput="cbUpdate()" style="width:100%;box-sizing:border-box;padding:0.55rem 0.7rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.85rem;resize:none;margin-bottom:0.25rem;"></textarea>
+    <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);margin-bottom:0.9rem;"><span id="cb-error" style="display:none;color:var(--red);"></span><span id="cb-count" style="margin-left:auto;">0 / 300</span></div>
     <div class="modal-actions" style="justify-content:center;">
       <button class="btn-cancel" onclick="document.getElementById('modal-cancel-booking').style.display='none'">Go Back</button>
-      <button onclick="confirmCancelBooking()" style="padding:0.6rem 1.5rem;background:rgba(208,0,25,0.85);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:pointer;">Yes, Cancel</button>
+      <button id="cb-confirm-btn" onclick="confirmCancelBooking()" disabled style="padding:0.6rem 1.5rem;background:rgba(208,0,25,0.85);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:0.875rem;cursor:not-allowed;opacity:0.5;">Yes, Cancel</button>
     </div>
   </div>
 </div>
@@ -7434,13 +7436,25 @@
     document.getElementById('modal-cb-service').textContent  = service;
     const mech = await mechanicNameFor(bookingId), line = document.getElementById('modal-cb-mech');
     line.textContent = mech ? `${mech} will be freed up.` : ''; line.style.display = mech ? 'block' : 'none';
+    document.getElementById('cb-reason').value = '';
+    document.getElementById('cb-error').style.display = 'none';
+    cbUpdate();
     document.getElementById('modal-cancel-booking').style.display = 'flex';
   }
-  function confirmCancelBooking() {
-    if (_cancelBookingFormId) {
-      document.getElementById('modal-cancel-booking').style.display = 'none';
-      submitBookingStatusForm(_cancelBookingFormId);
-    }
+  // the red button stays off until there is a reason to send (same rule as the Day Schedule's cancel)
+  function cbUpdate() {
+    const v = document.getElementById('cb-reason').value;
+    document.getElementById('cb-count').textContent = `${v.length} / 300`;
+    const ok = v.trim().length > 0, btn = document.getElementById('cb-confirm-btn');
+    btn.disabled = !ok; btn.style.opacity = ok ? '1' : '0.5'; btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+  }
+  async function confirmCancelBooking() {
+    if (!_cancelBookingFormId) return;
+    const reason = document.getElementById('cb-reason').value.trim(), err = document.getElementById('cb-error');
+    if (!reason) { err.textContent = 'Say why: the customer will see this reason.'; err.style.display = 'inline'; return; }
+    const data = await submitBookingStatusForm(_cancelBookingFormId, { reason }, true);
+    if (data && data.success) { document.getElementById('modal-cancel-booking').style.display = 'none'; }
+    else { err.textContent = (data && data.error) || 'Could not cancel this booking.'; err.style.display = 'inline'; }
   }
 
   let _startServiceFormId = null, _startServiceInfo = null;
@@ -7681,7 +7695,7 @@
         confirmMsg: `Ban ${fullname}? They will no longer be able to book appointments or place orders.` });
     } else {
       actions.push({ label: 'Deactivate', action: 'deactivate', danger: false,
-        confirmMsg: `Deactivate ${fullname}'s account? They won't be able to log in until reactivated.` });
+        confirmMsg: `Deactivate ${fullname}'s account? They won't be able to sign in until reactivated.` });
       actions.push({ label: 'Banned', action: 'ban', danger: true,
         confirmMsg: `Ban ${fullname}? They will no longer be able to book appointments or place orders.` });
     }

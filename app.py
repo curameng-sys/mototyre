@@ -1323,7 +1323,7 @@ def login():
     if current_user.is_authenticated:
         if current_user.role in ['admin', 'staff']:
             logout_user()
-            flash('Please use the Admin Portal to log in.', 'warning')
+            flash('Please use the Admin Portal to sign in.', 'warning')
             return redirect(url_for('login'))
         return redirect(url_for('customer_dashboard'))
 
@@ -1341,7 +1341,7 @@ def login():
 
         if user and user.check_password(password):
             if not user.email_verified:
-                flash('Please verify your email before logging in.', 'warning')
+                flash('Please verify your email before signing in.', 'warning')
                 return redirect(url_for('login'))
             if user.account_status == 'deactivated':
                 flash('Your account has been deactivated. Please contact support.', 'danger')
@@ -1617,7 +1617,7 @@ def verify_email_otp():
                 user.email_verified = True
                 db.session.commit()
             session.pop('pending_verify_email', None)
-            flash('Email verified! You can now log in.', 'success')
+            flash('Email verified! You can now sign in.', 'success')
             return redirect(url_for('login'))
         flash(result['message'], 'danger')
 
@@ -1680,7 +1680,7 @@ def forgot_password_reset():
             db.session.commit()
         session.pop('pending_reset_email', None)
         session.pop('reset_otp_verified', None)
-        flash('Password reset successful! You can now log in.', 'success')
+        flash('Password reset successful! You can now sign in.', 'success')
         return redirect(url_for('login'))
 
     return render_template('reset_password.html', email=email)
@@ -3201,6 +3201,8 @@ def _cart_checkout_impl(data):
         desc   = f"MotoTyres Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
         result = create_gcash_payment(amount=total, description=desc[:100], order_id=order.id, origin=request.host_url)
         if result['success']:
+            order.payment_ref = result['checkout_id']          # remembered, so the return from PayMongo can be checked against it
+            db.session.commit()
             return jsonify({'success': True, 'gcash': True, 'checkout_url': result['checkout_url'], 'order_id': order.id})
         return jsonify({'success': False, 'error': 'Could not create GCash payment'}), 500
 
@@ -3286,6 +3288,8 @@ def place_order():
         description = f"MotoTyres Order #{order.id:03d}: {product.name} x{quantity}"
         result = create_gcash_payment(amount=total, description=description, order_id=order.id, origin=request.host_url)
         if result["success"]:
+            order.payment_ref = result['checkout_id']
+            db.session.commit()
             return redirect(result["checkout_url"])
         else:
             flash('Could not create GCash payment. Please try again or pay in-store.', 'warning')
@@ -4411,6 +4415,7 @@ def pay_order(oid):
     result = create_gcash_payment(amount=order.total_amount, description=description, order_id=order.id, origin=request.host_url)
     if result["success"]:
         order.payment_method = 'gcash'
+        order.payment_ref = result['checkout_id']
         db.session.commit()
         return redirect(result["checkout_url"])
     flash('Could not create payment. Please try again.', 'danger')
@@ -4432,6 +4437,7 @@ def pay_booking(bid):
     result = create_gcash_payment(amount=amount, description=description, booking_id=booking.id, origin=request.host_url)
     if result["success"]:
         booking.payment_method = 'gcash'
+        booking.invoice_gcash_ref = result['checkout_id']      # remembered, so the return from PayMongo can be checked against it
         db.session.commit()
         return redirect(result["checkout_url"])
     flash('Could not create payment. Please try again.', 'danger')
@@ -4477,28 +4483,107 @@ def pay_invoice(bid):
                                    booking_id=booking.id, origin=request.host_url)
     if result["success"]:
         booking.invoice_payment_method = 'gcash'
+        booking.invoice_gcash_ref = result['checkout_id']      # remembered, so the return from PayMongo can be checked against it
         db.session.commit()
         return redirect(result["checkout_url"])
     flash('Could not create payment. Please try again.', 'danger')
     return redirect(url_for('customer_dashboard'))
 
 
+def _verified_checkout(owner_id, stored_ref, supplied_ref, tries=3):
+    """The PayMongo checkout session that PayMongo ITSELF says is paid for this order or booking, or None.
+    The return link and the webhook can be opened or posted by anyone, so neither is trusted on its own word. The session
+    checked is ONLY the one saved when the payment was started (the id in the return link is ignored: it could be the id of
+    some other paid session). Asked up to `tries` times, a second apart, because the paid payment can take a moment to
+    show right after PayMongo sends the customer back."""
+    import time as _tm
+    if not stored_ref:
+        return None
+    for i in range(tries):
+        ok, _pid = _paymongo_session_paid(stored_ref)
+        if ok:
+            return stored_ref
+        if i < tries - 1:
+            _tm.sleep(1)
+    return None
+
+
+def _confirm_gcash_order(order, checkout_id):
+    """A GCash order whose payment PayMongo confirmed: it becomes Confirmed and the customer is told."""
+    order.status = 'confirmed'
+    order.payment_method = 'gcash'
+    order.payment_ref = checkout_id or order.payment_ref
+    db.session.commit()
+    items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
+    _is_ship   = order.delivery_method == 'ship'
+    _dest      = shipping_destination(order.ship_address)
+    _next_step = (f' We are getting it ready to ship to {_dest}.' if _is_ship and _dest
+                  else ' We are getting it ready to ship.' if _is_ship
+                  else '')
+    _notify_order_customer(order, 'Order Confirmed! ✅',
+        with_stamp(
+            f'Your payment for Order ORD-{order.id:03d} ({items_desc}) worth '
+            f'₱{order.total_amount:,.2f} has been confirmed.{_next_step}',
+            'confirmed', is_ship=_is_ship),
+        status='confirmed')
+
+
+def _confirm_gcash_booking(booking):
+    booking.status = 'confirmed'
+    booking.payment_method = 'gcash'
+    db.session.commit()
+
+
+def _mark_booking_invoice_paid_gcash(booking, checkout_id):
+    """A completed booking's invoice that PayMongo confirmed as paid: record it, tell the customer, send the receipt."""
+    booking.invoice_paid = True
+    booking.invoice_paid_at = ph_now()
+    booking.invoice_payment_method = 'gcash'
+    booking.payment_method = 'gcash'
+    booking.invoice_receipt_no = f'OR-{booking.id:06d}'
+    booking.invoice_gcash_ref = checkout_id or booking.invoice_gcash_ref
+    Notification.query.filter_by(booking_id=booking.id, type='invoice', priority=True).update({'priority': False})
+    db.session.commit()
+    ref = f'BKG-{booking.id:03d}'
+    send_notification(
+        booking.user_id, 'Payment received ✅',
+        f'You paid ₱{booking.total_amount:,.2f} by GCash for {booking.service} ({ref}). Thank you for choosing MotoTyres!',
+        type='invoice', status='paid', booking_id=booking.id,
+    )
+    user = User.query.get(booking.user_id)
+    if user and user.email:
+        _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
+        if _q:
+            _rel = _q.items if _q.status == 'approved' else [i for i in _q.items if i.locked or i.item_type == 'product']
+            _items = [(_line_name(i), _line_amount(i)) for i in _rel]
+        else:
+            _items = [(booking.service, booking.total_amount)]
+        _subj, _html = booking_receipt_email(user.fullname, f'INV-{booking.id:03d}', ref, booking.service, _items,
+                                             booking.total_amount, 'gcash', booking.invoice_paid_at, booking.invoice_receipt_no)
+        _send_gmail(user.email, _subj, _html)
+
+
+_NOT_CONFIRMED_YET = 'We could not confirm your payment yet. If you paid, it will show up in a moment.'
+
+
 @app.route('/payment/success')
 def payment_success():
+    """Where PayMongo sends the customer back. Nothing here is marked paid unless PayMongo confirms that the checkout
+    this payment started is really paid (see _verified_checkout), so opening this link by hand changes nothing."""
     order_id    = request.args.get('order_id', '').strip()
     booking_id  = request.args.get('booking_id', '').strip()
-    checkout_id = request.args.get('checkout_id', '').strip()
-    gcash_email = None
+    checkout_id = request.args.get('checkout_id', '').strip()[:80]
 
-    if checkout_id:
+    def paying_email(cid):
         try:
             headers = {"Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"}
-            res = requests.get(f"{PAYMONGO_API_URL}/checkout_sessions/{checkout_id}", headers=headers)
+            res = requests.get(f"{PAYMONGO_API_URL}/checkout_sessions/{cid}", headers=headers, timeout=15)
             if res.status_code == 200:
                 attrs = res.json()['data']['attributes']
-                gcash_email = attrs.get('email') or (attrs.get('billing') or {}).get('email')
+                return attrs.get('email') or (attrs.get('billing') or {}).get('email')
         except Exception as e:
             print(f"[paymongo] could not fetch checkout session: {e}")
+        return None
 
     if order_id.isdigit():
         try:
@@ -4507,64 +4592,37 @@ def payment_success():
                 if _mark_ship_order_paid(order, checkout_id):
                     flash("GCash payment successful. Thank you! We'll book your courier delivery next.", 'success')
                 else:
-                    flash('We could not confirm your payment yet. If you paid, it will show up in a moment.', 'warning')
-            elif order and order.status == 'awaiting_payment':
-                order.status = 'confirmed'
-                order.payment_ref = (checkout_id or None)
-                db.session.commit()
-                flash('GCash payment successful — order confirmed!', 'success')
-                items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
-                _is_ship   = order.delivery_method == 'ship'
-                _dest      = shipping_destination(order.ship_address)
-                _next_step = (f' We are getting it ready to ship to {_dest}.' if _is_ship and _dest
-                              else ' We are getting it ready to ship.' if _is_ship
-                              else '')
-                _notify_order_customer(order, 'Order Confirmed! ✅',
-                    with_stamp(
-                        f'Your payment for Order ORD-{order.id:03d} ({items_desc}) worth '
-                        f'₱{order.total_amount:,.2f} has been confirmed.{_next_step}',
-                        'confirmed', is_ship=_is_ship),
-                    status='confirmed')
-            if order and order.status == 'confirmed':
-                send_order_receipt_email(order, override_email=gcash_email)
+                    flash(_NOT_CONFIRMED_YET, 'warning')
+            elif order and order.status in ('awaiting_payment', 'pending'):
+                paid_cid = _verified_checkout(order.user_id, order.payment_ref, checkout_id)
+                if paid_cid:
+                    _confirm_gcash_order(order, paid_cid)
+                    flash('GCash payment successful — order confirmed!', 'success')
+                    send_order_receipt_email(order, override_email=paying_email(paid_cid))
+                else:
+                    flash(_NOT_CONFIRMED_YET, 'warning')
         except Exception as e:
+            db.session.rollback()
             print(f"[payment/success] order error: {e}")
 
     if booking_id.isdigit():
         try:
             booking = Booking.query.get(int(booking_id))
             if booking and booking.status == 'pending':
-                booking.status = 'confirmed'
-                db.session.commit()
-                flash('GCash payment successful — booking confirmed!', 'success')
+                if _verified_checkout(booking.user_id, booking.invoice_gcash_ref, checkout_id):
+                    _confirm_gcash_booking(booking)
+                    flash('GCash payment successful — booking confirmed!', 'success')
+                else:
+                    flash(_NOT_CONFIRMED_YET, 'warning')
             elif booking and booking.status == 'completed' and not booking.invoice_paid:
-                booking.invoice_paid = True
-                booking.invoice_paid_at = ph_now()
-                booking.invoice_payment_method = 'gcash'
-                booking.payment_method = 'gcash'
-                booking.invoice_receipt_no = f'OR-{booking.id:06d}'
-                booking.invoice_gcash_ref = checkout_id or None
-                Notification.query.filter_by(booking_id=booking.id, type='invoice', priority=True).update({'priority': False})
-                db.session.commit()
-                flash('Payment received. Thank you!', 'success')
-                ref = f'BKG-{booking.id:03d}'
-                send_notification(
-                    booking.user_id, 'Payment received ✅',
-                    f'You paid ₱{booking.total_amount:,.2f} by GCash for {booking.service} ({ref}). Thank you for choosing MotoTyres!',
-                    type='invoice', status='paid', booking_id=booking.id,
-                )
-                user = User.query.get(booking.user_id)
-                if user and user.email:
-                    _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
-                    if _q:
-                        _rel = _q.items if _q.status == 'approved' else [i for i in _q.items if i.locked or i.item_type == 'product']
-                        _items = [(_line_name(i), _line_amount(i)) for i in _rel]
-                    else:
-                        _items = [(booking.service, booking.total_amount)]
-                    _subj, _html = booking_receipt_email(user.fullname, f'INV-{booking.id:03d}', ref, booking.service, _items,
-                                                         booking.total_amount, 'gcash', booking.invoice_paid_at, booking.invoice_receipt_no)
-                    _send_gmail(user.email, _subj, _html)
+                paid_cid = _verified_checkout(booking.user_id, booking.invoice_gcash_ref, checkout_id)
+                if paid_cid:
+                    _mark_booking_invoice_paid_gcash(booking, paid_cid)
+                    flash('Payment received. Thank you!', 'success')
+                else:
+                    flash(_NOT_CONFIRMED_YET, 'warning')
         except Exception as e:
+            db.session.rollback()
             print(f"[payment/success] booking error: {e}")
 
     return redirect(safe_return_origin(request.args.get('origin')) + '/customer/dashboard')
@@ -4572,15 +4630,24 @@ def payment_success():
 
 @app.route('/payment/failed')
 def payment_failed():
-    order_id   = request.args.get('order_id')
-    booking_id = request.args.get('booking_id')
-    if order_id:
+    """The customer backed out of the GCash page. Only their own unpaid order or pending booking is taken back, and only
+    if PayMongo does not say it was paid after all. Someone who is not signed in as the owner changes nothing."""
+    back = safe_return_origin(request.args.get('origin')) + '/customer/dashboard'
+    if not current_user.is_authenticated:
+        return redirect(back)
+    order_id   = (request.args.get('order_id') or '').strip()
+    booking_id = (request.args.get('booking_id') or '').strip()
+    undone = False
+    if order_id.isdigit():
         try:
             order = Order.query.get(int(order_id))
-            if order and order.status == 'awaiting_payment':
-                order.status = 'confirmed'
-                db.session.commit()
-            if order and order.status == 'awaiting_payment':
+            if order and order.user_id == current_user.id and order.status == 'awaiting_payment':
+                paid_cid = _verified_checkout(order.user_id, order.payment_ref, '', tries=1)
+                if paid_cid:                                  # it was paid after all
+                    _confirm_gcash_order(order, paid_cid)
+                    send_order_receipt_email(order)
+                    flash('GCash payment successful — order confirmed!', 'success')
+                    return redirect(back)
                 Notification.query.filter(
                     Notification.user_id == order.user_id,
                     Notification.type == 'order',
@@ -4593,12 +4660,17 @@ def payment_failed():
                 OrderItem.query.filter_by(order_id=order.id).delete()
                 db.session.delete(order)
                 db.session.commit()
-        except:
+                undone = True
+        except Exception:
             db.session.rollback()
-    if booking_id:
+    if booking_id.isdigit():
         try:
             booking = Booking.query.get(int(booking_id))
-            if booking and booking.status == 'pending':
+            if booking and booking.user_id == current_user.id and booking.status == 'pending':
+                if _verified_checkout(booking.user_id, booking.invoice_gcash_ref, '', tries=1):
+                    _confirm_gcash_booking(booking)
+                    flash('GCash payment successful — booking confirmed!', 'success')
+                    return redirect(back)
                 Notification.query.filter(
                     Notification.user_id == booking.user_id,
                     Notification.type == 'booking',
@@ -4606,46 +4678,56 @@ def payment_failed():
                 ).delete(synchronize_session=False)
                 db.session.delete(booking)
                 db.session.commit()
-        except:
+                undone = True
+        except Exception:
             db.session.rollback()
-    flash('GCash payment was not completed, so nothing was placed.', 'warning')
-    return redirect(safe_return_origin(request.args.get('origin')) + '/customer/dashboard')
+    if undone:
+        flash('GCash payment was not completed, so nothing was placed.', 'warning')
+    return redirect(back)
+
+
+def _collect_checkout_ids(node, out):
+    """Every PayMongo checkout session id (cs_...) anywhere in a webhook body."""
+    if isinstance(node, dict):
+        for v in node.values():
+            _collect_checkout_ids(v, out)
+    elif isinstance(node, list):
+        for v in node:
+            _collect_checkout_ids(v, out)
+    elif isinstance(node, str) and node.startswith('cs_') and len(node) <= 80:
+        out.add(node)
 
 
 @app.route('/webhook/paymongo', methods=['POST'])
 def paymongo_webhook():
-    data = request.get_json()
+    """PayMongo telling us a payment happened, for the customer who paid and then closed the browser before coming back.
+    The body is not trusted (anyone can post to this address): it only points at checkout sessions, and each one is
+    asked about at PayMongo directly before anything is marked paid."""
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({'error': 'No data'}), 400
-    event_type = data.get('data', {}).get('attributes', {}).get('type')
-    resource   = data.get('data', {}).get('attributes', {}).get('data', {})
-    if event_type == 'link.payment.paid':
-        metadata   = resource.get('attributes', {}).get('metadata', {})
-        order_id   = metadata.get('order_id')
-        booking_id = metadata.get('booking_id')
-        if order_id:
-            order = Order.query.get(int(order_id))
-            if order and order.status in ['pending', 'awaiting_payment']:
-                order.status = 'confirmed'
-                order.payment_method = 'gcash'
-                db.session.commit()
-                _is_ship = order.delivery_method == 'ship'
-                send_notification(order.user_id, 'Payment Received!',
-                    with_stamp(
-                        f'Your payment for Order ORD-{order.id:03d} has been confirmed.'
-                        + (' We are getting it ready to ship.' if _is_ship else ''),
-                        'confirmed', is_ship=_is_ship),
-                    type='order', status='confirmed')
+    ids = set()
+    _collect_checkout_ids(data, ids)
+    for cid in list(ids)[:5]:
+        try:
+            booking = Booking.query.filter(Booking.invoice_gcash_ref == cid).first()
+            order = Order.query.filter(Order.payment_ref == cid).first()
+            if not booking and not order:
+                continue
+            paid, _pid = _paymongo_session_paid(cid)
+            if not paid:
+                continue
+            if booking:
+                if booking.status == 'pending':
+                    _confirm_gcash_booking(booking)
+                elif booking.status == 'completed' and not booking.invoice_paid:
+                    _mark_booking_invoice_paid_gcash(booking, cid)
+            if order and order.status in ('awaiting_payment', 'pending') and order.delivery_method != 'ship':
+                _confirm_gcash_order(order, cid)
                 send_order_receipt_email(order)
-        if booking_id:
-            booking = Booking.query.get(int(booking_id))
-            if booking and booking.status == 'pending':
-                booking.status = 'confirmed'
-                booking.payment_method = 'gcash'
-                db.session.commit()
-                send_notification(booking.user_id, 'Booking Payment Received!',
-                    f'Your payment for {booking.service} on {booking.date.strftime("%b %d")} has been confirmed.',
-                    type='booking', status='confirmed')
+        except Exception as e:
+            db.session.rollback()
+            print(f'[webhook/paymongo] {cid}: {e}')
     return jsonify({'success': True})
 
 

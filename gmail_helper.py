@@ -82,7 +82,7 @@ def send_gmail_html(to: str, subject: str, html_body: str):
 
 def send_otp_email(email: str, otp: str, purpose: str = "login"):
     configs = {
-        "login":  ("Your MotoTyres login code",          "Sign-In Verification",    "complete your login"),
+        "login":  ("Your MotoTyres sign-in code",          "Sign-In Verification",    "complete your sign-in"),
         "verify": ("Verify your MotoTyres email",         "Email Verification",      "verify your email address"),
         "reset":  ("Your MotoTyres password reset code",  "Password Reset",          "reset your password"),
     }

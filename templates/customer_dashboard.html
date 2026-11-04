@@ -10960,6 +10960,7 @@ updateMechNote();
   // While the booking is being reviewed the form keeps everything the person picked (so Back loses nothing).
   // It is cleared only once the booking is really confirmed.
   let reviewing = false, backing = false;
+  let againMode = false, againToken = 0;     // againMode: the wizard holds a "Book Again" booking; againToken: lets a late async step know it was replaced or cancelled
   const _resetForm = window.resetBookingForm;
   window.resetBookingForm = function () { if (reviewing) return; return _resetForm.apply(this, arguments); };
   dots.forEach(d => d.addEventListener('click', () => { const i = +d.dataset.s; if (i < cur && i < 7) show(i); }));
@@ -11032,7 +11033,7 @@ updateMechNote();
       const n = bookingQueue.length;
       if (n > lastQueueLen && cur === 6) { reviewing = true; show(7); }
       else if (n === 0 && reviewing && !backing) {            // the booking went through: start fresh
-        reviewing = false; _resetForm(false);
+        reviewing = false; againMode = false; againToken++; _resetForm(false);
         { const n = document.getElementById('bw-again-note'); if (n) n.style.display = 'none'; }
         mechChosen = false; selectedMotoId = null; bkDirty = false; renderMotoPicker(); setMechanicMode('shop');
         const pl = document.getElementById('policy-check'); if (pl) pl.checked = false;
@@ -11075,6 +11076,7 @@ updateMechNote();
     try { closeModal('modal-booking-details'); } catch (e) {}
     showSection('book', null);
     reviewing = false; bookingQueue = []; lastQueueLen = 0;     // the queue was emptied here: forget how long it was the last time
+    againMode = true; const tok = ++againToken;
     _resetForm(false);
     mechChosen = false; selectedMotoId = null; bkDirty = false; renderMotoPicker(); setMechanicMode('shop');
     const pl = document.getElementById('policy-check'); if (pl) pl.checked = false;
@@ -11142,7 +11144,7 @@ updateMechNote();
       bookingQueue.push(entry);
       renderBookingQueue();                      // a new booking in the queue while on step 6 opens the review (step 7)
       if (cur !== 7) { reviewing = true; show(7); }   // and make sure of it, whatever the queue length was before
-      bookAgainSettle(b, hhmm, note).catch(() => {});
+      bookAgainSettle(b, hhmm, note, tok).catch(() => {});
       return;
     }
 
@@ -11156,12 +11158,14 @@ updateMechNote();
       ? [...document.querySelectorAll('#cal-grid .cal-day:not(.empty)')].find(c => parseInt(c.textContent, 10) === dd && typeof c.onclick === 'function') : null;
     let cell = findCell();
     if (!cell) { currentYear = yy; currentMonth = mm - 1; await renderCalendar(); cell = findCell(); }
+    if (tok !== againToken) return;
     if (!cell) return giveUp('Your old date is not open any more. Pick a new date.');
     cell.onclick();
     // the times come from the server: on a slow connection this can take a while, so wait for them (up to ~30 s)
     let btn = null, anySlots = false;
     for (let i = 0; i < 300 && !btn; i++) {
       await wait(100);
+      if (tok !== againToken) return;
       const all = [...document.querySelectorAll('#time-slots-wrap .time-slot-btn')];
       anySlots = all.length > 0;
       btn = all.find(x => x.dataset.time === hhmm && !x.disabled);
@@ -11172,6 +11176,7 @@ updateMechNote();
     mechChosen = true; setMechanicMode('shop');
     if (bkDirty) {
       const err = await bkCommit();
+      if (tok !== againToken) return;
       if (err) { show(4); msg.textContent = err; return; }
     }
     show(6);
@@ -11181,7 +11186,7 @@ updateMechNote();
   }
   // Runs behind the instant review: selects the old date and time in the form (so Back and the step bar show them like normal) and checks
   // the old time is still free. If it is not, the customer is taken to the step where they pick a new one, with the reason.
-  async function bookAgainSettle(b, hhmm, note) {
+  async function bookAgainSettle(b, hhmm, note, tok) {
     const wait = ms => new Promise(r => setTimeout(r, ms));
     const ref = 'Booking again (BKG-' + String(b.id).padStart(3, '0') + '): ';
     const fail = (why, step) => {
@@ -11195,11 +11200,13 @@ updateMechNote();
       ? [...document.querySelectorAll('#cal-grid .cal-day:not(.empty)')].find(c => parseInt(c.textContent, 10) === dd && typeof c.onclick === 'function') : null;
     let cell = findCell();
     if (!cell) { currentYear = yy; currentMonth = mm - 1; await renderCalendar(); cell = findCell(); }
+    if (tok !== againToken) return;
     if (!cell) return fail('Your old date is not open any more. Pick a new date.', 1);
     cell.onclick();
     let btn = null, anySlots = false;
     for (let i = 0; i < 300 && !btn; i++) {
       await wait(100);
+      if (tok !== againToken) return;
       const all = [...document.querySelectorAll('#time-slots-wrap .time-slot-btn')];
       anySlots = all.length > 0;
       btn = all.find(x => x.dataset.time === hhmm);
@@ -11213,6 +11220,29 @@ updateMechNote();
     document.getElementById('selected-time-value').value = hhmm;
     updateServiceSummary(); checkBookingReady();
   }
+  // A "Book Again" booking lives only while the customer stays in Appointment. If they go to another section and come back, the wizard
+  // starts at step 1 with nothing filled in, and they press Book Again again to get it back.
+  function bwDropAgain() {
+    againMode = false; againToken++;
+    backing = true; reviewing = false; bookingQueue = []; lastQueueLen = 0; renderBookingQueue(); backing = false;
+    _resetForm(false);
+    ['booking-notes', 'odometer', 'own-parts-note'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const opc = document.getElementById('own-parts-check'); if (opc) { opc.checked = false; if (typeof toggleOwnParts === 'function') toggleOwnParts(); }
+    selectedServiceNames = []; try { renderServiceChecklist(currentServiceFilterItems()); updateServiceSummary(); } catch (e) {}
+    mechChosen = false; selectedMotoId = null; bkDirty = false; renderMotoPicker(); setMechanicMode('shop');
+    const pl = document.getElementById('policy-check'); if (pl) pl.checked = false;
+    { const n = document.getElementById('bw-again-note'); if (n) { n.style.display = 'none'; n.textContent = ''; } }
+    bwLoading(false);
+    show(1);
+  }
+  const _showSecAgain = window.showSection;
+  window.showSection = function (name) {
+    const secBook = document.getElementById('sec-book');
+    const leaving = againMode && name !== 'book' && secBook && secBook.classList.contains('active');
+    const r = _showSecAgain.apply(this, arguments);
+    if (leaving) bwDropAgain();
+    return r;
+  };
   paintMech();
   show(1);
 })();
