@@ -373,7 +373,7 @@
     .cmp-tag { flex-shrink: 0; font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700; padding: 0.15em 0.6em; border-radius: 99px; white-space: nowrap; }
     .cmp-tag.online { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
     .cmp-tag.walkin { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
-    .cmp-tag.own { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .cmp-tag.own { background: #f4f4f5; color: #3f3f46; border: 1px solid #e4e4e7; }
     .cmp-tag.off { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
     .cmp-sep { border-top: 1px solid var(--line-1); margin: 0.3rem 0; }
     .mm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.6rem; }
@@ -385,7 +385,7 @@
     .mm-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
     .mm-tag { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.6rem; padding: 0.2em 0.6em; border-radius: 99px; white-space: nowrap; }
     .mm-tag.new { background: #dcfce7; color: #15803d; }
-    .mm-tag.booked { background: #ede9fe; color: #6d28d9; }
+    .mm-tag.booked { background: #f4f4f5; color: #3f3f46; }
     .mm-tag.queue { background: #dbeafe; color: #1d4ed8; }
     .mm-acts { display: flex; gap: 0.35rem; margin-top: 0.5rem; }
     .mm-btn { padding: 0.25rem 0.65rem; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg-page); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.68rem; cursor: pointer; color: var(--fg-1); }
@@ -552,7 +552,7 @@
     .mech-picker-item:hover:not(.disabled) { border-color: var(--brand-red-border); }
     .mech-picker-item .mp-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; color: var(--fg-1); }
     .mech-picker-item .mp-pill { display:inline-block; margin-left:0.4rem; padding:0.05rem 0.45rem; border-radius:99px; font-size:0.6rem; font-weight:700; vertical-align:middle; }
-    .mech-picker-item .mp-pill.available { background:#dcfce7; color:#15803d; } .mech-picker-item .mp-pill.reserved { background:#ede9fe; color:#6d28d9; }
+    .mech-picker-item .mp-pill.available { background:#dcfce7; color:#15803d; } .mech-picker-item .mp-pill.reserved { background:#f4f4f5; color:#3f3f46; }
     .mech-picker-item .mp-pill.busy { background:#fef9c3; color:#a16207; }      .mech-picker-item .mp-pill.off_duty { background:#e5e7eb; color:#4b5563; }
     .mech-picker-item .mp-match { display:inline-block; margin-top:0.15rem; font-size:0.62rem; font-weight:700; color:#15803d; background:#dcfce7; border-radius:99px; padding:0.05rem 0.5rem; align-self:flex-start; }
     .mech-picker-item.disabled { opacity:0.5; cursor:not-allowed; }
@@ -949,7 +949,7 @@
     .tx-name { font-weight:700; font-size:0.88rem; color:var(--fg-1); overflow-wrap:anywhere; }
     .tx-meta { display:flex; flex-wrap:wrap; align-items:center; gap:0.35rem; margin-top:0.2rem; font-size:0.72rem; color:var(--fg-3); }
     .tx-tag { font-family:'Syne',sans-serif; font-weight:700; font-size:0.62rem; padding:0.15em 0.55em; border-radius:6px; }
-    .tx-tag.BKG { background:#ede9fe; color:#6d28d9; } .tx-tag.ORD { background:#ffedd5; color:#c2410c; } .tx-tag.RMA { background:#fee2e2; color:#b91c1c; }
+    .tx-tag.BKG { background:#f4f4f5; color:#3f3f46; } .tx-tag.ORD { background:#f4f4f5; color:#3f3f46; } .tx-tag.RMA { background:#fee2e2; color:#b91c1c; }
     .tx-side { flex-shrink:0; text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.2rem; }
     .tx-label { font-family:'Syne',sans-serif; font-weight:700; font-size:0.64rem; padding:0.2em 0.65em; border-radius:99px; white-space:nowrap; }
     .tx-amt { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
@@ -1418,6 +1418,7 @@
       *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/badge-tones.css') }}">
 </head>
 <body>
 
@@ -2041,7 +2042,7 @@
                 </span>
                 <div style="min-width:0;flex:1;">
                   <div style="font-family:'Syne',sans-serif;font-weight:600;color:var(--fg-1);overflow-wrap:anywhere;">{{ b.service }}</div>
-                  <span style="display:inline-flex;align-items:center;gap:0.25rem;margin-top:0.2rem;font-family:'Syne',sans-serif;font-weight:700;font-size:0.62rem;padding:0.15em 0.55em;border-radius:6px;background:#ede9fe;color:#6d28d9;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>BKG-{{ '%03d'|format(b.id) }}</span>
+                  <span style="display:inline-flex;align-items:center;gap:0.25rem;margin-top:0.2rem;font-family:'Syne',sans-serif;font-weight:700;font-size:0.62rem;padding:0.15em 0.55em;border-radius:6px;background:#f4f4f5;color:#3f3f46;border:1px solid #e4e4e7;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>BKG-{{ '%03d'|format(b.id) }}</span>
                   <div class="ov-prog" data-mbp="{{ b.id }}"></div>
                 </div>
               </div>
@@ -2078,9 +2079,9 @@
             <td>
               {% if b.return_window %}
                 {% set _rw = b.return_window %}
-                {% if _rw.expired %}{% set _wc = ['#fee2e2', '#7f1d1d', '#ef4444'] %}
-                {% elif _rw.days_left <= 2 %}{% set _wc = ['#fef3c7', '#78350f', '#f59e0b'] %}
-                {% else %}{% set _wc = ['#dbeafe', '#1e3a8a', '#3b82f6'] %}{% endif %}
+                {% if _rw.expired %}{% set _wc = ['#fef2f2', '#b91c1c', '#fecaca'] %}
+                {% elif _rw.days_left <= 2 %}{% set _wc = ['#fffbeb', '#92400e', '#fde68a'] %}
+                {% else %}{% set _wc = ['#eff6ff', '#1d4ed8', '#bfdbfe'] %}{% endif %}
                 <span class="badge" style="display:inline-flex;align-items:center;gap:0.35em;background:{{ _wc[0] }};color:{{ _wc[1] }};border:1px solid {{ _wc[2] }};">
                   {% if _rw.expired %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="9.5" y1="9.5" x2="14.5" y2="14.5"/><line x1="14.5" y1="9.5" x2="9.5" y2="14.5"/></svg>{% else %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>{% endif %}{{ _rw.label }}</span>
                 <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.3rem;">Covered until {{ _rw.deadline.strftime('%b %d') }}</div>
@@ -2230,9 +2231,9 @@
               {% endif %}
               {% if o.return_window %}
                 {% set _rw = o.return_window %}
-                {% if _rw.expired %}{% set _wc = ['#fee2e2', '#7f1d1d', '#ef4444'] %}
-                {% elif _rw.days_left <= 2 %}{% set _wc = ['#fef3c7', '#78350f', '#f59e0b'] %}
-                {% else %}{% set _wc = ['#dbeafe', '#1e3a8a', '#3b82f6'] %}{% endif %}
+                {% if _rw.expired %}{% set _wc = ['#fef2f2', '#b91c1c', '#fecaca'] %}
+                {% elif _rw.days_left <= 2 %}{% set _wc = ['#fffbeb', '#92400e', '#fde68a'] %}
+                {% else %}{% set _wc = ['#eff6ff', '#1d4ed8', '#bfdbfe'] %}{% endif %}
                 <span class="badge" style="display:inline-flex;align-items:center;gap:0.35em;background:{{ _wc[0] }};color:{{ _wc[1] }};border:1px solid {{ _wc[2] }};">{% if _rw.expired %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>{% else %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>{% endif %}{{ _rw.label }}</span>
                 <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.3rem;">{{ 'Closed' if _rw.expired else 'Until' }} {{ _rw.deadline.strftime('%b %d') }}</div>
               {% elif o.status not in ['cancelled', 'delivered', 'completed'] %}
@@ -2299,9 +2300,9 @@
           <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;margin-bottom:0.3rem;color:var(--fg-1);">Replacement or back job</div>
           <div style="font-size:0.8rem;color:var(--fg-2);line-height:1.55;">We put it right — the same part again, or the mechanic redoes the work — at no charge.</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.6rem;">
-            <span class="rw-badge" style="background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Replacement</span>
-            <span class="rw-badge" style="background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>Back job</span>
-            <span class="rw-badge" style="background:#f3f4f6;color:#4b5563;border:1px solid #d1d5db;">No money returned</span>
+            <span class="rw-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Replacement</span>
+            <span class="rw-badge" style="background:#f4f4f5;color:#3f3f46;border:1px solid #e4e4e7;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>Back job</span>
+            <span class="rw-badge" style="background:#f4f4f5;color:#3f3f46;border:1px solid #e4e4e7;">No money returned</span>
           </div>
         </div>
       </div>

@@ -1,0 +1,34 @@
+/* MotoTyres status colours: ONE source for the admin and the customer side.
+   Seven tones. The same meaning has the same colour everywhere, so a customer and the shop staff looking at the same booking or
+   order see the same colour for the same status. Colours only: each page keeps its own badge size and shape. */
+:root {
+  --t-ok-bg: #f0fdf4;   --t-ok-fg: #15803d;   --t-ok-bd: #bbf7d0;     /* done, paid, active, approved */
+  --t-warn-bg: #fffbeb; --t-warn-fg: #92400e; --t-warn-bd: #fde68a;   /* waiting for someone */
+  --t-prog-bg: #fff7ed; --t-prog-fg: #c2410c; --t-prog-bd: #fed7aa;   /* work in progress */
+  --t-bad-bg: #fef2f2;  --t-bad-fg: #b91c1c;  --t-bad-bd: #fecaca;    /* cancelled, refunded, problem */
+  --t-neu-bg: #f4f4f5;  --t-neu-fg: #3f3f46;  --t-neu-bd: #e4e4e7;    /* nothing to decide: declined, closed, pickup, reserved */
+  --t-info-bg: #eff6ff; --t-info-fg: #1d4ed8; --t-info-bd: #bfdbfe;   /* confirmed, shipping, online, GCash */
+  --t-ink-bg: #111113;  --t-ink-fg: #ffffff;  --t-ink-bd: #111113;    /* admin, clash */
+}
+
+.badge-completed, .badge-s-completed, .badge-delivered, .badge-approved, .badge-accepted, .badge-resolved, .badge-active, .b-cash, .mpill.available, .tx-st.paid, .tx-bg-cash
+  { background: var(--t-ok-bg); color: var(--t-ok-fg); border-color: var(--t-ok-bd); }
+
+.badge-pending, .badge-awaitingpayment, .badge-awaiting_payment, .badge-awaiting_customer, .badge-inspection, .badge-submitted,
+.badge-ready_for_pickup, .badge-readyforpickup, .b-pending, .b-counter, .mpill.busy, .tag-jo, .tx-st.hold
+  { background: var(--t-warn-bg); color: var(--t-warn-fg); border-color: var(--t-warn-bd); }
+
+.badge-in_progress, .badge-inprogress, .badge-s-in_progress, .badge-processing, .badge-s-done_packaging, .badge-donepackaging
+  { background: var(--t-prog-bg); color: var(--t-prog-fg); border-color: var(--t-prog-bd); }
+
+.badge-cancelled, .badge-s-cancelled, .badge-refunded, .badge-s-refunded, .badge-banned, .badge-denied, .b-voided, .tx-st.refunded, .tx-bg-refund
+  { background: var(--t-bad-bg); color: var(--t-bad-fg); border-color: var(--t-bad-bd); }
+
+.badge-declined, .badge-rejected, .badge-customer, .badge-deactivated, .badge-underreview, .badge-pickup, .b-nocharge, .b-nomethod, .b-split,
+.b-booking, .b-jo, .b-order, .tx-st.nocharge, .h-bkg, .h-jo, .h-ord, .h-sale, .tag-bkg, .mpill.reserved, .mpill.off_duty
+  { background: var(--t-neu-bg); color: var(--t-neu-fg); border-color: var(--t-neu-bd); }
+
+.badge-confirmed, .badge-s-confirmed, .badge-shipping, .badge-s-shipping, .badge-shipped, .badge-staff, .b-gcash, .b-gwait, .tx-bg-gcash
+  { background: var(--t-info-bg); color: var(--t-info-fg); border-color: var(--t-info-bd); }
+
+.badge-admin { background: var(--t-ink-bg); color: var(--t-ink-fg); border-color: var(--t-ink-bd); }
