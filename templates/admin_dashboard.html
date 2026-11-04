@@ -875,6 +875,58 @@
       #parts-product-grid { grid-template-columns: 1fr 1fr !important; }
       .page-title { font-size: 1.4rem; }
     }
+
+    /* ───────── Visual polish (looks only: no markup, script or flow is touched) ───────── */
+
+    /* 1. Status badges that had no style at all (Shipping and Done Packaging showed as bare text in Manage Orders) */
+    .badge-shipping      { background: #ecfeff; color: #155e75; border: 1px solid #a5f3fc; }
+    .badge-donepackaging { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+
+    /* 2. Manage Products: the selected stock filter ("All") had white text on a light grey page colour, so it could not be read.
+          (--ink is the page background in this theme; the rule wanted a dark one.) */
+    .stock-chip.active { background: #111827; color: #fff; border-color: #111827; }
+
+    /* 3. Returns & Warranty: the count inside the selected (red) filter was dark on red. A global "* { color }" rule stopped it
+          from following its button's colour. */
+    #returns-filter-tabs button span { color: inherit; }
+
+    /* 4. Manage Orders: on a laptop the last two columns (Update Status, Archive) were off to the right and needed sideways scrolling to
+          find. The columns share the width instead; below about 1100px it scrolls as before. */
+    @media (min-width: 1101px) and (max-width: 1599px) {
+      #orders-table { min-width: 1040px !important; }
+      #orders-table col:nth-child(1) { width: 7.5% !important; }
+      #orders-table col:nth-child(2) { width: 12.5% !important; }
+      #orders-table col:nth-child(3) { width: 15.5% !important; }
+      #orders-table col:nth-child(4) { width: 14.5% !important; }
+      #orders-table col:nth-child(5) { width: 9% !important; }
+      #orders-table col:nth-child(6) { width: 12% !important; }
+      #orders-table col:nth-child(7) { width: 20% !important; }
+      #orders-table col:nth-child(8) { width: 9% !important; }
+    }
+
+    /* 4b. Day Schedule: the four tabs share one row and, on a laptop, "Mechanic Timeline" was a few pixels wider than its tab and touched
+           the next one. A little less letter-spacing there (the label is unchanged). */
+    @media (max-width: 1500px) { .ds-tab { letter-spacing: 0.01em; gap: 0.3rem; padding: 0 0.35rem; } }
+    @media (max-width: 1400px) { .ds-tab { font-size: 0.64rem; letter-spacing: 0; } }
+    @media (max-width: 1300px) { .ds-tab { font-size: 0.6rem; } }
+    @media (max-width: 1100px) { .ds-tab { font-size: 0.54rem; padding: 0 0.2rem; gap: 0.2rem; } }
+
+    /* 5. A light highlight on the row under the pointer (an overlay, so rows that are coloured on purpose keep their colour) */
+    @media (hover: hover) {
+      .page-section .table tbody tr:hover > td { box-shadow: inset 0 0 0 9999px rgba(17, 24, 39, 0.03); }
+    }
+    .table td, .table th { font-variant-numeric: tabular-nums; }
+
+    /* 6. Keyboard focus: a clear ring (the browser's was thin and pale grey; on the dark sidebar it was nearly invisible) */
+    a:focus-visible, button:focus-visible, [role="button"]:focus-visible, summary:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--red); outline-offset: 2px;
+    }
+    .sidebar a:focus-visible, .sidebar button:focus-visible { outline-color: #fff; outline-offset: -2px; }
+
+    /* 7. People who ask their device for less motion get none */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+    }
   </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
