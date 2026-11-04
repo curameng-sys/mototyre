@@ -117,6 +117,8 @@
     /* ── PAGE WRAP ── */
     .page-wrap { width: 100%; padding: 0 clamp(1.25rem, 6.5vw, 8rem) 4rem; overflow-anchor: none; }
     body.is-book .page-wrap { padding-left: 1.25rem; padding-right: 1.25rem; }      /* Appointment: its own, wider side margins */
+    /* Home, My Bookings, My Orders, Parts Catalog, Transactions and Account Settings share one, wider side margin (Appointment and Returns & Warranty keep their own) */
+    @media (min-width: 1001px) { body.wide-margin .page-wrap { padding-left: clamp(1.25rem, 9vw, 11rem); padding-right: clamp(1.25rem, 9vw, 11rem); } }
     #sec-bookings, #sec-orders, #sec-transactions, #sec-returns, #sec-profile { padding-left: 0 !important; padding-right: 0 !important; }
     .c-section.active { padding-top: 0.5rem; }
 
@@ -1028,7 +1030,7 @@
       .bw-pane[data-bstep="7"] #policy-hint { grid-column: 2; grid-row: 4; }
       .bw-pane[data-bstep="7"] #rv-side { grid-column: 2; grid-row: 5; align-self: stretch; }
       /* the review never scrolls as a page: the notes box takes what is left under Confirm, and only IT scrolls if a short screen cannot show every line */
-      .bw-pane[data-bstep="7"] { overflow: hidden; padding-bottom: 0.75rem; }
+      .bw-pane[data-bstep="7"] { overflow: hidden; }
       .bw-pane[data-bstep="7"] .bw-narrow { flex: 1; min-height: 0; display: flex; flex-direction: column; }
       .bw-pane[data-bstep="7"] #booking-queue-panel { flex: 1; min-height: 0; grid-template-rows: auto auto auto auto minmax(0, 1fr); }
       .bw-pane[data-bstep="7"] #rv-side { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
@@ -10946,12 +10948,11 @@ updateMechNote();
       </div>`;
       const side = document.getElementById('rv-side');
       if (side) side.innerHTML = `<div class="rv-info"><b class="t">Good to know</b><ul>
-        <li><b>Not booked yet.</b> Your slot is reserved only when you press Confirm. Leaving now books nothing.</li>
-        <li><b>Valid only for this date and time.</b> Arrive 10 minutes early. It is held ${POLICY.grace} minutes, then the shop may mark it a no-show.</li>
-        <li><b>Changing it:</b> up to ${POLICY.resched_max} times, not within ${POLICY.resched_hours} hours of the start.</li>
-        <li><b>Payment:</b> at the shop after the service, cash or GCash. The price is an estimate; extra work needs your OK.</li>
-        ${q.is_multiday ? '<li><b>Several days:</b> you drop off the motorcycle on this date; the shop tells you when it is ready.</li>' : ''}
-        <li><b>After the job:</b> ${POLICY.service_warranty} days to report a problem with a service.</li>
+        <li><b>Not booked yet.</b> It is reserved when you press Confirm.</li>
+        <li><b>Valid for this date and time.</b> Held ${POLICY.grace} min, then a no-show.</li>
+        <li><b>Change it</b> up to ${POLICY.resched_max} times, not within ${POLICY.resched_hours} hours of the start.</li>
+        <li><b>Pay at the shop</b> after the service.</li>
+        ${q.is_multiday ? '<li><b>Several days:</b> drop off on this date; we tell you when it is ready.</li>' : ''}
       </ul></div>`;
     }
     window.renderBookingQueue = function () {
@@ -10976,7 +10977,7 @@ updateMechNote();
     const nav = document.querySelector('.top-nav');
     document.documentElement.style.setProperty('--nav-h', (nav ? nav.offsetHeight : 72) + 'px');
   }
-  function lock(name) { document.body.classList.toggle('is-book', name === 'book'); document.body.classList.toggle('book-lock', name === 'book' || name === 'shop'); document.body.classList.toggle('pg-lock', ['overview', 'bookings', 'orders', 'transactions', 'returns', 'profile'].includes(name)); fit(); if (name === 'shop') { if (typeof renderShopPage === 'function') setTimeout(renderShopPage, 30); if (typeof refreshCatalogStock === 'function') refreshCatalogStock(); } }
+  function lock(name) { document.body.classList.toggle('is-book', name === 'book'); document.body.classList.toggle('wide-margin', ['overview', 'bookings', 'orders', 'shop', 'transactions', 'profile'].includes(name)); document.body.classList.toggle('book-lock', name === 'book' || name === 'shop'); document.body.classList.toggle('pg-lock', ['overview', 'bookings', 'orders', 'transactions', 'returns', 'profile'].includes(name)); fit(); if (name === 'shop') { if (typeof renderShopPage === 'function') setTimeout(renderShopPage, 30); if (typeof refreshCatalogStock === 'function') refreshCatalogStock(); } }
   const _show = window.showSection;
   window.showSection = function (name, el) { const r = _show.apply(this, arguments); lock(name); return r; };
   window.addEventListener('resize', fit);
