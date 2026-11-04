@@ -1218,9 +1218,9 @@
         </div>
         {% set bk_status_colors = {
           'confirmed':  {'bg': '#eff6ff', 'fg': '#1d4ed8'},
-          'inspection': {'bg': '#fffbeb', 'fg': '#b45309'},
-          'in_progress':{'bg': '#eef2ff', 'fg': '#4338ca'},
-          'inprogress': {'bg': '#eef2ff', 'fg': '#4338ca'},
+          'inspection': {'bg': '#fffbeb', 'fg': '#92400e'},
+          'in_progress':{'bg': '#fff7ed', 'fg': '#c2410c'},
+          'inprogress': {'bg': '#fff7ed', 'fg': '#c2410c'},
           'completed':  {'bg': '#f0fdf4', 'fg': '#15803d'},
           'cancelled':  {'bg': '#fef2f2', 'fg': '#b91c1c'},
         } %}
@@ -1618,7 +1618,7 @@
 
         <div class="card ds-day-card">
           <div id="day-schedule-body" class="card-body">
-            <div class="empty-state"><p>Loading…</p></div>
+            <div class="empty-state is-loading"><p>Loading…</p></div>
           </div>
         </div>
         </div>{# /ds-right #}
@@ -1829,7 +1829,7 @@
         </div>
       </div>
       <div class="card">
-        <div id="outbox-list"><div class="empty-state"><p>Loading…</p></div></div>
+        <div id="outbox-list"><div class="empty-state is-loading"><p>Loading…</p></div></div>
       </div>
     </section>
 
@@ -1873,7 +1873,7 @@
           <thead><tr>
             <th>Claim</th><th>Type</th><th>Customer</th><th>Covers</th><th>Asked For</th><th>Photos</th><th>Age</th><th>Status</th><th>Action</th>
           </tr></thead>
-          <tbody id="returns-list"><tr><td colspan="9"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
+          <tbody id="returns-list"><tr><td colspan="9"><div class="empty-state is-loading"><p>Loading…</p></div></td></tr></tbody>
         </table>
       </div>
     </section>
@@ -2352,7 +2352,7 @@
           <th>Mechanic</th><th>Contact</th><th>Specialty</th><th>Jobs Today</th>
           <th>Customer / Booking</th><th>Service</th><th>Status</th><th>Actions</th>
         </tr></thead>
-        <tbody id="mechanics-roster-list"><tr><td colspan="8"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
+        <tbody id="mechanics-roster-list"><tr><td colspan="8"><div class="empty-state is-loading"><p>Loading…</p></div></td></tr></tbody>
       </table>
     </div>
   </div>
@@ -2374,7 +2374,7 @@
       <div style="overflow-x:auto;">
         <table class="table">
           <thead><tr><th>Mechanic</th><th>Time in</th><th>Time out</th><th>Hours worked</th><th>Attendance</th><th>Mechanic status</th><th>Actions</th></tr></thead>
-          <tbody id="att-list"><tr><td colspan="7"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
+          <tbody id="att-list"><tr><td colspan="7"><div class="empty-state is-loading"><p>Loading…</p></div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -4331,7 +4331,7 @@
 
   async function loadMechanicsRoster() {
     const tbody = document.getElementById('mechanics-roster-list');
-    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>Loading…</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state is-loading"><p>Loading…</p></div></td></tr>';
     try {
       const res = await fetch('/api/mechanics-roster');
       const data = await res.json();
@@ -4621,7 +4621,7 @@
   // own assign control; both write through /booking/<id>/assign-mechanic. ──
   async function openAssignPicker(mid) {
     const listEl = document.getElementById('assign-picker-list');
-    listEl.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
+    listEl.innerHTML = '<div class="empty-state is-loading"><p>Loading…</p></div>';
     openModal('modal-assign-picker');
     try {
       const res = await fetch(`/api/mechanics/${mid}/assignable-bookings`);
@@ -4704,11 +4704,11 @@
 
   // ── DAY SCHEDULE ──
   const STATUS_COLORS = {
-    pending:     { bg:'#fefce8', color:'#854d0e', border:'#fde047' },
+    pending:     { bg:'#fffbeb', color:'#92400e', border:'#fde68a' },
     confirmed:   { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe' },
     in_progress: { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },
     inprogress:  { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },
-    awaiting_payment: { bg:'#faf5ff', color:'#6d28d9', border:'#ddd6fe' },
+    awaiting_payment: { bg:'#fffbeb', color:'#92400e', border:'#fde68a' },
     completed:   { bg:'#f0fdf4', color:'#15803d', border:'#bbf7d0' },
     cancelled:   { bg:'#fef2f2', color:'#b91c1c', border:'#fecaca' },
   };
@@ -4744,9 +4744,9 @@
   const DS_CHIP_COLORS = [
     { bg:'#eff6ff', border:'#93c5fd', text:'#1d4ed8' },
     { bg:'#f0fdf4', border:'#86efac', text:'#15803d' },
-    { bg:'#fdf4ff', border:'#e9d5ff', text:'#7e22ce' },
+    { bg:'#f4f4f5', border:'#d4d4d8', text:'#3f3f46' },
     { bg:'#fff7ed', border:'#fdba74', text:'#c2410c' },
-    { bg:'#f0fdfa', border:'#5eead4', text:'#0f766e' },
+    { bg:'#fef2f2', border:'#fecaca', text:'#b91c1c' },
     { bg:'#fefce8', border:'#fde047', text:'#854d0e' },
   ];
 
@@ -5044,18 +5044,18 @@
   // the one entry point every date-change / action-completion path calls.
 
   const TAG_STYLES = {
-    'Cancelled':          { bg:'#f3f4f6', color:'#4b5563', border:'#d1d5db' },
+    'Cancelled':          { bg:'#fef2f2', color:'#b91c1c', border:'#fecaca' },
     'Running long':       { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },
-    'Clash':              { bg:'#fef3c7', color:'#92400e', border:'#f59e0b' },
+    'Clash':              { bg:'#111113', color:'#ffffff', border:'#111113' },
     'Rescheduled':        { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe' },
-    'Not their mechanic': { bg:'#faf5ff', color:'#6d28d9', border:'#ddd6fe' },
+    'Not their mechanic': { bg:'#f4f4f5', color:'#3f3f46', border:'#e4e4e7' },
   };
 
   async function loadDaySchedule() {
     const dateInput = document.getElementById('day-schedule-date');
     if (!dateInput.value) dateInput.value = todayISO();
     const body = document.getElementById('day-schedule-body');
-    body.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
+    body.innerHTML = '<div class="empty-state is-loading"><p>Loading…</p></div>';
 
     let data;
     try {
@@ -5797,7 +5797,7 @@
 
   async function loadOutbox() {
     const list = document.getElementById('outbox-list');
-    list.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
+    list.innerHTML = '<div class="empty-state is-loading"><p>Loading…</p></div>';
     try {
       const res = await fetch('/api/outbox');
       const data = await res.json();
@@ -6095,24 +6095,24 @@
   }
 
   const RETURN_STATUS_LABEL_COLORS = {
-    'Submitted':              { bg: '#fef9c3', color: '#713f12', border: '#eab308' },
-    'Under review':           { bg: '#e0e7ff', color: '#3730a3', border: '#6366f1' },
-    'Waiting on you':         { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
-    'Approved':               { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
-    'Waiting for your item':  { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
-    'Item Received':          { bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
-    'Approved · bring item':  { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
-    'Customer at the shop':   { bg: '#ede9fe', color: '#5b21b6', border: '#8b5cf6' },
-    'Waiting for stock':      { bg: '#ffedd5', color: '#9a3412', border: '#f97316' },
-    'Ready for pickup':       { bg: '#ccfbf1', color: '#115e59', border: '#14b8a6' },
-    'Given · waiting for customer': { bg: '#ccfbf1', color: '#115e59', border: '#14b8a6' },
-    'Completed':              { bg: '#dcfce7', color: '#14532d', border: '#22c55e' },
-    'Back job booked':        { bg: '#ede9fe', color: '#5b21b6', border: '#8b5cf6' },
-    'Ready to Claim':         { bg: '#dbeafe', color: '#1e3a8a', border: '#3b82f6' },
-    'Refunded':               { bg: '#d1fae5', color: '#064e3b', border: '#10b981' },
-    'Declined':               { bg: '#fee2e2', color: '#7f1d1d', border: '#ef4444' },
-    'Closed':                 { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
-    'Cancelled':              { bg: '#f3f4f6', color: '#4b5563', border: '#d1d5db' },
+    'Submitted':              { bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+    'Under review':           { bg: '#f4f4f5', color: '#3f3f46', border: '#e4e4e7' },
+    'Waiting on you':         { bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+    'Approved':               { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    'Waiting for your item':  { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+    'Item Received':          { bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+    'Approved · bring item':  { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    'Customer at the shop':   { bg: '#f4f4f5', color: '#3f3f46', border: '#e4e4e7' },
+    'Waiting for stock':      { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+    'Ready for pickup':       { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    'Given · waiting for customer': { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    'Completed':              { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    'Back job booked':        { bg: '#f4f4f5', color: '#3f3f46', border: '#e4e4e7' },
+    'Ready to Claim':         { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+    'Refunded':               { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    'Declined':               { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' },
+    'Closed':                 { bg: '#f4f4f5', color: '#3f3f46', border: '#e4e4e7' },
+    'Cancelled':              { bg: '#f4f4f5', color: '#3f3f46', border: '#e4e4e7' },
   };
   // The rule the whole feature rests on: every claim forces ONE mutually
   // exclusive choice — put it right, or give the money back, never both —
@@ -6138,7 +6138,7 @@
 
   async function loadReturns() {
     const tbody = document.getElementById('returns-list');
-    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>Loading…</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state is-loading"><p>Loading…</p></div></td></tr>';
     try {
       const res = await fetch('/api/returns');
       const data = await res.json();
@@ -7285,7 +7285,7 @@
     const svcTimes  = (d.times || '').split('|||');
 
     const statusColors = {
-      pending:     { bg:'#fefce8', color:'#854d0e', border:'#fde047' },
+      pending:     { bg:'#fffbeb', color:'#92400e', border:'#fde68a' },
       confirmed:   { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe' },
       in_progress: { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },
       inprogress:  { bg:'#fff7ed', color:'#c2410c', border:'#fed7aa' },

@@ -65,8 +65,7 @@ a[style*="var(--blue)"]:hover { color: var(--red) !important; text-decoration: u
 [style*="#ddd6fe" i], [style*="#c4b5fd" i] { border-color: #e4e4e7 !important; }
 [style*="rgba(124,58,237" i], [style*="rgba(124, 58, 237" i] { background-color: rgba(17, 17, 19, 0.08) !important; }
 
-/* Dashboard inventory cards: the "Total products" card is black now, so its text is white (the other cards keep their look) */
-.inv-card.inv-all, .inv-card.inv-all * { color: #ffffff; }
+/* (Dashboard inventory cards are restyled in section 12 below.) */
 
 /* ───────── 6. Forms and pop-ups ───────── */
 .main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus, .main select:focus, .main textarea:focus {
@@ -118,6 +117,95 @@ html.embedded .section-title { color: #111113; }
 html.embedded .svc-price { color: #111113; }
 html.embedded .svc-add-icon, html.embedded .ci-icon.service { background: #f4f4f5; border-color: #e4e4e7; color: #111113; }
 .modal-head[style*="124,58,237"] { background: #fafafa !important; }
+
+/* ───────── 10. ONE badge system for every status in the admin ─────────
+   Seven tones, one size. Same meaning = same colour on every page (it used to differ: 5 or 6 near-identical yellows and oranges,
+   pale "dark theme" tints that could not be read on white, indigo and purple that are not in the theme). */
+:root {
+  --t-ok-bg: #f0fdf4;   --t-ok-fg: #15803d;   --t-ok-bd: #bbf7d0;     /* done, paid, active, approved */
+  --t-warn-bg: #fffbeb; --t-warn-fg: #92400e; --t-warn-bd: #fde68a;   /* waiting for someone */
+  --t-prog-bg: #fff7ed; --t-prog-fg: #c2410c; --t-prog-bd: #fed7aa;   /* work in progress */
+  --t-bad-bg: #fef2f2;  --t-bad-fg: #b91c1c;  --t-bad-bd: #fecaca;    /* cancelled, refunded, problem */
+  --t-neu-bg: #f4f4f5;  --t-neu-fg: #3f3f46;  --t-neu-bd: #e4e4e7;    /* nothing to decide: declined, closed, pickup, reserved */
+  --t-info-bg: #eff6ff; --t-info-fg: #1d4ed8; --t-info-bd: #bfdbfe;   /* confirmed, online, GCash */
+  --t-ink-bg: #111113;  --t-ink-fg: #ffffff;  --t-ink-bd: #111113;    /* admin, clash */
+}
+.badge {
+  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; border-radius: 99px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.69rem; font-weight: 600; letter-spacing: 0.01em; text-transform: none;
+  line-height: 1.35; white-space: nowrap; border: 1px solid transparent;
+}
+.badge-completed, .badge-s-completed, .badge-delivered, .badge-approved, .badge-accepted, .b-cash, .mpill.available
+  { background: var(--t-ok-bg); color: var(--t-ok-fg); border-color: var(--t-ok-bd); }
+.badge-pending, .badge-awaitingpayment, .badge-awaiting_payment, .badge-awaiting_customer, .badge-inspection, .badge-submitted, .b-pending, .b-counter, .mpill.busy, .tag-jo
+  { background: var(--t-warn-bg); color: var(--t-warn-fg); border-color: var(--t-warn-bd); }
+.badge-in_progress, .badge-inprogress, .badge-s-in_progress, .badge-processing, .badge-s-done_packaging, .badge-donepackaging
+  { background: var(--t-prog-bg); color: var(--t-prog-fg); border-color: var(--t-prog-bd); }
+.badge-cancelled, .badge-s-cancelled, .badge-refunded, .badge-s-refunded, .badge-banned, .b-voided
+  { background: var(--t-bad-bg); color: var(--t-bad-fg); border-color: var(--t-bad-bd); }
+.badge-declined, .badge-rejected, .badge-customer, .badge-deactivated, .b-nocharge, .b-nomethod, .b-split, .b-booking, .b-jo, .b-order,
+.h-bkg, .h-jo, .h-ord, .h-sale, .tag-bkg, .mpill.reserved, .mpill.off_duty
+  { background: var(--t-neu-bg); color: var(--t-neu-fg); border-color: var(--t-neu-bd); }
+.badge-confirmed, .badge-s-confirmed, .badge-shipping, .badge-s-shipping, .badge-shipped, .badge-staff, .b-gcash, .b-gwait
+  { background: var(--t-info-bg); color: var(--t-info-fg); border-color: var(--t-info-bd); }
+.badge-admin { background: var(--t-ink-bg); color: var(--t-ink-fg); border-color: var(--t-ink-bd); }
+/* badges whose colours are written inline in the page (Unpaid, the Ship tag, the Clash chip, the day-schedule status chips) */
+.badge[style*="#fef3c7" i] { background: var(--t-warn-bg) !important; color: var(--t-warn-fg) !important; border-color: var(--t-warn-bd) !important; }
+.badge[style*="#67e8f9" i] { background: var(--t-info-bg) !important; color: var(--t-info-fg) !important; border-color: var(--t-info-bd) !important; }
+[style*="background:#1f2937" i], [style*="background: #1f2937" i] { background: #111113 !important; border-color: #111113 !important; }
+[style*="#a16207" i] { color: #92400e !important; }
+/* the small type chips in the Billing history (BKG / ORD / JO / SALE) have no border of their own */
+.h-type { border: 1px solid var(--t-neu-bd); }
+
+/* ───────── 11. Empty and loading states: one look everywhere ───────── */
+.empty-state, .empty { text-align: center; color: #71717a; }
+.empty-state p, .empty p { font-size: 0.9rem; font-weight: 500; color: #52525b; margin: 0; }
+.empty svg, .empty-state svg {
+  display: block; box-sizing: content-box; width: 26px; height: 26px; padding: 15px; margin: 0 auto 0.9rem;
+  border-radius: 50%; background: #f4f4f5; color: #71717a; opacity: 1;
+}
+.empty-state .ei {
+  display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; margin: 0 auto 0.9rem;
+  border-radius: 50%; background: #f4f4f5; font-size: 1.5rem; filter: grayscale(1); opacity: 0.85;
+}
+.empty-state.is-loading { padding: 2.5rem 1rem; }
+.empty-state.is-loading p { display: inline-flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: #71717a; }
+.empty-state.is-loading p::before {
+  content: ""; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #e4e4e7; border-top-color: var(--red);
+  animation: ad-spin 0.7s linear infinite;
+}
+@keyframes ad-spin { to { transform: rotate(360deg); } }
+
+/* ───────── 12. Dashboard inventory cards: white cards with a coloured edge and number (the solid red, amber, green and black blocks
+           were heavy and the dark text on them was hard to read) ───────── */
+.inv-card {
+  background: #ffffff; color: #111113; border: 1px solid var(--border); border-left-width: 4px;
+  border-radius: var(--ad-radius); box-shadow: var(--ad-shadow);
+}
+.inv-card:hover { box-shadow: var(--ad-shadow-hover); }
+.inv-card .ic-label { color: #52525b; opacity: 1; }
+.inv-card .ic-count { color: #111113; }
+.inv-card .ic-pct { color: #71717a; opacity: 1; }
+.inv-card .ic-bar { background: #f0f0f2; }
+.inv-card.inv-out { background: #ffffff; border-left-color: #dc2626; } .inv-card.inv-out .ic-count { color: #b91c1c; } .inv-card.inv-out .ic-bar > div { background: #dc2626; }
+.inv-card.inv-low { background: #ffffff; border-left-color: #f59e0b; } .inv-card.inv-low .ic-count { color: #b45309; } .inv-card.inv-low .ic-bar > div { background: #f59e0b; }
+.inv-card.inv-ok  { background: #ffffff; border-left-color: #16a34a; } .inv-card.inv-ok .ic-count  { color: #15803d; } .inv-card.inv-ok .ic-bar > div  { background: #16a34a; }
+.inv-card.inv-all { background: #ffffff; border-left-color: #111113; } .inv-card.inv-all .ic-bar > div { background: #111113; }
+
+/* ───────── 13. Table action buttons: one size and one corner radius ───────── */
+.btn-action-edit, .btn-action-delete, .order-cancel-btn, .status-form button { border-radius: 8px !important; font-size: 0.72rem; font-weight: 600; line-height: 1.2; }
+.btn-action-edit, .btn-action-delete, .order-cancel-btn { padding: 0.3rem 0.7rem; }
+.status-form button { padding: 0.3rem 0.7rem; }
+
+/* ───────── 14. The top of every embedded page lines up with the dashboard's own pages ───────── */
+html.embedded .topbar:not(:has(.btn-primary)) { padding-top: 0 !important; }
+@media (min-width: 901px) {
+  .page-title { font-size: 2.1rem; line-height: 1.1; letter-spacing: 0.03em; }
+  html.embedded .page-title { margin-bottom: 0.2rem; }
+}
+
+/* ───────── 15. Column headings: one typeface (some pages used the wide display font) ───────── */
+table th { font-family: 'DM Sans', sans-serif !important; }
 
 /* ───────── 9. Keyboard focus on every admin page ───────── */
 a:focus-visible, button:focus-visible, [role="button"]:focus-visible, summary:focus-visible, select:focus-visible, [tabindex]:focus-visible {
