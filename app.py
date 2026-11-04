@@ -204,22 +204,30 @@ def create_gcash_payment(amount, description, order_id=None, booking_id=None, or
         }
     }
 
-    response = requests.post(
-        f"{PAYMONGO_API_URL}/checkout_sessions",
-        json=payload,
-        headers=headers
-    )
+    # No internet, a slow or a down PayMongo must come back as a normal "could not start the payment", never a crash or a hang.
+    try:
+        response = requests.post(
+            f"{PAYMONGO_API_URL}/checkout_sessions",
+            json=payload,
+            headers=headers,
+            timeout=20
+        )
+        body = response.json()
+    except Exception as e:
+        print(f"PayMongo unreachable: {e}")
+        return {"success": False, "error": "PayMongo could not be reached"}
 
     if response.status_code == 200:
-        data = response.json()
-        return {
-            "success": True,
-            "checkout_url": data["data"]["attributes"]["checkout_url"],
-            "checkout_id": data["data"]["id"]
-        }
-    else:
-        print(f"PayMongo Error: {response.json()}")
-        return {"success": False, "error": response.json()}
+        try:
+            return {
+                "success": True,
+                "checkout_url": body["data"]["attributes"]["checkout_url"],
+                "checkout_id": body["data"]["id"]
+            }
+        except (KeyError, TypeError):
+            pass
+    print(f"PayMongo Error: {body}")
+    return {"success": False, "error": body}
 
 
 def send_order_receipt_email(order, override_email=None):
@@ -561,6 +569,7 @@ class Booking(db.Model):
     reschedule_count = db.Column(db.Integer, default=0)              # how many times the CUSTOMER moved this booking (limited)
     cancelled_by     = db.Column(db.String(12), nullable=True)       # 'customer' or 'shop' (a no-show is 'shop' with no_show set)
     cancel_reason    = db.Column(db.String(300), nullable=True)      # why the shop cancelled it (the customer is shown this)
+    rebooked_from    = db.Column(db.Integer, nullable=True)          # a "Book Again" booking: the id of the cancelled booking it was made from
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
     is_multiday      = db.Column(db.Boolean, default=False)
@@ -2805,6 +2814,7 @@ def _booking_client_dict(b):
         'odometer': b.odometer or None, 'notes': b.notes or '',
         'own_parts': bool(b.own_parts), 'own_parts_note': b.own_parts_note or '',
         'cancelled_by': b.cancelled_by or '', 'cancel_reason': b.cancel_reason or '', 'no_show': bool(b.no_show),
+        'rebooked_from': b.rebooked_from or None,
         'mechanic_name': b.assigned_mechanic_name or '', 'mechanic_spec': b.assigned_mechanic_specialization or '',
         'created_at': b.created_at.strftime('%b %d, %Y at %I:%M %p'),
         'created_iso': b.created_at.strftime('%Y-%m-%dT%H:%M:%S'),
@@ -2973,7 +2983,14 @@ def _book_multiple_impl():
                 continue
 
             odo_raw = clean_str(str(b.get('odometer', '')), max_len=10)
+            # "Book Again": only the customer's own CANCELLED booking counts as the one this was made from
+            rebooked_from = None
+            if str(b.get('rebooked_from') or '').isdigit():
+                _src = Booking.query.filter_by(id=int(b['rebooked_from']), user_id=current_user.id).first()
+                if _src and _src.status == 'cancelled':
+                    rebooked_from = _src.id
             booking = Booking(
+                rebooked_from=rebooked_from,
                 user_id=current_user.id,
                 service=service,
                 date=booking_date,
@@ -5179,6 +5196,7 @@ with app.app_context():
         "ALTER TABLE booking ADD COLUMN reschedule_count INT DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN cancelled_by VARCHAR(12) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN cancel_reason VARCHAR(300) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN rebooked_from INT DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN address VARCHAR(255) DEFAULT NULL",
         "ALTER TABLE user ADD COLUMN motorcycle_model VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `user` ADD COLUMN motorcycle_year VARCHAR(4) DEFAULT NULL",

@@ -262,6 +262,7 @@ class Booking(db.Model):
     reschedule_count = db.Column(db.Integer, default=0)              # how many times the CUSTOMER moved this booking (limited)
     cancelled_by     = db.Column(db.String(12), nullable=True)       # 'customer' or 'shop' (a no-show is 'shop' with no_show set)
     cancel_reason    = db.Column(db.String(300), nullable=True)      # why the shop cancelled it (the customer is shown this)
+    rebooked_from    = db.Column(db.Integer, nullable=True)          # a "Book Again" booking: the id of the cancelled booking it was made from
     is_archived     = db.Column(db.Boolean, default=False)
     total_amount    = db.Column(db.Float, default=0)
     walkin_customer_id = db.Column(db.Integer, nullable=True)
@@ -4222,6 +4223,7 @@ def api_day_panel():
                 'own_parts': bool(b.own_parts), 'own_parts_note': b.own_parts_note or '',
                 'late_min': _minutes_late(b), 'no_shows': (_no_show_count(b.user_id) if _minutes_late(b) else 0),
                 'cancel_note': _cancel_note(b),
+                'rebooked_from': (f'BKG-{b.rebooked_from:03d}' if b.rebooked_from else ''),
                 'is_new': bool(b.created_at and (ph_now() - b.created_at) < timedelta(hours=24) and b.status == 'confirmed'),
                 'assign_notice': ({'kind': b.assign_notice_kind, 'mechanic': b.assigned_mechanic_name,
                                    'sent_at': _t_label(b.assign_notice_at),
@@ -6426,8 +6428,24 @@ def delete_product(pid):
         return redirect(url_for('admin_dashboard'))
     p = Product.query.get_or_404(pid)
     name = p.name
-    db.session.delete(p)
-    db.session.commit()
+    # A product that is on any order cannot go: the order would lose what was bought (and the database refuses it).
+    if OrderItem.query.filter_by(product_id=p.id).first():
+        msg = (f'"{name}" is on past orders, so it cannot be deleted without breaking those orders. '
+               'Set its stock to 0 instead: customers will then see it as Out of Stock.')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg})
+        flash(msg, 'danger')
+        return redirect(url_for('admin_dashboard'))
+    try:
+        db.session.delete(p)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        msg = f'"{name}" could not be deleted because other records still use it. Set its stock to 0 instead.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg})
+        flash(msg, 'danger')
+        return redirect(url_for('admin_dashboard'))
     return _product_change_response(None, f'Product "{name}" deleted!')
 
 
@@ -10032,6 +10050,7 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN reschedule_count INT DEFAULT 0",
         "ALTER TABLE booking ADD COLUMN cancelled_by VARCHAR(12) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN cancel_reason VARCHAR(300) DEFAULT NULL",
+        "ALTER TABLE booking ADD COLUMN rebooked_from INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN recorded_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN voided_at DATETIME DEFAULT NULL",

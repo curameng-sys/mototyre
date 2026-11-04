@@ -2555,6 +2555,8 @@
       <div style="margin-top:0.2rem;">You pay after the service. Extra work needs your approval first.</div>
     </div>
 
+    <div id="bd-rebooked" style="display:none;margin-top:1rem;padding:0.55rem 0.8rem;border-radius:10px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-2);font-size:0.78rem;line-height:1.5;"></div>
+
     <div id="bd-cancel-wrap" style="display:none;margin-top:1rem;">
       <button type="button" id="bd-resched-btn" onclick="openReschedule()" style="width:100%;padding:0.65rem;margin-bottom:0.5rem;background:#fff;border:1px solid var(--line-2);border-radius:10px;color:var(--fg-1);font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Change Date / Time</button>
       <button type="button" id="bd-cancel-btn" onclick="openCancelMyBooking()" style="width:100%;padding:0.65rem;background:#fff;border:1px solid #fecaca;border-radius:10px;color:#b91c1c;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Cancel Booking</button>
@@ -4450,6 +4452,7 @@ function addToBookingQueue() {
     own_parts_note:   ((document.getElementById('own-parts-note') || {}).value || '').trim(),
     contact_name:     nameVal,
     contact_mobile:   mobileVal,
+    rebooked_from:    window.__againFromId || null,      // set while the customer is booking again from a cancelled booking
     _displayDate:     document.getElementById('selected-date-display').value,
     _displayTime:     currentJobIsMultiday
                         ? `${minutesToAmpmJS(startMin)} drop off — ${currentJobReadyWindow}`
@@ -6160,6 +6163,7 @@ const bookingsData = {
     own_parts: {{ 'true' if b.own_parts else 'false' }},
     cancelled_by: {{ (b.cancelled_by or '')|tojson }},
     cancel_reason: {{ (b.cancel_reason or '')|tojson }},
+    rebooked_from: {{ b.rebooked_from if b.rebooked_from else 'null' }},
     no_show: {{ 'true' if b.no_show else 'false' }},
     own_parts_note: {{ (b.own_parts_note or '')|tojson }},
     mechanic_name: {{ (b.assigned_mechanic_name or '')|tojson }},
@@ -6372,6 +6376,15 @@ function openBookingDetails(bookingId) {
   document.getElementById('bd-again-wrap').style.display = booking.status === 'cancelled' ? 'block' : 'none';
   { const ci = document.getElementById('bd-cancelinfo'); const t = booking.status === 'cancelled' ? cancelNoteText(booking) : '';
     ci.textContent = t; ci.style.display = t ? 'block' : 'none'; }
+  // a booking made with Book Again says which one it came from; the cancelled one says which one replaced it
+  { const rb = document.getElementById('bd-rebooked'), ref = n => 'BKG-' + String(n).padStart(3, '0');
+    let t = '';
+    if (booking.rebooked_from) t = 'Rebooked from ' + ref(booking.rebooked_from) + ' (cancelled).';
+    else if (booking.status === 'cancelled') {
+      const next = Object.values(bookingsData).find(x => x && x.rebooked_from === booking.id);
+      if (next) t = 'Booked again as ' + ref(next.id) + '.';
+    }
+    rb.textContent = t; rb.style.display = t ? 'block' : 'none'; }
 
   document.getElementById('modal-booking-details').classList.add('open');
 }
@@ -11033,7 +11046,7 @@ updateMechNote();
       const n = bookingQueue.length;
       if (n > lastQueueLen && cur === 6) { reviewing = true; show(7); }
       else if (n === 0 && reviewing && !backing) {            // the booking went through: start fresh
-        reviewing = false; againMode = false; againToken++; _resetForm(false);
+        reviewing = false; againMode = false; againToken++; window.__againFromId = null; _resetForm(false);
         { const n = document.getElementById('bw-again-note'); if (n) n.style.display = 'none'; }
         mechChosen = false; selectedMotoId = null; bkDirty = false; renderMotoPicker(); setMechanicMode('shop');
         const pl = document.getElementById('policy-check'); if (pl) pl.checked = false;
@@ -11077,6 +11090,7 @@ updateMechNote();
     showSection('book', null);
     reviewing = false; bookingQueue = []; lastQueueLen = 0;     // the queue was emptied here: forget how long it was the last time
     againMode = true; const tok = ++againToken;
+    window.__againFromId = b.id;               // the booking being booked again: the new booking says "Rebooked from BKG-…"
     _resetForm(false);
     mechChosen = false; selectedMotoId = null; bkDirty = false; renderMotoPicker(); setMechanicMode('shop');
     const pl = document.getElementById('policy-check'); if (pl) pl.checked = false;
@@ -11135,6 +11149,7 @@ updateMechNote();
         own_parts: !!(document.getElementById('own-parts-check') || {}).checked,
         own_parts_note: ((document.getElementById('own-parts-note') || {}).value || '').trim(),
         contact_name: document.getElementById('contact-name').value.trim(), contact_mobile: document.getElementById('contact-mobile').value.trim(),
+        rebooked_from: b.id,
         _displayDate: `${monthNames[m0 - 1]} ${d0}, ${y0}`,
         _displayTime: `${minutesToAmpmJS(startMin)} \u2013 ${minutesToAmpmJS(startMin + total)}`,
       };
@@ -11223,7 +11238,7 @@ updateMechNote();
   // A "Book Again" booking lives only while the customer stays in Appointment. If they go to another section and come back, the wizard
   // starts at step 1 with nothing filled in, and they press Book Again again to get it back.
   function bwDropAgain() {
-    againMode = false; againToken++;
+    againMode = false; againToken++; window.__againFromId = null;
     backing = true; reviewing = false; bookingQueue = []; lastQueueLen = 0; renderBookingQueue(); backing = false;
     _resetForm(false);
     ['booking-notes', 'odometer', 'own-parts-note'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
