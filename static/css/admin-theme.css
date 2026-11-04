@@ -207,6 +207,38 @@ html.embedded .topbar:not(:has(.btn-primary)) { padding-top: 0 !important; }
 /* ───────── 15. Column headings: one typeface (some pages used the wide display font) ───────── */
 table th { font-family: 'DM Sans', sans-serif !important; }
 
+/* ───────── 16. Day Schedule calendar: roomy, squarish day boxes instead of tall narrow strips ─────────
+   The month used to be stretched to fill the whole height of the page, so every day became a thin tall rectangle with the number
+   squeezed in a corner and a "Clash" tag that did not fit. Now each day is a square-ish box with space around its content, and the
+   Full / Clash tags are small dots explained by the legend under the calendar. */
+.ds-legend {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin-top: 0.85rem; padding: 0.7rem 0.95rem;
+  background: #ffffff; border: 1px solid var(--border); border-radius: 12px; font-size: 0.7rem; color: #52525b;
+}
+.ds-legend .lg { display: inline-flex; align-items: center; gap: 0.4rem; }
+.ds-legend .lg-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 0.3rem; border-radius: 99px; background: #111113; color: #fff; font-style: normal; font-size: 0.62rem; font-weight: 700; }
+.ds-legend .lg-sw { display: inline-block; width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid var(--border); }
+.ds-legend .lg-today { background: #fffbeb; }
+.ds-legend .lg-sel { background: #fff; border-color: var(--red); box-shadow: 0 0 0 2px rgba(208, 0, 25, 0.15); }
+.ds-legend .lg-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+.ds-legend .lg-full { background: #dc2626; }
+.ds-legend .lg-clash { background: #111113; }
+@media (min-width: 901px) {
+  body.ds-lock .ds-left > .card { flex: 0 0 auto; padding: 1.25rem; }
+  body.ds-lock #ds-cal-grid { flex: 0 0 auto; grid-auto-rows: auto; gap: 6px !important; margin-top: 0.15rem; }
+  body.ds-lock #ds-cal-grid > div { aspect-ratio: auto; min-height: 58px !important; border-radius: 12px !important; padding: 0.4rem 0.45rem !important; transition: box-shadow 0.15s, transform 0.15s; }
+  body.ds-lock #ds-cal-grid > div:empty { border: 0 !important; background: transparent !important; box-shadow: none; }
+  body.ds-lock #ds-cal-grid > div:not(:empty):hover { box-shadow: 0 4px 12px rgba(17, 17, 19, 0.10); transform: translateY(-1px); }
+  body.ds-lock #ds-cal-grid > div > div:first-child > span { font-family: 'DM Sans', sans-serif !important; font-size: 0.9rem; font-weight: 700; }
+  body.ds-lock #ds-cal-grid > div > div:first-child > div { gap: 0.25rem; padding-top: 0.2rem; }
+  body.ds-lock #ds-cal-grid > div > div:first-child > div > span { font-size: 0 !important; width: 9px; height: 9px; padding: 0 !important; border-radius: 50% !important; display: block; }
+  body.ds-lock .ds-count { min-width: 20px; height: 20px; font-size: 0.68rem; }
+}
+@media (min-width: 1700px) {
+  body.ds-lock .ds-layout { grid-template-columns: 480px minmax(0, 1fr); }
+  body.ds-lock #ds-cal-grid > div { min-height: 66px !important; }
+}
+
 /* ───────── 9. Keyboard focus on every admin page ───────── */
 a:focus-visible, button:focus-visible, [role="button"]:focus-visible, summary:focus-visible, select:focus-visible, [tabindex]:focus-visible {
   outline: 2px solid var(--red); outline-offset: 2px;
