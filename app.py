@@ -569,6 +569,7 @@ class Booking(db.Model):
     reschedule_count = db.Column(db.Integer, default=0)              # how many times the CUSTOMER moved this booking (limited)
     cancelled_by     = db.Column(db.String(12), nullable=True)       # 'customer' or 'shop' (a no-show is 'shop' with no_show set)
     cancel_reason    = db.Column(db.String(300), nullable=True)      # why the shop cancelled it (the customer is shown this)
+    quote_extra_minutes = db.Column(db.Integer, default=0)           # minutes the extra work (quotations) added to this booking
     rebooked_from    = db.Column(db.Integer, nullable=True)          # a "Book Again" booking: the id of the cancelled booking it was made from
     duration_minutes = db.Column(db.Integer, default=60)  # total estimated job length
     end_time         = db.Column(db.Time, nullable=True)  # computed: time + duration
@@ -924,6 +925,7 @@ class Quotation(db.Model):
     decided_in_person = db.Column(db.Boolean, default=False)
     decided_by_staff  = db.Column(db.String(100), nullable=True)
     parts_deducted    = db.Column(db.Boolean, default=False)
+    extra_minutes    = db.Column(db.Integer, default=0)      # time this extra work adds to the booking
     items            = db.relationship('QuotationItem', backref='quotation', lazy=True)
 
 
@@ -1743,10 +1745,7 @@ def customer_dashboard():
         o.open_claim = open_by_order.get(o.id)
         o.replacement_stats = _order_replacement_stats(o) if o.return_window else None
     _booking_ids = [b.id for b in bookings]
-    _quotations_by_booking = {}
-    if _booking_ids:
-        for q in Quotation.query.filter(Quotation.booking_id.in_(_booking_ids)).order_by(Quotation.created_at.asc()).all():
-            _quotations_by_booking[q.booking_id] = q
+    _quotations_by_booking = _quotes_of(_booking_ids)
     # A back job writes a real, zero-charge Booking of its own (see
     # schedule_return_redo in admin_app.py) — this maps that booking's id
     # back to the ReturnRequest that created it, so its card can show the
@@ -1785,14 +1784,18 @@ def customer_dashboard():
             b.return_window = return_window_info('service', b.completed_at) if b.status == 'completed' else None
             b.open_claim = open_by_booking.get(b.id)
             b.redo_stats = _booking_redo_stats(b) if b.return_window else None
-        q = _quotations_by_booking.get(b.id)
-        if not q:
+        _bq = _quotations_by_booking.get(b.id)
+        if not _bq:
             b.quotation_data = None
         else:
+            q = _quote_to_show(_bq)
+            _round = _bq.index(q) + 1
             _qbd = _quotation_breakdown(q.items)
             _is_backjob = b.service.startswith('Back job — ')
             b.quotation_data = {
                 'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
+                'round': _round,
+                'history': [{'no': i + 1, 'status': x.status, 'total': float(x.total_amount or 0)} for i, x in enumerate(_bq) if x.id != q.id],
                 'service': b.service, 'is_backjob': _is_backjob,
                 # A back job is free: declining the extra work leaves nothing to pay, materials included.
                 'original': _qbd['booked'] if _is_backjob else _qbd['decline_total'],
@@ -2614,14 +2617,12 @@ def build_transactions(user):
             continue
         method = _tx_method(b.invoice_payment_method or b.payment_method)
         paid_at = b.invoice_paid_at or b.completed_at or b.created_at
-        q = Quotation.query.filter_by(booking_id=b.id).order_by(Quotation.created_at.desc()).first()
+        _bqs = Quotation.query.filter_by(booking_id=b.id).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()
+        q = _bqs[0] if _bqs else None
         mechanic = (q.inspected_by if q and q.inspected_by else None) or b.assigned_mechanic_name or ''
         is_backjob = (b.service or '').startswith(BACKJOB_PREFIX)
         sections = []
-        if q:
-            relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
-        else:
-            relevant = []
+        relevant = [i for x in _bqs for i in _billed_items(b.service, x)]
         row = lambda i: {'name': i.name, 'qty': i.quantity or 1, 'price': round((i.unit_price or 0) * (i.quantity or 1), 2)}
         if is_backjob:
             sections.append({'title': 'Your booked service', 'rows': [{'name': (b.service or '')[len(BACKJOB_PREFIX):], 'qty': 1, 'price': 0, 'free': True}]})
@@ -2823,6 +2824,58 @@ def _booking_client_dict(b):
         'backjob_original_id': None, 'backjob_original_service': None, 'backjob_number': None,
         'backjob_done': False, 'quotation': None,
     }
+
+
+def _quotes_of(booking_ids):
+    """{booking id: [its quotations (the inspection first, then each later extra work), oldest first]}"""
+    out = {}
+    if booking_ids:
+        for q in Quotation.query.filter(Quotation.booking_id.in_(list(booking_ids))).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all():
+            out.setdefault(q.booking_id, []).append(q)
+    return out
+
+
+def _quote_to_show(quotes):
+    """The extra work the customer should look at: the one waiting for their answer, otherwise the newest."""
+    for q in quotes:
+        if q.status == 'awaiting_customer':
+            return q
+    return quotes[-1]
+
+
+def _quote_for_notice(quotes, n):
+    """Which quotation a notification is about: the newest one that existed when the notification was written."""
+    pick = None
+    for q in quotes:
+        if q.created_at and n.created_at and q.created_at <= n.created_at:
+            pick = q
+    return pick or quotes[0]
+
+
+def _quote_round_no(q):
+    ids = [x.id for x in Quotation.query.filter_by(booking_id=q.booking_id).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()]
+    return ids.index(q.id) + 1 if q.id in ids else len(ids) + 1
+
+
+def _billed_items(service, q):
+    """The lines of ONE quotation that are on the bill: everything if approved; otherwise the booked service and parts already used."""
+    if q.status == 'approved':
+        return list(q.items)
+    backjob = (service or '').startswith('Back job — ')
+    return [i for i in q.items if i.locked or (i.item_type == 'product' and not backjob)]
+
+
+def _refresh_quote_time(booking):
+    """The time the extra work adds to a booking = the minutes of every extra work that is waiting or approved (a declined one adds
+    nothing). Whatever the counter added by hand (+30m / +1h) stays."""
+    total = sum(int(q.extra_minutes or 0) for q in Quotation.query.filter_by(booking_id=booking.id).all()
+                if q.status in ('awaiting_customer', 'approved'))
+    staff = max(0, (booking.overrun_minutes or 0) - (booking.quote_extra_minutes or 0))
+    booking.quote_extra_minutes = total
+    booking.overrun_minutes = staff + total
+    start = booking.time.hour * 60 + booking.time.minute
+    new_end = compute_finish_minutes(start, booking.duration_minutes or DEFAULT_DURATION_MIN) + booking.overrun_minutes
+    booking.end_time = minutes_to_time(min(new_end, 24 * 60 - 1))
 
 
 def _services_price(names):
@@ -3852,26 +3905,36 @@ def quotation_decision(qid):
     q.decided_at = ph_now()
     # The customer's own answer is what the shop was waiting on — no need to
     # also wait for an admin to click "No extra work" before work starts.
-    if booking.status == 'inspection':
+    was_inspection = booking.status == 'inspection'
+    if was_inspection:
         booking.status = 'in_progress'
         booking.in_progress_at = ph_now()
+    _refresh_quote_time(booking)                      # a declined extra work gives its time back
     db.session.commit()
 
     ref = f'BKG-{booking.id:03d}'
     verb = 'approved' if decision == 'approve' else 'declined'
-    if decision == 'approve':
-        progress_body = f'We started work on your {booking.service} and the approved extra work ({ref}).'
-    else:
-        progress_body = f'We started work on your {booking.service}. Extra work was not included.'
-    send_notification(booking.user_id, f'{booking.service} is now in progress', progress_body,
-                       type='booking', status='in_progress', booking_id=booking.id)
+    n = _quote_round_no(q)
+    if was_inspection:
+        if decision == 'approve':
+            progress_body = f'We started work on your {booking.service} and the approved extra work ({ref}).'
+        else:
+            progress_body = f'We started work on your {booking.service}. Extra work was not included.'
+        send_notification(booking.user_id, f'{booking.service} is now in progress', progress_body,
+                           type='booking', status='in_progress', booking_id=booking.id)
+    else:                                               # the original work never stopped
+        body = (f'You approved extra work #{n} (₱{(q.total_amount or 0):,.2f}) on your {booking.service} ({ref}). It was added to your booking.'
+                if decision == 'approve' else
+                f'You declined extra work #{n} on your {booking.service} ({ref}). Your booked service continues.')
+        send_notification(booking.user_id, f'Extra work #{n} {verb}', body, type='booking', status='in_progress', booking_id=booking.id)
 
-    decision_title = (f'Quotation Approved ✅ — {booking.service} ({ref})' if decision == 'approve'
-                      else f'Quotation Declined — {booking.service} ({ref})')
+    _label = 'Quotation' if n == 1 else f'Extra work #{n}'
+    decision_title = (f'{_label} Approved ✅ — {booking.service} ({ref})' if decision == 'approve'
+                      else f'{_label} Declined — {booking.service} ({ref})')
     for admin in User.query.filter_by(role='admin').all():
         send_notification(
             admin.id, decision_title,
-            f'{current_user.fullname} {verb} the quotation for {booking.service} ({ref}).',
+            f'{current_user.fullname} {verb} {"the quotation" if n == 1 else f"extra work #{n}"} for {booking.service} ({ref}).',
             type='quotation_decision', status=booking.status, booking_id=booking.id,
         )
     return jsonify({'success': True, 'new_status': q.status})
@@ -4093,11 +4156,10 @@ def get_notifications():
     claims = {r.id: r for r in ReturnRequest.query.filter(ReturnRequest.id.in_(return_ids)).all()} if return_ids else {}
 
     quotation_booking_ids = {n.booking_id for n in notifs if n.type in ('quotation', 'invoice', 'queue') and n.booking_id}
-    quotations_by_booking = {}
+    quotes_all = _quotes_of(quotation_booking_ids)
+    quotations_by_booking = {bid: lst[-1] for bid, lst in quotes_all.items()}
     bookings_by_id = {}
     if quotation_booking_ids:
-        for q in Quotation.query.filter(Quotation.booking_id.in_(quotation_booking_ids)).order_by(Quotation.created_at.desc()).all():
-            quotations_by_booking.setdefault(q.booking_id, q)
         for b in Booking.query.filter(Booking.id.in_(quotation_booking_ids)).all():
             bookings_by_id[b.id] = b
 
@@ -4118,7 +4180,8 @@ def get_notifications():
             if rr.status == 'replacement_arrived':
                 return True
         if n.type == 'quotation':
-            q = quotations_by_booking.get(n.booking_id)
+            lst = quotes_all.get(n.booking_id)
+            q = _quote_for_notice(lst, n) if lst else None
             return bool(q and q.status == 'awaiting_customer')
         if n.type == 'invoice' and n.status == 'completed':
             b = bookings_by_id.get(n.booking_id)
@@ -4126,15 +4189,17 @@ def get_notifications():
         return not n.is_read
 
     def quotation_payload(n):
-        q = quotations_by_booking.get(n.booking_id)
+        lst = quotes_all.get(n.booking_id)
+        q = _quote_for_notice(lst, n) if lst else None
         if not q:
             return None, n.title, n.message
+        round_no = lst.index(q) + 1
         b = bookings_by_id.get(n.booking_id)
         service = b.service if b else ''
         ref = f'BKG-{n.booking_id:03d}'
         breakdown = _quotation_breakdown(q.items)
         payload = {
-            'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by,
+            'id': q.id, 'status': q.status, 'inspected_by': q.inspected_by, 'round': round_no,
             'service': service, 'ref': ref, 'is_backjob': service.startswith('Back job — '),
             'original': breakdown['booked'] if service.startswith('Back job — ') else breakdown['decline_total'],
             'extra': breakdown['extra'], 'total': q.total_amount,
@@ -4148,24 +4213,24 @@ def get_notifications():
         if q.status == 'awaiting_customer':
             title, message = n.title, n.message
         elif q.status == 'approved':
-            title = f'Quotation for {service}'
+            title = f'Quotation for {service}' if round_no == 1 else f'Extra work #{round_no} for {service}'
             message = f'✓ You approved ₱{q.total_amount:,.2f}.'
         else:
-            title = f'Quotation for {service}'
+            title = f'Quotation for {service}' if round_no == 1 else f'Extra work #{round_no} for {service}'
             decline_note = ' plus materials used' if breakdown['materials'] else ''
-            message = f'You declined the extra work. Only {service}{decline_note} (₱{breakdown["decline_total"]:,.2f}).'
+            message = (f'You declined the extra work. Only {service}{decline_note} (₱{breakdown["decline_total"]:,.2f}).' if round_no == 1
+                       else f'You declined this extra work{(" (only the parts already used, ₱" + format(breakdown["decline_total"], ",.2f") + ", are billed)") if breakdown["materials"] else ""}. Your booked service continues.')
         return payload, title, message
 
     def invoice_payload(n):
         b = bookings_by_id.get(n.booking_id)
         if not b:
             return None
-        q = quotations_by_booking.get(n.booking_id)
+        lst = quotes_all.get(n.booking_id)
+        q = lst[-1] if lst else None
         if q:
-            # On decline, the booked service and any materials already used
-            # still bill — only the extra inspection findings drop off.
-            relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
-            items = [{'name': _line_name(i), 'price': _line_amount(i)} for i in relevant]
+            # On decline, the booked service and any materials already used still bill (for each extra work separately).
+            items = [{'name': _line_name(i), 'price': _line_amount(i)} for x in lst for i in _billed_items(b.service, x)]
             decision = q.status
         else:
             items = [{'name': b.service, 'price': b.total_amount}]
@@ -4569,10 +4634,9 @@ def _mark_booking_invoice_paid_gcash(booking, checkout_id):
     )
     user = User.query.get(booking.user_id)
     if user and user.email:
-        _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
-        if _q:
-            _rel = _q.items if _q.status == 'approved' else [i for i in _q.items if i.locked or i.item_type == 'product']
-            _items = [(_line_name(i), _line_amount(i)) for i in _rel]
+        _qs = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()
+        if _qs and any(x.items for x in _qs):
+            _items = [(_line_name(i), _line_amount(i)) for x in _qs for i in _billed_items(booking.service, x)]
         else:
             _items = [(booking.service, booking.total_amount)]
         _subj, _html = booking_receipt_email(user.fullname, f'INV-{booking.id:03d}', ref, booking.service, _items,
@@ -5234,6 +5298,8 @@ with app.app_context():
         "ALTER TABLE quotation ADD COLUMN decided_in_person TINYINT(1) DEFAULT 0",
         "ALTER TABLE quotation ADD COLUMN decided_by_staff VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE quotation ADD COLUMN parts_deducted TINYINT(1) DEFAULT 0",
+        "ALTER TABLE quotation ADD COLUMN extra_minutes INT DEFAULT 0",
+        "ALTER TABLE booking ADD COLUMN quote_extra_minutes INT DEFAULT 0",
         "ALTER TABLE product ADD COLUMN image_blob MEDIUMBLOB DEFAULT NULL",
         "ALTER TABLE product ADD COLUMN image_mime VARCHAR(40) DEFAULT NULL",
         "ALTER TABLE product ADD COLUMN motor_model VARCHAR(255) DEFAULT NULL",

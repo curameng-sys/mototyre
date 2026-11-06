@@ -2602,21 +2602,22 @@
 
     <!-- Awaiting-decision prompt — only while the quotation is unanswered -->
     <div id="bd-quotation-pending-box" style="display:none;margin-top:1rem;padding:1rem;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
-      <div style="font-size:0.82rem;color:#92400e;line-height:1.5;"><strong>The mechanic found additional work.</strong> Please approve or decline the quotation.</div>
+      <div style="font-size:0.82rem;color:#92400e;line-height:1.5;" id="bd-quotation-pending-text"><strong>The mechanic found additional work.</strong> Please approve or decline the quotation.</div>
       <button type="button" onclick="reviewQuotation()" style="margin-top:0.75rem;width:100%;padding:0.6rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Review quotation</button>
     </div>
 
     <!-- Inspection & Estimation quotation detail -->
     <div id="bd-quotation-wrap" style="display:none;margin-top:1rem;padding:1rem;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:#6b21a8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.65rem;">Inspection Findings</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.75rem;color:#6b21a8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.65rem;" id="bd-quotation-title">Inspection Findings</div>
       <div id="bd-quotation-items" style="margin-bottom:0.65rem;"></div>
-      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-2);margin-bottom:0.2rem;"><span id="bd-quotation-original-label">Original service</span><span id="bd-quotation-original"></span></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-2);margin-bottom:0.2rem;" id="bd-quotation-original-row"><span id="bd-quotation-original-label">Original service</span><span id="bd-quotation-original"></span></div>
       <div style="display:flex;justify-content:space-between;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--fg-1);padding-top:0.5rem;border-top:1px solid #e9d5ff;margin-bottom:0.75rem;"><span>Estimated Total</span><span id="bd-quotation-total" style="color:var(--brand-red);"></span></div>
       <div id="bd-quotation-actions" style="display:flex;gap:0.5rem;">
         <button type="button" onclick="decideQuotation('decline')" style="flex:1;padding:0.6rem;background:#fff;border:1px solid var(--line-2);border-radius:8px;color:var(--fg-2);font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Decline</button>
         <button type="button" onclick="decideQuotation('approve')" style="flex:1;padding:0.6rem;background:var(--brand-red);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;">Approve</button>
       </div>
       <div id="bd-quotation-decided" style="display:none;text-align:center;font-size:0.8rem;font-weight:700;font-family:'Syne',sans-serif;padding:0.5rem;"></div>
+      <div id="bd-quotation-history" style="display:none;margin-top:0.75rem;padding-top:0.65rem;border-top:1px dashed #e9d5ff;"></div>
     </div>
 
     <div id="bd-report-problem-wrap" style="display:none;margin-top:1rem;">
@@ -6342,13 +6343,24 @@ function openBookingDetails(bookingId) {
   const quotWrap = document.getElementById('bd-quotation-wrap');
   if (booking.quotation) {
     const q = booking.quotation;
+    const isExtra = (q.round || 1) > 1;                       // the second, third... time the mechanic found more work
     quotWrap.style.display = 'block';
     quotWrap.dataset.quotationId = q.id;
+    document.getElementById('bd-quotation-title').textContent = isExtra ? 'Extra Work #' + q.round : 'Inspection Findings';
+    document.getElementById('bd-quotation-original-row').style.display = (isExtra && !(q.materials > 0)) ? 'none' : 'flex';
+    document.getElementById('bd-quotation-pending-text').innerHTML = isExtra
+      ? '<strong>The mechanic found more work (extra work #' + q.round + ').</strong> Please approve or decline it. Your booked service keeps going while you decide.'
+      : '<strong>The mechanic found additional work.</strong> Please approve or decline the quotation.';
+    { const hist = document.getElementById('bd-quotation-history'), others = q.history || [];
+      hist.innerHTML = others.length ? '<div style="font-size:0.66rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--fg-3);margin-bottom:0.35rem;">Other extra work on this booking</div>' +
+        others.map(h => '<div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--fg-2);padding:0.15rem 0;"><span>Extra work #' + h.no + ' · ' +
+          (h.status === 'approved' ? 'You approved' : (h.status === 'declined' ? 'You declined' : 'Waiting for you')) + '</span><span>₱' + Number(h.total).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span></div>').join('') : '';
+      hist.style.display = others.length ? 'block' : 'none'; }
     const extraItems = q.items.filter(it => !it.locked);
     document.getElementById('bd-quotation-items').innerHTML = extraItems.length
       ? extraItems.map(it => { const n = it.quantity || 1; return `<div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--fg-1);margin-bottom:0.3rem;"><span>${it.name}${n > 1 ? ' ×' + n : ''}</span><span>₱${Number(it.price * n).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`; }).join('')
       : '<div style="font-size:0.8rem;color:var(--fg-3);">No extra work found.</div>';
-    document.getElementById('bd-quotation-original-label').textContent = (q.materials || 0) > 0 ? 'Service + materials' : 'Original service';
+    document.getElementById('bd-quotation-original-label').textContent = isExtra ? 'Parts already used' : ((q.materials || 0) > 0 ? 'Service + materials' : 'Original service');
     document.getElementById('bd-quotation-original').textContent = `₱${Number(q.original).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('bd-quotation-total').textContent    = `₱${Number(q.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     const actions = document.getElementById('bd-quotation-actions');
@@ -6361,7 +6373,7 @@ function openBookingDetails(bookingId) {
     } else {
       actions.style.display = 'none';
       decided.style.display = 'block';
-      decided.textContent = (q.status === 'approved' ? 'You approved this quotation.' : 'You declined this quotation.') + ' When your service is done, you pay at the shop counter, or the shop sends you an invoice here to pay online by Cash or GCash.';
+      decided.textContent = (q.status === 'approved' ? 'You approved this ' + (isExtra ? 'extra work.' : 'quotation.') : 'You declined this ' + (isExtra ? 'extra work.' : 'quotation.')) + ' When your service is done, you pay at the shop counter, or the shop sends you an invoice here to pay online by Cash or GCash.';
       decided.style.color = q.status === 'approved' ? 'var(--green,#16a34a)' : 'var(--fg-2)';
       pendingBox.style.display = 'none';
     }
@@ -6388,7 +6400,8 @@ function openBookingDetails(bookingId) {
   let normalizedStatus = booking.status.toLowerCase().replace(' ', '_');
   if (normalizedStatus === 'inprogress') normalizedStatus = 'in_progress';
 
-  const quot = booking.quotation;
+  // only the FIRST quotation belongs to the Inspection step; a later extra work is asked while the booking is already In Progress
+  const quot = (booking.quotation && (booking.quotation.round || 1) === 1) ? booking.quotation : null;
   let currentIdx = steps.indexOf(normalizedStatus);
   // Once the customer has answered the quotation, the booking visually
   // advances to "In Progress" even though the shop hasn't clicked its own
@@ -7578,7 +7591,7 @@ function applyQuotationAnswer(qid, status) {
     document.getElementById('bd-quotation-pending-box').style.display = 'none';
     const decided = document.getElementById('bd-quotation-decided');
     decided.style.display = 'block';
-    decided.textContent = status === 'approved' ? 'You approved this quotation.' : 'You declined this quotation.';
+    decided.textContent = (status === 'approved' ? 'You approved this ' : 'You declined this ') + ((q && q.round > 1) ? 'extra work.' : 'quotation.');
     decided.style.color = status === 'approved' ? 'var(--green,#16a34a)' : 'var(--fg-2)';
   }
   renderNotifications();
@@ -7614,11 +7627,12 @@ function openQuotationConfirmModal(decision, qid, q) {
       <span>${it.name}${free ? ' <span style="text-decoration:none;display:inline-block;font-size:0.56rem;font-weight:700;letter-spacing:0.05em;background:#dcfce7;color:#15803d;border-radius:4px;padding:0.05rem 0.35rem;vertical-align:middle;">FREE</span>' : ''}${it.item_type === 'product' && it.quantity > 1 ? ` ×${it.quantity}` : ''}</span>
       <span style="font-family:'Syne',sans-serif;font-weight:700;white-space:nowrap;${free ? 'color:#15803d;' : ''}">${peso(it.price)}</span>
     </div>`;
-  let html = head('Your booked service') + booked.map(it => line(it, false, isBackjob && Number(it.price) === 0)).join('');
+  const isExtra = (q.round || 1) > 1;
+  let html = (booked.length ? head('Your booked service') + booked.map(it => line(it, false, isBackjob && Number(it.price) === 0)).join('') : '');
   if (findings.length)  html += head('Extra work') + findings.map(it => line(it, strikeExtra, false)).join('');
   if (materials.length) html += head('Materials used') + materials.map(it => line(it, strikeMats, false)).join('');
   html += `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:0.7rem;padding-top:0.6rem;border-top:1px solid var(--line-2);">
-      <span style="font-size:0.82rem;font-weight:700;color:var(--fg-1);">You will pay</span>
+      <span style="font-size:0.82rem;font-weight:700;color:var(--fg-1);">${isExtra ? (approve ? 'This extra work adds' : 'Billed for this extra work') : 'You will pay'}</span>
       <span style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--fg-1);">${peso(youPay)}</span></div>`;
   document.getElementById('qc-items').innerHTML = html;
 
@@ -7627,18 +7641,22 @@ function openQuotationConfirmModal(decision, qid, q) {
   if (approve) {
     icon.style.background = '#dcfce7';
     icon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-    document.getElementById('qc-title').textContent = 'Approve this quotation?';
-    document.getElementById('qc-subtitle').textContent = `The shop will do the extra work and use the materials below. You'll pay ${peso(q.total)}${isBackjob ? ' — your back job stays free.' : '.'}`;
+    document.getElementById('qc-title').textContent = isExtra ? 'Approve extra work #' + q.round + '?' : 'Approve this quotation?';
+    document.getElementById('qc-subtitle').textContent = isExtra
+      ? `The shop will do this extra work too. It adds ${peso(q.total)} to your bill. Your booked service keeps going either way.`
+      : `The shop will do the extra work and use the materials below. You'll pay ${peso(q.total)}${isBackjob ? ' — your back job stays free.' : '.'}`;
     document.getElementById('qc-note').textContent = "Pay by cash or GCash when the work is done. You can't change this answer after approving.";
-    confirmBtn.textContent = `Yes, Approve ${peso(q.total)}`;
+    confirmBtn.textContent = isExtra ? `Yes, Add ${peso(q.total)}` : `Yes, Approve ${peso(q.total)}`;
     confirmBtn.style.background = 'var(--brand-red)';
   } else {
     icon.style.background = '#f3f4f6';
     icon.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
-    document.getElementById('qc-title').textContent = 'Decline this quotation?';
-    document.getElementById('qc-subtitle').textContent = isBackjob
-      ? 'The shop will only do your free back job. None of the extra work or materials below will be used.'
-      : `The shop will only do your booked service${materials.length ? ' and the materials already used' : ''}. The extra work below won't be done.`;
+    document.getElementById('qc-title').textContent = isExtra ? 'Decline extra work #' + q.round + '?' : 'Decline this quotation?';
+    document.getElementById('qc-subtitle').textContent = isExtra
+      ? `This extra work won't be done${materials.length ? ' (only the parts already used are billed)' : ''}. Your booked service and any extra work you already approved continue.`
+      : (isBackjob
+        ? 'The shop will only do your free back job. None of the extra work or materials below will be used.'
+        : `The shop will only do your booked service${materials.length ? ' and the materials already used' : ''}. The extra work below won't be done.`);
     document.getElementById('qc-note').textContent = isBackjob
       ? "Only your free back job will be done. If the problem comes back later because of the work you declined, it won't be covered by this claim."
       : "Only your booked service will be done. You can't change this answer after declining.";

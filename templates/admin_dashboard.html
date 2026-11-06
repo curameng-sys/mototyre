@@ -1019,6 +1019,7 @@
     <div class="sidebar-label sidebar-toggle" data-group="management" onclick="toggleSidebarGroup('management')">Management <svg class="sb-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
     <div class="sidebar-group" id="sbg-management">
     <a href="#" onclick="showSection('bookings', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Bookings</a>
+    <a href="#" onclick="showSection('inspection', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></span> Inspection &amp; Quotation</a>
     <a href="#" onclick="showSection('day-schedule', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Day Schedule</a>
     <a href="#" onclick="showSection('outbox', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span> Outbox <span id="outbox-nav-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;"></span></a>
     <a href="#" onclick="showSection('returns', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></span> Returns <span id="returns-nav-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;"></span></a>
@@ -1839,6 +1840,24 @@
       </div>
       <div class="card">
         <div id="outbox-list"><div class="empty-state is-loading"><p>Loading…</p></div></div>
+      </div>
+    </section>
+
+    <!-- INSPECTION & QUOTATION: the extra work a mechanic found, added to a booking that is being worked on -->
+    <section id="sec-inspection" class="page-section">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Inspection <span class="accent">&amp; Quotation</span></div>
+          <div class="page-sub">The mechanic found more work? Pick the booking, add what he reported, and the customer approves or declines it. You can add extra work as many times as it happens; the booked service keeps going meanwhile.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.9rem;">
+        <input type="text" id="insp-search" placeholder="Search customer, booking or service…" oninput="renderInspection()" style="flex:1 1 240px;max-width:360px;padding:0.5rem 0.8rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.85rem;background:#fff;">
+        <button type="button" id="insp-chip-all" class="btn-primary-custom" onclick="setInspFilter('all')" style="padding:0.4rem 0.9rem;">All <span id="insp-count-all"></span></button>
+        <button type="button" id="insp-chip-waiting" class="btn-cancel" onclick="setInspFilter('waiting')" style="padding:0.4rem 0.9rem;">Waiting for the customer <span id="insp-count-waiting"></span></button>
+      </div>
+      <div class="card">
+        <div id="insp-list"><div class="empty-state is-loading"><p>Loading…</p></div></div>
       </div>
     </section>
 
@@ -4146,6 +4165,7 @@
     if (name === 'transactions') loadTxns();
     if (name === 'day-schedule') { initDaySchedule(); if (dsView === 'list') loadBookingList(); }
     if (name === 'outbox') { loadOutbox(); }
+    if (name === 'inspection') { loadInspection(); }
     if (name === 'returns') { loadReturns(); }
     if (name === 'mechanics') { loadMechanicsRoster(); }
     if (name === 'reports') { refreshReports(); }
@@ -4892,6 +4912,83 @@
       }
       grid.appendChild(cell);
     }
+  }
+
+
+  // ── INSPECTION & QUOTATION ──
+  let _inspData = [], _inspFilter = 'all';
+  const _inspEsc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const _inspPeso = n => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  async function loadInspection() {
+    const box = document.getElementById('insp-list');
+    box.innerHTML = '<div class="empty-state is-loading"><p>Loading…</p></div>';
+    try {
+      const res = await fetch('/api/inspection-bookings');
+      const data = await res.json();
+      _inspData = data.bookings || [];
+      renderInspection();
+    } catch (e) {
+      box.innerHTML = '<div class="empty-state"><p>Could not load the bookings. Please try again.</p></div>';
+    }
+  }
+  function setInspFilter(key) {
+    _inspFilter = key;
+    document.getElementById('insp-chip-all').className = key === 'all' ? 'btn-primary-custom' : 'btn-cancel';
+    document.getElementById('insp-chip-waiting').className = key === 'waiting' ? 'btn-primary-custom' : 'btn-cancel';
+    renderInspection();
+  }
+  function renderInspection() {
+    const box = document.getElementById('insp-list');
+    const q = (document.getElementById('insp-search').value || '').trim().toLowerCase();
+    document.getElementById('insp-count-all').textContent = '(' + _inspData.length + ')';
+    document.getElementById('insp-count-waiting').textContent = '(' + _inspData.filter(b => b.waiting).length + ')';
+    const rows = _inspData.map((b, i) => [b, i]).filter(([b]) => (_inspFilter === 'all' || b.waiting) &&
+      (!q || (b.customer + ' ' + b.ref + ' ' + b.service + ' ' + b.motorcycle + ' ' + b.mechanic).toLowerCase().includes(q)));
+    if (!rows.length) {
+      box.innerHTML = '<div class="empty-state"><p>' + (_inspData.length ? 'No bookings match.' : 'No booking is being worked on right now. Start a booking from Manage Bookings and it will show here.') + '</p></div>';
+      return;
+    }
+    const chip = r => {
+      const cls = r.status === 'approved' ? 'badge-approved' : (r.status === 'declined' ? 'badge-declined' : 'badge-awaiting_customer');
+      const word = r.status === 'approved' ? 'Approved' : (r.status === 'declined' ? 'Declined' : 'Waiting');
+      return '<span class="badge ' + cls + '" title="' + (r.in_person ? 'Answered at the shop' : '') + '">Extra work #' + r.no + ' · ' + word + ' · ' + _inspPeso(r.total) + '</span>';
+    };
+    box.innerHTML = '<table class="table"><thead><tr><th>Booking</th><th>Service</th><th>Mechanic</th><th>Status</th><th>Extra work</th><th>Action</th></tr></thead><tbody>' +
+      rows.map(([b, i]) => {
+        const act = b.waiting
+          ? '<div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">Waiting for the customer (#' + b.waiting.no + ')</div>' +
+            '<div style="display:flex;gap:0.3rem;flex-wrap:wrap;">' +
+            '<button type="button" class="btn-action-edit" onclick="inspDecide(' + i + ', \'approve\')">Approved at the shop</button>' +
+            '<button type="button" class="btn-action-edit" onclick="inspDecide(' + i + ', \'decline\')">Declined at the shop</button>' +
+            '<button type="button" class="btn-action-edit" onclick="inspWithdraw(' + i + ')">Withdraw</button></div>'
+          : (b.can_add
+              ? '<button type="button" class="btn-primary-custom" style="padding:0.4rem 0.9rem;" onclick="openEmbedded(\'quotations\', \'booking_id=' + b.id + '\', \'/quotation/new\')">+ Add extra work</button>'
+              : '<span style="font-size:0.72rem;color:var(--muted);">Assign a mechanic in Manage Bookings first</span>');
+        return '<tr>' +
+          '<td><div style="font-weight:700;">' + _inspEsc(b.customer) + '</div><div style="font-size:0.72rem;color:var(--muted);">' + _inspEsc(b.ref) + ' · ' + _inspEsc(b.motorcycle || 'No motorcycle') + '</div><div style="font-size:0.7rem;color:var(--muted);">' + _inspEsc(b.when) + '</div></td>' +
+          '<td>' + _inspEsc(b.service) + '</td>' +
+          '<td>' + (b.mechanic ? _inspEsc(b.mechanic) : '<span style="color:var(--muted);">Not assigned</span>') + '</td>' +
+          '<td><span class="badge ' + (b.status === 'in_progress' ? 'badge-in_progress' : 'badge-inspection') + '">' + _inspEsc(b.status_label) + '</span></td>' +
+          '<td>' + (b.rounds.length ? '<div style="display:flex;flex-direction:column;gap:0.25rem;align-items:flex-start;">' + b.rounds.map(chip).join('') + '</div>' : '<span style="font-size:0.75rem;color:var(--muted);">None yet</span>') + '</td>' +
+          '<td>' + act + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function inspDecide(i, decision) {
+    const b = _inspData[i];
+    if (b && b.waiting) decideInPerson(b.waiting.id, decision, b.customer, b.waiting.total);
+  }
+  async function inspWithdraw(i) {
+    const b = _inspData[i];
+    if (!b || !b.waiting) return;
+    const yes = await askConfirm({ title: 'Withdraw extra work #' + b.waiting.no + '?', message: 'The customer will no longer be asked about it, and its time is given back to the booking. You can add it again after fixing it.',
+      confirmLabel: 'Yes, withdraw', cancelLabel: 'Keep it', danger: true });
+    if (!yes) return;
+    try {
+      const res = await fetch('/quotation/' + b.waiting.id + '/withdraw', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await res.json();
+      if (data.success) { showToast('Extra work withdrawn.', 'success'); loadInspection(); }
+      else showToast(data.error || 'Could not withdraw it.', 'error');
+    } catch (e) { showToast('Network error — please try again.', 'error'); }
   }
 
   // ── LIST VIEW ──
@@ -7419,16 +7516,24 @@
     const exWrap = document.getElementById('bd-extras-wrap');
     if (extras && extras.items && extras.items.length) {
       const money = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-      const tag = { approved: ['#dcfce7', '#15803d', extras.in_person ? 'Approved at the shop' : 'Approved'],
-                    declined: ['#fee2e2', '#b91c1c', extras.in_person ? 'Declined at the shop' : 'Declined'],
-                    awaiting_customer: ['#fef3c7', '#92400e', 'Waiting for the customer'] }[extras.status] || ['#f3f4f6', '#4b5563', extras.status];
-      document.getElementById('bd-extras-tag').innerHTML = `<span style="font-size:0.66rem;font-weight:700;padding:0.2rem 0.55rem;border-radius:99px;background:${tag[0]};color:${tag[1]};">${tag[2]}</span>`;
-      document.getElementById('bd-extras-list').innerHTML = extras.items.map(it => `
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem;padding:0.55rem 0.8rem;background:#f9fafb;border:1px solid var(--border);border-radius:8px;${it.billed || extras.status === 'awaiting_customer' ? '' : 'opacity:0.6;'}">
-          <div style="min-width:0;"><div style="font-weight:600;font-size:0.82rem;color:var(--text);${it.billed || extras.status === 'awaiting_customer' ? '' : 'text-decoration:line-through;'}">${it.name.replace(/</g, '&lt;')}</div>
-            <div style="font-size:0.68rem;color:var(--muted);">${it.kind}${it.billed ? '' : (extras.status === 'awaiting_customer' ? ' · waiting for approval' : ' · not included')}</div></div>
+      const rounds = (extras.rounds && extras.rounds.length) ? extras.rounds : [{ no: 1, status: extras.status, in_person: extras.in_person, items: extras.items }];
+      const tagOf = r => ({ approved: ['#f0fdf4', '#15803d', r.in_person ? 'Approved at the shop' : 'Approved'],
+                            declined: ['#f4f4f5', '#3f3f46', r.in_person ? 'Declined at the shop' : 'Declined'],
+                            awaiting_customer: ['#fffbeb', '#92400e', 'Waiting for the customer'] }[r.status] || ['#f4f4f5', '#3f3f46', r.status]);
+      const tag = tagOf(rounds[rounds.length - 1]);
+      document.getElementById('bd-extras-tag').innerHTML = rounds.length > 1
+        ? `<span style="font-size:0.66rem;font-weight:700;padding:0.2rem 0.55rem;border-radius:99px;background:#f4f4f5;color:#3f3f46;">${rounds.length} extra works</span>`
+        : `<span style="font-size:0.66rem;font-weight:700;padding:0.2rem 0.55rem;border-radius:99px;background:${tag[0]};color:${tag[1]};">${tag[2]}</span>`;
+      document.getElementById('bd-extras-list').innerHTML = rounds.map(r => {
+        const t = tagOf(r), waiting = r.status === 'awaiting_customer';
+        const head = rounds.length > 1 ? `<div style="display:flex;align-items:center;justify-content:space-between;margin:0.5rem 0 0.3rem;"><span style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Extra work #${r.no}</span><span style="font-size:0.64rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:99px;background:${t[0]};color:${t[1]};">${t[2]}</span></div>` : '';
+        return head + r.items.map(it => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.6rem;padding:0.55rem 0.8rem;margin-bottom:0.3rem;background:#f9fafb;border:1px solid var(--border);border-radius:8px;${it.billed || waiting ? '' : 'opacity:0.6;'}">
+          <div style="min-width:0;"><div style="font-weight:600;font-size:0.82rem;color:var(--text);${it.billed || waiting ? '' : 'text-decoration:line-through;'}">${it.name.replace(/</g, '&lt;')}</div>
+            <div style="font-size:0.68rem;color:var(--muted);">${it.kind}${it.billed ? '' : (waiting ? ' · waiting for approval' : ' · not included')}</div></div>
           <span style="font-weight:700;font-size:0.85rem;color:var(--text);white-space:nowrap;">${money(it.amount)}</span>
         </div>`).join('');
+      }).join('');
       exWrap.style.display = 'block';
     } else {
       exWrap.style.display = 'none';

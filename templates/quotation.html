@@ -271,7 +271,18 @@
 <body>
 
 <div class="page-header">
-  {% if booking %}
+  {% if booking and booking.is_extra_round %}
+  <div class="page-title">Extra work #{{ booking.round_no }} <span class="accent">#{{ booking.ref }}</span></div>
+  <div class="page-sub">Status: {{ 'In Progress' if booking.status in ('in_progress', 'inprogress') else 'Inspection &amp; Estimation' }}. The booked service keeps going while the customer decides. Add what the mechanic found now, then send it to the customer.</div>
+  {% if booking.previous %}
+  <div id="prev-rounds" style="margin-top:0.55rem;display:flex;gap:0.4rem;flex-wrap:wrap;">
+    {% for p in booking.previous %}<span class="badge badge-{{ 'approved' if p.status == 'approved' else ('declined' if p.status == 'declined' else 'awaiting_customer') }}">Extra work #{{ p.no }} · {{ 'Approved' if p.status == 'approved' else ('Declined' if p.status == 'declined' else 'Waiting') }} · ₱{{ '{:,.2f}'.format(p.total) }}</span>{% endfor %}
+  </div>
+  {% endif %}
+  {% if booking.open_round %}
+  <div style="margin-top:0.6rem;padding:0.55rem 0.8rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:0.8rem;color:#92400e;">Extra work #{{ booking.open_round }} is still waiting for the customer's answer. You can send another one after they answer, or after you withdraw it in Inspection &amp; Quotation.</div>
+  {% endif %}
+  {% elif booking %}
   <div class="page-title">Quotation for booking <span class="accent">#{{ booking.ref }}</span></div>
   <div class="page-sub">Status: Inspection &amp; Estimation. Add what the mechanic found, parts and services, then send the quotation to the customer.</div>
   {% else %}
@@ -283,8 +294,8 @@
 <header class="topbar">
   {% if booking %}
     <div class="topbar-brand">
-      <span style="color:#fff;">Quotation for booking <span style="color:var(--red);">#{{ booking.ref }}</span></span>
-      <span class="badge-pill">Status: Inspection &amp; Estimation</span>
+      <span style="color:#fff;">{{ ('Extra work #' ~ booking.round_no ~ ' for booking') if booking.is_extra_round else 'Quotation for booking' }} <span style="color:var(--red);">#{{ booking.ref }}</span></span>
+      <span class="badge-pill">Status: {{ 'In Progress' if booking.status in ('in_progress', 'inprogress') else 'Inspection &amp; Estimation' }}</span>
     </div>
     <div class="topbar-right">
       <a href="{{ url_for('admin_dashboard', section='bookings') }}" target="_top" class="btn-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> <span>Manage Bookings</span></a>
@@ -544,12 +555,12 @@
             <label style="display:flex;gap:0.35rem;align-items:center;cursor:pointer;"><input type="radio" name="atshop" value="approve"> They approved</label>
             <label style="display:flex;gap:0.35rem;align-items:center;cursor:pointer;"><input type="radio" name="atshop" value="decline"> They declined</label>
           </div>
-          <div style="font-size:0.72rem;color:#6b7280;line-height:1.45;">No online message is sent. Work starts now, and the customer gets a notice that you recorded their answer at the shop.</div>
+          <div style="font-size:0.72rem;color:#6b7280;line-height:1.45;">No online message is sent. {% if booking and booking.is_extra_round %}The customer gets a notice that you recorded their answer at the shop.{% else %}Work starts now, and the customer gets a notice that you recorded their answer at the shop.{% endif %}</div>
         </div>
       </div>
       {% endif %}
       <button class="btn-save" id="save-btn" onclick="saveQuotation()" disabled>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> {% if booking %}Save &amp; Send Quotation{% else %}Save Quotation{% endif %}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> {% if booking and booking.is_extra_round %}Send Extra Work{% elif booking %}Save &amp; Send Quotation{% else %}Save Quotation{% endif %}
       </button>
       <div class="sent-msg" id="sent-msg"></div>
       <button class="btn-clear" id="clear-btn" onclick="clearAll()">× Clear All</button>
@@ -606,10 +617,13 @@
 <script>
   const HAS_BOOKING = {{ 'true' if booking else 'false' }};
   const BOOKING_ID  = {{ booking.id if booking else 'null' }};
-  const IS_BACKJOB = {{ 'true' if (booking and booking.is_backjob) else 'false' }};
+  const IS_EXTRA = {{ 'true' if (booking and booking.is_extra_round) else 'false' }};         // a second, third... extra work on the same booking
+  const ROUND_NO = {{ booking.round_no if booking else 1 }};
+  const BLOCKED_BY = {{ (booking.open_round or 'null') if booking else 'null' }};              // an earlier extra work is still waiting for the customer
+  const IS_BACKJOB = {{ 'true' if (booking and booking.is_backjob and not booking.is_extra_round) else 'false' }};
   const BACKJOB_REGULAR_PRICE = {{ (booking.regular_price if booking else 0) or 0 }};
   let items = [];
-  {% if booking %}
+  {% if booking and not booking.is_extra_round %}
   items.push({ item_type: 'service', name: {{ booking.service_name|tojson }}, unit_price: {{ booking.service_price }}, quantity: 1, locked: true, minutes: {{ booking.duration_min }} });
   {% endif %}
   // The booking's time: what was booked, what the counter already added (+30m / +1h), and the day label.
@@ -919,7 +933,7 @@
   function validateForm() {
     const hasName  = document.getElementById('cust-name').value.trim().length > 0;
     const hasItems = items.length > 0;
-    document.getElementById('save-btn').disabled = !(hasName && hasItems);
+    document.getElementById('save-btn').disabled = !(hasName && hasItems) || !!BLOCKED_BY;
   }
 
   function clearAll() {
@@ -1012,8 +1026,8 @@
           const firstName = (data.customer_first_name || name.split(' ')[0] || '').trim();
           const inspBy    = data.inspected_by || document.getElementById('inspected-by').value.trim();
           document.getElementById('modal-sub').textContent = data.in_person
-            ? `Recorded at the shop: ${firstName} ${data.in_person}. Work has started.`
-            : (inspBy ? `Quotation sent to ${firstName} · inspected by ${inspBy}` : `Quotation sent to ${firstName}`);
+            ? `Recorded at the shop: ${firstName} ${data.in_person}. ${IS_EXTRA ? (data.in_person === 'approved' ? 'The extra work was added.' : 'The booked service continues.') : 'Work has started.'}`
+            : (inspBy ? `${IS_EXTRA ? 'Extra work #' + ROUND_NO : 'Quotation'} sent to ${firstName} · inspected by ${inspBy}` : `${IS_EXTRA ? 'Extra work #' + ROUND_NO : 'Quotation'} sent to ${firstName}`);
         }
         document.getElementById('success-modal').classList.add('open');
         if (!HAS_BOOKING) items = [];
@@ -1030,13 +1044,13 @@
 
   function saveLabel() {
     const c = document.getElementById('atshop-check');
-    return HAS_BOOKING ? ((c && c.checked) ? 'Save &amp; Start Work' : 'Save &amp; Send Quotation') : 'Save Quotation';
+    return HAS_BOOKING ? ((c && c.checked) ? (IS_EXTRA ? 'Save &amp; Record Answer' : 'Save &amp; Start Work') : (IS_EXTRA ? 'Send Extra Work' : 'Save &amp; Send Quotation')) : 'Save Quotation';
   }
   function onAtShopToggle() {
     const on = document.getElementById('atshop-check').checked;
     document.getElementById('atshop-choice').style.display = on ? 'block' : 'none';
     const btn = document.getElementById('save-btn');
-    if (btn && !btn.disabled) btn.lastChild.textContent = ' ' + (on ? 'Save & Start Work' : 'Save & Send Quotation');
+    if (btn && !btn.disabled) btn.lastChild.textContent = ' ' + (on ? (IS_EXTRA ? 'Save & Record Answer' : 'Save & Start Work') : (IS_EXTRA ? 'Send Extra Work' : 'Save & Send Quotation'));
   }
 
   function newQuotation() {

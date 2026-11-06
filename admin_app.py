@@ -785,50 +785,104 @@ def _req_cache():
     return None
 
 
-def _latest_quotation(booking_id):
-    """The newest quotation of a booking. On a page that asks for many bookings, all quotations are read ONCE (with their items)."""
+def _all_quotes_map():
+    """Every booking-linked quotation (with its items), oldest first, grouped by booking. On a page that asks for many bookings
+    they are all read ONCE."""
     cache = _req_cache()
-    if cache is None:
-        return Quotation.query.filter_by(booking_id=booking_id).order_by(Quotation.created_at.desc()).first()
-    allq = cache.get('latest_quotes')
-    if allq is None:
-        allq = {}
-        for q in Quotation.query.options(selectinload(Quotation.items)).filter(Quotation.booking_id.isnot(None)).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all():
-            allq[q.booking_id] = q
-        cache['latest_quotes'] = allq
-    return allq.get(booking_id)
+    if cache is not None and 'quotes_map' in cache:
+        return cache['quotes_map']
+    m = {}
+    for q in Quotation.query.options(selectinload(Quotation.items)).filter(Quotation.booking_id.isnot(None)).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all():
+        m.setdefault(q.booking_id, []).append(q)
+    if cache is not None:
+        cache['quotes_map'] = m
+    return m
+
+
+def _booking_quotes(booking_id):
+    """All the quotations of one booking, oldest first. The first one is the inspection; every later one is another time the
+    mechanic found extra work ("Extra work #2", "#3"...)."""
+    if _req_cache() is None:
+        return Quotation.query.filter_by(booking_id=booking_id).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()
+    return list(_all_quotes_map().get(booking_id, []))
+
+
+def _latest_quotation(booking_id):
+    """The newest quotation of a booking."""
+    qs = _booking_quotes(booking_id)
+    return qs[-1] if qs else None
+
+
+def _quote_billed_items(q, backjob=False):
+    """The lines of ONE quotation that are on the bill: everything if the customer approved it; if they declined (or have not
+    answered), only the booked service and the parts already used."""
+    if q.status == 'approved':
+        return list(q.items)
+    return [i for i in q.items if i.locked or (i.item_type == 'product' and not backjob)]
+
+
+def _booking_billed_items(booking, quotes):
+    """The billed lines of ALL the booking's quotations, in order."""
+    backjob = booking.service.startswith(BACKJOB_PREFIX)
+    out = []
+    for q in quotes:
+        out.extend(_quote_billed_items(q, backjob))
+    return out
+
+
+def _booking_quotes_total(booking, quotes):
+    """What the customer owes for a booking that has quotations: the booked service, plus for each extra work the customer approved
+    everything on it, or for one they declined only the parts already used."""
+    backjob = booking.service.startswith(BACKJOB_PREFIX)
+    total = 0.0
+    for q in quotes:
+        bd = _quotation_breakdown(q.items)
+        total += bd['approve_total'] if q.status == 'approved' else (bd['booked'] if backjob else bd['decline_total'])
+    return round(total, 2)
+
+
+def _quote_round_no(q):
+    """Which extra work of its booking this quotation is: 1 for the inspection, 2, 3... for the ones after it."""
+    ids = [x.id for x in Quotation.query.filter_by(booking_id=q.booking_id).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()]
+    return ids.index(q.id) + 1 if q.id in ids else len(ids) + 1
 
 
 def booking_bill(booking):
     """What a booking in progress really costs when the customer is billed: the booked service plus the extra work they
-    approved (or, if they declined, the service plus the materials already used). None when there is no quotation, and
-    then the plain service price applies. Returns (total, [(name, amount)...], number of extra items)."""
-    q = _latest_quotation(booking.id)
-    if not q or not q.items:
+    approved (or, if they declined, the service plus the materials already used), over EVERY extra work of the booking. None
+    when there is no quotation, and then the plain service price applies. Returns (total, [(name, amount)...], number of extra items)."""
+    qs = [q for q in _booking_quotes(booking.id) if q.items]
+    if not qs:
         return None
-    rel = q.items if q.status == 'approved' else [i for i in q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))]
+    rel = _booking_billed_items(booking, qs)
     lines = [(_line_name(i), _line_amount(i)) for i in rel]
-    extra = len([i for i in rel if not i.locked]) if q.status == 'approved' else 0
+    extra = sum(len([i for i in q.items if not i.locked]) for q in qs if q.status == 'approved')
     return round(sum(a for _, a in lines), 2), lines, extra
 
 
 def booking_extras(booking):
-    """What the inspection added to a booking (findings, extra services, parts), for the booking details window.
-    Each line says whether it is on the bill: everything if the customer approved; only the parts already used if
-    they declined; nothing yet while the quotation waits for the customer."""
-    q = _latest_quotation(booking.id)
-    if not q or not q.items:
+    """What the inspection and every later extra work added to a booking (findings, extra services, parts), for the booking
+    details window. Each line says whether it is on the bill: everything if the customer approved; only the parts already
+    used if they declined; nothing yet while that extra work waits for the customer."""
+    qs = [q for q in _booking_quotes(booking.id) if q.items]
+    if not qs:
         return None
     kinds = {'product': 'Part', 'finding': 'Finding', 'service': 'Service'}
-    lines = []
-    for i in q.items:
-        if i.locked:
-            continue                                   # the booked service is already listed above
-        billed = q.status == 'approved' or (q.status == 'declined' and i.item_type == 'product'
-                                            and not booking.service.startswith(BACKJOB_PREFIX))
-        lines.append({'name': _line_name(i), 'amount': _line_amount(i), 'kind': kinds.get(i.item_type, 'Service'), 'billed': billed})
+    backjob = booking.service.startswith(BACKJOB_PREFIX)
+    lines, rounds = [], []
+    for n, q in enumerate(qs, start=1):
+        rlines = []
+        for i in q.items:
+            if i.locked:
+                continue                                   # the booked service is already listed above
+            billed = q.status == 'approved' or (q.status == 'declined' and i.item_type == 'product' and not backjob)
+            rlines.append({'name': _line_name(i), 'amount': _line_amount(i), 'kind': kinds.get(i.item_type, 'Service'), 'billed': billed, 'round': n})
+        lines.extend(rlines)
+        rounds.append({'no': n, 'id': q.id, 'status': q.status, 'in_person': bool(q.decided_in_person), 'items': rlines,
+                       'amount': round(sum(r['amount'] for r in rlines), 2)})
     bill = booking_bill(booking)
-    return {'status': q.status, 'in_person': bool(q.decided_in_person), 'items': lines, 'total': bill[0] if bill else None}
+    last = qs[-1]
+    return {'status': last.status, 'in_person': bool(last.decided_in_person), 'items': lines, 'total': bill[0] if bill else None, 'rounds': rounds}
 
 
 def awaiting_payment_ids():
@@ -984,6 +1038,16 @@ def _quotation_breakdown(items):
         'approve_total': booked + materials + extra,
         'decline_total': booked + materials,
     }
+
+
+def _day_quote_summary(quotes):
+    """The Day Schedule card's one-line view of ALL of a booking's extra work: waiting if any is waiting, else approved if any was
+    approved; the extra is what the approved ones add."""
+    waiting = any(q.status == 'awaiting_customer' for q in quotes)
+    approved = [q for q in quotes if q.status == 'approved']
+    extra = sum((lambda bd: bd['extra'] + bd['materials'])(_quotation_breakdown(q.items)) for q in approved)
+    status = 'awaiting_customer' if waiting else ('approved' if approved else quotes[-1].status)
+    return {'status': status, 'extra': extra, 'count': len(quotes)}
 
 
 def _mechanic_initials(name):
@@ -2524,18 +2588,26 @@ def _record_in_person_decision(q, booking, decision):
     q.decided_at = ph_now()
     q.decided_in_person = True
     q.decided_by_staff = current_user.fullname
-    if booking.status == 'inspection':
+    was_inspection = booking.status == 'inspection'
+    if was_inspection:
         booking.status = 'in_progress'
         booking.in_progress_at = ph_now()
+    _refresh_quote_time(booking)                      # a declined extra work gives its time back
     db.session.commit()
     ref = f'BKG-{booking.id:03d}'
     verb = 'approved' if decision == 'approve' else 'declined'
     extra = f' (₱{(q.total_amount or 0):,.2f})' if decision == 'approve' else ''
-    _notify_customer(booking, f'Quotation {verb} at the shop — {booking.service} ({ref})',
-        f'{current_user.fullname} recorded that you {verb} the quotation for {booking.service}{extra} at the shop. '
-        + ('We started work on your booking and the approved extra work.' if decision == 'approve'
-           else 'We started work on your booking. Extra work was not included.')
-        + ' If this is not right, please tell the staff right away.',
+    n = _quote_round_no(q)
+    what = 'the quotation' if n == 1 else f'extra work #{n}'
+    if was_inspection:
+        tail = ('We started work on your booking and the approved extra work.' if decision == 'approve'
+                else 'We started work on your booking. Extra work was not included.')
+    else:                                               # the original work never stopped
+        tail = ('The extra work was added to your booking.' if decision == 'approve' else 'The extra work was not added. Your booked service continues.')
+    _label = 'Quotation' if n == 1 else f'Extra work #{n}'
+    _notify_customer(booking, f'{_label} {verb} at the shop — {booking.service} ({ref})',
+        f'{current_user.fullname} recorded that you {verb} {what} for {booking.service}{extra} at the shop. '
+        + tail + ' If this is not right, please tell the staff right away.',
         status='in_progress')
     return verb
 
@@ -2573,16 +2645,20 @@ def complete_booking_invoice(bid):
     if booking.status == 'completed':
         return jsonify({'success': False, 'error': 'This booking is already completed.'}), 400
 
-    q = Quotation.query.filter_by(booking_id=bid).order_by(Quotation.created_at.desc()).first()
-    if q:
-        breakdown = _quotation_breakdown(q.items)
-        # A declined back-job quotation bills nothing but the (free or not-covered) redo line.
-        total = (breakdown['approve_total'] if q.status == 'approved'
-                 else (breakdown['booked'] if booking.service.startswith(BACKJOB_PREFIX) else breakdown['decline_total']))
-    else:
-        total = booking_price(booking)
+    qs = Quotation.query.filter_by(booking_id=bid).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()
+    waiting = [x for x in qs if x.status == 'awaiting_customer']
+    if waiting:
+        n = qs.index(waiting[0]) + 1
+        _what = 'The quotation' if n == 1 else f'Extra work #{n}'
+        return jsonify({'success': False, 'error': f"{_what} is still waiting for the customer's answer. "
+                                                   "Wait for it, or withdraw it, before completing the booking."}), 400
+    q = qs[-1] if qs else None
+    # A declined back-job quotation bills nothing but the (free or not-covered) redo line.
+    total = _booking_quotes_total(booking, qs) if qs else booking_price(booking)
 
-    parts_used = _deduct_quotation_parts(q, booking)
+    parts_used = []
+    for _qq in qs:
+        parts_used.extend(_deduct_quotation_parts(_qq, booking))
     booking.status = 'completed'
     booking.completed_at = ph_now()
     booking.total_amount = total
@@ -2641,11 +2717,10 @@ def complete_booking_invoice(bid):
 
     if not booking.walkin_customer_id and customer and customer.email:
         items_rows = ''
-        if q and q.items:
+        if qs and any(x.items for x in qs):
             # On decline, the booked service and any materials already used
             # still bill — only the extra inspection findings drop off.
-            relevant = (q.items if q.status == 'approved'
-                        else [i for i in q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))])
+            relevant = _booking_billed_items(booking, qs)
             items_rows = ''.join(
                 f'<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;">{_line_name(i)}</td>'
                 f'<td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">₱{_line_amount(i):,.2f}</td></tr>'
@@ -2721,10 +2796,9 @@ def record_invoice_cash(bid):
     customer_first_name = (booking.contact_name if booking.walkin_customer_id
                             else (customer.fullname if customer else 'the customer')).split(' ')[0]
     if not booking.walkin_customer_id and customer and customer.email:
-        _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
-        if _q:
-            _rel = _q.items if _q.status == 'approved' else [i for i in _q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))]
-            _items = [(_line_name(i), _line_amount(i)) for i in _rel]
+        _qs = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()
+        if _qs and any(x.items for x in _qs):
+            _items = [(_line_name(i), _line_amount(i)) for i in _booking_billed_items(booking, _qs)]
         else:
             _items = [(booking.service, booking.total_amount)]
         _subj, _html = booking_receipt_email(customer.fullname, f'INV-{booking.id:03d}', ref, booking.service, _items,
@@ -2743,12 +2817,11 @@ def api_booking_invoice_data(bid):
     Billing Center's Record Cash modal (pre-payment) and Receipt modal
     (post-payment) alike, so they can never show different numbers."""
     booking = Booking.query.get_or_404(bid)
-    q = Quotation.query.filter_by(booking_id=bid).order_by(Quotation.created_at.desc()).first()
+    _qs = Quotation.query.filter_by(booking_id=bid).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()
+    q = _qs[-1] if _qs else None
     if q:
-        # On decline, the booked service and any materials already used
-        # still bill — only the extra inspection findings drop off.
-        relevant = q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
-        items = [{'name': _line_name(i), 'price': _line_amount(i)} for i in relevant]
+        # On decline, the booked service and any materials already used still bill (for each extra work separately).
+        items = [{'name': _line_name(i), 'price': _line_amount(i)} for i in _booking_billed_items(booking, _qs)]
         # inspected_by is the mechanic as of when the quotation was sent;
         # fall back to the booking's current assignment for older quotations
         # that predate that field, or any other case it ended up blank —
@@ -4128,8 +4201,8 @@ def api_day_panel():
     _day_ids = [b.id for b in bookings]
     _day_quotes = {}
     if _day_ids:
-        for q in Quotation.query.filter(Quotation.booking_id.in_(_day_ids)).order_by(Quotation.created_at.asc()).all():
-            _day_quotes[q.booking_id] = q
+        for q in Quotation.query.filter(Quotation.booking_id.in_(_day_ids)).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all():
+            _day_quotes.setdefault(q.booking_id, []).append(q)
     _day_claims = {}
     if _day_ids:
         for rr in ReturnRequest.query.filter(ReturnRequest.redo_booking_id.in_(_day_ids)).all():
@@ -4211,9 +4284,7 @@ def api_day_panel():
                     'in_progress': _t_label(b.in_progress_at),
                     'completed': _t_label(b.completed_at),
                 },
-                'quotation': ({'status': _day_quotes[b.id].status,
-                               'extra': (lambda bd: bd['extra'] + bd['materials'])(_quotation_breakdown(_day_quotes[b.id].items))}
-                              if b.id in _day_quotes else None),
+                'quotation': (_day_quote_summary(_day_quotes[b.id]) if b.id in _day_quotes else None),
                 'is_backjob': b.service.startswith(BACKJOB_PREFIX),
                 'rma_ref': (_return_ref(_day_claims[b.id]) if b.id in _day_claims else None),
                 'customer_service': b.service[len(BACKJOB_PREFIX):] if b.service.startswith(BACKJOB_PREFIX) else b.service,
@@ -7144,6 +7215,14 @@ def quotation_new():
                 'mechanic_is_customer_choice': bool(b.preferred_mechanic_name) and b.preferred_mechanic_name == b.assigned_mechanic_name,
                 **_quote_time_facts(b),
             }
+            _prior = Quotation.query.filter_by(booking_id=b.id).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()
+            booking['round_no'] = len(_prior) + 1
+            booking['is_extra_round'] = bool(_prior)
+            booking['status'] = b.status
+            booking['open_round'] = next((_prior.index(x) + 1 for x in _prior if x.status == 'awaiting_customer'), None)
+            booking['previous'] = [{'no': i + 1, 'status': x.status, 'total': float(x.total_amount or 0)} for i, x in enumerate(_prior)]
+            if _prior:                                   # the time the earlier extra work already added is part of "already extended"
+                booking['staff_extra_min'] = booking['staff_extra_min'] + booking['quote_extra_min']
     return render_template('quotation.html', products=products, services=services,
                             mechanics=mechanics, booking=booking, fmt_duration=format_duration)
 
@@ -7170,6 +7249,21 @@ def _quote_time_facts(b):
     return {'date_label': _quote_day_label(b.date), 'start_min': start, 'duration_min': duration,
             'booked_end_min': booked_end, 'staff_extra_min': staff_extra, 'quote_extra_min': quote_extra,
             'booked_services': split_service_names(b.service)}
+
+
+def _refresh_quote_time(booking):
+    """The time the extra work adds to a booking = the minutes of every extra work that is waiting for the customer or approved
+    (a declined one adds nothing). Moves the booking's end time with it. Whatever the counter added by hand (+30m / +1h) stays."""
+    from datetime import time as _dtime
+    total = sum(int(q.extra_minutes or 0) for q in Quotation.query.filter_by(booking_id=booking.id).all()
+                if q.status in ('awaiting_customer', 'approved'))
+    staff = max(0, (booking.overrun_minutes or 0) - (booking.quote_extra_minutes or 0))
+    booking.quote_extra_minutes = total
+    booking.overrun_minutes = staff + total
+    start = booking.time.hour * 60 + booking.time.minute
+    new_end = compute_finish_minutes(start, booking.duration_minutes or DEFAULT_DURATION_MIN) + booking.overrun_minutes
+    booking.end_time = _dtime(min(new_end, 24 * 60 - 1) // 60, min(new_end, 24 * 60 - 1) % 60)
+    return new_end
 
 
 def _quote_extra_minutes(items):
@@ -7231,6 +7325,23 @@ def save_quotation():
     total = sum(float(i['unit_price']) * int(i['quantity']) for i in items)
     booking_id = data.get('booking_id')
     booking = Booking.query.get(booking_id) if booking_id else None
+    round_no = 1
+    if booking:
+        if booking.status not in ('inspection', 'in_progress', 'inprogress'):
+            return jsonify({'success': False, 'error': 'Extra work can only be added while the booking is in Inspection or In Progress.'}), 400
+        _prior = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()
+        _open = [x for x in _prior if x.status == 'awaiting_customer']
+        if _open:
+            _n = _prior.index(_open[0]) + 1
+            _what = 'The quotation' if _n == 1 else f'Extra work #{_n}'
+            return jsonify({'success': False, 'error': f"{_what} is still waiting for the customer's answer. "
+                                                       "Wait for the answer, or withdraw it, before adding more."}), 400
+        round_no = len(_prior) + 1
+        if _prior:                                   # a later extra work never repeats the booked service
+            items = [i for i in items if not i.get('locked')]
+            if not items:
+                return jsonify({'success': False, 'error': 'Add at least one item.'}), 400
+            total = sum(float(i['unit_price']) * int(i['quantity']) for i in items)
     # A part can only be quoted if the shop really has that many (several lines for one product are added up).
     _need = {}
     for i in items:
@@ -7295,11 +7406,8 @@ def save_quotation():
     time_info = None
     if booking:
         facts = _quote_time_facts(booking)
-        booking.overrun_minutes = facts['staff_extra_min'] + extra_min    # replaces the previous quotation's time
-        booking.quote_extra_minutes = extra_min
-        new_end = facts['booked_end_min'] + facts['staff_extra_min'] + extra_min
-        from datetime import time as _dtime
-        booking.end_time = _dtime(min(new_end, 24 * 60 - 1) // 60, min(new_end, 24 * 60 - 1) % 60)
+        db.session.flush()
+        new_end = _refresh_quote_time(booking)          # every extra work that is waiting or approved counts
         time_info = {'date_label': facts['date_label'], 'start_label': minutes_to_ampm(facts['start_min']),
                      'end_label': minutes_to_ampm(new_end), 'extra_minutes': extra_min, 'end_min': new_end}
     db.session.commit()
@@ -7309,14 +7417,17 @@ def save_quotation():
         verb = _record_in_person_decision(q, booking, in_person)
         return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}', 'inspected_by': inspected_by,
                         'customer_first_name': (q.customer_name or '').split(' ')[0] or None, 'in_person': verb,
-                        'time': time_info})
+                        'time': time_info, 'round': round_no})
 
     if booking:
         ref = f'BKG-{booking.id:03d}'
         breakdown = _quotation_breakdown(items)
         decline_note = ' (service + materials)' if breakdown['materials'] else ' (booked service only)'
-        title = 'Quotation ready: please respond'
+        title = 'Quotation ready: please respond' if round_no == 1 else f'Extra work #{round_no}: please respond'
         message = f'During inspection of your {booking.service} ({ref}), the mechanic found additional work.'
+        if round_no > 1:
+            message = (f'While working on your {booking.service} ({ref}), the mechanic found more work (extra work #{round_no}). '
+                       f'Your booked service keeps going while you decide.')
         if nc_reason:
             message = (f'During inspection of your {booking.service} ({ref}), the mechanic found the problem is not covered '
                        f'by the back job: {nc_reason}')
@@ -7350,7 +7461,40 @@ def save_quotation():
 
     customer_first_name = (q.customer_name or '').split(' ')[0] or None
     return jsonify({'success': True, 'quotation_id': q.id, 'ref': f'QUO-{q.id:03d}',
-                     'inspected_by': inspected_by, 'customer_first_name': customer_first_name, 'time': time_info})
+                     'inspected_by': inspected_by, 'customer_first_name': customer_first_name, 'time': time_info, 'round': round_no})
+
+
+@admin_app.route('/api/inspection-bookings')
+@login_required
+@require_admin_or_staff
+def api_inspection_bookings():
+    """The bookings the shop is working on right now (Inspection & Estimation or In Progress), each with the extra work it already
+    has, for the Inspection & Quotation section. The mechanic reports what he found to the staff, the staff picks the booking here
+    and adds it, as many times as it happens."""
+    rows = (Booking.query.options(joinedload(Booking.customer))
+            .filter(Booking.status.in_(['inspection', 'in_progress', 'inprogress']), Booking.is_archived == False)
+            .order_by(Booking.date.desc(), Booking.time.desc()).limit(150).all())
+    qmap = {}
+    if rows:
+        for q in (Quotation.query.options(selectinload(Quotation.items)).filter(Quotation.booking_id.in_([b.id for b in rows]))
+                  .order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()):
+            qmap.setdefault(q.booking_id, []).append(q)
+    out = []
+    for b in rows:
+        rounds = [{'no': i + 1, 'id': q.id, 'status': q.status, 'total': float(q.total_amount or 0), 'in_person': bool(q.decided_in_person),
+                   'items': len([x for x in q.items if not x.locked])} for i, q in enumerate(qmap.get(b.id, []))]
+        waiting = next((r for r in rounds if r['status'] == 'awaiting_customer'), None)
+        out.append({
+            'id': b.id, 'ref': f'BKG-{b.id:03d}', 'customer': _booking_customer_name(b) or 'Customer',
+            'service': b.service, 'motorcycle': _moto_label(b), 'mechanic': b.assigned_mechanic_name or '',
+            'status': 'in_progress' if b.status in ('in_progress', 'inprogress') else 'inspection',
+            'status_label': 'In Progress' if b.status in ('in_progress', 'inprogress') else 'Inspection & Estimation',
+            'when': f"{_quote_day_label(b.date)}, {b.time.strftime('%I:%M %p').lstrip('0')}",
+            'rounds': rounds, 'waiting': waiting, 'can_add': waiting is None and bool(b.assigned_mechanic_name),
+            'needs_mechanic': not b.assigned_mechanic_name,
+        })
+    out.sort(key=lambda o: (0 if o['waiting'] else 1))        # the ones waiting for a customer first (the sort keeps the date order inside each group)
+    return jsonify({'bookings': out, 'waiting_count': sum(1 for o in out if o['waiting'])})
 
 
 @admin_app.route('/quotations')
@@ -7427,9 +7571,15 @@ def withdraw_quotation(qid):
     if quot.status != 'awaiting_customer':
         return jsonify({'success': False, 'error': 'This quotation can no longer be withdrawn.'}), 400
     booking_id = quot.booking_id
+    sent_at = quot.created_at
     QuotationItem.query.filter_by(quotation_id=quot.id).delete()
     db.session.delete(quot)
-    Notification.query.filter_by(booking_id=booking_id, type='quotation').delete()
+    db.session.flush()
+    Notification.query.filter(Notification.booking_id == booking_id, Notification.type == 'quotation',
+                              Notification.created_at >= sent_at).delete(synchronize_session=False)
+    _b = Booking.query.get(booking_id)
+    if _b:
+        _refresh_quote_time(_b)
     db.session.commit()
     return jsonify({'success': True})
 
@@ -7671,8 +7821,8 @@ def payments():
             b.is_invoice_flow = False
             _bill = booking_bill(b)                     # service + the extra work the customer approved
             b.bill_total, b.bill_lines, b.extra_item_count = (_bill[0], _bill[1], _bill[2]) if _bill else (None, None, 0)
-            _q = Quotation.query.filter_by(booking_id=b.id).order_by(Quotation.created_at.desc()).first()
-            b.quotation_decided = bool(_q and _q.status in ('approved', 'declined'))
+            _bq = _booking_quotes(b.id)
+            b.quotation_decided = bool(_bq) and all(x.status in ('approved', 'declined') for x in _bq)
 
         # Completed-but-unpaid invoices from the Inspection & Estimation flow
         # — the customer may or may not have picked a method yet.
@@ -7686,12 +7836,11 @@ def payments():
         _inv_quotations = {}
         if pending_invoices:
             for q in Quotation.query.filter(Quotation.booking_id.in_([b.id for b in pending_invoices])) \
-                                     .order_by(Quotation.created_at.asc()).all():
-                _inv_quotations[q.booking_id] = q
+                                     .order_by(Quotation.created_at.asc(), Quotation.id.asc()).all():
+                _inv_quotations.setdefault(q.booking_id, []).append(q)
         for b in pending_invoices:
             b.is_invoice_flow = True
-            q = _inv_quotations.get(b.id)
-            b.extra_item_count = len([i for i in q.items if not i.locked]) if (q and q.status == 'approved') else 0
+            b.extra_item_count = sum(len([i for i in q.items if not i.locked]) for q in _inv_quotations.get(b.id, []) if q.status == 'approved')
 
         pending_bookings = sorted(
             pending_bookings + pending_invoices,
@@ -7738,11 +7887,12 @@ def payments():
         _hist_quotations = {}
         if _hist_booking_ids:
             for q in Quotation.query.filter(Quotation.booking_id.in_(_hist_booking_ids)) \
-                                     .order_by(Quotation.created_at.asc()).all():
-                _hist_quotations[q.booking_id] = q
+                                     .order_by(Quotation.created_at.asc(), Quotation.id.asc()).all():
+                _hist_quotations.setdefault(q.booking_id, []).append(q)
         for b in history_bookings:
-            q = _hist_quotations.get(b.id)
-            b.extra_item_count = len([i for i in q.items if not i.locked]) if (q and q.status == 'approved') else 0
+            _hq = _hist_quotations.get(b.id, [])
+            q = _hq[0] if _hq else None                 # a back job's own quotation is the first one
+            b.extra_item_count = sum(len([i for i in x.items if not i.locked]) for x in _hq if x.status == 'approved')
             b.paid_at_display = b.invoice_paid_at or b.completed_at or b.created_at
             # Back jobs: free unless the customer approved extra work — then show the split.
             b.is_backjob = b.service.startswith(BACKJOB_PREFIX)
@@ -7949,8 +8099,14 @@ def booking_payment_submit(bid):
     if booking.status == 'completed' and booking.invoice_paid:
         return jsonify({'success': False, 'error': 'This booking is already paid.'}), 400
 
+    _qs_all = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.asc(), Quotation.id.asc()).all()
+    _waiting = [x for x in _qs_all if x.status == 'awaiting_customer']
+    if _waiting:
+        _n = _qs_all.index(_waiting[0]) + 1
+        _what = 'The quotation' if _n == 1 else f'Extra work #{_n}'
+        return jsonify({'success': False, 'error': f"{_what} is still waiting for the customer's answer. Wait for it, or withdraw it, before collecting payment."}), 400
+
     try:
-        _q = Quotation.query.filter_by(booking_id=booking.id).order_by(Quotation.created_at.desc()).first()
         booking.status         = 'completed'
         if not booking.completed_at:
             booking.completed_at = ph_now()
@@ -7967,7 +8123,8 @@ def booking_payment_submit(bid):
             booking.invoice_cash_received = amount_f
             booking.invoice_change = 0
             booking.invoice_received_by = current_user.fullname
-        _deduct_quotation_parts(_q, booking)
+        for _qq in _qs_all:
+            _deduct_quotation_parts(_qq, booking)
         db.session.commit()
 
         # Notify customer
