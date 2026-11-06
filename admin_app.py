@@ -594,6 +594,21 @@ class Payment(db.Model):
     job_order      = db.relationship('JobOrder', backref=db.backref('payment', uselist=False))
 
 
+class WalkInQueue(db.Model):
+    """The counter's waiting list: a walk-in customer puts their name down, and is called in the order they came, when a mechanic
+    is free. Only staff see it. A name is only good for the day it was written."""
+    __tablename__ = 'walkin_queue'
+    id               = db.Column(db.Integer, primary_key=True)
+    customer_name    = db.Column(db.String(100), nullable=False)
+    customer_phone   = db.Column(db.String(20))
+    motorcycle_model = db.Column(db.String(100))
+    note             = db.Column(db.String(200))                     # what they came for, e.g. "oil change"
+    status           = db.Column(db.String(12), default='waiting')   # waiting, served, cancelled
+    created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    done_at          = db.Column(db.DateTime, nullable=True)
+    job_order_id     = db.Column(db.Integer, nullable=True)
+
+
 class Notification(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -8487,6 +8502,90 @@ def walk_in():
                            view_quotation=view_quotation)
 
 
+def _waiting_today():
+    """Today's waiting list, the first to come first. A name written on an earlier day is no longer in the line."""
+    today = ph_now().date()
+    start = datetime.combine(today, datetime.min.time())
+    return (WalkInQueue.query.filter(WalkInQueue.status == 'waiting', WalkInQueue.created_at >= start)
+            .order_by(WalkInQueue.created_at.asc(), WalkInQueue.id.asc()).all())
+
+
+def _queue_payload():
+    now = ph_now()
+    start_min = now.hour * 60 + now.minute
+    free = [r for r in _mech_availability(now.date(), start_min, start_min + 30, starts_now=True) if r['group'] == 'free']
+    rows = []
+    for pos, w in enumerate(_waiting_today(), start=1):
+        waited = max(0, int((now - w.created_at).total_seconds() // 60))
+        rows.append({'id': w.id, 'position': pos, 'name': w.customer_name, 'phone': w.customer_phone or '', 'motorcycle': w.motorcycle_model or '',
+                     'note': w.note or '', 'waited_min': waited, 'since': w.created_at.strftime('%I:%M %p').lstrip('0')})
+    return {'queue': rows, 'free_mechanics': [{'id': r['id'], 'name': r['name'], 'line': r['line']} for r in free],
+            'can_call': bool(rows) and bool(free)}
+
+
+@admin_app.route('/api/walkin-queue')
+@login_required
+@require_admin_or_staff
+def api_walkin_queue():
+    return jsonify(_queue_payload())
+
+
+@admin_app.route('/api/walkin-queue/add', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def api_walkin_queue_add():
+    data = request.get_json(silent=True) or {}
+    name = clean_str(data.get('name', ''), max_len=100)
+    if not name:
+        return jsonify({'success': False, 'error': 'Please enter the customer name.'}), 400
+    w = WalkInQueue(customer_name=name, customer_phone=clean_str(data.get('phone', ''), max_len=20),
+                    motorcycle_model=clean_str(data.get('motorcycle', ''), max_len=100), note=clean_str(data.get('note', ''), max_len=200))
+    db.session.add(w)
+    db.session.commit()
+    return jsonify({'success': True, 'id': w.id, **_queue_payload()})
+
+
+@admin_app.route('/api/walkin-queue/<int:wid>/cancel', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def api_walkin_queue_cancel(wid):
+    w = WalkInQueue.query.get_or_404(wid)
+    if w.status != 'waiting':
+        return jsonify({'success': False, 'error': 'This customer is no longer waiting.'}), 400
+    w.status, w.done_at = 'cancelled', ph_now()
+    db.session.commit()
+    return jsonify({'success': True, **_queue_payload()})
+
+
+@admin_app.route('/api/walkin-queue/<int:wid>/call', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def api_walkin_queue_call(wid):
+    """Calls the customer: only the one who has waited longest, and only when a mechanic is free. Returns what the Walk-In form needs
+    (the customer, and the mechanic who is free). It does not take them out of the line; the job order does, once it is created."""
+    w = WalkInQueue.query.get_or_404(wid)
+    waiting = _waiting_today()
+    if w.status != 'waiting' or w not in waiting:
+        return jsonify({'success': False, 'error': 'This customer is no longer in the line.'}), 400
+    if waiting[0].id != w.id:
+        return jsonify({'success': False, 'error': f'{waiting[0].customer_name} came first and is next.'}), 409
+    payload = _queue_payload()
+    if not payload['free_mechanics']:
+        return jsonify({'success': False, 'error': 'No mechanic is free right now. Wait for one to finish.'}), 409
+    return jsonify({'success': True, 'customer': {'id': w.id, 'name': w.customer_name, 'phone': w.customer_phone or '',
+                                                   'motorcycle': w.motorcycle_model or '', 'note': w.note or ''},
+                    'mechanic': payload['free_mechanics'][0]})
+
+
+@admin_app.route('/api/walkin-queue/<int:wid>')
+@login_required
+@require_admin_or_staff
+def api_walkin_queue_one(wid):
+    w = WalkInQueue.query.get_or_404(wid)
+    return jsonify({'id': w.id, 'name': w.customer_name, 'phone': w.customer_phone or '', 'motorcycle': w.motorcycle_model or '',
+                    'note': w.note or '', 'status': w.status})
+
+
 @admin_app.route('/walk-in/search-customer')
 @login_required
 @require_admin_or_staff
@@ -8627,6 +8726,15 @@ def walkin_create_job_order():
     if not data:
         return jsonify({'success': False, 'error': 'No data received'}), 400
 
+    queue_entry = None
+    if data.get('queue_id'):
+        queue_entry = WalkInQueue.query.get(int(data.get('queue_id')))
+        waiting = _waiting_today()
+        if not queue_entry or queue_entry.status != 'waiting' or queue_entry not in waiting:
+            return jsonify({'success': False, 'error': 'This customer is no longer in the waiting list.'}), 409
+        if waiting[0].id != queue_entry.id:
+            return jsonify({'success': False, 'error': f'{waiting[0].customer_name} came first and is next.'}), 409
+
     customer_name  = clean_str(data.get('customer_name', ''), max_len=100)
     customer_phone = clean_str(data.get('customer_phone', ''), max_len=20)
     moto_model     = clean_str(data.get('motorcycle_model', ''), max_len=100)
@@ -8704,6 +8812,8 @@ def walkin_create_job_order():
                 quantity     = i['quantity'],
                 unit_price   = i['unit_price'],
             ))
+        if queue_entry:
+            queue_entry.status, queue_entry.done_at, queue_entry.job_order_id = 'served', now, jo.id
         db.session.commit()
         return jsonify({'success': True, 'job_order_id': jo.id, 'ref': f'JO-{jo.id:03d}'})
     except Exception as e:
