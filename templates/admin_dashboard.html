@@ -234,7 +234,7 @@
     .ds-tab.on .n { background: rgba(255,255,255,0.25); color: #fff; }
     .ds-tab .n.alert { background: #dc2626; color: #fff; }
     #day-schedule-body > .ds-sec:not(.ds-on), #day-schedule-body > .ds-foot:not(.ds-on) { display: none !important; }
-    /* Day Schedule on a computer: the page does not scroll. The calendar sits on the left, the capacity controls and the
+    /* Day Schedule on a computer: the page does not scroll. The calendar sits on the left and the
        day's panel on the right, and only the day's panel (or the list) scrolls inside itself. */
     @media (min-width: 901px) {
       body.ds-lock { overflow: hidden; }
@@ -255,13 +255,6 @@
       body.ds-lock .ds-count { display: flex; align-items: center; justify-content: center; align-self: flex-start; min-width: 20px; height: 20px; font-size: 0.68rem; font-weight: 700; color: #fff; background: #2563eb; border-radius: 99px; padding: 0 0.4rem; margin-top: auto; }
       body.ds-lock #ds-cal-grid > div > div:not(:first-child):not(.ds-count) { display: none; }
       body.ds-lock #ds-cal-grid > div { padding: 0.4rem 0.45rem !important; gap: 0.2rem !important; border-radius: 10px !important; }
-      body.ds-lock .ds-right > div:nth-child(2) { gap: 0.75rem !important; }
-      body.ds-lock .ds-right > div:nth-child(2) > .card { padding: 0.6rem 0.9rem !important; }
-      body.ds-lock .ds-right > div:nth-child(2) > .card > div:first-child { margin-bottom: 0.3rem !important; }
-      body.ds-lock .ds-right > div:nth-child(2) > .card > div:nth-child(2):not(#cap-bottleneck-text) { margin-bottom: 0.3rem !important; font-size: 0.66rem !important; }
-      body.ds-lock #cap-bottleneck-text { font-size: 0.78rem !important; line-height: 1.4 !important; }
-      body.ds-lock #cap-mechanic-note { font-size: 0.72rem !important; margin-top: 0.3rem !important; }
-      body.ds-lock .ds-right > div:nth-child(2) { margin-bottom: 0.55rem !important; }
       body.ds-lock .ds-day-card { background: transparent; border: 0; box-shadow: none; margin-bottom: 0 !important; }
       /* the date, the status counts and the tabs stay put; only the open tab's content (the time slots, etc.) scrolls */
       body.ds-lock #day-schedule-body { padding: 0 !important; flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -281,7 +274,6 @@
       body.ds-lock #ds-cal-grid > div { min-height: 0 !important; min-width: 0; overflow: hidden; }
       body.ds-lock #ds-selected-label { display: none; }
       body.ds-lock .ds-right { display: flex; flex-direction: column; min-height: 0; }
-      body.ds-lock .ds-right > div:nth-child(2) { flex-shrink: 0; margin-bottom: 0.85rem !important; }
       body.ds-lock .ds-day-card { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
       body.ds-lock #ds-view-list { flex: 1; min-height: 0; display: flex; flex-direction: column; }
       body.ds-lock #ds-view-list > .card { flex: 1; min-height: 0; overflow: auto; }
@@ -1476,9 +1468,8 @@
                       <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:0.25rem 0.6rem;border-radius:6px;">Cancelled</span>
                     {% elif group_bookings|length > 1 %}
                       {# Each service in a batch can be on its own date/time and needs its own
-                         Start/Cancel — done per-service inside the details modal, not here,
-                         so starting one never silently drags the others along with it. #}
-                      <span style="font-size:0.7rem;color:var(--muted);font-style:italic;">Click row to manage each service</span>
+                         the details modal only shows them (information, no buttons). #}
+                      <span style="font-size:0.7rem;color:var(--muted);font-style:italic;">Click row to view the services</span>
                     {% else %}
                       {% if b.status == 'in_progress' and not b.walkin_customer_id %}
                         {% set _bill = booking_bill(b) %}
@@ -1594,34 +1585,6 @@
         </div>{# /ds-left #}
         <div class="ds-right">
         <input type="date" id="day-schedule-date" style="display:none;">
-
-        <!-- CAPACITY CONTROLS -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:0.85rem;margin-bottom:1.1rem;">
-          <div class="card" style="padding:1rem 1.1rem;">
-            <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.65rem;">Mechanics on Duty</div>
-            <input type="range" id="cap-mechanic-slider" min="0" max="0" value="0" step="1"
-                   oninput="onCapacitySliderInput()" onchange="saveCapacity('mechanic_count', this.value)"
-                   style="width:100%;accent-color:var(--red);">
-            <div id="cap-mechanic-note" style="font-size:0.78rem;color:var(--text);margin-top:0.55rem;line-height:1.5;"></div>
-          </div>
-
-          <div class="card" style="padding:1rem 1.1rem;">
-            <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Daily Booking Cap</div>
-            <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.6rem;">the most we will accept in a day</div>
-            <div style="display:flex;align-items:center;gap:0.5rem;">
-              <button type="button" onclick="stepCap(-1)" style="width:34px;height:34px;flex-shrink:0;border-radius:8px;border:1px solid var(--border);background:#f9fafb;font-weight:700;font-size:1rem;cursor:pointer;">−</button>
-              <input type="number" id="cap-daily-input" min="0" step="1"
-                     onchange="saveCapacity('daily_cap', this.value)"
-                     style="flex:1;min-width:0;text-align:center;padding:0.45rem;border:1px solid var(--border);border-radius:8px;font-weight:700;font-size:0.95rem;">
-              <button type="button" onclick="stepCap(1)" style="width:34px;height:34px;flex-shrink:0;border-radius:8px;border:1px solid var(--border);background:#f9fafb;font-weight:700;font-size:1rem;cursor:pointer;">+</button>
-            </div>
-          </div>
-
-          <div class="card" id="cap-bottleneck-card" style="padding:1rem 1.1rem;border-width:2px;transition:all 0.2s;">
-            <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.55rem;">What's Turning Customers Away</div>
-            <div id="cap-bottleneck-text" style="font-size:0.86rem;font-weight:600;color:var(--text);line-height:1.55;">Loading…</div>
-          </div>
-        </div>
 
         <div class="card ds-day-card">
           <div id="day-schedule-body" class="card-body">
@@ -3113,11 +3076,6 @@
       <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.75rem 1rem;text-align:center;">
         <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Mechanic</div>
         <div style="font-size:0.82rem;color:var(--text);font-weight:600;" id="bd-mechanic"></div>
-        <div id="bd-mechanic-edit" style="display:flex;gap:0.35rem;margin-top:0.4rem;">
-          <div id="bd-mechanic-picker" style="flex:1;min-width:0;"></div>
-          <input type="hidden" id="bd-mechanic-reassign" value="">
-          <button type="button" onclick="saveMechanicReassign()" style="font-size:0.72rem;padding:0.25rem 0.5rem;background:#1f2937;color:#fff;border:none;border-radius:5px;cursor:pointer;">Save</button>
-        </div>
         <div id="bd-mechanic-locked" style="display:none;margin-top:0.35rem;font-size:0.68rem;color:var(--muted);">Can't be changed · the job is finished</div>
         <div id="bd-preferred-mechanic" style="display:none;margin-top:0.35rem;font-size:0.68rem;color:var(--muted);"></div>
       </div>
@@ -4211,7 +4169,7 @@
   }
 
   // Every add, edit, delete or assign touches the roster the bookings
-  // calendar, the mechanic timeline, the on-duty slider, and the capacity
+  // calendar, and the mechanic timeline
   // read all depend on — a stale one of those is how a shop double-books
   // someone who's already gone. Refresh them all together, not just this
   // table, whether or not the admin is currently looking at them.
@@ -4721,40 +4679,6 @@
 
   let _currentBookingGroupIds = [];
 
-  // The shared mechanic dropdown, checked against this booking's own time.
-  async function populateMechanicReassign(currentName) {
-    const hidden = document.getElementById('bd-mechanic-reassign');
-    hidden.value = '';
-    const bid = _currentBookingGroupIds[0];
-    if (!bid) return;
-    const p = new MechPicker(document.getElementById('bd-mechanic-picker'), {
-      url: () => `/api/mechanic-availability?mode=booking&booking_id=${bid}`,
-      none: { label: 'Shop decides', sub: 'No mechanic on this booking' },
-      keepCurrent: true,
-      onChange: id => { hidden.value = id || ''; },
-    });
-    await p.load();
-    const cur = p.rows().find(r => r.name === currentName);
-    if (cur) { p.value = String(cur.id); hidden.value = String(cur.id); p.renderBox(); p.renderList(); }
-  }
-
-  async function saveMechanicReassign() {
-    const mechanicId = document.getElementById('bd-mechanic-reassign').value;
-    if (!_currentBookingGroupIds.length) return;
-    try {
-      for (const bid of _currentBookingGroupIds) {
-        await fetch(`/booking/${bid}/assign-mechanic`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-          body: `mechanic_id=${encodeURIComponent(mechanicId)}`,
-        });
-      }
-      window.location.reload();
-    } catch (e) {
-      alert('Could not update the mechanic. Please try again.');
-    }
-  }
-
   // ── DAY SCHEDULE ──
   const STATUS_COLORS = {
     pending:     { bg:'#fffbeb', color:'#92400e', border:'#fde68a' },
@@ -4815,7 +4739,6 @@
     updateSelectedLabel();
     renderDsCalendar();
     loadDaySchedule();
-    loadCapacity();
   }
 
   function jumpToToday() {
@@ -4826,7 +4749,6 @@
     updateSelectedLabel();
     renderDsCalendar();
     loadDaySchedule();
-    loadCapacity();
   }
 
   function shiftCalendarMonth(delta) {
@@ -4848,7 +4770,6 @@
     document.getElementById('day-schedule-date').value = dateStr;
     updateSelectedLabel();
     loadDaySchedule();
-    loadCapacity();
     renderDsCalendar();
   }
 
@@ -5138,101 +5059,6 @@
           <td><span class="badge" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">${b.status.replace(/_/g,' ')}</span></td>
         </tr>`;
     }).join('');
-  }
-
-  // ── CAPACITY CONTROLS ──
-  // Three panels sharing the Day Schedule's selected date: how many
-  // mechanics are on duty, the policy cap on bookings, and — the actual
-  // point of this dashboard — which of those two is really limiting the day.
-  let _capacityRosterSize = 0;
-
-  let _capLoadSeq = 0;
-  async function loadCapacity() {
-    const dateInput = document.getElementById('day-schedule-date');
-    if (!dateInput.value) dateInput.value = todayISO();
-    const seq = ++_capLoadSeq;
-    let data;
-    try {
-      const res = await fetch(`/api/capacity?date=${dateInput.value}`);
-      data = await res.json();
-    } catch (e) {
-      if (seq === _capLoadSeq) document.getElementById('cap-bottleneck-text').textContent = 'Could not load capacity data.';
-      return;
-    }
-    if (data.error) return;
-    // A slower, earlier request landing after a faster, later one would
-    // otherwise stomp the just-saved number back to what it was before —
-    // only the most recently *initiated* load is allowed to actually paint.
-    if (seq !== _capLoadSeq) return;
-
-    _capacityRosterSize = data.roster_size;
-    const slider = document.getElementById('cap-mechanic-slider');
-    slider.max = data.roster_size;
-    slider.value = data.mechanic_count;
-    renderMechanicNote(data.mechanic_count, data.working_today, data.roster_size, data.staff_note);
-
-    document.getElementById('cap-daily-input').value = data.daily_cap;
-
-    renderBottleneck(data.bottleneck);
-  }
-
-  function renderMechanicNote(mechanicCount, workingToday, rosterSize, staffNote) {
-    const note = document.getElementById('cap-mechanic-note');
-    note.textContent = staffNote
-      ? staffNote
-      : `${rosterSize} on the roster · ${workingToday} working today`;
-  }
-
-  // Live feedback as the slider is dragged, before the change actually saves
-  // (onchange fires on release) — the roster count itself is known instantly,
-  // even though whether anyone within it is individually off duty needs the
-  // server's answer once it's actually set.
-  function onCapacitySliderInput() {
-    const slider = document.getElementById('cap-mechanic-slider');
-    document.getElementById('cap-mechanic-note').textContent =
-      `${_capacityRosterSize} on the roster · ${slider.value} working today`;
-  }
-
-  let _capStepSaveTimer = null;
-  function stepCap(delta) {
-    const input = document.getElementById('cap-daily-input');
-    const next = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
-    input.value = next;
-    // Debounced: clicking +/- rapidly used to fire one save+reload per click,
-    // and those overlapping requests could land out of order and stomp the
-    // number back to a stale value mid-click — the "glitch." Only the last
-    // click in a burst actually hits the server now.
-    clearTimeout(_capStepSaveTimer);
-    _capStepSaveTimer = setTimeout(() => saveCapacity('daily_cap', next), 350);
-  }
-
-  async function saveCapacity(field, value) {
-    const dateInput = document.getElementById('day-schedule-date');
-    const payload = { date: dateInput.value };
-    payload[field] = value === '' ? null : parseInt(value, 10);
-    try {
-      await fetch('/api/capacity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-    } catch (e) { /* fall through to reload regardless */ }
-    loadCapacity();
-    renderDsCalendar();
-  }
-
-  function renderBottleneck(b) {
-    const card = document.getElementById('cap-bottleneck-card');
-    const text = document.getElementById('cap-bottleneck-text');
-    if (!b) { text.textContent = '—'; return; }
-    text.textContent = b.message;
-    if (b.binding === 'cap') {
-      card.style.background = 'rgba(217,119,6,0.08)';
-      card.style.borderColor = '#f59e0b';
-    } else {
-      card.style.background = 'rgba(29,78,216,0.06)';
-      card.style.borderColor = '#3b82f6';
-    }
   }
 
   // ── DAY PANEL ──
@@ -7459,8 +7285,7 @@
       if (data.success) {
         closeModal('modal-reschedule');
         loadDaySchedule();
-        loadCapacity();
-        renderDsCalendar();
+            renderDsCalendar();
         _bookingListData = null;
       } else {
         errEl.textContent = data.error || 'Could not reschedule this booking.';
@@ -7506,9 +7331,7 @@
     document.getElementById('bd-contact-name').textContent   = d.contactName   || d.customer;
     document.getElementById('bd-contact-mobile').textContent = d.contactMobile || d.phone;
 
-    // Services list — one card per service, each with its own Start/Cancel so
-    // acting on one booking in a batch never affects the others (they can be on
-    // different dates/times even though they were queued together).
+    // Services list — one card per service (information only: no Start / Cancel buttons in the details).
     const servicesList = document.getElementById('bd-services-list');
     servicesList.innerHTML = '';
     services.forEach((svc, i) => {
@@ -7521,24 +7344,7 @@
       let actionHtml = '';
       if (st === 'in_progress') {
         actionHtml = `<div style="font-size:0.7rem;color:#d97706;font-weight:600;">Collect via Billing</div>`;
-      } else if (st === 'confirmed') {
-        // The server decides (scheduled time reached / 30-min early window /
-        // mechanic busy) — the slot below is filled in once it answers.
-        const notYetDue = false;
-        const startBtnHtml = `<span class="bd-svc-start-slot" data-bid="${bid}"><button type="button" disabled style="background:#f3f4f6;border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:not-allowed;">▶ Start</button></span>`;
-        actionHtml = `
-          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
-            <form method="POST" action="/booking/${bid}/status" class="status-form" id="start-service-form-${bid}">
-              <input type="hidden" name="status" value="in_progress">
-            </form>
-            <form method="POST" action="/booking/${bid}/status" class="status-form" id="cancel-booking-form-${bid}">
-              <input type="hidden" name="status" value="cancelled">
-            </form>
-            ${startBtnHtml}
-            <button type="button" class="bd-svc-cancel-btn" data-bid="${bid}" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">Cancel</button>
-            ${notYetDue ? `<div style="width:100%;font-size:0.65rem;color:var(--muted);">Starts ${svcDates[i] || d.date}, ${svcTimes[i] || d.time}</div>` : ''}
-          </div>`;
-      }
+      }                                                   // a confirmed booking shows no buttons here: the details are for reading only
 
       card.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -7554,10 +7360,6 @@
         ${actionHtml}`;
       servicesList.appendChild(card);
 
-      const startSlot = card.querySelector('.bd-svc-start-slot');
-      if (startSlot) fillStartSlot(startSlot, bid, d.customer, svc);
-      const cancelBtn = card.querySelector('.bd-svc-cancel-btn');
-      if (cancelBtn) cancelBtn.addEventListener('click', () => openCancelBookingModal(bid, d.customer, svc));
     });
 
     // Date, moto, mechanic — show "Multiple" when the batch spans different slots
@@ -7569,11 +7371,8 @@
     const mech = d.mechanic ? (d.mechanic + (d.mechanicSpec ? ' · ' + d.mechanicSpec : '')) : '—';
     document.getElementById('bd-mechanic').textContent = mech;
     _currentBookingGroupIds = ids;
-    populateMechanicReassign(d.mechanic || '');
-    // A finished or cancelled job keeps its mechanic: the picker is hidden (an unpaid invoice counts as finished work too)
-    const _finished = ['completed', 'cancelled'].includes((d.realStatus || d.status || '').replace('-', '_'));
-    document.getElementById('bd-mechanic-edit').style.display = _finished ? 'none' : 'flex';
-    document.getElementById('bd-mechanic-locked').style.display = _finished ? 'block' : 'none';
+    // The mechanic is shown, not changed, here. It is chosen when the job is started; blank until then.
+    document.getElementById('bd-mechanic-locked').style.display = 'none';
 
     // What the customer originally asked for — this never changes, even if the
     // shop has since reassigned the job to someone else.
