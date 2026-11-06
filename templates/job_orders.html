@@ -337,7 +337,7 @@
             <button type="button" class="view-btn" style="margin-bottom:.35rem;" onclick="addWorkTo({{ jo.id }})">+ Add work</button><br>
             {% endif %}
             {% if jo.status == 'in_progress' %}
-            <a href="{{ url_for('payment_process', joid=jo.id) }}"
+            <a href="{{ url_for('payments') }}?tab=pending&collect_jo={{ jo.id }}" onclick="return payInBilling({{ jo.id }})"
                style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border-radius:7px;background:rgba(22,163,74,.12);border:1px solid rgba(22,163,74,.35);color:#86efac;font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:all .15s;"
                onmouseover="this.style.background='rgba(22,163,74,.22)'" onmouseout="this.style.background='rgba(22,163,74,.12)'">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pay
@@ -458,6 +458,11 @@
       const data = await res.json();
       if (data.success) location.reload(); else alert(data.error || 'Could not extend this job.');
     } catch (e) { alert('Network error — please try again.'); }
+  }
+  // Pay: the payment is collected in Billing (its Collect window for this job order), not on a page of its own.
+  function payInBilling(jid) {
+    try { if (window.top !== window && window.top.openBilling) { window.top.openBilling('tab=pending&collect_jo=' + jid); return false; } } catch (e) {}
+    return true;      // opened alone: follow the link to the Billing page
   }
   // Extra work found on a walk-in job: the same builder as for a booking, pointed at this job order.
   function addWorkTo(jid) {

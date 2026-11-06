@@ -590,6 +590,8 @@ class Payment(db.Model):
     amount         = db.Column(db.Float, nullable=False)
     payment_method = db.Column(db.String(20), nullable=False, default='cash')  # cash, gcash
     reference_no   = db.Column(db.String(50), nullable=True)   # GCash ref number
+    cash_received  = db.Column(db.Float, nullable=True)        # cash: what the customer handed over
+    change_given   = db.Column(db.Float, nullable=True)        # cash: the change given back
     paid_at        = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     created_by     = db.Column(db.Integer, db.ForeignKey('user.id'))
     job_order      = db.relationship('JobOrder', backref=db.backref('payment', uselist=False))
@@ -8086,6 +8088,21 @@ def payment_process(joid):
     return render_template('payment_process.html', jo=jo)
 
 
+def _cash_handed_over(owed):
+    """The cash the customer handed over, from the form ('cash_received'), checked against what they owe. Returns (received, change, error).
+    Nothing typed means exact money (no change), so an older client that does not send it still works."""
+    raw = (request.form.get('cash_received') or '').strip()
+    if not raw:
+        return round(owed, 2), 0.0, None
+    try:
+        received = round(float(raw), 2)
+    except ValueError:
+        return None, None, 'Please enter the cash received.'
+    if received < round(owed, 2) - 0.004:
+        return None, None, f'The cash received (₱{received:,.2f}) is less than the total (₱{owed:,.2f}).'
+    return received, round(received - owed, 2), None
+
+
 @admin_app.route('/payments/process/<int:joid>', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -8099,12 +8116,19 @@ def payment_submit(joid):
         return jsonify({'success': False, 'error': 'Invalid payment method'}), 400
     if method == 'gcash' and not ref_no:
         return jsonify({'success': False, 'error': 'GCash reference number is required'}), 400
+    cash_in, change, cash_err = (None, None, None)
+    if method == 'cash':
+        cash_in, change, cash_err = _cash_handed_over(jo.total_amount)
+        if cash_err:
+            return jsonify({'success': False, 'error': cash_err}), 400
     try:
         pmt = Payment(
             job_order_id   = jo.id,
             amount         = jo.total_amount,
             payment_method = method,
             reference_no   = ref_no,
+            cash_received  = cash_in,
+            change_given   = change,
             created_by     = current_user.id,
         )
         db.session.add(pmt)
@@ -8112,7 +8136,7 @@ def payment_submit(joid):
         jo.completed_at = datetime.utcnow() + timedelta(hours=8)
         db.session.commit()
         return jsonify({'success': True, 'ref': f'JO-{jo.id:03d}', 'amount': jo.total_amount,
-                        'method': method, 'payment_id': pmt.id})
+                        'method': method, 'payment_id': pmt.id, 'cash_received': cash_in, 'change': change})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -8145,6 +8169,11 @@ def booking_payment_submit(bid):
         amount_f = float(amount)
     except ValueError:
         return jsonify({'success': False, 'error': 'Invalid amount'}), 400
+    cash_in, change, cash_err = (None, None, None)
+    if method == 'cash':
+        cash_in, change, cash_err = _cash_handed_over(amount_f)
+        if cash_err:
+            return jsonify({'success': False, 'error': cash_err}), 400
     if booking.status == 'completed' and booking.invoice_paid:
         return jsonify({'success': False, 'error': 'This booking is already paid.'}), 400
 
@@ -8169,8 +8198,8 @@ def booking_payment_submit(bid):
         if method == 'gcash':
             booking.invoice_gcash_ref = ref_no
         else:
-            booking.invoice_cash_received = amount_f
-            booking.invoice_change = 0
+            booking.invoice_cash_received = cash_in
+            booking.invoice_change = change
             booking.invoice_received_by = current_user.fullname
         for _qq in _qs_all:
             _deduct_quotation_parts(_qq, booking)
@@ -8189,7 +8218,8 @@ def booking_payment_submit(bid):
             'ref':       f'BKG-{booking.id:03d}',
             'amount':    amount_f,
             'method':    method,
-            'booking_id': booking.id
+            'booking_id': booking.id,
+            'cash_received': cash_in, 'change': change,
         })
     except Exception as e:
         db.session.rollback()
@@ -10465,6 +10495,8 @@ with admin_app.app_context():
         "UPDATE booking SET status = 'in_progress', in_progress_at = COALESCE(in_progress_at, inspection_at, actual_start_at) WHERE status = 'inspection'",
         "UPDATE job_order SET status = 'in_progress' WHERE status = 'pending'",
         "ALTER TABLE job_order_item ADD COLUMN product_id INT DEFAULT NULL",
+        "ALTER TABLE payment ADD COLUMN cash_received FLOAT DEFAULT NULL",
+        "ALTER TABLE payment ADD COLUMN change_given FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN recorded_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN voided_at DATETIME DEFAULT NULL",

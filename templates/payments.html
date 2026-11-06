@@ -741,6 +741,18 @@
         <button class="pay-opt" id="pay-opt-gcash" onclick="selectPayMethod('gcash')">GCash</button>
       </div>
 
+      <!-- Cash: type what the customer hands over, the change shows by itself -->
+      <div id="cash-wrap" style="margin-top:.75rem;padding:.75rem .85rem;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:10px;">
+        <div class="bill-section-label" style="color:#166534;">Cash received (₱)</div>
+        <input type="text" id="bill-cash-input" class="bill-input" inputmode="decimal" placeholder="0.00" autocomplete="off" style="margin-bottom:.5rem;" oninput="this.value=this.value.replace(/[^0-9.]/g,''); onCashInput()">
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem;" id="cash-quick"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.8rem;color:var(--muted);font-weight:600;">Change to give</span>
+          <span id="bill-change" style="font-family:'Barlow Condensed',sans-serif;font-size:1.7rem;letter-spacing:.03em;color:#111827;">₱0.00</span>
+        </div>
+        <div class="bill-field-error" id="bill-cash-error" style="display:none;margin:.35rem 0 0;">The cash received is less than the total.</div>
+      </div>
+
       <!-- GCash ref -->
       <div id="gcash-ref-wrap" style="display:none;">
         <div class="bill-section-label">GCash Reference No.</div>
@@ -873,6 +885,7 @@ function openBillingModal(el) {
     items:    JSON.parse(d.items || '[]')
   };
   _payMethod = 'cash';
+  document.getElementById('bill-cash-input').value = '';
 
   document.getElementById('bill-modal-title').textContent =
     _bill.type === 'booking' ? 'Customer Booking' :
@@ -904,6 +917,7 @@ function openBillingModal(el) {
 
   selectPayMethod('cash');
   document.getElementById('bill-gcash-ref').value = '';
+  buildCashQuick(); onCashInput();
   hideBillErrors();
   document.getElementById('bill-submit-btn').disabled = false;
   document.getElementById('bill-submit-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Mark as Paid';
@@ -922,13 +936,41 @@ function selectPayMethod(m) {
   cash.className  = 'pay-opt' + (m === 'cash'  ? ' active-cash'  : '');
   gcash.className = 'pay-opt' + (m === 'gcash' ? ' active-gcash' : '');
   gcashWrap.style.display = m === 'gcash' ? '' : 'none';
+  document.getElementById('cash-wrap').style.display = m === 'cash' ? '' : 'none';
+  if (m === 'cash') onCashInput();
   hideBillErrors();
 }
+
+// ── CASH: what the customer hands over, and the change ──
+function _billTotal() {
+  let total = _bill.amount || _bill.items.reduce((s, i) => s + i.price * i.qty, 0);
+  if (_bill.type === 'booking' && total === 0) total = parseFloat(document.getElementById('bill-amount-input').value) || 0;
+  return total;
+}
+function _pesoFmt(n) { return '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function buildCashQuick() {
+  const total = _billTotal(), box = document.getElementById('cash-quick');
+  const opts = [total, Math.ceil(total / 100) * 100, Math.ceil(total / 500) * 500, Math.ceil(total / 1000) * 1000].filter((v, i, a) => v > 0 && a.indexOf(v) === i).slice(0, 4);
+  box.innerHTML = opts.map((v, i) => '<button type="button" class="pay-opt" style="flex:0 0 auto;padding:.25rem .6rem;font-size:.72rem;" onclick="setCash(' + v + ')">' + (i === 0 ? 'Exact ' : '') + _pesoFmt(v) + '</button>').join('');
+}
+function setCash(v) { document.getElementById('bill-cash-input').value = String(v); onCashInput(); }
+function onCashInput() {
+  const total = _billTotal(), raw = document.getElementById('bill-cash-input').value;
+  const got = parseFloat(raw), ch = document.getElementById('bill-change'), err = document.getElementById('bill-cash-error');
+  document.getElementById('bill-cash-input').classList.remove('field-invalid');
+  if (!raw || isNaN(got)) { ch.textContent = '₱0.00'; err.style.display = 'none'; return; }
+  const short = got + 0.004 < total;
+  ch.textContent = short ? '₱0.00' : _pesoFmt(got - total);
+  ch.style.color = short ? '#b91c1c' : '#166534';
+  err.style.display = short ? 'flex' : 'none';
+}
+document.getElementById('bill-amount-input').addEventListener('input', function() { buildCashQuick(); onCashInput(); });
 
 function hideBillErrors() {
   document.getElementById('bill-error-banner').style.display = 'none';
   document.getElementById('bill-ref-error').style.display = 'none';
   document.getElementById('bill-amount-error').style.display = 'none';
+  document.getElementById('bill-cash-error').style.display = 'none';
   document.getElementById('bill-gcash-ref').classList.remove('field-invalid');
   document.getElementById('bill-amount-input').classList.remove('field-invalid');
 }
@@ -974,6 +1016,14 @@ async function submitBilling() {
     amount = inp;
   }
 
+  let cashIn = null, changeDue = 0;
+  if (_payMethod === 'cash') {
+    cashIn = parseFloat(document.getElementById('bill-cash-input').value);
+    if (isNaN(cashIn)) { showBillFieldError('bill-cash-input', 'bill-cash-error'); document.getElementById('bill-cash-error').textContent = 'Type the cash the customer handed over.'; return; }
+    if (cashIn + 0.004 < amount) { showBillFieldError('bill-cash-input', 'bill-cash-error'); document.getElementById('bill-cash-error').textContent = 'The cash received is less than the total.'; return; }
+    changeDue = Math.round((cashIn - amount) * 100) / 100;
+  }
+
   btn.disabled = true;
   btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .7s linear infinite;vertical-align:middle;"><path d="M21 12a9 9 0 1 1-2.64-6.36"/></svg> Processing…';
 
@@ -983,6 +1033,7 @@ async function submitBilling() {
       const fd = new FormData();
       fd.append('payment_method', _payMethod);
       if (ref) fd.append('reference_no', ref);
+      if (cashIn !== null) fd.append('cash_received', cashIn);
       res  = await fetch(`/payments/process/${_bill.id}`, {method:'POST', body:fd});
       data = await res.json();
 
@@ -991,6 +1042,7 @@ async function submitBilling() {
       fd.append('payment_method', _payMethod);
       fd.append('amount', amount);
       if (ref) fd.append('reference_no', ref);
+      if (cashIn !== null) fd.append('cash_received', cashIn);
       res  = await fetch(`/payments/booking/${_bill.id}`, {method:'POST', body:fd});
       data = await res.json();
 
@@ -1003,7 +1055,9 @@ async function submitBilling() {
       closeBillingModal();
       document.getElementById('s-ref').textContent    = _bill.ref;
       document.getElementById('s-amount').textContent = '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits:2});
-      document.getElementById('s-method').textContent = _payMethod === 'cash' ? 'Cash' : `GCash${ref ? ' · Ref: ' + ref : ''}`;
+      document.getElementById('s-method').textContent = _payMethod === 'cash'
+        ? `Cash · received ${_pesoFmt(cashIn)} · change ${_pesoFmt(changeDue)}`
+        : `GCash${ref ? ' · Ref: ' + ref : ''}`;
       document.getElementById('success-overlay').classList.add('open');
     } else {
       showBillBannerError(data.error || 'Something went wrong. Please try again.');
@@ -1082,6 +1136,7 @@ function showPendBox(key) {
 }
 // first time: the first box that has something to collect
 function pickStartBox() {
+  if (new URLSearchParams(location.search).get('collect_jo')) return 'joborder';
   if (new URLSearchParams(location.search).get('collect')) return 'booking';
   const rows = [...document.querySelectorAll('.pending-row')];
   const first = ['booking', 'joborder', 'online'].find(k => rows.some(r => r.dataset.type === k));
@@ -1426,6 +1481,14 @@ function printReceipt() {
       }
     } catch (e) { /* try again next time */ }
   }, POLL_MS);
+})();
+
+/* ── "Pay" on a walk-in job order (Job Orders) opens that job order's Collect window here ── */
+(function openRequestedJobOrder() {
+  const id = new URLSearchParams(window.location.search).get('collect_jo');
+  if (!id) return;
+  const btn = document.querySelector(`.btn-collect-jo[data-id="${id}"]`);
+  if (btn) { const row = btn.closest('tr'); if (row) row.scrollIntoView({ block: 'center' }); openBillingModal(btn); }
 })();
 
 /* ── "At the shop · Collect payment" from Manage Bookings opens that booking's window ── */
