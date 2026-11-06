@@ -1004,7 +1004,6 @@
     <a href="#" onclick="showSection('walkin', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span> Walk-In</a>
     <a href="#" onclick="showSection('walkqueue', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Walk-In Queue <span id="wq-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;"></span></a>
     <a href="#" onclick="showSection('parts', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span> Parts Purchase</a>
-    <a href="#" onclick="showSection('quotations', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Quotations</a>
     <a href="#" onclick="showSection('joborders', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span> Job Orders</a>
     <a href="#" onclick="showSection('billing', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing {% set billing_badge = (pending_billing_count or 0) + (billing_new_count or 0) %}{% if billing_badge %}<span title="{{ pending_billing_count or 0 }} to collect · {{ billing_new_count or 0 }} new in History" style="margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;">{{ billing_badge }}</span>{% endif %}</a>
     <a href="#" onclick="showSection('transactions', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Transactions</a>
@@ -1377,7 +1376,12 @@
                   <td>
                     {{ b.service }}{% if b.own_parts %} <span class="own-parts-tag" title="{{ (b.own_parts_note or 'The customer brings their own parts')|e }}">Own parts · labor only</span>{% endif %}
                     {% if b.own_parts and b.own_parts_note %}<div style="font-size:0.68rem;color:#92400e;margin-top:0.1rem;">Parts: {{ b.own_parts_note }}</div>{% endif %}
+                    {% set _rowbill = booking_bill(b) %}
+                    {% if _rowbill and _rowbill[2] %}
+                    <div style="font-size:0.7rem;color:var(--muted);"><strong style="color:var(--text);">₱{{ _rowbill[0]|money }}</strong> · service ₱{{ (booking_price(b))|money }} + extra work ₱{{ (_rowbill[0] - booking_price(b))|money }}</div>
+                    {% else %}
                     <div style="font-size:0.7rem;color:var(--muted);">₱{{ (booking_price(b))|money }}</div>
+                    {% endif %}
                     {% if b.assigned_mechanic_name %}
                       {% if b.id in (row_mech or {}) %}
                       {# not started yet: Reserved for this booking (Busy shows only on the row that is in progress) #}
@@ -1838,6 +1842,7 @@
         <input type="text" id="insp-search" placeholder="Search customer, booking or service…" oninput="renderInspection()" style="flex:1 1 240px;max-width:360px;padding:0.5rem 0.8rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.85rem;background:#fff;">
         <button type="button" id="insp-chip-all" class="btn-primary-custom" onclick="setInspFilter('all')" style="padding:0.4rem 0.9rem;">All <span id="insp-count-all"></span></button>
         <button type="button" id="insp-chip-waiting" class="btn-cancel" onclick="setInspFilter('waiting')" style="padding:0.4rem 0.9rem;">Waiting for the customer <span id="insp-count-waiting"></span></button>
+        <button type="button" class="btn-cancel" onclick="openEmbedded('quotations', 'section=online', '/quotations')" style="padding:0.4rem 0.9rem;margin-left:auto;">Quotation history</button>
       </div>
       <div class="card">
         <div id="insp-list"><div class="empty-state is-loading"><p>Loading…</p></div></div>
@@ -4130,6 +4135,9 @@
     document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
     if (el) el.classList.add('active');
+    if (name === 'quotations' || name === 'inspection') {      // the quotation builder and its history are part of Inspection & Quotation
+      const _iq = document.querySelector(".sidebar a[onclick*=\"'inspection'\"]"); if (_iq) _iq.classList.add('active');
+    }
     sessionStorage.setItem('adminSection', name);
     document.body.classList.toggle('parts-lock', name === 'parts');
     document.body.classList.toggle('ds-lock', name === 'day-schedule');
@@ -4910,7 +4918,7 @@
   async function wqCancel(id) {
     const w = (_wq.queue || []).find(x => x.id === id);
     const yes = await askConfirm({ title: 'Remove ' + (w ? w.name : 'this customer') + ' from the line?', message: 'They will lose their place. Use this when they left or no longer need service.',
-      confirmLabel: 'Yes, remove', cancelLabel: 'Keep', danger: true });
+      confirmLabel: 'Remove', cancelLabel: 'Keep', danger: true });
     if (!yes) return;
     try {
       const res = await fetch('/api/walkin-queue/' + id + '/cancel', { method: 'POST' });

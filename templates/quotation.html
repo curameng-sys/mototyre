@@ -227,6 +227,8 @@
     }
     /* Shown inside the dashboard: it already has the top bar, so the layout takes the whole frame. */
     html.embedded .topbar{display:none;}
+    .back-iq{display:inline-block;margin-bottom:.45rem;font-size:.78rem;font-weight:700;color:#6b7280;text-decoration:none;font-family:'Inter',sans-serif;}
+    .back-iq:hover{color:var(--red);}
     html.embedded .wrap{height:100vh;}
     html.embedded .quote-panel{height:100vh;}
 
@@ -268,7 +270,7 @@
     html.embedded .quote-header,html.embedded .quote-footer{flex-shrink:0;}
     html.embedded .quote-header{padding:.6rem .9rem;}
     html.embedded .quote-footer{padding:.55rem .9rem;}
-    html.embedded .quote-items{min-height:110px;}
+    html.embedded .quote-items{min-height:80px;}
     /* the panel takes the full height of the frame (the page title sits only above the left column) and its fixed parts are compact */
     html.embedded body{display:grid;grid-template-columns:minmax(0,1fr) 340px;grid-template-rows:auto minmax(0,1fr);column-gap:1.5rem;height:100vh;}
     html.embedded .wrap{display:contents;}
@@ -287,7 +289,11 @@
     html.embedded .notes-box{margin:.4rem 0;}
     html.embedded .notes-box .notes-label,html.embedded .notes-box label{margin-bottom:.15rem;}
     html.embedded .quote-footer .notes-inp{min-height:36px;max-height:44px;padding:.3rem .6rem;}
-    html.embedded #atshop-box,html.embedded .atshop-box{padding:.4rem .7rem;}
+    html.embedded #atshop-box,html.embedded .atshop-box{padding:.45rem .7rem;margin-bottom:.5rem !important;}
+    html.embedded #atshop-choice{margin-top:.25rem !important;}
+    html.embedded #atshop-choice > div:first-child{margin-bottom:0 !important;}
+    html.embedded #atshop-choice > div:last-child{display:none;}           /* the long explanation: the label of the button says it */
+    html.embedded #atshop-box label[for],html.embedded #atshop-box > label{margin-top:.35rem !important;padding-top:.35rem !important;font-size:.72rem !important;}
     html.embedded #save-btn{padding-top:.55rem;padding-bottom:.55rem;}
     html.embedded .clear-btn{padding:.25rem;margin-top:.3rem;}
     html.embedded .quote-footer .total-row:not(.grand){display:none;}   /* every line is already priced in the list above; the total stays */
@@ -303,6 +309,7 @@
 <body>
 
 <div class="page-header">
+  {% if booking %}<a href="{{ url_for('admin_dashboard', section='inspection') }}" target="_top" onclick="if (window.top !== window &amp;&amp; window.top.showSection) { window.top.showSection('inspection', null); window.top.loadInspection &amp;&amp; window.top.loadInspection(); return false; }" class="back-iq">&larr; Back to Inspection &amp; Quotation</a>{% endif %}
   {% if booking and booking.is_extra_round %}
   <div class="page-title">Extra work #{{ booking.round_no }} <span class="accent">#{{ booking.ref }}</span></div>
   <div class="page-sub">Status: {{ 'In Progress' if booking.status in ('in_progress', 'inprogress') else 'Inspection &amp; Estimation' }}. The booked service keeps going while the customer decides. Add what the mechanic found now, then send it to the customer.</div>
@@ -519,7 +526,6 @@
             </div>
             <div class="booking-ref-time"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="booking-ref-time-text"></span></div>
           </div>
-          <a href="{{ url_for('quotation_new') }}" class="booking-ref-change">Change</a>
         </div>
         <input type="hidden" id="cust-name" value="{{ booking.customer_name }}">
         <input type="hidden" id="cust-phone" value="{{ booking.customer_phone }}">
@@ -579,20 +585,22 @@
       </div>
       {% if booking %}
       <div id="atshop-box" style="margin-bottom:0.7rem;padding:0.7rem 0.8rem;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;">
-        <label style="display:flex;gap:0.5rem;align-items:center;font-size:0.82rem;font-weight:700;color:#5b21b6;cursor:pointer;">
-          <input type="checkbox" id="atshop-check" onchange="onAtShopToggle()" style="width:16px;height:16px;"> The customer is at the shop
-        </label>
-        <div id="atshop-choice" style="display:none;margin-top:0.55rem;font-size:0.8rem;color:#374151;">
+        <div style="font-size:0.82rem;font-weight:700;color:#5b21b6;">Customer at the shop? Just save.</div>
+        <input type="checkbox" id="atshop-check" checked style="display:none;">   {# on by default: the answer is recorded here. Ticking the box below sends it online instead. #}
+        <div id="atshop-choice" style="display:block;margin-top:0.45rem;font-size:0.8rem;color:#374151;">
           <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:0.35rem;">
-            <label style="display:flex;gap:0.35rem;align-items:center;cursor:pointer;"><input type="radio" name="atshop" value="approve"> They approved</label>
+            <label style="display:flex;gap:0.35rem;align-items:center;cursor:pointer;"><input type="radio" name="atshop" value="approve" checked> They approved</label>
             <label style="display:flex;gap:0.35rem;align-items:center;cursor:pointer;"><input type="radio" name="atshop" value="decline"> They declined</label>
           </div>
           <div style="font-size:0.72rem;color:#6b7280;line-height:1.45;">No online message is sent. {% if booking and booking.is_extra_round %}The customer gets a notice that you recorded their answer at the shop.{% else %}Work starts now, and the customer gets a notice that you recorded their answer at the shop.{% endif %}</div>
         </div>
+        <label style="display:flex;gap:0.5rem;align-items:center;font-size:0.76rem;font-weight:600;color:#6b7280;cursor:pointer;margin-top:0.55rem;padding-top:0.5rem;border-top:1px solid #ddd6fe;">
+          <input type="checkbox" id="online-check" onchange="onOnlineToggle()" style="width:15px;height:15px;"> Check this if the customer is not at the shop: send it to them online
+        </label>
       </div>
       {% endif %}
       <button class="btn-save" id="save-btn" onclick="saveQuotation()" disabled>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> {% if booking and booking.is_extra_round %}Send Extra Work{% elif booking %}Save &amp; Send Quotation{% else %}Save Quotation{% endif %}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> {% if booking and booking.is_extra_round %}Save &amp; Record Answer{% elif booking %}Save &amp; Start Work{% else %}Save Quotation{% endif %}
       </button>
       <div class="sent-msg" id="sent-msg"></div>
       <button class="btn-clear" id="clear-btn" onclick="clearAll()">× Clear All</button>
@@ -619,7 +627,7 @@
     </div>
     <div class="modal-foot">
       {% if booking %}
-        <a href="{{ url_for('admin_dashboard', section='bookings') }}" target="_top" class="btn-modal-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Manage Bookings</a>
+        <a href="{{ url_for('admin_dashboard', section='inspection') }}" target="_top" onclick="if (window.top !== window &amp;&amp; window.top.showSection) { window.top.showSection('inspection', null); window.top.loadInspection &amp;&amp; window.top.loadInspection(); return false; }" class="btn-modal-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Inspection &amp; Quotation</a>
       {% else %}
         <button class="btn-modal-sec" onclick="newQuotation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Quote</button>
         <a href="{{ url_for('quotations_list') }}" class="btn-modal-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> View All</a>
@@ -1077,6 +1085,11 @@
   function saveLabel() {
     const c = document.getElementById('atshop-check');
     return HAS_BOOKING ? ((c && c.checked) ? (IS_EXTRA ? 'Save &amp; Record Answer' : 'Save &amp; Start Work') : (IS_EXTRA ? 'Send Extra Work' : 'Save &amp; Send Quotation')) : 'Save Quotation';
+  }
+  // The answer is recorded at the shop by default. The box "send it online instead" turns that off.
+  function onOnlineToggle() {
+    document.getElementById('atshop-check').checked = !document.getElementById('online-check').checked;
+    onAtShopToggle();
   }
   function onAtShopToggle() {
     const on = document.getElementById('atshop-check').checked;
