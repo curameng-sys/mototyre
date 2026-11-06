@@ -7663,7 +7663,7 @@ def convert_quotation(qid):
         motorcycle_plate = quot.motorcycle_plate,
         notes            = quot.notes,
         total_amount     = quot.total_amount,
-        status           = 'pending',
+        status           = 'in_progress',
         created_by       = current_user.id,
     )
     db.session.add(jo)
@@ -8859,6 +8859,8 @@ def walkin_create_job_order():
         mechanic = Mechanic.query.get(int(mechanic_id))
         if mechanic:
             mechanic_name = mechanic.name
+    if not mechanic_name:
+        return jsonify({'success': False, 'error': 'Pick the mechanic who will do this job.'}), 400
 
     items = []
     for svc in services:
@@ -8902,7 +8904,7 @@ def walkin_create_job_order():
             motorcycle_plate = moto_plate,
             notes            = notes,
             total_amount     = total,
-            status           = 'in_progress' if mechanic_name else 'pending',   # work starts as soon as a mechanic has it
+            status           = 'in_progress',   # a job order is In Progress as soon as it is created
             mechanic_name    = mechanic_name,
             created_by       = current_user.id,
         )
@@ -10423,6 +10425,7 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN cancel_reason VARCHAR(300) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN rebooked_from INT DEFAULT NULL",
         "UPDATE booking SET status = 'in_progress', in_progress_at = COALESCE(in_progress_at, inspection_at, actual_start_at) WHERE status = 'inspection'",
+        "UPDATE job_order SET status = 'in_progress' WHERE status = 'pending'",
         "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN recorded_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN voided_at DATETIME DEFAULT NULL",

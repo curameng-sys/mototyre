@@ -760,7 +760,7 @@
         </div>
         <div class="field-row">
           <div class="field-wrap">
-            <label class="field-label">Assign Mechanic</label>
+            <label class="field-label">Mechanic <span style="color:var(--red,#d00019);">*</span></label>
             <div id="mechanic-picker"></div>
             <input type="hidden" id="mechanic-select" value="">
             <div id="mech-job-note" style="font-size:0.72rem;color:#6b7280;margin-top:0.4rem;line-height:1.45;">Add services to see how long this job takes.</div>
@@ -978,7 +978,7 @@ let mechPicker = null;
 function initMechPicker() {
   mechPicker = new MechPicker(document.getElementById('mechanic-picker'), {
     url: () => `/api/mechanic-availability?mode=walkin&minutes=${cartMinutes() || 30}`,
-    none: { label: '— No Mechanic Assigned —', sub: 'Assign one later' },
+    none: { label: 'Select a mechanic', sub: 'Required: who will do this job?' },
     onChange: id => { document.getElementById('mechanic-select').value = id || ''; updateMechanicNote(); updateShopTime(); },
     onCleared: r => toast(`${r.name} is busy for that long, so the pick was cleared.`, true),
   });
@@ -1360,9 +1360,14 @@ function openConfirm() {
   const phone = document.getElementById('cust-phone').value.trim();
   if (!name) { toast('Customer name is required', true); return; }
   if (!cart.length) { toast('Cart is empty', true); return; }
+  if (!document.getElementById('mechanic-select').value) {
+    toast('Pick the mechanic who will do this job.', true);
+    const mp = document.getElementById('mechanic-picker'); if (mp) { mp.scrollIntoView({ behavior: 'smooth', block: 'center' }); mp.style.outline = '2px solid #d00019'; mp.style.borderRadius = '10px'; setTimeout(() => { mp.style.outline = ''; }, 2200); }
+    return;
+  }
 
   const total    = cart.reduce((s, c) => s + c.price * c.qty, 0);
-  const mechName = (document.getElementById('mechanic-select').value && mechPicker && mechPicker.name()) || 'Not assigned';
+  const mechName = (mechPicker && mechPicker.name()) || '';
   const motoModel = motoWithYear();
 
   document.getElementById('confirm-title').textContent    = 'Create Job Order';

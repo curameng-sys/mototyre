@@ -25,7 +25,7 @@
     .page-sub{font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;}
 
     /* STATS ROW */
-    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
     .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 3px rgba(0,0,0,.05);}
     .stat-num{font-family:'Barlow Condensed',sans-serif;font-size:2rem;letter-spacing:.04em;color:#111827;}
     .stat-label{font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:.15rem;}
@@ -179,14 +179,9 @@
   {% endwith %}
 
   <!-- STATS -->
-  {% set pending_count    = job_orders | selectattr('status','eq','pending')     | list | length %}
   {% set progress_count   = job_orders | selectattr('status','eq','in_progress') | list | length %}
   {% set completed_count  = job_orders | selectattr('status','eq','completed')   | list | length %}
   <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-num" style="color:#fbbf24;">{{ pending_count }}</div>
-      <div class="stat-label">Pending</div>
-    </div>
     <div class="stat-card">
       <div class="stat-num" style="color:#93c5fd;">{{ progress_count }}</div>
       <div class="stat-label">In Progress</div>
@@ -247,7 +242,6 @@
 
   <div class="filter-tabs">
     <a href="?status=all"         class="ftab {% if status_filter=='all'         %}active{% endif %}">All</a>
-    <a href="?status=pending"     class="ftab {% if status_filter=='pending'     %}active{% endif %}">Pending</a>
     <a href="?status=in_progress" class="ftab {% if status_filter=='in_progress' %}active{% endif %}">In Progress</a>
     <a href="?status=completed"   class="ftab {% if status_filter=='completed'   %}active{% endif %}">Completed</a>
     <a href="?status=cancelled"   class="ftab {% if status_filter=='cancelled'   %}active{% endif %}">Cancelled</a>
