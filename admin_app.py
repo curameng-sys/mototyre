@@ -8707,6 +8707,40 @@ def extend_job_order_time(jid):
     return jsonify({'success': True, 'until': minutes_to_ampm(until) if until is not None else None})
 
 
+@admin_app.route('/job-order/<int:jid>/add-work', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def job_order_add_work(jid):
+    """The mechanic found something more while working on a walk-in: it is added to the job order and to its total, and the
+    customer pays the new total. The customer is at the shop, so they agree out loud; no online approval is needed.
+    An optional +30m / +1h keeps the mechanic marked busy for the extra time."""
+    jo = JobOrder.query.get_or_404(jid)
+    if jo.payment or jo.status not in ('pending', 'in_progress'):
+        return jsonify({'success': False, 'error': 'Work can only be added before this job order is paid.'}), 400
+    data = request.get_json(silent=True) or {}
+    name = clean_str(data.get('name', ''), max_len=150)
+    kind = data.get('item_type') if data.get('item_type') in ('finding', 'service', 'product') else 'finding'
+    try:
+        price = round(float(data.get('unit_price')), 2)
+        qty = int(data.get('quantity') if data.get('quantity') is not None else 1)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'Please enter a valid price.'}), 400
+    if not name:
+        return jsonify({'success': False, 'error': 'Please describe the work.'}), 400
+    if price < 0 or price > 1000000 or qty < 1 or qty > 999:
+        return jsonify({'success': False, 'error': 'Please enter a valid price and quantity.'}), 400
+    minutes = data.get('minutes') or 0
+    if minutes not in (0, 30, 60):
+        return jsonify({'success': False, 'error': 'Unknown extra time.'}), 400
+    db.session.add(JobOrderItem(job_order_id=jo.id, item_type=kind, name=name, quantity=qty, unit_price=price))
+    db.session.flush()
+    jo.total_amount = round(sum((i.unit_price or 0) * (i.quantity or 1) for i in JobOrderItem.query.filter_by(job_order_id=jo.id).all()), 2)
+    if minutes and jo.mechanic_name and not jo.mechanic_done_at:
+        jo.est_minutes = (jo.est_minutes or 30) + minutes
+    db.session.commit()
+    return jsonify({'success': True, 'total': jo.total_amount, 'ref': f'JO-{jo.id:03d}'})
+
+
 @admin_app.route('/job-order/<int:jid>/mechanic-done', methods=['POST'])
 @login_required
 @require_admin_or_staff
