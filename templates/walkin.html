@@ -195,13 +195,26 @@
     }
     /* Only the list of items scrolls. Customer info and the mechanic stay at the top, the totals and the button stay at the bottom. */
     .cart-panel-scroll {
-      flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column;
+      flex: 1 1 0; min-height: 0; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column;   /* the panel itself scrolls only on a very short screen */
     }
     .cart-panel-scroll > .customer-section, .cart-panel-scroll > .mechanic-section { flex-shrink: 0; }
     .cart-panel-scroll > .cart-section { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
     .cart-panel-scroll > .cart-section > .cart-title, .cart-panel-scroll > .cart-section > .est-box { flex-shrink: 0; }
+    /* the top of the panel is kept short so the list of items has room: the notes under the mechanic are one line, the totals show only the Total */
+    .cart-panel .customer-section { padding-top: 0.6rem; padding-bottom: 0.4rem; }
+    .cart-panel .mechanic-section { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    .cart-panel #mech-job-note { margin-top: 0.25rem !important; font-size: 0.68rem !important; line-height: 1.3 !important; }
+    .cart-panel #mech-note { display: none !important; }
+    .cart-panel .customer-section .section-title, .cart-panel .mechanic-section .section-title { display: none; }   /* the field labels say it already */
+    .cart-panel #mech-job-note { display: none !important; }                                                       /* the estimated shop time below says it */
+    .cart-panel .customer-section .field-inp { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+    .cart-panel .field-row { margin-bottom: 0.35rem; }
+    .cart-panel .totals .total-row:not(.grand) { display: none; }
+    .cart-panel .totals { margin-bottom: 0.5rem; }
+    .cart-panel .cart-footer { padding: 0.65rem 1.1rem; }
+    .cart-panel .est-box { margin-top: 0.35rem; padding: 0.35rem 0.6rem; }
     .cart-panel-scroll #cart-items {
-      flex: 1 1 0; min-height: 110px; overflow-y: auto;
+      flex: 1 1 0; min-height: 112px; overflow-y: auto;
       scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.15) transparent;
     }
     .cart-panel-scroll::-webkit-scrollbar { width: 5px; }
@@ -832,10 +845,8 @@
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem;margin-bottom:0.85rem;">
         <div class="r-row"><span>Customer</span><span id="confirm-customer">—</span></div>
-        <div class="r-row"><span>Phone</span><span id="confirm-phone">—</span></div>
         <div class="r-row"><span>Motorcycle</span><span id="confirm-moto">—</span></div>
         <div class="r-row"><span>Mechanic</span><span id="confirm-mechanic">Not assigned</span></div>
-        <div class="r-row"><span>Status</span><span id="confirm-status">—</span></div>
         <div class="r-row"><span>Items</span><span id="confirm-items">0</span></div>
         <div class="r-row"><span>Estimated shop time</span><span id="confirm-est">—</span></div>
       </div>
@@ -1358,7 +1369,6 @@ function updateTotals() {
 // ── CONFIRM MODAL ─────────────────────────────────────────────────────────────
 function openConfirm() {
   const name  = document.getElementById('cust-name').value.trim();
-  const phone = document.getElementById('cust-phone').value.trim();
   if (!name) { toast('Customer name is required', true); return; }
   if (!cart.length) { toast('Cart is empty', true); return; }
   if (!document.getElementById('mechanic-select').value) {
@@ -1374,10 +1384,8 @@ function openConfirm() {
   document.getElementById('confirm-title').textContent    = 'Create Job Order';
   document.getElementById('confirm-total').textContent    = `₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   document.getElementById('confirm-customer').textContent = name;
-  document.getElementById('confirm-phone').textContent    = phone || '—';
   document.getElementById('confirm-moto').textContent     = motoModel || '—';
   document.getElementById('confirm-mechanic').textContent = mechName;
-  document.getElementById('confirm-status').textContent   = 'Pending';
   document.getElementById('confirm-items').textContent    = cart.reduce((s,c)=>s+c.qty,0) + ' item(s)';
   {
     const mins = cartMinutes();

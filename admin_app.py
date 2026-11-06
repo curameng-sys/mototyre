@@ -7231,6 +7231,9 @@ def quotation_new():
                 'date_label': _quote_day_label(began.date()), 'start_min': start, 'duration_min': dur, 'booked_end_min': start + dur,
                 'staff_extra_min': 0, 'quote_extra_min': 0, 'booked_services': [],
                 'round_no': 2, 'is_extra_round': True, 'status': 'in_progress', 'open_round': None, 'previous': [],
+                # what is already on the job order: shown (locked) in the quotation so the total is the whole job, the original and the extra
+                'original_items': [{'item_type': i.item_type, 'name': i.name, 'quantity': int(i.quantity or 1), 'unit_price': float(i.unit_price or 0)}
+                                   for i in JobOrderItem.query.filter_by(job_order_id=jo.id).order_by(JobOrderItem.id).all()],
             }
     if booking_id:
         b = Booking.query.get(booking_id)

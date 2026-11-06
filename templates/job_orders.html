@@ -168,15 +168,6 @@
   <div class="page-title">Job Orders</div>
   <div class="page-sub">Walk-in work in the shop, made from the Walk-In page or converted from a quotation. Separate from online bookings.</div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-  <div class="flash-wrap">
-    {% for cat, msg in messages %}
-    <div class="flash flash-{{ cat }}">{{ msg }}</div>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% endwith %}
 
   <!-- STATS -->
   {% set progress_count   = job_orders | selectattr('status','eq','in_progress') | list | length %}

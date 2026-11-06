@@ -181,15 +181,6 @@
   <div class="page-title">Quotation <span style="color:var(--red);">History</span></div>
   <div class="page-sub">Every quotation and extra work sent for online bookings, and what the customer answered.</div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-  <div class="flash-wrap">
-    {% for cat, msg in messages %}
-    <div class="flash flash-{{ cat }}">{{ msg }}</div>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% endwith %}
 
   {% if section == 'online' %}
   <div class="info-box online">

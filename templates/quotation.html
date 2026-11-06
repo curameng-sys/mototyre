@@ -669,6 +669,11 @@
   const IS_BACKJOB = {{ 'true' if (booking and booking.is_backjob and not booking.is_extra_round) else 'false' }};
   const BACKJOB_REGULAR_PRICE = {{ (booking.regular_price if booking else 0) or 0 }};
   let items = [];
+  {% if booking and booking.is_job_order %}
+  {% for oi in booking.original_items %}
+  items.push({ item_type: {{ oi.item_type|tojson }}, name: {{ oi.name|tojson }}, unit_price: {{ oi.unit_price }}, quantity: {{ oi.quantity }}, locked: true, minutes: 0 });
+  {% endfor %}
+  {% endif %}
   {% if booking and not booking.is_extra_round %}
   items.push({ item_type: 'service', name: {{ booking.service_name|tojson }}, unit_price: {{ booking.service_price }}, quantity: 1, locked: true, minutes: {{ booking.duration_min }} });
   {% endif %}
@@ -803,7 +808,7 @@
   function renderFindings() {
     const list = document.getElementById('findings-list');
     if (!list) return;
-    const findings = items.map((it, idx) => ({ ...it, idx })).filter(it => it.item_type === 'finding');
+    const findings = items.map((it, idx) => ({ ...it, idx })).filter(it => it.item_type === 'finding' && !it.locked);
     if (findings.length === 0) {
       list.innerHTML = '<div class="findings-empty">No findings yet.</div>';
       return;
@@ -850,15 +855,15 @@
   function itemRow(item, idx) {
     const g = groupOf(item);
     if (g === 'orig') {
-      const tag = IS_BACKJOB ? (notCovered.on ? 'Not covered · normal price' : 'Back job · Free') : 'Booked by the customer';
+      const tag = IS_JO ? 'Already on the job order' : (IS_BACKJOB ? (notCovered.on ? 'Not covered · normal price' : 'Back job · Free') : 'Booked by the customer');
       return `<div class="q-item">
         <div class="ci-icon orig">${ICON_WRENCH}</div>
         <div class="ci-info">
-          <div class="ci-name">${escH(item.name)}</div>
+          <div class="ci-name">${escH(item.name)}${item.quantity > 1 ? ' ×' + item.quantity : ''}</div>
           <div class="ci-sub">${item.minutes ? `<span class="time-pill">${ICON_CLOCK}${fmtMin(item.minutes)}</span>` : ''}<span>${tag}</span></div>
         </div>
         <div class="ci-amt">${peso(item.unit_price * item.quantity)}</div>
-        <div class="lock-ico" title="The booked service can't be removed">${ICON_LOCK}</div>
+        <div class="lock-ico" title="${IS_JO ? 'Already on the job order, so it stays' : "The booked service can't be removed"}">${ICON_LOCK}</div>
       </div>`;
     }
     if (g === 'mat') {
@@ -908,7 +913,7 @@
     } else {
       empty.style.display = 'none';
       const groups = [
-        ['orig', 'Original service', ICON_WRENCH],
+        ['orig', IS_JO ? 'Original job order' : 'Original service', ICON_WRENCH],
         ['mat', 'Materials used', ICON_BOX],
         ['extra', 'Extra work', ICON_WRENCH],
       ];
@@ -978,7 +983,7 @@
 
   function validateForm() {
     const hasName  = document.getElementById('cust-name').value.trim().length > 0;
-    const hasItems = items.length > 0;
+    const hasItems = IS_JO ? items.some(i => !i.locked) : items.length > 0;     // a job order needs something new to add
     document.getElementById('save-btn').disabled = !(hasName && hasItems) || !!BLOCKED_BY;
   }
 
