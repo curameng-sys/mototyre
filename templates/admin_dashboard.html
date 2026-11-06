@@ -1145,7 +1145,7 @@
         <div class="card">
           <div class="card-head"><h5>Pending Actions</h5></div>
           <div class="card-body" id="pending-actions-body">
-            <div class="pending-box{% if awaiting_quotation_count > 0 %} amber-highlight{% endif %}" id="pending-box-quotation" onclick="goToBookingsTab('inspection')">
+            <div class="pending-box{% if awaiting_quotation_count > 0 %} amber-highlight{% endif %}" id="pending-box-quotation" onclick="goToSection('inspection'); setInspFilter('waiting')">
               <div><span>Awaiting Quotation Answer</span><div class="pending-sub">Quotations sent, waiting for the customer</div></div>
               <span class="pending-num" id="pending-num-quotation" style="color:#b45309;">{{ awaiting_quotation_count }}</span>
             </div>
@@ -1191,7 +1191,7 @@
           </div>
           <div class="card-body">
             <div class="chart-bar-wrap" id="booking-status-chart">
-              {% set booking_statuses = [('confirmed','Confirmed','bk-bar-confirmed','confirmed'),('inspection','Inspection & Estimation','bk-bar-inspection','inspection'),('in_progress','In Progress','bk-bar-inprogress','inprogress'),('completed','Completed','bk-bar-completed','completed'),('cancelled','Cancelled','bk-bar-cancelled','cancelled')] %}
+              {% set booking_statuses = [('confirmed','Confirmed','bk-bar-confirmed','confirmed'),('in_progress','In Progress','bk-bar-inprogress','inprogress'),('completed','Completed','bk-bar-completed','completed'),('cancelled','Cancelled','bk-bar-cancelled','cancelled')] %}
               {% for status, label, cls, tab in booking_statuses %}
                 {% set count = booking_status_counts.get(status, 0) %}
                 {% set pct = ((count / total_bookings * 100)|int) if total_bookings > 0 else 0 %}
@@ -1271,9 +1271,6 @@
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
         <button class="bk-tab active" data-tab="confirmed" onclick="switchBookingTab('confirmed', this)">
           Confirmed <span class="bk-tab-count">{{ booking_status_counts.get('confirmed', 0) }}<span class="bk-new" data-bk-new="confirmed"{% if not bk_unseen.get('confirmed') %} style="display:none;"{% endif %}>{{ bk_unseen.get('confirmed', 0) }}</span></span>
-        </button>
-        <button class="bk-tab" data-tab="inspection" onclick="switchBookingTab('inspection', this)">
-          Inspection &amp; Estimation <span class="bk-tab-count">{{ booking_status_counts.get('inspection', 0) }}<span class="bk-new" data-bk-new="inspection"{% if not bk_unseen.get('inspection') %} style="display:none;"{% endif %}>{{ bk_unseen.get('inspection', 0) }}</span></span>
         </button>
         <button class="bk-tab" data-tab="inprogress" onclick="switchBookingTab('inprogress', this)">
           In Progress <span class="bk-tab-count">{{ booking_status_counts.get('in_progress', 0) + booking_status_counts.get('inprogress', 0) }}<span class="bk-new" data-bk-new="inprogress"{% if not bk_unseen.get('inprogress') %} style="display:none;"{% endif %}>{{ bk_unseen.get('inprogress', 0) }}</span></span>
@@ -1490,7 +1487,7 @@
                         {% set not_yet_due = elig.state != 'ready' %}
                         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
                           <form method="POST" action="{{ url_for('update_booking_status', bid=b.id) }}" class="status-form" id="start-service-form-{{ b.id }}">
-                            <input type="hidden" name="status" value="inspection">
+                            <input type="hidden" name="status" value="in_progress">
                             {% if elig.state == 'early_ok' %}
                               <button type="button" onclick="openEarlyStartModal('{{ b.id }}', {{ (b.customer.fullname)|tojson|forceescape }}, {{ (b.service)|tojson|forceescape }})" style="background:#fff7ed;border:1px solid #fdba74;color:#c2410c;padding:0.25rem 0.75rem;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;">▶ Start early</button>
                             {% elif elig.state == 'early_busy' %}
@@ -2356,7 +2353,7 @@
     <strong>Unavailable:</strong> hasn't timed in yet, already timed out, or absent.
     <strong>Available:</strong> timed in and free.
     <strong>Reserved:</strong> has a Confirmed booking that hasn't started.
-    <strong>Busy:</strong> the admin pressed Start, so the booking is in Inspection &amp; Estimation or In Progress.
+    <strong>Busy:</strong> the admin pressed Start, so the booking is In Progress.
     These are all automatic.
     <strong>Off Duty:</strong> on a short break, set in Edit. It doesn't mean absent.
   </div>
@@ -4028,10 +4025,10 @@
   <div class="modal-box" style="max-width:400px;text-align:center;">
     <div style="margin-bottom:0.75rem;color:var(--warning);"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
     <h5 style="margin-bottom:0.25rem;">Start Service</h5>
-    <p style="color:var(--muted);font-size:0.875rem;margin-bottom:0.4rem;">You are about to start the inspection for:</p>
+    <p style="color:var(--muted);font-size:0.875rem;margin-bottom:0.4rem;">You are about to start the work for:</p>
     <p id="modal-ss-customer" style="color:var(--text);font-weight:700;font-size:1rem;margin-bottom:0.25rem;"></p>
     <p id="modal-ss-service" style="color:#d97706;font-size:0.875rem;margin-bottom:1.5rem;"></p>
-    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.9rem;">This will mark the booking as <strong style="color:#d97706;">Inspection &amp; Estimation</strong>. Continue?</p>
+    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.9rem;">This will mark the booking as <strong style="color:#d97706;">In Progress</strong>. Continue?</p>
     <div id="ss-mech-note" style="display:none;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.55rem 0.75rem;font-size:0.76rem;color:#713f12;line-height:1.5;margin-bottom:0.9rem;text-align:left;"></div>
     <div id="ss-mech-pick" style="display:none;text-align:left;margin-bottom:0.9rem;">
       <label style="display:block;font-size:0.72rem;font-weight:600;color:var(--muted);margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.06em;">Mechanic for this job</label>
@@ -5400,7 +5397,6 @@
 
   const DS_STEPS = [
     { key: 'confirmed',   label: 'Confirmed',               bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', dot: '#2563eb', line: '#2563eb' },
-    { key: 'inspection',  label: 'Inspection & Estimation', bg: '#fffbeb', color: '#a16207', border: '#fde68a', dot: '#ca8a04', line: '#ca8a04' },
     { key: 'in_progress', label: 'In Progress',             bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', dot: '#ea580c', line: '#ea580c' },
     { key: 'completed',   label: 'Completed',               bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', dot: '#16a34a', line: '#16a34a' },
   ];
@@ -5484,7 +5480,8 @@
         <button type="button" class="btn-primary-custom" ${waiting ? 'disabled' : ''} style="padding:0.4rem 0.9rem;font-size:0.76rem;${waiting ? 'opacity:0.5;cursor:not-allowed;' : ''}" onclick="dsSetStatus(${c.id}, 'in_progress', 'Work started — customer notified.')">No Extra Work — Start Work</button>`;
       undo = undoLink;
     } else if (c.status_key === 'in_progress') {
-      if (q && q.status === 'approved') note = dsNote(`The customer approved the quotation — ${pesoN(q.extra)} extra work.`, 'green');
+      if (q && q.status === 'awaiting_customer') note = dsNote('<strong>Extra work is waiting for the customer.</strong> The booked service keeps going; it cannot be completed until they answer.', 'yellow');
+      else if (q && q.status === 'approved') note = dsNote(`The customer approved the quotation — ${pesoN(q.extra)} extra work.`, 'green');
       else if (q && q.status === 'declined') note = dsNote('The customer declined the quotation — only the booked service is being done.', 'grey');
       primary = `<button type="button" class="btn-primary-custom" style="padding:0.4rem 0.9rem;font-size:0.76rem;" onclick="openDsComplete(${c.id})">Mark Completed</button>`;
       undo = undoLink;
@@ -10049,7 +10046,7 @@ async function refreshDashboardOverview() {
 
     const counts = d.booking_status_counts || {};
     const total = d.total_bookings || 0;
-    ['confirmed', 'inspection', 'in_progress', 'completed', 'cancelled'].forEach(status => {
+    ['confirmed', 'in_progress', 'completed', 'cancelled'].forEach(status => {
       const count = counts[status] || 0;
       const pct = total > 0 ? Math.floor(count / total * 100) : 0;
       const bar = document.getElementById('bk-bar-' + status);

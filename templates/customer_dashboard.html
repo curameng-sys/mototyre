@@ -1988,7 +1988,7 @@
               <div style="display:flex;gap:0.6rem;align-items:flex-start;padding:0.45rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;">
                 <span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#fee2e2;color:#dc2626;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                 <div style="min-width:0;">
-                  <div style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.8rem;color:#b91c1c;">Inspection &amp; Estimation: you can't cancel</div>
+                  <div style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.8rem;color:#b91c1c;">In Progress: you can't cancel</div>
                   <div style="font-size:0.72rem;color:var(--fg-3);margin-top:0.1rem;line-height:1.35;">Once the shop starts inspecting, it can't be cancelled online.</div>
                 </div>
               </div>
@@ -2075,7 +2075,7 @@
                 {% if b.status == 'confirmed' %}
                 <button type="button" onclick="event.stopPropagation(); openCancelFor({{ b.id }})" style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.66rem;padding:0.25em 0.7em;border-radius:99px;background:#fff;border:1px solid #fecaca;color:#b91c1c;cursor:pointer;">Cancel booking</button>
                 {% elif b.status in ['inspection', 'in_progress', 'inprogress'] %}
-                <span style="font-size:0.7rem;color:var(--fg-3);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Can't cancel · inspection started</span>
+                <span style="font-size:0.7rem;color:var(--fg-3);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Can't cancel · work started</span>
                 {% elif b.status == 'cancelled' %}
                 <button type="button" class="mb-again" onclick="event.stopPropagation(); bookAgain({{ b.id }})" style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.66rem;padding:0.3em 0.8em;border-radius:99px;background:#fff;border:1px solid var(--brand-red-border);color:var(--brand-red);cursor:pointer;display:inline-flex;align-items:center;gap:0.3em;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Book Again</button>
                 {% endif %}
@@ -5045,7 +5045,7 @@ function renderUpcomingBookings() {
             <div style="margin-top:0.45rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
               ${tag(st.label, st.bg, st.color)}
               ${r.status === 'confirmed' ? `<button type="button" onclick="openCancelFor(${r.id})" style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.66rem;padding:0.25em 0.7em;border-radius:99px;background:#fff;border:1px solid #fecaca;color:#b91c1c;cursor:pointer;">Cancel booking</button>` : ''}
-              ${started ? `<span style="font-size:0.7rem;color:var(--fg-3);">${lockIcon} Can't cancel · inspection started</span>` : ''}
+              ${started ? `<span style="font-size:0.7rem;color:var(--fg-3);">${lockIcon} Can't cancel · work started</span>` : ''}
             </div>
           </div>`;
         }).join('')}
@@ -6398,22 +6398,16 @@ function openBookingDetails(bookingId) {
 
   // Status timeline
   const timeline = document.getElementById('bd-timeline');
-  const steps = ['confirmed', 'inspection', 'in_progress', 'completed'];
-  const stepLabels = { confirmed: 'Confirmed', inspection: 'Inspection & Estimation', in_progress: 'In Progress', completed: 'Completed' };
+  const steps = ['confirmed', 'in_progress', 'completed'];
+  const stepLabels = { confirmed: 'Confirmed', in_progress: 'In Progress', completed: 'Completed' };
 
   // Normalize status
   let normalizedStatus = booking.status.toLowerCase().replace(' ', '_');
-  if (normalizedStatus === 'inprogress') normalizedStatus = 'in_progress';
+  if (normalizedStatus === 'inprogress' || normalizedStatus === 'inspection') normalizedStatus = 'in_progress';   // the inspection is part of the work now
 
-  // only the FIRST quotation belongs to the Inspection step; a later extra work is asked while the booking is already In Progress
-  const quot = (booking.quotation && (booking.quotation.round || 1) === 1) ? booking.quotation : null;
+  // extra work found while the booking is In Progress: its state shows under that step
+  const quot = booking.quotation || null;
   let currentIdx = steps.indexOf(normalizedStatus);
-  // Once the customer has answered the quotation, the booking visually
-  // advances to "In Progress" even though the shop hasn't clicked its own
-  // next-step button yet — the customer's part of this step is done.
-  if (normalizedStatus === 'inspection' && quot && (quot.status === 'approved' || quot.status === 'declined')) {
-    currentIdx = steps.indexOf('in_progress');
-  }
   const isCancelled = booking.status === 'cancelled';
 
   if (isCancelled) {
@@ -6431,10 +6425,10 @@ function openBookingDetails(bookingId) {
           const done = i < currentIdx;
           const active = i === currentIdx;
           let subLabel = '';
-          if (step === 'inspection' && quot) {
-            if (quot.status === 'awaiting_customer') subLabel = `<div style="font-size:0.58rem;font-weight:700;color:#92400e;margin-top:0.15rem;">Awaiting your response</div>`;
-            else if (quot.status === 'approved') subLabel = `<div style="font-size:0.58rem;font-weight:700;color:#15803d;margin-top:0.15rem;">Approved</div>`;
-            else if (quot.status === 'declined') subLabel = `<div style="font-size:0.58rem;font-weight:700;color:#b91c1c;margin-top:0.15rem;">Declined</div>`;
+          if (step === 'in_progress' && quot) {
+            if (quot.status === 'awaiting_customer') subLabel = `<div style="font-size:0.58rem;font-weight:700;color:#92400e;margin-top:0.15rem;">Extra work: awaiting your response</div>`;
+            else if (quot.status === 'approved') subLabel = `<div style="font-size:0.58rem;font-weight:700;color:#15803d;margin-top:0.15rem;">Extra work approved</div>`;
+            else if (quot.status === 'declined') subLabel = `<div style="font-size:0.58rem;font-weight:700;color:#b91c1c;margin-top:0.15rem;">Extra work declined</div>`;
           }
           return `
             <div style="display:flex;flex-direction:column;align-items:center;z-index:2;flex:1;">
@@ -6600,10 +6594,10 @@ async function doCancelBooking(id) {
       if (live && live.status === 'confirmed') live.status = 'inspection';
       renderUpcomingBookings();
       const slot = document.querySelector(`tr.booking-row[data-booking-id="${id}"] .mb-cancel-slot`);
-      if (slot) slot.innerHTML = `<span style="font-size:0.7rem;color:var(--fg-3);">Can't cancel · inspection started</span>`;
+      if (slot) slot.innerHTML = `<span style="font-size:0.7rem;color:var(--fg-3);">Can't cancel · work started</span>`;
       const badge = document.querySelector(`tr.booking-row[data-booking-id="${id}"] [data-mb-status]`);
       if (badge) { badge.className = 'badge badge-inspection'; badge.textContent = 'Inspection & Estimation'; }
-      showCartToast(`${ref} can't be cancelled anymore. The shop already started the inspection.`);
+      showCartToast(`${ref} can't be cancelled anymore. The shop already started the work.`);
       return;
     }
     showCartToast(data.error || 'Could not cancel this booking.');
@@ -7907,17 +7901,17 @@ function _findInvoiceData(bookingId) {
 }
 
 function buildInvoiceProgressHTML(decision, isPaid) {
-  const steps = ['Confirmed', 'Inspection & Estimation', 'In Progress', 'Completed'];
+  const steps = ['Confirmed', 'In Progress', 'Completed'];
   let sub2 = '';
   if (decision === 'approved') sub2 = '<div style="font-size:0.58rem;font-weight:700;color:#15803d;margin-top:0.15rem;">Approved</div>';
   else if (decision === 'declined') sub2 = '<div style="font-size:0.58rem;font-weight:700;color:#b91c1c;margin-top:0.15rem;">Declined</div>';
-  const subs = ['', sub2, '', isPaid ? '<div style="font-size:0.58rem;font-weight:700;color:#15803d;margin-top:0.15rem;">Paid</div>' : ''];
+  const subs = ['', sub2, isPaid ? '<div style="font-size:0.58rem;font-weight:700;color:#15803d;margin-top:0.15rem;">Paid</div>' : ''];
   return `
     <div style="position:absolute;top:14px;left:14px;right:14px;height:2px;background:var(--green);z-index:0;"></div>
     ${steps.map((label, i) => `
       <div style="display:flex;flex-direction:column;align-items:center;z-index:2;flex:1;">
         <div style="width:28px;height:28px;border-radius:50%;background:var(--green);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#fff;${i===3?'box-shadow:0 0 0 4px rgba(21,128,61,0.2);':''}">✓</div>
-        <div style="font-size:0.63rem;color:#14532d;margin-top:0.5rem;font-family:'Inter',sans-serif;font-weight:${i===3?'700':'600'};text-align:center;max-width:68px;">${label}</div>
+        <div style="font-size:0.63rem;color:#14532d;margin-top:0.5rem;font-family:'Inter',sans-serif;font-weight:${i===2?'700':'600'};text-align:center;max-width:68px;">${label}</div>
         ${subs[i]}
       </div>`).join('')}`;
 }
@@ -10449,7 +10443,7 @@ function showToast(msg, type) {
 
 
 // ══ HOME: live progress under each unfinished booking / order ══
-const OVP_BOOKING = ['Confirmed', 'Inspection', 'In Progress', 'Completed'];
+const OVP_BOOKING = ['Confirmed', 'In Progress', 'Completed'];
 const OVP_DELIVERY = ['Confirmed', 'In Progress', 'Done Packaging', 'Shipping', 'Completed'];
 const SHIP_STEP_INDEX = { confirmed: 0, in_progress: 1, done_packaging: 2, shipping: 3 };
 // One short line about where a Ship to Address order is right now.
@@ -10484,7 +10478,7 @@ function renderOverviewProgress() {
     let html = '';
     if (key[0] === 'b') {
       const b = bookingsData[id];
-      const idx = b ? { confirmed: 0, inspection: 1, in_progress: 2, inprogress: 2 }[b.status] : undefined;
+      const idx = b ? { confirmed: 0, inspection: 1, in_progress: 1, inprogress: 1 }[b.status] : undefined;
       if (idx !== undefined) {
         let line;
         if (idx === 0) {
@@ -10528,7 +10522,7 @@ function renderMyBookingsProgress() {
   const noZero = t => (t || '').replace(/^0/, '');
   document.querySelectorAll('[data-mbp]').forEach(el => {
     const b = bookingsData[el.dataset.mbp];
-    const idx = b ? { confirmed: 0, inspection: 1, in_progress: 2, inprogress: 2 }[b.status] : undefined;
+    const idx = b ? { confirmed: 0, inspection: 1, in_progress: 1, inprogress: 1 }[b.status] : undefined;
     if (idx === undefined) { el.innerHTML = ''; return; }
     let line;
     if (idx === 0) {
@@ -10553,7 +10547,7 @@ function renderMyBookingsProgress() {
     if (has === want) return;
     slot.innerHTML = want === 'confirmed'
       ? `<button type="button" onclick="event.stopPropagation(); openCancelFor(${b.id})" style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.66rem;padding:0.25em 0.7em;border-radius:99px;background:#fff;border:1px solid #fecaca;color:#b91c1c;cursor:pointer;">Cancel booking</button>`
-      : (want === 'started' ? `<span style="font-size:0.7rem;color:var(--fg-3);">Can't cancel · inspection started</span>` : (want === 'again' ? bookAgainBtnHTML(b.id) : ''));
+      : (want === 'started' ? `<span style="font-size:0.7rem;color:var(--fg-3);">Can't cancel · work started</span>` : (want === 'again' ? bookAgainBtnHTML(b.id) : ''));
   });
 }
 

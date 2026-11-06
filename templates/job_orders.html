@@ -340,7 +340,7 @@
           </td>
           <td>
             {% if jo.status in ('pending', 'in_progress') %}
-            <button type="button" class="view-btn" style="margin-bottom:.35rem;" onclick='openAddWork({{ jo.id }}, {{ jo.customer_name|tojson }}, {{ "true" if jo.mechanic_name and not jo.mechanic_done_at else "false" }})'>+ Add work</button><br>
+            <button type="button" class="view-btn" style="margin-bottom:.35rem;" onclick="addWorkTo({{ jo.id }})">+ Add work</button><br>
             {% endif %}
             {% if jo.status == 'in_progress' %}
             <a href="{{ url_for('payment_process', joid=jo.id) }}"
@@ -383,31 +383,6 @@
 <div class="toast-wrap" id="toast-wrap"></div>
 
 
-<div id="aw-overlay" style="display:none;position:fixed;inset:0;background:rgba(17,24,39,.55);z-index:3000;align-items:center;justify-content:center;padding:1rem;" onclick="if(event.target===this)closeAddWork()">
-  <div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:1.25rem 1.4rem;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.5rem;color:#111827;">Add work</div>
-    <div id="aw-sub" style="font-size:.8rem;color:#6b7280;margin-bottom:.9rem;">The mechanic found something more. It is added to the total the customer pays.</div>
-    <label style="display:block;font-size:.7rem;font-weight:700;color:#6b7280;margin-bottom:.2rem;">What is it?</label>
-    <select id="aw-kind" style="width:100%;padding:.5rem .6rem;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:.7rem;font-family:inherit;">
-      <option value="finding">Extra repair / finding</option><option value="service">Extra service</option><option value="product">Part</option>
-    </select>
-    <label style="display:block;font-size:.7rem;font-weight:700;color:#6b7280;margin-bottom:.2rem;">Description</label>
-    <input id="aw-name" maxlength="150" placeholder="e.g. Loose steering bearing" style="width:100%;padding:.5rem .6rem;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:.7rem;font-family:inherit;">
-    <div style="display:flex;gap:.6rem;margin-bottom:.7rem;">
-      <div style="flex:1;"><label style="display:block;font-size:.7rem;font-weight:700;color:#6b7280;margin-bottom:.2rem;">Price (each)</label><input id="aw-price" type="number" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:.5rem .6rem;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;"></div>
-      <div style="width:90px;"><label style="display:block;font-size:.7rem;font-weight:700;color:#6b7280;margin-bottom:.2rem;">Qty</label><input id="aw-qty" type="number" min="1" value="1" style="width:100%;padding:.5rem .6rem;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;"></div>
-    </div>
-    <div id="aw-time-wrap" style="margin-bottom:.8rem;">
-      <label style="display:block;font-size:.7rem;font-weight:700;color:#6b7280;margin-bottom:.2rem;">Extra time for the mechanic</label>
-      <select id="aw-minutes" style="width:100%;padding:.5rem .6rem;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;"><option value="0">No extra time</option><option value="30">+30 minutes</option><option value="60">+1 hour</option></select>
-    </div>
-    <div id="aw-err" style="display:none;color:#b91c1c;font-size:.78rem;margin-bottom:.6rem;"></div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;">
-      <button type="button" onclick="closeAddWork()" style="padding:.5rem 1rem;border:1px solid #e5e7eb;background:#fff;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;">Cancel</button>
-      <button type="button" id="aw-save" onclick="saveAddWork()" style="padding:.5rem 1.1rem;border:0;background:#d00019;color:#fff;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;">Add to the total</button>
-    </div>
-  </div>
-</div>
 <script>
   function toggleItems(id) {
     document.getElementById('items-row-' + id).classList.toggle('open');
@@ -490,32 +465,10 @@
       if (data.success) location.reload(); else alert(data.error || 'Could not extend this job.');
     } catch (e) { alert('Network error — please try again.'); }
   }
-  let _awJo = null;
-  function openAddWork(jid, customer, holdsMechanic) {
-    _awJo = jid;
-    document.getElementById('aw-sub').textContent = customer + ' · the mechanic found something more. It is added to the total the customer pays.';
-    ['aw-name', 'aw-price'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('aw-qty').value = 1; document.getElementById('aw-kind').value = 'finding'; document.getElementById('aw-minutes').value = '0';
-    document.getElementById('aw-time-wrap').style.display = holdsMechanic ? 'block' : 'none';
-    document.getElementById('aw-err').style.display = 'none';
-    document.getElementById('aw-overlay').style.display = 'flex';
-    setTimeout(() => document.getElementById('aw-name').focus(), 30);
-  }
-  function closeAddWork() { document.getElementById('aw-overlay').style.display = 'none'; }
-  async function saveAddWork() {
-    const err = document.getElementById('aw-err'), btn = document.getElementById('aw-save');
-    err.style.display = 'none';
-    const body = { item_type: document.getElementById('aw-kind').value, name: document.getElementById('aw-name').value.trim(),
-      unit_price: document.getElementById('aw-price').value, quantity: parseInt(document.getElementById('aw-qty').value, 10) || 1,
-      minutes: parseInt(document.getElementById('aw-minutes').value, 10) || 0 };
-    if (!body.name) { err.textContent = 'Please describe the work.'; err.style.display = 'block'; return; }
-    if (body.unit_price === '' || Number(body.unit_price) < 0) { err.textContent = 'Please enter the price.'; err.style.display = 'block'; return; }
-    btn.disabled = true;
-    try {
-      const res = await fetch(`/job-order/${_awJo}/add-work`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const data = await res.json();
-      if (data.success) { location.reload(); } else { err.textContent = data.error || 'Could not add the work.'; err.style.display = 'block'; btn.disabled = false; }
-    } catch (e) { err.textContent = 'Network error. Please try again.'; err.style.display = 'block'; btn.disabled = false; }
+  // Extra work found on a walk-in job: the same builder as for a booking, pointed at this job order.
+  function addWorkTo(jid) {
+    try { if (window.top !== window && window.top.openEmbedded) { window.top.openEmbedded('joborders', 'job_order_id=' + jid, '/quotation/new'); return; } } catch (e) {}
+    window.location.href = '/quotation/new?job_order_id=' + jid;
   }
   async function markJoDone(jid) {
     try {

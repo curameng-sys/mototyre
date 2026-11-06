@@ -309,10 +309,15 @@
 <body>
 
 <div class="page-header">
-  {% if booking %}<a href="{{ url_for('admin_dashboard', section='inspection') }}" target="_top" onclick="if (window.top !== window &amp;&amp; window.top.showSection) { window.top.showSection('inspection', null); window.top.loadInspection &amp;&amp; window.top.loadInspection(); return false; }" class="back-iq">&larr; Back to Inspection &amp; Quotation</a>{% endif %}
+  {% if booking %}{% if booking.is_job_order %}<a href="{{ url_for('admin_dashboard', section='joborders') }}" target="_top" onclick="if (window.top !== window &amp;&amp; window.top.openEmbedded) { window.top.openEmbedded('joborders', '', '/job-orders'); return false; }" class="back-iq">&larr; Back to Job Orders</a>{% else %}<a href="{{ url_for('admin_dashboard', section='inspection') }}" target="_top" onclick="if (window.top !== window &amp;&amp; window.top.showSection) { window.top.showSection('inspection', null); window.top.loadInspection &amp;&amp; window.top.loadInspection(); return false; }" class="back-iq">&larr; Back to Inspection &amp; Quotation</a>{% endif %}{% endif %}
   {% if booking and booking.is_extra_round %}
+  {% if booking.is_job_order %}
+  <div class="page-title">Add work to <span class="accent">{{ booking.ref }}</span></div>
+  <div class="page-sub">The mechanic found more on this walk-in job. Pick the parts, services or findings. The customer is at the shop, so it is added to the job order and its total right away.</div>
+  {% else %}
   <div class="page-title">Extra work #{{ booking.round_no }} <span class="accent">#{{ booking.ref }}</span></div>
   <div class="page-sub">Status: {{ 'In Progress' if booking.status in ('in_progress', 'inprogress') else 'Inspection &amp; Estimation' }}. The booked service keeps going while the customer decides. Add what the mechanic found now, then send it to the customer.</div>
+  {% endif %}
   {% if booking.previous %}
   <div id="prev-rounds" style="margin-top:0.55rem;display:flex;gap:0.4rem;flex-wrap:wrap;">
     {% for p in booking.previous %}<span class="badge badge-{{ 'approved' if p.status == 'approved' else ('declined' if p.status == 'declined' else 'awaiting_customer') }}">Extra work #{{ p.no }} · {{ 'Approved' if p.status == 'approved' else ('Declined' if p.status == 'declined' else 'Waiting') }} · ₱{{ '{:,.2f}'.format(p.total) }}</span>{% endfor %}
@@ -583,7 +588,7 @@
         <label class="field-label">Notes</label>
         <textarea class="notes-inp" id="notes" placeholder="Additional notes or remarks..."></textarea>
       </div>
-      {% if booking %}
+      {% if booking and not booking.is_job_order %}
       <div id="atshop-box" style="margin-bottom:0.7rem;padding:0.7rem 0.8rem;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;">
         <div style="font-size:0.82rem;font-weight:700;color:#5b21b6;">Customer at the shop? Just save.</div>
         <input type="checkbox" id="atshop-check" checked style="display:none;">   {# on by default: the answer is recorded here. Ticking the box below sends it online instead. #}
@@ -600,7 +605,7 @@
       </div>
       {% endif %}
       <button class="btn-save" id="save-btn" onclick="saveQuotation()" disabled>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> {% if booking and booking.is_extra_round %}Save &amp; Record Answer{% elif booking %}Save &amp; Start Work{% else %}Save Quotation{% endif %}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> {% if booking and booking.is_job_order %}Add to the job order{% elif booking and booking.is_extra_round %}Save &amp; Record Answer{% elif booking %}Save &amp; Start Work{% else %}Save Quotation{% endif %}
       </button>
       <div class="sent-msg" id="sent-msg"></div>
       <button class="btn-clear" id="clear-btn" onclick="clearAll()">× Clear All</button>
@@ -627,7 +632,7 @@
     </div>
     <div class="modal-foot">
       {% if booking %}
-        <a href="{{ url_for('admin_dashboard', section='inspection') }}" target="_top" onclick="if (window.top !== window &amp;&amp; window.top.showSection) { window.top.showSection('inspection', null); window.top.loadInspection &amp;&amp; window.top.loadInspection(); return false; }" class="btn-modal-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Inspection &amp; Quotation</a>
+        {% if booking.is_job_order %}<a href="{{ url_for('admin_dashboard', section='joborders') }}" target="_top" onclick="if (window.top !== window &amp;&amp; window.top.openEmbedded) { window.top.openEmbedded('joborders', '', '/job-orders'); return false; }" class="btn-modal-pri">Back to Job Orders</a>{% else %}<a href="{{ url_for('admin_dashboard', section='inspection') }}" target="_top" onclick="if (window.top !== window &amp;&amp; window.top.showSection) { window.top.showSection('inspection', null); window.top.loadInspection &amp;&amp; window.top.loadInspection(); return false; }" class="btn-modal-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Inspection &amp; Quotation</a>{% endif %}
       {% else %}
         <button class="btn-modal-sec" onclick="newQuotation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Quote</button>
         <a href="{{ url_for('quotations_list') }}" class="btn-modal-pri"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> View All</a>
@@ -657,6 +662,7 @@
 <script>
   const HAS_BOOKING = {{ 'true' if booking else 'false' }};
   const BOOKING_ID  = {{ booking.id if booking else 'null' }};
+  const IS_JO = {{ 'true' if (booking and booking.is_job_order) else 'false' }};                  // extra work on a walk-in job order
   const IS_EXTRA = {{ 'true' if (booking and booking.is_extra_round) else 'false' }};         // a second, third... extra work on the same booking
   const ROUND_NO = {{ booking.round_no if booking else 1 }};
   const BLOCKED_BY = {{ (booking.open_round or 'null') if booking else 'null' }};              // an earlier extra work is still waiting for the customer
@@ -1018,6 +1024,7 @@
       if (notCovered.photos.length === 0) { toast("Add at least one photo showing why it isn't covered.", 'error'); return; }
     }
 
+    if (IS_JO) { return saveToJobOrder(); }
     const atShop = HAS_BOOKING && document.getElementById('atshop-check') && document.getElementById('atshop-check').checked;
     const atShopAnswer = atShop ? (document.querySelector('input[name="atshop"]:checked') || {}).value : null;
     if (atShop && !atShopAnswer) { toast('Choose whether the customer approved or declined.', 'error'); return; }
@@ -1082,8 +1089,35 @@
     }
   }
 
+  async function saveToJobOrder() {
+    const btn = document.getElementById('save-btn');
+    const list = items.filter(i => !i.locked);
+    if (!list.length) { toast('Add at least one item.', 'error'); return; }
+    btn.disabled = true;
+    try {
+      const res = await fetch('/job-order/{{ booking.id if booking else 0 }}/add-items', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: list.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price, source: i.source || null,
+                                                       minutes: i.item_type === 'service' ? (i.minutes || 0) : 0 })) }) });
+      const data = await res.json();
+      if (data.success) {
+        const total = list.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+        document.getElementById('modal-ref').textContent = data.ref;
+        document.getElementById('modal-customer').textContent = document.getElementById('cust-name') ? document.getElementById('cust-name').value : '';
+        document.getElementById('modal-moto').textContent = {{ (booking.motorcycle_model if booking else '')|tojson }} || '—';
+        document.getElementById('modal-items').textContent = list.reduce((s, i) => s + i.quantity, 0) + ' item(s)';
+        document.getElementById('modal-total').textContent = '₱' + Number(total).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('modal-sub').textContent = 'Added to ' + data.ref + '. The new total is ₱' + Number(data.total).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '.' + (data.extra_minutes ? ' The mechanic stays busy ' + data.extra_minutes + ' minutes longer.' : '');
+        document.getElementById('success-modal').classList.add('open');
+        syncStock();
+      } else {
+        toast(data.error || 'Could not add the work.', 'error'); btn.disabled = false;
+      }
+    } catch (e) { toast('Network error. Please try again.', 'error'); btn.disabled = false; }
+  }
+
   function saveLabel() {
     const c = document.getElementById('atshop-check');
+    if (IS_JO) return 'Add to the job order';
     return HAS_BOOKING ? ((c && c.checked) ? (IS_EXTRA ? 'Save &amp; Record Answer' : 'Save &amp; Start Work') : (IS_EXTRA ? 'Send Extra Work' : 'Save &amp; Send Quotation')) : 'Save Quotation';
   }
   // The answer is recorded at the shop by default. The box "send it online instead" turns that off.

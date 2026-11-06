@@ -457,7 +457,7 @@ def send_booking_confirmation_email(booking):
               Please arrive 10 minutes early so we can start on time.
               <ul style="margin:10px 0 0 18px;padding:0;color:#6b7280;font-size:12px;line-height:1.7;">
                 <li>Your booking is valid only for the date and time above. It is held for {NO_SHOW_GRACE_MIN} minutes after your time; after that the shop may mark it a no-show and cancel it.</li>
-                <li>You can cancel while it is Confirmed. Once the shop starts the inspection, it can no longer be cancelled online.</li>
+                <li>You can cancel while it is Confirmed. Once the shop starts the work, it can no longer be cancelled online.</li>
                 <li>You can change the date or time up to {MAX_CUSTOMER_RESCHEDULES} times, and not within {RESCHEDULE_CUTOFF_HOURS} hours of your appointment.</li>
                 <li>You pay at the shop after the service. If the mechanic finds more work, the shop sends you a quotation first and you decide.</li>
               </ul>

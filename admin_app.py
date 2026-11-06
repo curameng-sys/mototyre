@@ -1716,7 +1716,7 @@ def admin_dashboard():
     # genuinely useful to call out separately on the dashboard.
     _awaiting_quotation_count = sum(
         1 for b in _all_bookings_list
-        if b.status == 'inspection' and b.quotation and b.quotation.status == 'awaiting_customer'
+        if b.status in ('inspection', 'in_progress', 'inprogress') and b.quotation and b.quotation.status == 'awaiting_customer'
     )
 
     return render_template('admin_dashboard.html',
@@ -1920,7 +1920,7 @@ def api_dashboard_stats():
 
     _awaiting_quotation_count = sum(
         1 for b in _all_bookings_list
-        if b.status == 'inspection' and b.quotation and b.quotation.status == 'awaiting_customer'
+        if b.status in ('inspection', 'in_progress', 'inprogress') and b.quotation and b.quotation.status == 'awaiting_customer'
     )
 
     _paid_jo_ids = [r[0] for r in db.session.query(Payment.job_order_id).filter(Payment.job_order_id != None).all()]
@@ -1949,7 +1949,7 @@ def api_dashboard_stats():
             'is_backjob': b.service.startswith('Back job — '),
             'date': b.date.strftime('%b %d, %Y'), 'time': b.time.strftime('%I:%M %p'),
             'status': b.status,
-            'awaiting_quotation': bool(b.status == 'inspection' and b.quotation and b.quotation.status == 'awaiting_customer'),
+            'awaiting_quotation': bool(b.status in ('inspection', 'in_progress', 'inprogress') and b.quotation and b.quotation.status == 'awaiting_customer'),
         })
 
     return jsonify({
@@ -2410,6 +2410,8 @@ def update_booking_status(bid):
     if new_status == 'completed':
         flash('Bookings can only be completed via the Billing page.', 'danger')
         return redirect(url_for('admin_dashboard'))
+    if new_status == 'inspection':
+        new_status = 'in_progress'        # Start goes straight to In Progress: the inspection is part of the work, not a step of its own
     is_start = new_status in ('inspection', 'in_progress', 'inprogress')
     if is_start and booking.status == 'confirmed':
         elig = start_eligibility(booking, ph_now())
@@ -3976,8 +3978,12 @@ def undo_booking_status(bid):
     if booking.status == 'completed':
         return jsonify({'success': False, 'error': 'A completed booking can\'t be undone — the invoice has been sent.'}), 400
     if booking.status in ('in_progress', 'inprogress'):
-        booking.status = 'inspection'
+        if Quotation.query.filter_by(booking_id=booking.id).first():
+            return jsonify({'success': False, 'error': 'Extra work was already added to this booking, so it cannot go back to Confirmed. Withdraw it first.'}), 400
+        booking.status = 'confirmed'
         booking.in_progress_at = None
+        booking.inspection_at = None
+        booking.actual_start_at = None
     elif booking.status == 'inspection':
         q = Quotation.query.filter_by(booking_id=booking.id).first()
         if q:
@@ -4224,7 +4230,7 @@ def api_day_panel():
             _day_claims[rr.redo_booking_id] = rr
 
     def _norm_status(st):
-        return 'in_progress' if st == 'inprogress' else st
+        return 'in_progress' if st in ('inprogress', 'inspection') else st     # there is no separate Inspection step any more
 
     def _t_label(dt):
         return dt.strftime('%I:%M %p').lstrip('0') if dt else None
@@ -7197,12 +7203,32 @@ def pos():
 @require_admin_or_staff
 def quotation_new():
     if _opened_as_page():
-        return _into_dashboard('quotations')
+        return _into_dashboard('joborders' if request.args.get('job_order_id') else 'quotations')
     products = Product.query.filter(Product.stock > 0).order_by(Product.category, Product.name).all()
     services = Service.query.filter_by(is_active=True).order_by(Service.name).all()
     mechanics = Mechanic.query.order_by(Mechanic.name).all()
     booking = None
     booking_id = request.args.get('booking_id', type=int)
+    jo_id = request.args.get('job_order_id', type=int)
+    if jo_id and not booking_id:
+        # Extra work found on a walk-in job: the same builder, pointed at the job order (the customer is at the shop, so there is no
+        # answer to wait for; what is added goes straight onto the job order and its total).
+        jo = JobOrder.query.get(jo_id)
+        if jo and jo.status in ('pending', 'in_progress') and not jo.payment:
+            began = jo.start_at or jo.created_at
+            start = began.hour * 60 + began.minute
+            dur = jo.est_minutes or 30
+            booking = {
+                'id': jo.id, 'ref': f'JO-{jo.id:03d}', 'is_job_order': True,
+                'customer_name': jo.customer_name or '', 'customer_phone': jo.customer_phone or '',
+                'motorcycle_model': jo.motorcycle_model or '', 'motorcycle_plate': jo.motorcycle_plate or '',
+                'service_name': '', 'service_price': 0, 'is_backjob': False, 'regular_price': 0,
+                'assigned_mechanic_name': jo.mechanic_name, 'assigned_mechanic_specialization': None,
+                'assigned_mechanic_initials': _mechanic_initials(jo.mechanic_name), 'mechanic_is_customer_choice': False,
+                'date_label': _quote_day_label(began.date()), 'start_min': start, 'duration_min': dur, 'booked_end_min': start + dur,
+                'staff_extra_min': 0, 'quote_extra_min': 0, 'booked_services': [],
+                'round_no': 2, 'is_extra_round': True, 'status': 'in_progress', 'open_round': None, 'previous': [],
+            }
     if booking_id:
         b = Booking.query.get(booking_id)
         if b:
@@ -8708,6 +8734,45 @@ def extend_job_order_time(jid):
     db.session.commit()
     until = (jo.start_at.hour * 60 + jo.start_at.minute + jo.est_minutes) if jo.start_at else None
     return jsonify({'success': True, 'until': minutes_to_ampm(until) if until is not None else None})
+
+
+@admin_app.route('/job-order/<int:jid>/add-items', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def job_order_add_items(jid):
+    """Extra work picked in the quotation builder for a walk-in job (parts, services, findings, many at once). The customer is at the
+    shop and agrees out loud, so it goes straight onto the job order and its total. Time for the services (and the custom labor time)
+    keeps the mechanic marked busy for that long."""
+    jo = JobOrder.query.get_or_404(jid)
+    if jo.payment or jo.status not in ('pending', 'in_progress'):
+        return jsonify({'success': False, 'error': 'Work can only be added before this job order is paid.'}), 400
+    data = request.get_json(silent=True) or {}
+    raw = data.get('items') or []
+    if not isinstance(raw, list) or not raw or len(raw) > 50:
+        return jsonify({'success': False, 'error': 'Add at least one item.'}), 400
+    clean, rows = [], []
+    for it in raw:
+        if not isinstance(it, dict):
+            return jsonify({'success': False, 'error': 'Invalid item.'}), 400
+        kind = it.get('item_type') if it.get('item_type') in ('finding', 'service', 'product') else 'finding'
+        name = clean_str(it.get('name', ''), max_len=150)
+        try:
+            price = round(float(it.get('unit_price')), 2)
+            qty = int(it.get('quantity') if it.get('quantity') is not None else 1)
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'Please check the price and quantity.'}), 400
+        if not name or price < 0 or price > 1000000 or qty < 1 or qty > 999:
+            return jsonify({'success': False, 'error': 'Please check the name, price and quantity of each item.'}), 400
+        clean.append({'item_type': kind, 'name': name, 'quantity': qty, 'unit_price': price, 'source': it.get('source'), 'minutes': it.get('minutes') or 0})
+        rows.append(JobOrderItem(job_order_id=jo.id, item_type=kind, name=name, quantity=qty, unit_price=price))
+    db.session.add_all(rows)
+    db.session.flush()
+    jo.total_amount = round(sum((i.unit_price or 0) * (i.quantity or 1) for i in JobOrderItem.query.filter_by(job_order_id=jo.id).all()), 2)
+    extra_min = _quote_extra_minutes(clean)
+    if extra_min and jo.mechanic_name and not jo.mechanic_done_at:
+        jo.est_minutes = (jo.est_minutes or 30) + extra_min
+    db.session.commit()
+    return jsonify({'success': True, 'ref': f'JO-{jo.id:03d}', 'total': jo.total_amount, 'added': len(rows), 'extra_minutes': extra_min})
 
 
 @admin_app.route('/job-order/<int:jid>/add-work', methods=['POST'])
@@ -10357,6 +10422,7 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN cancelled_by VARCHAR(12) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN cancel_reason VARCHAR(300) DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN rebooked_from INT DEFAULT NULL",
+        "UPDATE booking SET status = 'in_progress', in_progress_at = COALESCE(in_progress_at, inspection_at, actual_start_at) WHERE status = 'inspection'",
         "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN recorded_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN voided_at DATETIME DEFAULT NULL",
