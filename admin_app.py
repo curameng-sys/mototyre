@@ -818,7 +818,7 @@ def _quote_billed_items(q, backjob=False):
     answered), only the booked service and the parts already used."""
     if q.status == 'approved':
         return list(q.items)
-    return [i for i in q.items if i.locked or (i.item_type == 'product' and not backjob)]
+    return [i for i in q.items if i.locked]          # declined or unanswered: only the booked service stays on the bill
 
 
 def _booking_billed_items(booking, quotes):
@@ -837,7 +837,7 @@ def _booking_quotes_total(booking, quotes):
     total = 0.0
     for q in quotes:
         bd = _quotation_breakdown(q.items)
-        total += bd['approve_total'] if q.status == 'approved' else (bd['booked'] if backjob else bd['decline_total'])
+        total += bd['approve_total'] if q.status == 'approved' else bd['booked']
     return round(total, 2)
 
 
@@ -875,7 +875,7 @@ def booking_extras(booking):
         for i in q.items:
             if i.locked:
                 continue                                   # the booked service is already listed above
-            billed = q.status == 'approved' or (q.status == 'declined' and i.item_type == 'product' and not backjob)
+            billed = q.status == 'approved'
             rlines.append({'name': _line_name(i), 'amount': _line_amount(i), 'kind': kinds.get(i.item_type, 'Service'), 'billed': billed, 'round': n})
         lines.extend(rlines)
         rounds.append({'no': n, 'id': q.id, 'status': q.status, 'in_person': bool(q.decided_in_person), 'items': rlines,
@@ -1036,7 +1036,7 @@ def _quotation_breakdown(items):
     return {
         'booked': booked, 'materials': materials, 'extra': extra,
         'approve_total': booked + materials + extra,
-        'decline_total': booked + materials,
+        'decline_total': booked,                       # a declined extra work leaves only the booked service (its parts are not billed)
     }
 
 
@@ -1494,7 +1494,7 @@ def _reports_summary(date_from=None, date_to=None):
             _mp_latest_quotations[q.booking_id] = q
 
     def _relevant_quotation_items(q):
-        return q.items if q.status == 'approved' else [i for i in q.items if i.locked or i.item_type == 'product']
+        return q.items if q.status == 'approved' else [i for i in q.items if i.locked]
 
     def _labor_income(b, q):
         if not q:
@@ -2566,7 +2566,7 @@ def _deduct_quotation_parts(q, booking):
     if not q or q.parts_deducted:
         return []
     used = []
-    billable = q.items if q.status == 'approved' else [i for i in q.items if i.locked or (i.item_type == 'product' and not booking.service.startswith(BACKJOB_PREFIX))]
+    billable = q.items if q.status == 'approved' else [i for i in q.items if i.locked]
     for it in billable:
         if it.item_type != 'product':
             continue
@@ -7422,7 +7422,7 @@ def save_quotation():
     if booking:
         ref = f'BKG-{booking.id:03d}'
         breakdown = _quotation_breakdown(items)
-        decline_note = ' (service + materials)' if breakdown['materials'] else ' (booked service only)'
+        decline_note = ' (booked service only)'
         title = 'Quotation ready: please respond' if round_no == 1 else f'Extra work #{round_no}: please respond'
         message = f'During inspection of your {booking.service} ({ref}), the mechanic found additional work.'
         if round_no > 1:

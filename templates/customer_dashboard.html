@@ -7619,7 +7619,7 @@ function openQuotationConfirmModal(decision, qid, q) {
   const youPay    = approve ? q.total : q.original;
   // Declining crosses out the extra work — and, on a back job, the materials too (they only go with the extra work).
   const strikeExtra = !approve;
-  const strikeMats  = !approve && isBackjob;
+  const strikeMats  = !approve;
 
   const head = t => `<div style="font-size:0.6rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--fg-3);margin:0.7rem 0 0.3rem;">${t}</div>`;
   const line = (it, strike, free) => `
@@ -7653,10 +7653,10 @@ function openQuotationConfirmModal(decision, qid, q) {
     icon.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
     document.getElementById('qc-title').textContent = isExtra ? 'Decline extra work #' + q.round + '?' : 'Decline this quotation?';
     document.getElementById('qc-subtitle').textContent = isExtra
-      ? `This extra work won't be done${materials.length ? ' (only the parts already used are billed)' : ''}. Your booked service and any extra work you already approved continue.`
+      ? `This extra work won't be done or billed. Your booked service and any extra work you already approved continue.`
       : (isBackjob
         ? 'The shop will only do your free back job. None of the extra work or materials below will be used.'
-        : `The shop will only do your booked service${materials.length ? ' and the materials already used' : ''}. The extra work below won't be done.`);
+        : `The shop will only do your booked service. The extra work below won't be done.`);
     document.getElementById('qc-note').textContent = isBackjob
       ? "Only your free back job will be done. If the problem comes back later because of the work you declined, it won't be covered by this claim."
       : "Only your booked service will be done. You can't change this answer after declining.";
@@ -7698,7 +7698,7 @@ function buildQuotationItemsHTML(q) {
 function buildQuotationTotalsHTML(q) {
   const hasMaterials = (q.materials || 0) > 0;
   const approveNote = hasMaterials ? 'Service + materials + extra work' : 'Service + extra work';
-  const declineNote = hasMaterials ? 'Service + materials only' : 'Booked service only';
+  const declineNote = 'Booked service only';
   return `
     <div style="display:flex;gap:0.5rem;margin:0.6rem 0;">
       <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.5rem 0.6rem;text-align:center;">

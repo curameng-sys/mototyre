@@ -1168,7 +1168,7 @@ def _quotation_breakdown(items):
     return {
         'booked': booked, 'materials': materials, 'extra': extra,
         'approve_total': booked + materials + extra,
-        'decline_total': booked + materials,
+        'decline_total': booked,
     }
 
 
@@ -2862,7 +2862,7 @@ def _billed_items(service, q):
     if q.status == 'approved':
         return list(q.items)
     backjob = (service or '').startswith('Back job — ')
-    return [i for i in q.items if i.locked or (i.item_type == 'product' and not backjob)]
+    return [i for i in q.items if i.locked]
 
 
 def _refresh_quote_time(booking):
@@ -4217,9 +4217,8 @@ def get_notifications():
             message = f'✓ You approved ₱{q.total_amount:,.2f}.'
         else:
             title = f'Quotation for {service}' if round_no == 1 else f'Extra work #{round_no} for {service}'
-            decline_note = ' plus materials used' if breakdown['materials'] else ''
-            message = (f'You declined the extra work. Only {service}{decline_note} (₱{breakdown["decline_total"]:,.2f}).' if round_no == 1
-                       else f'You declined this extra work{(" (only the parts already used, ₱" + format(breakdown["decline_total"], ",.2f") + ", are billed)") if breakdown["materials"] else ""}. Your booked service continues.')
+            message = (f'You declined the extra work. Only {service} (₱{breakdown["decline_total"]:,.2f}) will be billed.' if round_no == 1
+                       else 'You declined this extra work. Your booked service continues and is the only thing billed.')
         return payload, title, message
 
     def invoice_payload(n):
@@ -4229,7 +4228,7 @@ def get_notifications():
         lst = quotes_all.get(n.booking_id)
         q = lst[-1] if lst else None
         if q:
-            # On decline, the booked service and any materials already used still bill (for each extra work separately).
+            # On decline, only the booked service stays on the bill.
             items = [{'name': _line_name(i), 'price': _line_amount(i)} for x in lst for i in _billed_items(b.service, x)]
             decision = q.status
         else:
