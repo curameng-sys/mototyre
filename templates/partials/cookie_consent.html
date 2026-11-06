@@ -1,51 +1,56 @@
 <!-- Cookie banner, Cookie Settings and Cookie Policy (shared by the public pages) -->
 <style>
-  .ck-banner{position:fixed;left:20px;bottom:20px;z-index:1200;width:min(360px,calc(100vw - 40px));background:#fff;border:1px solid var(--line-1,#e5e7eb);border-radius:16px;box-shadow:0 18px 50px rgba(28,24,20,.28),0 3px 10px rgba(28,24,20,.12);padding:18px 18px 14px;font-family:var(--font-body,'DM Sans',sans-serif);color:var(--fg-1,#1c1814);display:none}
+  .ck-banner{position:fixed;left:20px;bottom:20px;z-index:1200;width:min(360px,calc(100vw - 40px));background:#fff;border:1px solid var(--line-1,#e5e7eb);border-radius:16px;box-shadow:0 18px 50px rgba(28,24,20,.28),0 3px 10px rgba(28,24,20,.12);padding:18px 18px 14px;font-family:var(--font-body,'Inter',sans-serif);color:var(--fg-1,#1c1814);display:none}
   .ck-banner.show{display:block;animation:ckIn .35s ease both}
   @keyframes ckIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){.ck-banner.show{animation:none}}
   .ck-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
   .ck-ico{width:34px;height:34px;border-radius:10px;background:var(--brand-red-soft,#fdecee);color:var(--brand-red,#d00019);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .ck-title{font-family:var(--font-display,'Bebas Neue',sans-serif);font-size:22px;letter-spacing:.03em;line-height:1;text-transform:uppercase}
+  .ck-title{font-family:var(--font-display,'Barlow Condensed',sans-serif);font-size:22px;letter-spacing:.03em;line-height:1;text-transform:uppercase}
   .ck-text{font-size:12.5px;line-height:1.55;color:var(--fg-2,#4b5563);margin:0 0 12px}
   .ck-link{color:var(--brand-red,#d00019);font-weight:700;text-decoration:underline;background:none;border:0;padding:0;font:inherit;font-weight:700;cursor:pointer}
   .ck-btns{display:flex;gap:10px}
-  .ck-btn{flex:1;padding:10px 12px;border-radius:10px;font-family:var(--font-label,'Syne',sans-serif);font-weight:700;font-size:12.5px;cursor:pointer;border:1.5px solid var(--fg-1,#1c1814);background:#fff;color:var(--fg-1,#1c1814)}
+  .ck-btn{flex:1;padding:10px 12px;border-radius:10px;font-family:var(--font-label,'Inter',sans-serif);font-weight:700;font-size:12.5px;cursor:pointer;border:1.5px solid var(--fg-1,#1c1814);background:#fff;color:var(--fg-1,#1c1814)}
   .ck-btn.red{background:var(--brand-red,#d00019);border-color:var(--brand-red,#d00019);color:#fff}
   .ck-btn:focus-visible,.ck-link:focus-visible,.ck-x:focus-visible,.ck-switch:focus-visible{outline:2px solid var(--brand-red,#d00019);outline-offset:2px}
   .ck-choose{display:block;text-align:center;margin:12px auto 0;font-size:12.5px}
   .ck-overlay{position:fixed;inset:0;z-index:1300;background:rgba(20,16,12,.55);display:none;align-items:center;justify-content:center;padding:16px}
   .ck-overlay.open{display:flex}
-  .ck-modal{position:relative;background:#fff;border-radius:18px;width:min(560px,100%);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.35);font-family:var(--font-body,'DM Sans',sans-serif);color:var(--fg-1,#1c1814)}
+  .ck-modal{position:relative;background:#fff;border-radius:18px;width:min(560px,100%);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.35);font-family:var(--font-body,'Inter',sans-serif);color:var(--fg-1,#1c1814)}
   .ck-modal.sm{width:min(480px,100%)}
   .ck-mhead{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 14px;border-bottom:1px solid var(--line-1,#e5e7eb)}
-  .ck-mtitle{font-family:var(--font-display,'Bebas Neue',sans-serif);font-size:30px;letter-spacing:.03em;line-height:1;text-transform:uppercase;margin:0}
+  .ck-mtitle{font-family:var(--font-display,'Barlow Condensed',sans-serif);font-size:30px;letter-spacing:.03em;line-height:1;text-transform:uppercase;margin:0}
   .ck-mtitle span{color:var(--brand-red,#d00019)}
   .ck-x{width:34px;height:34px;border-radius:50%;border:0;background:transparent;color:var(--fg-2,#4b5563);display:flex;align-items:center;justify-content:center;cursor:pointer}
   .ck-x:hover{background:var(--bg-subtle,#f3f4f6)}
   .ck-mbody{padding:18px 24px;overflow-y:auto;font-size:13.5px;line-height:1.6;color:var(--fg-2,#4b5563)}
-  .ck-mbody h3{font-family:var(--font-label,'Syne',sans-serif);font-size:14px;font-weight:700;color:var(--fg-1,#1c1814);margin:18px 0 6px}
+  .ck-mbody h3{font-family:var(--font-label,'Inter',sans-serif);font-size:14px;font-weight:700;color:var(--fg-1,#1c1814);margin:18px 0 6px}
   .ck-mbody h3:first-of-type{margin-top:12px}
   .ck-mbody p{margin:0 0 6px}
   .ck-updated{font-size:12px;color:var(--fg-3,#6b7280)}
   .ck-table-wrap{border:1px solid var(--line-1,#e5e7eb);border-radius:12px;overflow:hidden;overflow-x:auto;margin-top:6px}
   .ck-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px}
-  .ck-table th{background:var(--bg-subtle,#f3f4f6);text-align:left;font-family:var(--font-label,'Syne',sans-serif);font-weight:700;color:var(--fg-1,#1c1814);padding:10px 12px}
+  .ck-table th{background:var(--bg-subtle,#f3f4f6);text-align:left;font-family:var(--font-label,'Inter',sans-serif);font-weight:700;color:var(--fg-1,#1c1814);padding:10px 12px}
   .ck-table td{padding:10px 12px;border-top:1px solid var(--line-1,#e5e7eb);vertical-align:top}
   .ck-code{font-family:var(--font-mono,'DM Mono',monospace);font-size:11.5px;background:var(--bg-subtle,#f3f4f6);border-radius:5px;padding:2px 6px;white-space:nowrap}
-  .ck-pill{display:inline-block;font-family:var(--font-label,'Syne',sans-serif);font-weight:700;font-size:10.5px;padding:3px 9px;border-radius:99px}
+  .ck-pill{display:inline-block;font-family:var(--font-label,'Inter',sans-serif);font-weight:700;font-size:10.5px;padding:3px 9px;border-radius:99px}
   .ck-pill.ess{background:#dcfce7;color:#15803d}.ck-pill.opt{background:#fee2e2;color:#b91c1c}
   .ck-mfoot{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px 18px;border-top:1px solid var(--line-1,#e5e7eb);background:var(--bg-subtle,#f9fafb);border-radius:0 0 18px 18px}
   .ck-mfoot .ck-btn{flex:0 0 auto;min-width:130px}
   .ck-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:14px 0}
   .ck-row + .ck-row{border-top:1px solid var(--line-1,#e5e7eb)}
   .ck-row h3{margin:0 0 4px !important}
-  .ck-on{font-family:var(--font-label,'Syne',sans-serif);font-weight:700;font-size:12px;color:#15803d;white-space:nowrap}
+  .ck-on{font-family:var(--font-label,'Inter',sans-serif);font-weight:700;font-size:12px;color:#15803d;white-space:nowrap}
   .ck-switch{position:relative;flex-shrink:0;width:44px;height:26px;border-radius:99px;border:0;background:#d1d5db;cursor:pointer;transition:background .15s;padding:0}
   .ck-switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s}
   .ck-switch[aria-checked="true"]{background:var(--brand-red,#d00019)}
   .ck-switch[aria-checked="true"]::after{transform:translateX(18px)}
   @media (max-width:520px){.ck-banner{left:12px;right:12px;bottom:12px;width:auto}.ck-mfoot .ck-btn{flex:1}.ck-mhead,.ck-mbody,.ck-mfoot{padding-left:18px;padding-right:18px}}
+  /* hover: the cookie buttons show they can be pressed */
+  .ck-btn{transition:background .15s,filter .15s,border-color .15s}
+  .ck-btn:hover{background:#f4f1ee}
+  .ck-btn.red:hover{background:var(--brand-red,#d00019);filter:brightness(.9)}
+  .ck-link:hover{opacity:.75}
 </style>
 
 <div class="ck-banner" id="ckBanner" role="dialog" aria-label="Cookies" aria-live="polite">

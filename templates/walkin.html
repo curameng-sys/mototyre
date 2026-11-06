@@ -6,7 +6,7 @@
   <title>Walk-In – MotoTyres Moto Shop</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Barlow+Condensed:ital,wght@0,600;1,800&family=DM+Mono:wght@400;500&display=swap');
 
     :root {
       --ink:     #f3f4f6;
@@ -27,7 +27,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       height: 100vh; overflow: hidden;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       background: var(--ink); color: var(--text);
     }
 
@@ -39,25 +39,25 @@
       flex-shrink: 0;
     }
     .topbar-brand {
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Barlow Condensed', sans-serif;
       font-size: 1.35rem; letter-spacing: 0.06em; color: #fff;
       display: flex; align-items: center; gap: 0.6rem;
     }
     .topbar-brand span { color: var(--red); }
     .pos-badge {
       background: rgba(124,58,237,0.2); color: #a78bfa;
-      font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.6rem; font-weight: 700;
       letter-spacing: 0.1em; text-transform: uppercase;
       padding: 0.15rem 0.5rem; border-radius: 4px;
       border: 1px solid rgba(124,58,237,0.35);
     }
     .topbar-right { display: flex; align-items: center; gap: 1rem; }
-    .topbar-clock { font-family: 'Syne', sans-serif; font-size: 0.8rem; color: var(--muted); letter-spacing: 0.05em; }
+    .topbar-clock { font-family: 'Inter', sans-serif; font-size: 0.8rem; color: var(--muted); letter-spacing: 0.05em; }
     .btn-back {
       display: flex; align-items: center; gap: 0.5rem;
       padding: 0.4rem 0.9rem; border-radius: 8px;
       background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-      color: var(--muted); font-family: 'Syne', sans-serif;
+      color: var(--muted); font-family: 'Inter', sans-serif;
       font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em;
       text-decoration: none; text-transform: uppercase; transition: all 0.15s;
     }
@@ -85,7 +85,7 @@
       display: flex; align-items: center; gap: 0.4rem;
       padding: 0.45rem 1rem; border-radius: 8px;
       background: transparent; border: 1px solid var(--border);
-      color: var(--muted); font-family: 'Syne', sans-serif;
+      color: var(--muted); font-family: 'Inter', sans-serif;
       font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em;
       text-transform: uppercase; cursor: pointer; transition: all 0.15s;
     }
@@ -100,7 +100,7 @@
       width: 100%; padding: 0.5rem 0.75rem 0.5rem 2rem;
       background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
       border-radius: 8px; color: #e5e7eb;
-      font-family: 'DM Sans', sans-serif; font-size: 0.85rem; outline: none;
+      font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none;
       transition: border-color 0.15s;
     }
     .search-box input::placeholder { color: #9ca3af; }
@@ -111,7 +111,7 @@
     .cat-chip {
       flex-shrink: 0; padding: 0.3rem 0.75rem; border-radius: 99px;
       background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-      color: var(--muted); font-family: 'Syne', sans-serif;
+      color: var(--muted); font-family: 'Inter', sans-serif;
       font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
       text-transform: uppercase; cursor: pointer; transition: all 0.15s;
     }
@@ -146,7 +146,7 @@
       border-radius: 10px; padding: 1rem; margin-bottom: 1rem;
     }
     .custom-svc-box label {
-      font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.65rem; font-weight: 700;
       letter-spacing: 0.08em; text-transform: uppercase;
       color: var(--muted); display: block; margin-bottom: 0.5rem;
     }
@@ -155,7 +155,7 @@
       flex: 1; padding: 0.5rem 0.75rem;
       background: #fff; border: 1px solid #d1d5db;
       border-radius: 8px; color: #111827;
-      font-family: 'DM Sans', sans-serif; font-size: 0.85rem; outline: none;
+      font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none;
       transition: border-color 0.15s;
     }
     .svc-inp:focus { border-color: var(--red); }
@@ -163,7 +163,7 @@
     .btn-add-svc {
       padding: 0.5rem 0.9rem; border-radius: 8px;
       background: var(--red); border: none; color: #fff;
-      font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 700;
       letter-spacing: 0.04em; text-transform: uppercase;
       cursor: pointer; transition: all 0.2s; white-space: nowrap;
     }
@@ -177,9 +177,9 @@
     }
     .service-item:hover { border-color: rgba(37,99,235,0.4); background: rgba(37,99,235,0.06); }
     .service-item.flash { border-color: var(--blue); background: rgba(37,99,235,0.12); }
-    .svc-name { font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700; color: #111827; }
+    .svc-name { font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 700; color: #111827; }
     .svc-right { display: flex; align-items: center; gap: 0.6rem; }
-    .svc-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.03em; color: #93c5fd; }
+    .svc-price { font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem; letter-spacing: 0.03em; color: #93c5fd; }
     .svc-add-icon {
       width: 26px; height: 26px; border-radius: 6px;
       background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.3);
@@ -208,13 +208,13 @@
     }
     .section-title {
       display: flex; align-items: center; gap: 0.45rem;
-      font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 700;
       letter-spacing: 0.08em; text-transform: uppercase;
       color: #a78bfa; margin-bottom: 0.65rem;
     }
     .returning-badge {
       display: none; align-items: center; gap: 0.35rem;
-      font-size: 0.65rem; font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 0.65rem; font-family: 'Inter', sans-serif; font-weight: 700;
       background: rgba(22,163,74,0.12); border: 1px solid rgba(22,163,74,0.3);
       color: #86efac; padding: 0.12rem 0.5rem; border-radius: 4px;
       margin-left: auto; cursor: pointer; transition: all 0.15s;
@@ -225,7 +225,7 @@
     .field-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
     .field-wrap { flex: 1; position: relative; }
     .field-label {
-      font-family: 'Syne', sans-serif; font-size: 0.6rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.6rem; font-weight: 700;
       letter-spacing: 0.08em; text-transform: uppercase;
       color: var(--muted); display: block; margin-bottom: 0.25rem;
     }
@@ -233,7 +233,7 @@
       width: 100%; padding: 0.45rem 0.65rem;
       background: #fff; border: 1px solid #d1d5db;
       border-radius: 7px; color: #111827;
-      font-family: 'DM Sans', sans-serif; font-size: 0.82rem; outline: none;
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; outline: none;
       transition: border-color 0.15s;
     }
     .field-inp:focus { border-color: #a78bfa; background: rgba(124,58,237,0.03); }
@@ -253,7 +253,7 @@
     }
     .phone-suggest-item:last-child { border-bottom: none; }
     .phone-suggest-item:hover { background: rgba(124,58,237,0.1); }
-    .suggest-name { font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; color: #111827; }
+    .suggest-name { font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 700; color: #111827; }
     .suggest-meta { font-size: 0.68rem; color: var(--muted); margin-top: 0.1rem; }
 
     /* MECHANIC SECTION */
@@ -266,7 +266,7 @@
       width: 100%; padding: 0.45rem 0.65rem;
       background: #fff; border: 1px solid #d1d5db;
       border-radius: 7px; color: #111827;
-      font-family: 'DM Sans', sans-serif; font-size: 0.82rem; outline: none;
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; outline: none;
       transition: border-color 0.15s;
     }
     .field-select:focus { border-color: #fbbf24; }
@@ -276,12 +276,12 @@
     .cart-section { padding: 0.6rem 1.1rem; border-bottom: 1px solid var(--border); }
     .cart-title {
       display: flex; align-items: center; gap: 0.5rem;
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Barlow Condensed', sans-serif;
       font-size: 1.1rem; letter-spacing: 0.04em; color: #111827; margin-bottom: 0.5rem;
     }
     .cart-count {
       background: var(--red); color: #fff;
-      font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.65rem; font-weight: 700;
       padding: 0.15rem 0.5rem; border-radius: 4px;
     }
     .cart-empty {
@@ -308,12 +308,12 @@
     .ci-icon.service { background: rgba(37,99,235,0.12); color: #93c5fd; border: 1px solid rgba(37,99,235,0.2); }
     .ci-icon.finding { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
     .cart-group-label {
-      font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.62rem; font-weight: 700;
       letter-spacing: 0.08em; text-transform: uppercase;
       color: var(--muted); margin: 0.65rem 0 0.3rem;
     }
     .cart-group-label:first-child { margin-top: 0; }
-    .ci-name { font-family: 'Syne', sans-serif; font-size: 0.76rem; font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ci-name { font-family: 'Inter', sans-serif; font-size: 0.76rem; font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ci-unit { font-size: 0.68rem; color: var(--muted); margin-top: 0.1rem; }
     .ci-info { flex: 1; min-width: 0; }
     .ci-controls { display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; }
@@ -325,7 +325,7 @@
       cursor: pointer; transition: all 0.12s;
     }
     .qty-btn:hover { border-color: var(--red); color: var(--red); }
-    .qty-val { font-family: 'Syne', sans-serif; font-size: 0.76rem; font-weight: 700; min-width: 16px; text-align: center; }
+    .qty-val { font-family: 'Inter', sans-serif; font-size: 0.76rem; font-weight: 700; min-width: 16px; text-align: center; }
     .btn-del {
       width: 20px; height: 20px; border-radius: 5px;
       background: transparent; border: 1px solid transparent;
@@ -345,7 +345,7 @@
     .total-row.grand {
       margin-top: 0.5rem; padding-top: 0.5rem;
       border-top: 1px solid var(--border);
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Barlow Condensed', sans-serif;
       font-size: 1.3rem; letter-spacing: 0.04em; color: #111827;
     }
     .total-row.grand span:last-child { color: var(--red); }
@@ -353,7 +353,7 @@
       width: 100%; padding: 0.55rem;
       background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
       border-radius: 9px; color: #fbbf24;
-      font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 700;
       letter-spacing: 0.04em; text-transform: uppercase;
       cursor: pointer; transition: all 0.15s; margin-bottom: 0.4rem;
       display: flex; align-items: center; justify-content: center; gap: 0.4rem;
@@ -364,7 +364,7 @@
       width: 100%; padding: 0.45rem;
       background: transparent; border: 1px solid var(--border);
       border-radius: 8px; color: var(--muted);
-      font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.68rem; font-weight: 700;
       letter-spacing: 0.04em; text-transform: uppercase;
       cursor: pointer; transition: all 0.15s;
     }
@@ -392,7 +392,7 @@
       display: flex; align-items: center; gap: 0.6rem;
     }
     .modal-head h3 {
-      font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem;
+      font-family: 'Barlow Condensed', sans-serif; font-size: 1.35rem;
       letter-spacing: 0.05em; color: #111827; margin: 0;
     }
     .modal-body { padding: 0 1.5rem 1rem; overflow-y: auto; flex: 1; }
@@ -404,10 +404,10 @@
     .mech-note.info { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; }
     .mech-note.warn { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
     .r-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: #374151; margin-bottom: 0.4rem; }
-    .r-row.bold { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: #111827; }
+    .r-row.bold { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.9rem; color: #111827; }
     .r-divider { border: none; border-top: 1px dashed var(--border); margin: 0.75rem 0; }
     .r-section-label {
-      font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.62rem; font-weight: 700;
       letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem;
     }
     .r-item { font-size: 0.78rem; color: #6b7280; margin-bottom: 0.3rem; display: flex; justify-content: space-between; }
@@ -416,14 +416,14 @@
       flex: 1; padding: 0.6rem;
       background: #f9fafb; border: 1px solid var(--border);
       border-radius: 8px; color: #374151;
-      font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 700;
       letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
     }
     .btn-modal-cancel:hover { border-color: #9ca3af; }
     .btn-modal-ok {
       flex: 2; padding: 0.6rem;
       background: var(--red); border: none; border-radius: 8px; color: #fff;
-      font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 700;
       letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
     }
     .btn-modal-ok:hover { background: #a8001a; }
@@ -443,10 +443,10 @@
     }
     .h-icon.service { background: rgba(37,99,235,0.15); color: #93c5fd; border: 1px solid rgba(37,99,235,0.2); }
     .h-icon.product { background: rgba(208,0,25,0.12); color: var(--red); border: 1px solid rgba(208,0,25,0.2); }
-    .h-desc { font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 600; color: #111827; }
+    .h-desc { font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600; color: #111827; }
     .h-meta { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
     .h-right { text-align: right; flex-shrink: 0; }
-    .h-amount { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; color: #86efac; }
+    .h-amount { font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; color: #86efac; }
     .h-date { font-size: 0.65rem; color: var(--muted); margin-top: 0.1rem; }
 
     /* TOAST */
@@ -457,7 +457,7 @@
     .toast {
       background: #1f2937; border: 1px solid #374151;
       border-left: 3px solid var(--green); border-radius: 8px;
-      padding: 0.7rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: #e5e7eb;
+      padding: 0.7rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.82rem; color: #e5e7eb;
       box-shadow: 0 4px 20px rgba(0,0,0,0.25); animation: toastIn 0.25s ease; min-width: 180px;
     }
     .toast.error { border-left-color: var(--red); }
@@ -476,7 +476,7 @@
     .mobile-tab-btn {
       flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 3px; color: var(--muted); background: none; border: none;
-      font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700;
+      font-family: 'Inter', sans-serif; font-size: 0.62rem; font-weight: 700;
       letter-spacing: 0.04em; text-transform: uppercase;
       cursor: pointer; transition: color 0.15s; position: relative;
     }
@@ -485,7 +485,7 @@
     .mob-cart-badge {
       display: none; position: absolute; top: 7px; right: calc(50% - 18px);
       background: var(--red); color: #fff;
-      font-size: 0.55rem; font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 0.55rem; font-family: 'Inter', sans-serif; font-weight: 700;
       border-radius: 10px; padding: 0.1rem 0.38rem;
       border: 2px solid var(--panel);
     }
@@ -514,10 +514,10 @@
     .topright-profile{border-radius:99px;padding:.28rem .75rem .28rem .28rem;}
     .topright-avatar{width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
     .topright-badge{display:none;position:absolute;top:-2px;right:-2px;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center;border:2px solid #fff;}
-    #admin-profile-menu{display:none;position:fixed;top:4rem;right:1.75rem;width:220px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);z-index:9999;overflow:hidden;font-family:'DM Sans',sans-serif;}
+    #admin-profile-menu{display:none;position:fixed;top:4rem;right:1.75rem;width:220px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);z-index:9999;overflow:hidden;font-family:'Inter',sans-serif;}
     .profile-menu-item{display:block;padding:.7rem 1rem;font-size:.82rem;color:var(--text);text-decoration:none;border-top:1px solid var(--border);transition:background .12s;}
     .profile-menu-item:hover{background:#f9fafb;}
-    #admin-notif-panel{display:none;position:fixed;top:4rem;right:1.75rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,.1);border-radius:16px;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden;font-family:'DM Sans',sans-serif;}
+    #admin-notif-panel{display:none;position:fixed;top:4rem;right:1.75rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,.1);border-radius:16px;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden;font-family:'Inter',sans-serif;}
     @media(max-width:640px){ #admin-notif-panel,#admin-profile-menu{right:.75rem;width:calc(100vw - 1.5rem);} }
 
     /* Shown inside the dashboard: it already has the top bar, so the layout takes the whole frame. */
@@ -530,7 +530,7 @@
     html.embedded body{display:flex;flex-direction:column;background:var(--ink);padding:0 2rem 1.25rem;box-sizing:border-box;}
     @media (max-width: 768px) { html.embedded body{padding:0 1rem 58px;} }
     html.embedded .page-header{display:block;flex-shrink:0;margin-bottom:.9rem;}
-    html.embedded .page-title{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:.04em;color:#111827;line-height:1;}
+    html.embedded .page-title{font-family:'Barlow Condensed',sans-serif;font-size:2.2rem;letter-spacing:.04em;color:#111827;line-height:1;}
     html.embedded .page-title .accent{color:var(--red);}
     html.embedded .page-sub{color:#6b7280;font-size:.84rem;margin-top:.2rem;}
     html.embedded .walkin-wrap{flex:1;min-height:0;height:auto;grid-template-columns:minmax(0,1fr) 380px;gap:1.5rem;}
@@ -573,7 +573,8 @@
     html.embedded .btn-save{color:#b45309;background:#fffbeb;border-color:#fde68a;}
     html.embedded .btn-save:hover{background:#fef3c7;border-color:#f59e0b;}
     html.embedded .returning-badge{color:#15803d;}
-  </style>
+      #walkin-refresh-btn:hover{background:rgba(0,0,0,.06) !important;color:var(--text,#111) !important;border-color:#9ca3af !important;}
+</style>
   <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-theme.css') }}">
@@ -651,11 +652,11 @@
            data-barcode="{{ p.barcode or '' }}"
            onclick="addProduct(this)">
         <div style="flex:1; min-width:0;">
-          <div style="font-family:'Syne',sans-serif; font-size:0.82rem; font-weight:700; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
+          <div style="font-family:'Inter',sans-serif; font-size:0.82rem; font-weight:700; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
           <div style="font-size:0.7rem; color:var(--muted); margin-top:0.1rem;">{{ p.category }}{% if p.motor_model %} · {{ p.motor_model }}{% endif %}</div>
         </div>
         <div style="text-align:right; flex-shrink:0;">
-          <div style="font-family:'Bebas Neue',sans-serif; font-size:1.05rem; color:#111827;">&#8369;{{ '%.2f'|format(p.price) }}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif; font-size:1.05rem; color:#111827;">&#8369;{{ '%.2f'|format(p.price) }}</div>
           <div class="stock-text" style="font-size:0.68rem; {% if p.stock == 0 %}color:#fca5a5;{% elif p.stock <= 5 %}color:#fbbf24;{% else %}color:var(--muted);{% endif %}">
             {% if p.stock == 0 %}Out of stock{% elif p.stock <= 5 %}{{ p.stock }} left{% else %}{{ p.stock }} in stock{% endif %}
           </div>
@@ -692,7 +693,7 @@
       </div>
       <div class="custom-svc-box">
         <label>What did the mechanic find?</label>
-        <textarea class="svc-inp" id="finding-desc" placeholder="e.g. Steering bearings are worn and loose" style="width:100%;resize:vertical;min-height:56px;margin-bottom:0.6rem;font-family:'DM Sans',sans-serif;"></textarea>
+        <textarea class="svc-inp" id="finding-desc" placeholder="e.g. Steering bearings are worn and loose" style="width:100%;resize:vertical;min-height:56px;margin-bottom:0.6rem;font-family:'Inter',sans-serif;"></textarea>
         <div class="custom-svc-row">
           <input class="svc-inp" id="finding-price" type="number" placeholder="Price" style="max-width:120px;">
           <select class="svc-inp" id="finding-minutes" style="max-width:110px;" title="How long the inspection takes">
@@ -702,7 +703,7 @@
           <button class="btn-add-svc" onclick="addFinding()">+ Add to Job Order</button>
         </div>
       </div>
-      <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Findings added</div>
+      <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Findings added</div>
       <div class="service-list" id="findings-list-container">
         <div style="padding:1rem;color:#6b7280;font-size:0.85rem;">No findings yet.</div>
       </div>
@@ -826,7 +827,7 @@
     <div class="modal-body" style="padding-top:1rem;">
       <div style="text-align:center;margin-bottom:1rem;">
         <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.2rem;">Total Amount</div>
-        <div id="confirm-total" style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:var(--red);letter-spacing:0.04em;">₱0.00</div>
+        <div id="confirm-total" style="font-family:'Barlow Condensed',sans-serif;font-size:2.2rem;color:var(--red);letter-spacing:0.04em;">₱0.00</div>
       </div>
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem;margin-bottom:0.85rem;">
         <div class="r-row"><span>Customer</span><span id="confirm-customer">—</span></div>
@@ -839,15 +840,15 @@
       </div>
       <div id="confirm-busy-note" class="mech-note info" style="display:none;margin:0 0 .75rem;"></div>
       <div id="confirm-services-box" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
-        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Services</div>
+        <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Services</div>
         <div id="confirm-services-list" style="font-size:0.84rem;color:#111827;"></div>
       </div>
       <div id="confirm-products-box" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
-        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#d00019;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> Products</div>
+        <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:700;color:#d00019;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> Products</div>
         <div id="confirm-products-list" style="font-size:0.84rem;color:#111827;"></div>
       </div>
       <div id="confirm-findings-box" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
-        <div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspection Findings</div>
+        <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspection Findings</div>
         <div id="confirm-findings-list" style="font-size:0.84rem;color:#111827;"></div>
       </div>
       <div id="confirm-note" style="font-size:0.75rem;color:var(--muted);text-align:center;background:rgba(255,255,255,0.02);border-radius:8px;padding:0.5rem;"></div>
@@ -1146,7 +1147,7 @@ async function showHistory() {
     const hist = data.history;
     let html = `
       <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:0.85rem;margin-bottom:1rem;">
-        <div style="font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;color:#fff;margin-bottom:0.35rem;">${c.name}</div>
+        <div style="font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;color:#fff;margin-bottom:0.35rem;">${c.name}</div>
         <div style="font-size:0.78rem;color:var(--muted);">${c.phone}</div>
         ${c.motorcycle_model ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M12 17V9l-3-3h6l3 5H12"/></svg> ${c.motorcycle_model}${c.motorcycle_plate ? ' · ' + c.motorcycle_plate : ''}</div>` : ''}
         <div style="font-size:0.7rem;color:var(--muted);margin-top:0.4rem;">Customer since ${c.created_at}</div>
@@ -1154,7 +1155,7 @@ async function showHistory() {
     if (!hist.length) {
       html += '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:0.85rem;">No service history yet.</div>';
     } else {
-      html += `<div style="font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Past Transactions (${hist.length})</div>`;
+      html += `<div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Past Transactions (${hist.length})</div>`;
       hist.forEach(h => {
         const isService = h.type === 'service';
         const statusColor = h.status === 'completed' ? '#86efac' : (h.status === 'in_progress' || h.status === 'inprogress') ? '#fde047' : '#fbbf24';
@@ -1244,7 +1245,7 @@ function renderFindingsList() {
   wrap.innerHTML = findings.map((f, n) => `
     <div class="service-item" style="cursor:default;">
       <div style="display:flex;gap:0.55rem;align-items:flex-start;flex:1;min-width:0;">
-        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--muted);font-size:0.78rem;flex-shrink:0;">${n + 1}.</span>
+        <span style="font-family:'Inter',sans-serif;font-weight:700;color:var(--muted);font-size:0.78rem;flex-shrink:0;">${n + 1}.</span>
         <span class="svc-name" style="white-space:normal;">${f.name}</span>
       </div>
       <div class="svc-right">

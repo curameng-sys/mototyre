@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>E-Receipt – JO-{{ '%03d'|format(jo.id) }} – MotoTyres</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Barlow+Condensed:ital,wght@0,600;1,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'DM Sans',sans-serif;background:#f3f4f6;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem;}
+    body{font-family:'Inter',sans-serif;background:#f3f4f6;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem;}
 
     /* TOOLBAR — hidden on print */
     .toolbar{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:480px;margin-bottom:1.25rem;}
-    .toolbar-title{font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;}
+    .toolbar-title{font-family:'Inter',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;}
     .toolbar-btns{display:flex;gap:.5rem;}
-    .btn-toolbar{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .85rem;border-radius:8px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:none;transition:all .15s;text-decoration:none;}
+    .btn-toolbar{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .85rem;border-radius:8px;font-family:'Inter',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border:none;transition:all .15s;text-decoration:none;}
     .btn-pdf{background:#16a34a;color:#fff;}
     .btn-pdf:hover{background:#15803d;color:#fff;}
     .btn-back{background:#e5e7eb;color:#374151;}
@@ -24,20 +24,20 @@
 
     /* HEADER */
     .rec-header{background:#0c0d0f;padding:1.75rem 1.5rem 1.5rem;text-align:center;}
-    .rec-logo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.06em;color:#fff;}
+    .rec-logo{font-family:'Barlow Condensed',sans-serif;font-size:2rem;letter-spacing:.06em;color:#fff;}
     .rec-logo span{color:#d00019;}
     .rec-addr{font-size:.72rem;color:#9ca3af;margin-top:.35rem;line-height:1.5;}
-    .rec-tag{display:inline-block;margin-top:.75rem;background:rgba(22,163,74,.2);color:#86efac;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .65rem;border-radius:4px;border:1px solid rgba(22,163,74,.3);}
+    .rec-tag{display:inline-block;margin-top:.75rem;background:rgba(22,163,74,.2);color:#86efac;font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .65rem;border-radius:4px;border:1px solid rgba(22,163,74,.3);}
 
     /* JO REF BAND */
     .rec-ref-band{background:#16a34a;padding:.65rem 1.5rem;display:flex;align-items:center;justify-content:space-between;}
-    .rec-ref{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.06em;color:#fff;}
+    .rec-ref{font-family:'Barlow Condensed',sans-serif;font-size:1.4rem;letter-spacing:.06em;color:#fff;}
     .rec-date{font-size:.72rem;color:rgba(255,255,255,.8);text-align:right;line-height:1.4;}
 
     /* BODY */
     .rec-body{padding:1.25rem 1.5rem;}
     .rec-section{margin-bottom:1.1rem;}
-    .rec-section-label{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:.6rem;}
+    .rec-section-label{font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:.6rem;}
     .rec-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem 1rem;}
     .rec-info-item{}
     .rec-info-key{font-size:.7rem;color:#9ca3af;margin-bottom:.1rem;}
@@ -56,13 +56,13 @@
 
     /* TOTAL */
     .rec-total-band{background:#0c0d0f;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;}
-    .rec-total-label{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;}
-    .rec-total-amt{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;color:#fff;}
+    .rec-total-label{font-family:'Inter',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;}
+    .rec-total-amt{font-family:'Barlow Condensed',sans-serif;font-size:2rem;letter-spacing:.04em;color:#fff;}
 
     /* PAYMENT METHOD */
     .rec-method{padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;background:#f9fafb;border-top:1px solid #e5e7eb;}
     .rec-method-label{font-size:.75rem;color:#6b7280;}
-    .rec-method-val{display:inline-flex;align-items:center;gap:.35rem;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;}
+    .rec-method-val{display:inline-flex;align-items:center;gap:.35rem;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:700;}
     .rec-method-val.cash{color:#16a34a;}
     .rec-method-val.gcash{color:#2563eb;}
     .rec-ref-no{font-size:.72rem;color:#6b7280;margin-top:.1rem;text-align:right;}
@@ -70,7 +70,7 @@
     /* FOOTER */
     .rec-footer{padding:1.1rem 1.5rem;text-align:center;border-top:1px solid #f3f4f6;}
     .rec-footer-msg{font-size:.78rem;color:#6b7280;line-height:1.6;}
-    .rec-footer-thank{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:#111;margin-top:.5rem;}
+    .rec-footer-thank{font-family:'Inter',sans-serif;font-size:.85rem;font-weight:700;color:#111;margin-top:.5rem;}
     .rec-footer-id{font-size:.65rem;color:#d1d5db;margin-top:.5rem;}
 
     /* PRINT */

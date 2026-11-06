@@ -6,7 +6,7 @@
   <title>Admin Dashboard – MotoTyres Moto Shop</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Barlow+Condensed:ital,wght@0,600;1,800&family=DM+Mono:wght@400;500&display=swap');
 
     :root {
       --sidebar-bg: #111827;
@@ -25,7 +25,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; color: var(--text); }
-    body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--ink); color: var(--text); font-size: 14px; line-height: 1.5; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--ink); color: var(--text); font-size: 14px; line-height: 1.5; }
 
     /* ── SIDEBAR EXCEPTIONS (keep white text) ── */
     .sidebar, .sidebar *, .mobile-topbar, .mobile-topbar * { color: revert; }
@@ -53,7 +53,7 @@
       display: flex; align-items: center; gap: 0.5rem;
       padding: 1.1rem 1rem 1rem;
       border-bottom: 1px solid var(--sidebar-border);
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Barlow Condensed', sans-serif;
       font-size: 1.35rem; font-weight: 400;
       letter-spacing: 0.04em; color: #ffffff;
       white-space: nowrap;
@@ -171,7 +171,7 @@
       display: none; position: fixed; top: 4rem; right: 1.75rem; width: 220px;
       background: #fff; border: 1px solid var(--border); border-radius: 12px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.15); z-index: 601; overflow: hidden;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
     }
     .profile-menu-item {
       display: block; padding: 0.7rem 1rem; font-size: 0.82rem; color: var(--text);
@@ -227,7 +227,7 @@
     }
     .ds-count { display: none; }
     .ds-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; position: sticky; top: 0; z-index: 3; background: var(--ink); padding: 0.3rem 0 0.6rem; }
-    .ds-tab { display: flex; align-items: center; justify-content: center; gap: 0.4rem; height: 34px; padding: 0 0.5rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: #6b7280; font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; line-height: 1; cursor: pointer; transition: all 0.15s; }
+    .ds-tab { display: flex; align-items: center; justify-content: center; gap: 0.4rem; height: 34px; padding: 0 0.5rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: #6b7280; font-family: 'Inter', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; line-height: 1; cursor: pointer; transition: all 0.15s; }
     .ds-tab:hover { color: var(--text); border-color: #d1d5db; }
     .ds-tab.on { background: var(--red); border-color: var(--red); color: #fff; }
     .ds-tab .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 20px; height: 18px; padding: 0 0.35rem; font-size: 0.62rem; line-height: 1; border-radius: 99px; background: rgba(0,0,0,0.07); color: #374151; }
@@ -328,7 +328,7 @@
     /* Page header row */
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; }
 
-    .page-title { font-size: 2.1rem; font-weight: 400; color: var(--text); letter-spacing: 0.03em; line-height: 1.1; font-family: 'Bebas Neue', sans-serif; }
+    .page-title { font-size: 2.1rem; font-weight: 400; color: var(--text); letter-spacing: 0.03em; line-height: 1.1; font-family: 'Barlow Condensed', sans-serif; }
     .page-title .accent { color: var(--red); }
     .page-sub { color: var(--muted); font-size: 0.82rem; margin-top: 0.2rem; }
     #rr-modal-body { overflow-wrap: anywhere; }
@@ -365,7 +365,7 @@
     .stat-card.blue .stat-icon { background: rgba(59,130,246,0.08); color: var(--blue); }
     .stat-card.green .stat-icon { background: rgba(22,163,74,0.08); color: var(--green); }
     .stat-card.orange .stat-icon { background: rgba(245,158,11,0.08); color: var(--warning); }
-    .stat-value { font-size: 2.1rem; font-weight: 400; color: var(--text); line-height: 1; font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.03em; }
+    .stat-value { font-size: 2.1rem; font-weight: 400; color: var(--text); line-height: 1; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.03em; }
     .stat-label { color: var(--muted); font-size: 0.75rem; margin-top: 0.35rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 
     /* ═══════════════════════════════════════
@@ -489,13 +489,13 @@
     .xr-check b { font-size:0.74rem; color:var(--muted); font-weight:700; }
     /* Booking number (Manage Bookings) */
     .bk-day-row td { background:#faf8ff; border-top:1px solid #ece4fb; border-bottom:1px solid #ece4fb; padding:0.5rem 0.9rem !important; }
-    .bk-day-name { font-family:'Syne',sans-serif; font-weight:700; font-size:0.7rem; letter-spacing:0.07em; color:#6d28d9; }
+    .bk-day-name { font-family:'Inter',sans-serif; font-weight:700; font-size:0.7rem; letter-spacing:0.07em; color:#6d28d9; }
     .bk-day-count { font-size:0.68rem; color:var(--muted); margin-left:0.55rem; }
     .qcell { display:flex; flex-direction:column; align-items:center; width:46px; line-height:1.15; }
     .qref { font-size:0.56rem; color:var(--muted); margin-top:0.1rem; white-space:nowrap; }
     .booked-on { font-size:0.66rem; color:#7c3aed; margin-top:0.2rem; }
     .bk-tab-count { position: relative; }
-    .bk-new { position:absolute; top:-9px; right:-10px; min-width:16px; height:16px; padding:0 4px; border-radius:99px; background:#dc2626; color:#fff !important; font-family:'DM Sans',sans-serif; font-size:0.6rem; font-weight:700; line-height:16px; text-align:center; box-shadow:0 0 0 2px #fff; pointer-events:none; }
+    .bk-new { position:absolute; top:-9px; right:-10px; min-width:16px; height:16px; padding:0 4px; border-radius:99px; background:#dc2626; color:#fff !important; font-family:'Inter',sans-serif; font-size:0.6rem; font-weight:700; line-height:16px; text-align:center; box-shadow:0 0 0 2px #fff; pointer-events:none; }
     .bk-tab.active .bk-new { box-shadow:0 0 0 2px var(--text); }
     .bk-tab-count { background: rgba(0,0,0,0.08) !important; color: inherit !important; font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 99px; font-weight: 700; }
     .bk-tab.active .bk-tab-count { background: rgba(255,255,255,0.2) !important; color: #fff !important; }
@@ -556,7 +556,7 @@
     .inv-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; align-items:stretch; }
     .inv-grid > .card { margin-bottom:0; }
     .dash-tabs { display:flex; gap:0.5rem; flex-wrap:wrap; margin:0 0 0.9rem; }
-    .dash-tab { height:34px; padding:0 1rem; border-radius:8px; border:1px solid var(--border); background:#fff; color:#6b7280; font-family:'Syne',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; cursor:pointer; transition:all 0.15s; }
+    .dash-tab { height:34px; padding:0 1rem; border-radius:8px; border:1px solid var(--border); background:#fff; color:#6b7280; font-family:'Inter',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; cursor:pointer; transition:all 0.15s; }
     .dash-tab:hover { color:var(--text); border-color:#d1d5db; }
     .dash-tab.on { background:var(--red); border-color:var(--red); color:#fff; }
     .dash-pane { display:none; }
@@ -1574,7 +1574,7 @@
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.85rem;">
             <div style="display:flex;align-items:center;gap:0.5rem;">
               <button type="button" onclick="shiftCalendarMonth(-1)" class="btn-cancel" style="padding:0.4rem 0.75rem;">‹ Prev</button>
-              <div id="ds-cal-label" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;min-width:160px;text-align:center;"></div>
+              <div id="ds-cal-label" style="font-family:'Inter',sans-serif;font-weight:700;font-size:1.05rem;min-width:160px;text-align:center;"></div>
               <button type="button" onclick="shiftCalendarMonth(1)" class="btn-cancel" style="padding:0.4rem 0.75rem;">Next ›</button>
             </div>
             <button type="button" onclick="jumpToToday()" class="btn-primary-custom" style="padding:0.45rem 1rem;">Today</button>
@@ -2695,7 +2695,7 @@
           <div class="card">
             <div class="card-head">
               <h5>Cart</h5>
-              <button onclick="clearPartsCart()" style="font-size:0.72rem;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;">Clear all</button>
+              <button onclick="clearPartsCart()" style="font-size:0.72rem;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;font-family:'Inter',sans-serif;">Clear all</button>
             </div>
             <div class="card-body" style="padding:0.75rem 1rem;">
 
@@ -2864,7 +2864,7 @@
           <option value="month">This Month</option>
         </select>
         <input type="text" id="txn-search" placeholder="Search customer, ID…" oninput="filterTxns()">
-        <button onclick="loadTxns()" style="padding:.55rem 1rem;border:1px solid var(--border);border-radius:8px;background:#f3f4f6;color:var(--text);cursor:pointer;font-size:.875rem;font-family:'DM Sans',sans-serif;">↻ Refresh</button>
+        <button onclick="loadTxns()" style="padding:.55rem 1rem;border:1px solid var(--border);border-radius:8px;background:#f3f4f6;color:var(--text);cursor:pointer;font-size:.875rem;font-family:'Inter',sans-serif;">↻ Refresh</button>
       </div>
 
 
@@ -3057,7 +3057,7 @@
     <!-- Header -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:1rem;">
       <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="bd-id"></div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="bd-id"></div>
         <div style="margin-top:0.5rem;" id="bd-status"></div>
       </div>
       <button onclick="closeModal('modal-booking-details')" style="width:30px;height:30px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:0.9rem;flex-shrink:0;font-family:inherit;">✕</button>
@@ -3378,7 +3378,7 @@
   <div class="modal-box" style="width:540px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;">
       <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--text);letter-spacing:0.04em;line-height:1;">Shipping Options</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--text);letter-spacing:0.04em;line-height:1;">Shipping Options</div>
         <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;" id="so-sub"></div>
       </div>
       <button type="button" onclick="shipCloseOptions()" aria-label="Close" style="background:none;border:none;font-size:1.3rem;color:var(--muted);cursor:pointer;line-height:1;padding:0.1rem 0.2rem;">&times;</button>
@@ -3439,7 +3439,7 @@
 
 <div class="modal-overlay" id="modal-ship-start">
   <div class="modal-box" style="width:480px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="ss-title">Rider details</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="ss-title">Rider details</div>
     <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 0.8rem;line-height:1.5;" id="ss-sub"></div>
     <input type="hidden" id="ss-oid"><input type="hidden" id="ss-fee"><input type="hidden" id="ss-car">
     <div class="form-group"><label><span class="ss-who">Rider</span> name</label><input type="text" id="ss-name" maxlength="100" oninput="this.classList.remove('so-err-field')"></div>
@@ -3459,7 +3459,7 @@
 
 <div class="modal-overlay" id="modal-ship-complete">
   <div class="modal-box" style="width:480px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Mark as completed?</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Mark as completed?</div>
     <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 0.8rem;line-height:1.5;" id="sc-sub"></div>
     <input type="hidden" id="sc-oid">
     <ol style="font-size:0.78rem;color:#374151;padding-left:1.2rem;margin:0 0 0.9rem;line-height:1.55;">
@@ -3484,7 +3484,7 @@
 
 <div class="modal-overlay" id="modal-ship-cancel">
   <div class="modal-box" style="width:500px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Cancel and refund</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Cancel and refund</div>
     <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;line-height:1.5;" id="sx-sub"></div>
     <input type="hidden" id="sx-oid"><input type="hidden" id="sx-total">
     <div class="form-group"><label>Reason (the customer will see this)</label>
@@ -3519,7 +3519,7 @@
 <!-- CANCEL A SHOP PICKUP ORDER (part out of stock / not available) -->
 <div class="modal-overlay" id="modal-order-cancel">
   <div class="modal-box" style="width:500px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Cancel order</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Cancel order</div>
     <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;line-height:1.5;" id="oc-sub"></div>
     <input type="hidden" id="oc-oid">
     <div class="form-group"><label>Reason (the customer will see this)</label>
@@ -3546,7 +3546,7 @@
 
 <div class="modal-overlay" id="modal-ship-finish">
   <div class="modal-box" style="max-width:430px;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Complete booking</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Complete booking</div>
     <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;" id="fc-sub"></div>
     <div style="font-size:0.78rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">Where is the customer?</div>
     <button type="button" onclick="finishAtShop()" style="width:100%;text-align:left;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:0.75rem 0.9rem;margin-bottom:0.55rem;cursor:pointer;font-family:inherit;">
@@ -3568,7 +3568,7 @@
 
     <!-- Header -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:1rem;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="od-title">Order Details</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;" id="od-title">Order Details</div>
       <button onclick="closeModal('modal-order-detail')" style="width:30px;height:30px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:0.9rem;flex-shrink:0;font-family:inherit;">✕</button>
     </div>
 
@@ -3616,7 +3616,7 @@
     <!-- Total -->
     <div style="display:flex;justify-content:space-between;align-items:center;padding:0.85rem 1rem;background:rgba(208,0,25,0.06);border:1px solid rgba(208,0,25,0.18);border-radius:9px;">
       <span style="font-weight:700;font-size:0.88rem;color:var(--text);">Total</span>
-      <span style="font-weight:800;font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.03em;" id="od-total"></span>
+      <span style="font-weight:800;font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.03em;" id="od-total"></span>
     </div>
 
     <div class="modal-actions">
@@ -4865,7 +4865,7 @@
       const head = document.createElement('div');
       head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:0.2rem;';
       const num = document.createElement('span');
-      num.style.cssText = 'font-weight:700;font-family:\'Syne\',sans-serif;';
+      num.style.cssText = 'font-weight:700;font-family:\'Inter\',sans-serif;';
       num.textContent = d;
       head.appendChild(num);
 
@@ -5223,7 +5223,7 @@
     return `
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;margin-bottom:1.2rem;">
         <div>
-          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;">${data.date_label}</div>
+          <div style="font-family:'Inter',sans-serif;font-weight:700;font-size:1.1rem;">${data.date_label}</div>
           <div style="font-size:0.82rem;color:var(--muted);margin-top:0.15rem;">
             ${data.booked_count} of ${data.daily_cap} booked &middot; ${data.mechanic_count} mechanic${data.mechanic_count === 1 ? '' : 's'} on duty
           </div>
@@ -5434,7 +5434,7 @@
       <div style="border:1px solid var(--border);border-radius:10px;padding:0.8rem 0.9rem;margin-bottom:0.7rem;${s.blocked ? 'background:#f3f4f6;' : ''}">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;${s.cards.length ? 'margin-bottom:0.7rem;' : ''}">
           <div>
-            <span style="font-weight:700;font-family:'Syne',sans-serif;">${s.label}</span>
+            <span style="font-weight:700;font-family:'Inter',sans-serif;">${s.label}</span>
             <span style="font-size:0.76rem;color:var(--muted);margin-left:0.5rem;">${s.booked_count} booked &middot; ${s.free_mechanics} of ${s.mechanic_count} mechanics free${s.needs_mechanic ? ' &middot; <span style="color:#92400e;font-weight:600;">needs a mechanic</span>' : ''}${s.dot_status ? ` <span title="${s.dot_status.replace('_', ' ')}" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:0.25rem;background:${(DS_STEP_BY_KEY[s.dot_status] || {}).dot || '#9ca3af'};"></span>` : ''}</span>
             ${s.blocked ? '<span class="badge" style="background:#e5e7eb;color:#374151;border:1px solid #d1d5db;margin-left:0.5rem;">Blocked</span>' : ''}
           </div>
@@ -5973,7 +5973,7 @@
         <div style="padding:0 0.9rem 0.9rem 0.9rem;">
           <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:0.9rem;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.2rem;">
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:0.03em;">BOOKING #${qd.ref}</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;letter-spacing:0.03em;">BOOKING #${qd.ref}</div>
               <span class="badge" style="background:${qd.completed ? '#dcfce7' : '#dbeafe'};color:${qd.completed ? '#166534' : '#1e3a8a'};border:1px solid ${qd.completed ? '#bbf7d0' : '#93c5fd'};">${qd.completed ? 'Completed' : 'In Progress'}</span>
             </div>
             <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">${qd.customer_name} · ${qd.motorcycle || 'No motorcycle on file'}</div>
@@ -8869,7 +8869,7 @@
 </script>
 
 <!-- ═══ ADMIN NOTIFICATION PANEL ═══ -->
-<div id="admin-notif-panel" style="display:none;position:fixed;top:4rem;right:1.75rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,0.1);border-radius:16px;z-index:601;box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;font-family:'DM Sans',sans-serif;">
+<div id="admin-notif-panel" style="display:none;position:fixed;top:4rem;right:1.75rem;width:380px;max-width:95vw;background:#1a1d23;border:1px solid rgba(255,255,255,0.1);border-radius:16px;z-index:601;box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;font-family:'Inter',sans-serif;">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.07);">
     <div style="font-family:inherit;font-weight:700;font-size:0.95rem;color:#fff;">Notifications</div>
     <button onclick="adminMarkAllRead()" style="background:none;border:none;color:#d00019;font-family:inherit;font-weight:700;font-size:0.75rem;cursor:pointer;">Mark all read</button>

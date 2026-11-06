@@ -6,7 +6,7 @@
   <title>Products — MotoTyres</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Barlow+Condensed:ital,wght@0,600;1,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -27,9 +27,9 @@
       --shadow-2:0 4px 16px rgba(28,24,20,0.06);
       --shadow-3:0 12px 32px rgba(28,24,20,0.10);
       --shadow-red:0 8px 24px rgba(208,0,25,0.18);
-      --font-display:'Bebas Neue','Oswald',sans-serif;
-      --font-body:'DM Sans',system-ui,sans-serif;
-      --font-label:'Syne','DM Sans',sans-serif;
+      --font-display:'Barlow Condensed','Oswald',sans-serif;
+      --font-body:'Inter',system-ui,sans-serif;
+      --font-label:'Inter','Inter',sans-serif;
       --font-mono:'DM Mono','JetBrains Mono',monospace;
       --ease:cubic-bezier(.2,.7,.2,1);
     }
@@ -211,7 +211,9 @@
     /* Small screens / short windows: even more compact so the cards get the room */
     @media (max-width: 640px) { .page-hero p, .page-hero .eyebrow, .footer-links { display: none; } .footer { justify-content: center; } }
     @media (max-height: 640px) { .page-hero p, .page-hero .eyebrow { display: none; } .footer { display: none; } }
-  </style>
+      .nav-logo{transition:opacity .15s}
+    .nav-logo:hover{opacity:.82}
+</style>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
 <body>

@@ -4,27 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>One more step – MotoTyres</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Barlow+Condensed:ital,wght@0,600;1,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root { --brand-red:#d00019; --fg-1:#1a1613; --fg-2:#4b4540; --fg-3:#8a827b; --line-2:#e3ddd6; --bg:#f6f3ef; }
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--fg-1); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--fg-1); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
     .card { width:100%; max-width:420px; background:#fff; border:1px solid var(--line-2); border-radius:16px; padding:2rem 1.75rem; box-shadow:0 12px 40px rgba(0,0,0,0.06); }
-    .logo { font-family:'Bebas Neue',sans-serif; font-size:1.6rem; letter-spacing:0.04em; margin-bottom:1.2rem; }
+    .logo { font-family:'Barlow Condensed',sans-serif; font-size:1.6rem; letter-spacing:0.04em; margin-bottom:1.2rem; }
     .logo span { color:var(--brand-red); }
-    .eyebrow { font-family:'Syne',sans-serif; font-weight:700; font-size:0.66rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--brand-red); }
-    h1 { font-family:'Bebas Neue',sans-serif; font-size:2.1rem; line-height:1; margin:0.25rem 0 0.5rem; }
+    .eyebrow { font-family:'Inter',sans-serif; font-weight:700; font-size:0.66rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--brand-red); }
+    h1 { font-family:'Barlow Condensed',sans-serif; font-size:2.1rem; line-height:1; margin:0.25rem 0 0.5rem; }
     p.sub { font-size:0.86rem; color:var(--fg-2); line-height:1.5; margin-bottom:1.2rem; }
     .who { display:flex; align-items:center; gap:0.7rem; padding:0.7rem 0.85rem; background:#faf8f5; border:1px solid var(--line-2); border-radius:10px; margin-bottom:1.1rem; }
     .who b { display:block; font-size:0.86rem; } .who small { color:var(--fg-3); font-size:0.76rem; }
-    label { display:block; font-family:'Syne',sans-serif; font-weight:700; font-size:0.66rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-2); margin-bottom:0.35rem; }
+    label { display:block; font-family:'Inter',sans-serif; font-weight:700; font-size:0.66rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-2); margin-bottom:0.35rem; }
     input { width:100%; padding:0.8rem 0.9rem; border:1.5px solid var(--line-2); border-radius:10px; font-family:inherit; font-size:0.9rem; outline:none; margin-bottom:0.9rem; }
     input:focus { border-color:var(--brand-red); box-shadow:0 0 0 3px rgba(208,0,25,0.1); }
     .hint { font-size:0.72rem; color:var(--fg-3); margin:-0.6rem 0 0.9rem; }
-    button { width:100%; padding:0.85rem; border:none; border-radius:10px; background:#1a1613; color:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer; }
+    button { width:100%; padding:0.85rem; border:none; border-radius:10px; background:#1a1613; color:#fff; font-family:'Inter',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer; }
     button:hover { background:#000; }
     .flash { padding:0.65rem 0.8rem; border-radius:8px; font-size:0.8rem; margin-bottom:0.9rem; background:rgba(220,38,38,0.06); border:1px solid rgba(220,38,38,0.2); color:#b91c1c; }
-    a.cancel { display:block; box-sizing:border-box; width:100%; text-align:center; margin-top:0.7rem; padding:0.8rem; border:1.5px solid var(--line-2); border-radius:10px; background:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; color:var(--fg-2, #5a5149); text-decoration:none; transition:border-color .2s, color .2s, background .2s; }
+    a.cancel { display:block; box-sizing:border-box; width:100%; text-align:center; margin-top:0.7rem; padding:0.8rem; border:1.5px solid var(--line-2); border-radius:10px; background:#fff; font-family:'Inter',sans-serif; font-weight:700; font-size:0.9rem; color:var(--fg-2, #5a5149); text-decoration:none; transition:border-color .2s, color .2s, background .2s; }
     a.cancel:hover { border-color:var(--fg-3); color:#1a1613; background:#faf8f5; }
   </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">

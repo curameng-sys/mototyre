@@ -124,7 +124,7 @@ html.embedded .svc-add-icon, html.embedded .ci-icon.service { background: #f4f4f
 /* The seven status tones (--t-*) and the class lists that use them live in badge-tones.css, shared with the customer dashboard. */
 .badge {
   display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; border-radius: 99px;
-  font-family: 'DM Sans', sans-serif; font-size: 0.69rem; font-weight: 600; letter-spacing: 0.01em; text-transform: none;
+  font-family: 'Inter', sans-serif; font-size: 0.69rem; font-weight: 600; letter-spacing: 0.01em; text-transform: none;
   line-height: 1.35; white-space: nowrap; border: 1px solid transparent;
 }
 /* badges whose colours are written inline in the page (Unpaid, the Ship tag, the Clash chip, the day-schedule status chips) */
@@ -183,7 +183,7 @@ html.embedded .topbar:not(:has(.btn-primary)) { padding-top: 0 !important; }
 }
 
 /* ───────── 15. Column headings: one typeface (some pages used the wide display font) ───────── */
-table th { font-family: 'DM Sans', sans-serif !important; }
+table th { font-family: 'Inter', sans-serif !important; }
 
 /* ───────── 16. Day Schedule calendar: roomy, squarish day boxes instead of tall narrow strips ─────────
    The month used to be stretched to fill the whole height of the page, so every day became a thin tall rectangle with the number
@@ -207,7 +207,7 @@ table th { font-family: 'DM Sans', sans-serif !important; }
   body.ds-lock #ds-cal-grid > div { aspect-ratio: auto; min-height: 58px !important; border-radius: 12px !important; padding: 0.4rem 0.45rem !important; transition: box-shadow 0.15s, transform 0.15s; }
   body.ds-lock #ds-cal-grid > div:empty { border: 0 !important; background: transparent !important; box-shadow: none; }
   body.ds-lock #ds-cal-grid > div:not(:empty):hover { box-shadow: 0 4px 12px rgba(17, 17, 19, 0.10); transform: translateY(-1px); }
-  body.ds-lock #ds-cal-grid > div > div:first-child > span { font-family: 'DM Sans', sans-serif !important; font-size: 0.9rem; font-weight: 700; }
+  body.ds-lock #ds-cal-grid > div > div:first-child > span { font-family: 'Inter', sans-serif !important; font-size: 0.9rem; font-weight: 700; }
   body.ds-lock #ds-cal-grid > div > div:first-child > div { gap: 0.25rem; padding-top: 0.2rem; }
   body.ds-lock #ds-cal-grid > div > div:first-child > div > span { font-size: 0 !important; width: 9px; height: 9px; padding: 0 !important; border-radius: 50% !important; display: block; }
   body.ds-lock .ds-count { min-width: 20px; height: 20px; font-size: 0.68rem; }
@@ -222,3 +222,8 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, summary:fo
   outline: 2px solid var(--red); outline-offset: 2px;
 }
 .sidebar a:focus-visible, .sidebar button:focus-visible { outline-color: #ffffff; outline-offset: -2px; }
+
+/* hover: text links inside pages ("Manage products", "Undo") and the no-show button */
+.page-section a[onclick], .card a[onclick] { transition: color .15s; }
+.page-section a[onclick]:hover, .card a[onclick]:hover { text-decoration: underline; text-underline-offset: 3px; }
+.btn-cancel[onclick*="markNoShow"]:hover { background: #ffedd5 !important; border-color: #fb923c !important; }
