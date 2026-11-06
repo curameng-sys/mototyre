@@ -1013,7 +1013,7 @@
     <a href="#" onclick="showSection('walkqueue', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Walk-In Queue <span id="wq-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;"></span></a>
     <a href="#" onclick="showSection('parts', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span> Parts Purchase</a>
     <a href="#" onclick="showSection('quotations', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Quotations</a>
-    <a href="{{ url_for('job_orders') }}"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span> Job Orders</a>
+    <a href="#" onclick="showSection('joborders', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span> Job Orders</a>
     <a href="#" onclick="showSection('billing', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing {% set billing_badge = (pending_billing_count or 0) + (billing_new_count or 0) %}{% if billing_badge %}<span title="{{ pending_billing_count or 0 }} to collect · {{ billing_new_count or 0 }} new in History" style="margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;">{{ billing_badge }}</span>{% endif %}</a>
     <a href="#" onclick="showSection('transactions', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Transactions</a>
     </div>
@@ -1849,7 +1849,7 @@
       <div class="page-header">
         <div class="page-header-left">
           <div class="page-title">Walk-In <span class="accent">Queue</span></div>
-          <div class="page-sub">Write down a customer who has to wait. When a mechanic is free, call the first one on the list. Nobody can be called before the one who came first. Online bookings keep their mechanic, so only a mechanic who is really free is offered.</div>
+          <div class="page-sub">Write down a customer who has to wait. When a mechanic is free, the first one on the list is next: tell them in the shop, then assign the mechanic. Nobody can be served before the one who came first. Online bookings keep their mechanic, so only a mechanic who is really free is offered.</div>
         </div>
       </div>
       <div class="card" style="margin-bottom:1rem;">
@@ -2679,6 +2679,9 @@
     </section>
     <section id="sec-quotations" class="page-section">
       <iframe id="quotations-frame" class="embed-frame" title="Quotations" data-src="{{ url_for('quotations_list') }}?embed=1" style="display:block;width:100%;border:0;background:transparent;"></iframe>
+    </section>
+    <section id="sec-joborders" class="page-section">
+      <iframe id="joborders-frame" class="embed-frame" title="Job Orders" data-src="{{ url_for('job_orders') }}?embed=1" style="display:block;width:100%;border:0;background:transparent;"></iframe>
     </section>
     <section id="sec-walkin" class="page-section">
       <iframe id="walkin-frame" class="embed-frame" title="Walk-In" data-src="{{ url_for('walk_in') }}?embed=1" style="display:block;width:100%;border:0;background:transparent;"></iframe>
@@ -4157,7 +4160,7 @@
   }
 
   // Billing, Quotations and Walk-In open inside the dashboard (a frame), never as a page of their own.
-  const EMBEDS = { billing: { frame: 'billing-frame', path: '/payments' }, quotations: { frame: 'quotations-frame', path: '/quotations' }, walkin: { frame: 'walkin-frame', path: '/walk-in' } };
+  const EMBEDS = { billing: { frame: 'billing-frame', path: '/payments' }, quotations: { frame: 'quotations-frame', path: '/quotations' }, walkin: { frame: 'walkin-frame', path: '/walk-in' }, joborders: { frame: 'joborders-frame', path: '/job-orders' } };
   // Opens one of them, optionally on a specific view, e.g. openEmbedded('billing', 'tab=pending&collect=12')
   // or openEmbedded('quotations', 'booking_id=5', '/quotation/new').
   function openEmbedded(name, query, path) {
@@ -4959,13 +4962,13 @@
     if (badge) { badge.textContent = q.length; badge.style.display = q.length ? 'inline-block' : 'none'; }
     document.getElementById('wq-free').innerHTML = free.length
       ? '<strong style="color:#15803d;">' + free.length + ' mechanic' + (free.length > 1 ? 's' : '') + ' free now:</strong> ' + free.map(m => _wqEsc(m.name)).join(', ')
-      : '<strong style="color:#b45309;">No mechanic is free right now.</strong> The next customer is called when one finishes.';
+      : '<strong style="color:#b45309;">No mechanic is free right now.</strong> The next customer on the list is served when one finishes.';
     const box = document.getElementById('wq-list');
     if (!q.length) { box.innerHTML = '<div class="empty-state"><p>Nobody is waiting. Add a customer above when the mechanics are all busy.</p></div>'; return; }
     box.innerHTML = '<table class="table"><thead><tr><th>#</th><th>Customer</th><th>Needs</th><th>Waiting</th><th>Action</th></tr></thead><tbody>' + q.map((w, i) => {
       const first = i === 0;
       const call = first
-        ? (free.length ? '<button type="button" class="btn-primary-custom" style="padding:0.4rem 0.9rem;" onclick="wqCall(' + w.id + ')">Call · ' + _wqEsc(free[0].name) + '</button>'
+        ? (free.length ? '<button type="button" class="btn-primary-custom" style="padding:0.4rem 0.9rem;" onclick="wqCall(' + w.id + ')">Assign · ' + _wqEsc(free[0].name) + '</button>'
                        : '<span style="font-size:0.72rem;color:var(--muted);">Waiting for a free mechanic</span>')
         : '<span style="font-size:0.72rem;color:var(--muted);">Not yet; ' + _wqEsc(q[0].name) + ' is first</span>';
       return '<tr><td style="font-weight:800;">' + w.position + '</td>' +
@@ -5002,7 +5005,7 @@
     try {
       const res = await fetch('/api/walkin-queue/' + id + '/call', { method: 'POST' });
       const data = await res.json();
-      if (!data.success) { showToast(data.error || 'Could not call the customer.', 'error'); loadWalkQueue(); return; }
+      if (!data.success) { showToast(data.error || 'Could not assign the mechanic.', 'error'); loadWalkQueue(); return; }
       openEmbedded('walkin', 'queue_id=' + data.customer.id + '&mech=' + data.mechanic.id, '/walk-in');
     } catch (e) { showToast('Network error. Please try again.', 'error'); }
   }

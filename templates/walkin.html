@@ -1478,7 +1478,11 @@ async function processTransaction() {
     if (data.success) {
       toast(`${data.ref} created! Redirecting to Job Orders...`, false, 'info');
       syncStock();
-      setTimeout(() => { window.location.href = '/job-orders?new=' + data.job_order_id; }, 1200);
+      setTimeout(() => {
+        // inside the dashboard: open Job Orders in its own section; opened alone: go to the page
+        try { if (window.top !== window && window.top.openEmbedded) { window.top.openEmbedded('joborders', 'new=' + data.job_order_id, '/job-orders'); return; } } catch (e) {}
+        window.location.href = '/job-orders?new=' + data.job_order_id;
+      }, 1200);
     } else {
       toast(data.error || 'Failed to create job order', true);
       btnS.disabled = false;

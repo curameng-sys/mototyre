@@ -166,7 +166,7 @@
 
 <div class="main">
   <div class="page-title">Job Orders</div>
-  <div class="page-sub">Walk-in job orders converted from quotations. Separate from online bookings.</div>
+  <div class="page-sub">Walk-in work in the shop, made from the Walk-In page or converted from a quotation. Separate from online bookings.</div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
@@ -273,7 +273,7 @@
         <tr id="jo-row-{{ jo.id }}" {% if new_jo and jo.id == new_jo.id %}class="new-jo-highlight"{% endif %}>
           <td>
             <span class="ref-code">JO-{{ '%03d'|format(jo.id) }}</span>
-            {% if jo.quotation_id %}<a href="{{ url_for('walk_in', view_quotation=jo.quotation_id) }}" class="from-quot" style="text-decoration:none;cursor:pointer;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> QUO-{{ '%03d'|format(jo.quotation_id) }}</a>{% endif %}
+            {% if jo.quotation_id %}<a href="{{ url_for('walk_in', view_quotation=jo.quotation_id) }}" target="_top" class="from-quot" style="text-decoration:none;cursor:pointer;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> QUO-{{ '%03d'|format(jo.quotation_id) }}</a>{% endif %}
           </td>
           <td>
             <div class="cust-name">{{ jo.customer_name }}</div>
@@ -371,7 +371,7 @@
     {% else %}
     <div class="empty-state">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-      <p>No job orders yet.<br>Convert a <a href="{{ url_for('quotations_list') }}" style="color:var(--blue);">quotation</a> to create one.</p>
+      <p>No job orders yet.<br>Convert a <a href="{{ url_for('quotations_list') }}" target="_top" style="color:var(--blue);">quotation</a> to create one.</p>
     </div>
     {% endif %}
   </div>

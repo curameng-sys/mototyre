@@ -7678,6 +7678,8 @@ def reject_quotation(qid):
 @login_required
 @require_admin_or_staff
 def job_orders():
+    if _opened_as_page():
+        return _into_dashboard('joborders')
     new_id = request.args.get('new', type=int)
     status_filter = 'all' if new_id else request.args.get('status', 'all')
     q = JobOrder.query
@@ -7789,7 +7791,7 @@ def _opened_as_page():
 
 
 def _into_dashboard(section):
-    """Billing, Quotations and Walk-In have no page of their own: send the visitor to that section of the dashboard,
+    """Billing, Quotations, Walk-In and Job Orders have no page of their own: send the visitor to that section of the dashboard,
     on the same view (path and query) they asked for."""
     frame = request.path + ('?' + request.query_string.decode() if request.query_string else '')
     return redirect(url_for('admin_dashboard', section=section, frame=frame))
@@ -8561,7 +8563,7 @@ def api_walkin_queue_cancel(wid):
 @login_required
 @require_admin_or_staff
 def api_walkin_queue_call(wid):
-    """Calls the customer: only the one who has waited longest, and only when a mechanic is free. Returns what the Walk-In form needs
+    """Starts the job for the customer at the front of the line (staff tell them in the shop): only the one who has waited longest, and only when a mechanic is free. Returns what the Walk-In form needs
     (the customer, and the mechanic who is free). It does not take them out of the line; the job order does, once it is created."""
     w = WalkInQueue.query.get_or_404(wid)
     waiting = _waiting_today()
