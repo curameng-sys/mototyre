@@ -445,7 +445,10 @@
     try {
       const res  = await fetch(`/job-order/${joid}/status`, { method: 'POST', body: fd });
       const data = await res.json();
-      if (data.success) toast(name ? `Assigned to ${name}.` : 'Mechanic removed.', 'info');
+      if (data.success) {
+        toast(name ? `Assigned to ${name}.` : 'Mechanic removed.', 'info');
+        if (data.status && data.status !== document.querySelector(`.status-sel[data-joid="${joid}"]`).value) setTimeout(() => location.reload(), 600);   // it is In Progress now: show Pay
+      }
       else toast('Failed to assign mechanic.', 'error');
     } catch { toast('Network error.', 'error'); }
   }

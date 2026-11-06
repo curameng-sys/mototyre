@@ -214,7 +214,7 @@
   {% if section == 'online' %}
   <div class="info-box online">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-    <div>Created from <strong>Manage Bookings → Create quotation</strong>. The customer approves or declines in their notifications, and the booking moves to <strong>In Progress</strong>. These never become Job Orders.</div>
+    <div>Created from <strong>Inspection &amp; Quotation</strong>. The customer approves or declines in their notifications, and the booking moves to <strong>In Progress</strong>. These never become Job Orders.</div>
   </div>
   <div class="filter-tabs">
     <a href="?section=online&status=all"                class="ftab {% if status_filter=='all' %}active{% endif %}">All</a>
@@ -351,7 +351,7 @@
     <div class="empty-state">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       {% if section == 'online' %}
-      <p>No online booking quotations found.<br>Create one from <strong>Manage Bookings → Create quotation</strong>.</p>
+      <p>No online booking quotations found.<br>Create one from <strong>Inspection &amp; Quotation</strong>.</p>
       {% else %}
       <p>No walk-in quotations found.<br><a href="{{ url_for('quotation_new') }}" style="color:var(--red);">Create the first one</a>.</p>
       {% endif %}

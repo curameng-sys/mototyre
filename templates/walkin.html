@@ -1040,7 +1040,7 @@ function _loadServices() {
 _loadServices();
 initMechPicker();
 
-// Called from the Walk-In Queue: ?queue_id=..&mech=.. fills in the customer who came first and the mechanic who is free.
+// Called from the Walk-In Queue: ?queue_id=.. fills in the customer who came first. The staff picks the mechanic.
 (async function fromQueue() {
   const qs = new URLSearchParams(location.search), qid = qs.get('queue_id');
   if (!qid) return;
@@ -1052,9 +1052,7 @@ initMechPicker();
     document.getElementById('cust-name').value = w.name || '';
     document.getElementById('cust-phone').value = w.phone || '';
     if (w.motorcycle) document.getElementById('cust-moto-model').value = w.motorcycle;
-    const mech = qs.get('mech');
-    if (mech && mechPicker) { await mechPicker.load(); mechPicker.pick(mech); }
-    toast('From the waiting list: ' + w.name + (w.note ? ' · ' + w.note : '') + '. Add the services, then create the job order.', false, 'info');
+    toast('From the waiting list: ' + w.name + (w.note ? ' · ' + w.note : '') + '. Add the services, pick the mechanic, then create the job order.', false, 'info');
   } catch (e) { /* the form still works without it */ }
 })();
 refreshMechanicStatus();

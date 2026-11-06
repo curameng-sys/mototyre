@@ -1437,10 +1437,6 @@
                         <span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">Quotation declined</span>
                       {% else %}
                         <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Inspection &amp; Estimation</span>
-                        <div style="margin-top:0.3rem;">
-                          <a href="{{ url_for('quotation_new') }}?booking_id={{ b.id }}"
-                             style="font-size:0.72rem;font-weight:700;color:var(--red);text-decoration:none;" onclick="event.stopPropagation(); openEmbedded('quotations', 'booking_id={{ b.id }}', '/quotation/new'); return false;">Create quotation →</a>
-                        </div>
                       {% endif %}
                     {% elif b_wait %}
                       <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Awaiting payment</span>
@@ -1849,7 +1845,7 @@
       <div class="page-header">
         <div class="page-header-left">
           <div class="page-title">Walk-In <span class="accent">Queue</span></div>
-          <div class="page-sub">Write down a customer who has to wait. When a mechanic is free, the first one on the list is next: tell them in the shop, then assign the mechanic. Nobody can be served before the one who came first. Online bookings keep their mechanic, so only a mechanic who is really free is offered.</div>
+          <div class="page-sub">Write down a customer who has to wait. When a mechanic is free, the first one on the list is next: tell them in the shop, then open their job and pick the mechanic yourself. Nobody can be served before the one who came first. Online bookings keep their mechanic, so only a mechanic who is really free is offered.</div>
         </div>
       </div>
       <div class="card" style="margin-bottom:1rem;">
@@ -4968,7 +4964,7 @@
     box.innerHTML = '<table class="table"><thead><tr><th>#</th><th>Customer</th><th>Needs</th><th>Waiting</th><th>Action</th></tr></thead><tbody>' + q.map((w, i) => {
       const first = i === 0;
       const call = first
-        ? (free.length ? '<button type="button" class="btn-primary-custom" style="padding:0.4rem 0.9rem;" onclick="wqCall(' + w.id + ')">Assign · ' + _wqEsc(free[0].name) + '</button>'
+        ? (free.length ? '<button type="button" class="btn-primary-custom" style="padding:0.4rem 0.9rem;" onclick="wqCall(' + w.id + ')">Serve now</button>'
                        : '<span style="font-size:0.72rem;color:var(--muted);">Waiting for a free mechanic</span>')
         : '<span style="font-size:0.72rem;color:var(--muted);">Not yet; ' + _wqEsc(q[0].name) + ' is first</span>';
       return '<tr><td style="font-weight:800;">' + w.position + '</td>' +
@@ -5005,8 +5001,8 @@
     try {
       const res = await fetch('/api/walkin-queue/' + id + '/call', { method: 'POST' });
       const data = await res.json();
-      if (!data.success) { showToast(data.error || 'Could not assign the mechanic.', 'error'); loadWalkQueue(); return; }
-      openEmbedded('walkin', 'queue_id=' + data.customer.id + '&mech=' + data.mechanic.id, '/walk-in');
+      if (!data.success) { showToast(data.error || 'Could not open this customer.', 'error'); loadWalkQueue(); return; }
+      openEmbedded('walkin', 'queue_id=' + data.customer.id, '/walk-in');
     } catch (e) { showToast('Network error. Please try again.', 'error'); }
   }
   setInterval(() => { const s = document.getElementById('sec-walkqueue'); if (!document.hidden && s && s.classList.contains('active')) loadWalkQueue(); }, 15000);

@@ -7747,7 +7747,8 @@ def update_job_order_status(jid):
     }
     if jo.status in ['completed', 'cancelled']:
         return jsonify({'success': False, 'error': 'Status is final and cannot be changed'}), 400
-    if new_status not in transitions.get(jo.status, []):
+    assigning = request.form.get('mechanic_name') is not None and new_status == jo.status     # only the mechanic is being set
+    if not assigning and new_status not in transitions.get(jo.status, []):
         return jsonify({'success': False, 'error': 'Invalid status transition'}), 400
     jo.status = new_status
     if new_status == 'completed':
@@ -7755,6 +7756,8 @@ def update_job_order_status(jid):
     mechanic_name = request.form.get('mechanic_name')
     if mechanic_name is not None:
         jo.mechanic_name = mechanic_name.strip() or None
+        if jo.mechanic_name and jo.status == 'pending':
+            jo.status = 'in_progress'                       # a mechanic has it now: the work has started
     db.session.commit()
     return jsonify({'success': True, 'status': jo.status})
 
@@ -8564,7 +8567,7 @@ def api_walkin_queue_cancel(wid):
 @require_admin_or_staff
 def api_walkin_queue_call(wid):
     """Starts the job for the customer at the front of the line (staff tell them in the shop): only the one who has waited longest, and only when a mechanic is free. Returns what the Walk-In form needs
-    (the customer, and the mechanic who is free). It does not take them out of the line; the job order does, once it is created."""
+    (the customer; the staff picks the mechanic). It does not take them out of the line; the job order does, once it is created."""
     w = WalkInQueue.query.get_or_404(wid)
     waiting = _waiting_today()
     if w.status != 'waiting' or w not in waiting:
@@ -8576,7 +8579,7 @@ def api_walkin_queue_call(wid):
         return jsonify({'success': False, 'error': 'No mechanic is free right now. Wait for one to finish.'}), 409
     return jsonify({'success': True, 'customer': {'id': w.id, 'name': w.customer_name, 'phone': w.customer_phone or '',
                                                    'motorcycle': w.motorcycle_model or '', 'note': w.note or ''},
-                    'mechanic': payload['free_mechanics'][0]})
+                    'free_mechanics': payload['free_mechanics']})
 
 
 @admin_app.route('/api/walkin-queue/<int:wid>')
@@ -8834,7 +8837,7 @@ def walkin_create_job_order():
             motorcycle_plate = moto_plate,
             notes            = notes,
             total_amount     = total,
-            status           = 'pending',
+            status           = 'in_progress' if mechanic_name else 'pending',   # work starts as soon as a mechanic has it
             mechanic_name    = mechanic_name,
             created_by       = current_user.id,
         )
