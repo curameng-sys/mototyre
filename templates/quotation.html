@@ -1096,7 +1096,7 @@
     btn.disabled = true;
     try {
       const res = await fetch('/job-order/{{ booking.id if booking else 0 }}/add-items', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: list.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price, source: i.source || null,
+        body: JSON.stringify({ items: list.map(i => ({ item_type: i.item_type, name: i.name, quantity: i.quantity, unit_price: i.unit_price, product_id: i.product_id ? parseInt(i.product_id, 10) : null, source: i.source || null,
                                                        minutes: i.item_type === 'service' ? (i.minutes || 0) : 0 })) }) });
       const data = await res.json();
       if (data.success) {

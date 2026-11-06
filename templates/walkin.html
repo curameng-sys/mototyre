@@ -193,8 +193,15 @@
       display: flex; flex-direction: column;
       background: var(--card); border-left: 1px solid var(--border); overflow: hidden;
     }
+    /* Only the list of items scrolls. Customer info and the mechanic stay at the top, the totals and the button stay at the bottom. */
     .cart-panel-scroll {
-      flex: 1; overflow-y: auto;
+      flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column;
+    }
+    .cart-panel-scroll > .customer-section, .cart-panel-scroll > .mechanic-section { flex-shrink: 0; }
+    .cart-panel-scroll > .cart-section { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+    .cart-panel-scroll > .cart-section > .cart-title, .cart-panel-scroll > .cart-section > .est-box { flex-shrink: 0; }
+    .cart-panel-scroll #cart-items {
+      flex: 1 1 0; min-height: 110px; overflow-y: auto;
       scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.15) transparent;
     }
     .cart-panel-scroll::-webkit-scrollbar { width: 5px; }
@@ -724,14 +731,8 @@
           </span>
         </div>
 
-        <div class="field-row">
-          <div class="field-wrap phone-wrap" style="flex:1;">
-            <label class="field-label">Phone Number</label>
-            <input class="field-inp" id="cust-phone" type="tel" placeholder="09XXXXXXXXX"
-                   oninput="onPhoneInput()" autocomplete="off">
-            <div class="phone-suggestions" id="phone-suggestions"></div>
-          </div>
-        </div>
+        <input type="hidden" id="cust-phone" value="">          {# no phone number on the walk-in form: the name, the motorcycle and the year are enough #}
+        <div class="phone-suggestions" id="phone-suggestions" style="display:none;"></div>
 
         <div class="field-row">
           <div class="field-wrap" style="flex:1;">

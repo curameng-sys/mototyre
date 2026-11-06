@@ -580,6 +580,7 @@ class JobOrderItem(db.Model):
     name         = db.Column(db.String(150), nullable=False)
     quantity     = db.Column(db.Integer, default=1)
     unit_price   = db.Column(db.Float, nullable=False)
+    product_id   = db.Column(db.Integer, nullable=True)     # which product a 'product' line is: the stock it took goes back if the job is cancelled
 
 
 class Payment(db.Model):
@@ -7777,6 +7778,8 @@ def update_job_order_status(jid):
     if not assigning and new_status not in transitions.get(jo.status, []):
         return jsonify({'success': False, 'error': 'Invalid status transition'}), 400
     jo.status = new_status
+    if new_status == 'cancelled':
+        _return_job_order_stock(jo)                          # the parts it took go back on the shelf
     if new_status == 'completed':
         jo.completed_at = datetime.utcnow() + timedelta(hours=8)
     mechanic_name = request.form.get('mechanic_name')
@@ -8736,6 +8739,27 @@ def extend_job_order_time(jid):
     return jsonify({'success': True, 'until': minutes_to_ampm(until) if until is not None else None})
 
 
+def _take_stock(product_id, qty):
+    """Takes `qty` of a product off the shelf, only if there is that much. Returns None, or a message saying how many are left."""
+    if not product_id:
+        return None
+    qty = int(qty or 0)
+    if qty < 1:
+        return 'Please check the quantity.'
+    taken = Product.query.filter(Product.id == product_id, Product.stock >= qty).update({Product.stock: Product.stock - qty}, synchronize_session=False)
+    if taken:
+        return None
+    prod = Product.query.get(product_id)
+    return f"Only {int(prod.stock or 0) if prod else 0} left of {prod.name if prod else 'that product'}."
+
+
+def _return_job_order_stock(jo):
+    """A cancelled job order gives back the parts it took (only the lines that took some: old ones have no product recorded)."""
+    for it in JobOrderItem.query.filter_by(job_order_id=jo.id).all():
+        if it.item_type == 'product' and it.product_id:
+            Product.query.filter(Product.id == it.product_id).update({Product.stock: Product.stock + int(it.quantity or 0)}, synchronize_session=False)
+
+
 @admin_app.route('/job-order/<int:jid>/add-items', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -8763,10 +8787,19 @@ def job_order_add_items(jid):
             return jsonify({'success': False, 'error': 'Please check the price and quantity.'}), 400
         if not name or price < 0 or price > 1000000 or qty < 1 or qty > 999:
             return jsonify({'success': False, 'error': 'Please check the name, price and quantity of each item.'}), 400
+        try:
+            pid = int(it.get('product_id')) if (kind == 'product' and it.get('product_id')) else None
+        except (TypeError, ValueError):
+            pid = None
         clean.append({'item_type': kind, 'name': name, 'quantity': qty, 'unit_price': price, 'source': it.get('source'), 'minutes': it.get('minutes') or 0})
-        rows.append(JobOrderItem(job_order_id=jo.id, item_type=kind, name=name, quantity=qty, unit_price=price))
+        rows.append(JobOrderItem(job_order_id=jo.id, item_type=kind, name=name, quantity=qty, unit_price=price, product_id=pid))
     db.session.add_all(rows)
     db.session.flush()
+    for r in rows:
+        err = _take_stock(r.product_id, r.quantity) if r.item_type == 'product' else None
+        if err:
+            db.session.rollback()
+            return jsonify({'success': False, 'error': err}), 409
     jo.total_amount = round(sum((i.unit_price or 0) * (i.quantity or 1) for i in JobOrderItem.query.filter_by(job_order_id=jo.id).all()), 2)
     extra_min = _quote_extra_minutes(clean)
     if extra_min and jo.mechanic_name and not jo.mechanic_done_at:
@@ -8869,7 +8902,7 @@ def walkin_create_job_order():
     for p in cart:
         product = Product.query.get(p.get('product_id')) if p.get('product_id') else None
         items.append({'item_type': 'product', 'name': product.name if product else p.get('name', ''),
-                      'quantity': int(p.get('quantity', 1)), 'unit_price': float(p.get('unit_price', 0))})
+                      'quantity': int(p.get('quantity', 1)), 'unit_price': float(p.get('unit_price', 0)), 'product_id': product.id if product else None})
     for f in findings:
         name = clean_str(f.get('name', ''), max_len=150)
         if not name:
@@ -8917,7 +8950,12 @@ def walkin_create_job_order():
                 name         = i['name'],
                 quantity     = i['quantity'],
                 unit_price   = i['unit_price'],
+                product_id   = i.get('product_id'),
             ))
+            _stock_err = _take_stock(i.get('product_id'), i['quantity']) if i['item_type'] == 'product' else None
+            if _stock_err:
+                db.session.rollback()
+                return jsonify({'success': False, 'error': _stock_err}), 409
         if queue_entry:
             queue_entry.status, queue_entry.done_at, queue_entry.job_order_id = 'served', now, jo.id
         db.session.commit()
@@ -10426,6 +10464,7 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN rebooked_from INT DEFAULT NULL",
         "UPDATE booking SET status = 'in_progress', in_progress_at = COALESCE(in_progress_at, inspection_at, actual_start_at) WHERE status = 'inspection'",
         "UPDATE job_order SET status = 'in_progress' WHERE status = 'pending'",
+        "ALTER TABLE job_order_item ADD COLUMN product_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN gcash_amount FLOAT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN recorded_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN voided_at DATETIME DEFAULT NULL",
