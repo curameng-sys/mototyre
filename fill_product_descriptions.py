@@ -1,8 +1,9 @@
 """Give every product that has NO description a first draft built from its name, category and 'fits' column.
 
 Safe by default: with no flags it only READS and prints  id | name -> draft description  (add --csv file.csv to save the
-list). Nothing is written until you add --apply. Only products whose description is empty are touched; a description an
-admin already wrote is never changed. Before saving it writes the touched ids to a JSON file so --undo can blank them again.
+list). Nothing is written until you add --apply. Only products with NO real description are touched: empty, a few letters,
+or one that only repeats the product name. A description an admin really wrote is never changed. Before saving it writes
+each product's old text to a JSON file so --undo can put it back exactly.
 
     set DATABASE_URL=...                         (the same value the Render service uses)
     python fill_product_descriptions.py --csv preview.csv      # preview
@@ -36,6 +37,27 @@ TYPE_RULES = [
     (('GASKET',), 'Gasket', 'Seals two engine surfaces together to prevent leaks.'),
     (('ROCKER',), 'Rocker arm', 'Part of the valve train that opens and closes the engine valves.'),
     (('AIR SCREW',), 'Air screw', 'Adjusting screw on the carburetor that sets the air and fuel mix.'),
+    (('OIL SEAL', ' SEAL'), 'Oil seal', 'Keeps oil and grease from leaking out around a shaft or fork.'),
+    (('PISTON RING', 'RING SET'), 'Piston ring', 'Seals the piston against the cylinder wall.'),
+    (('FORK',), 'Front fork part', 'Part of the front suspension that absorbs bumps.'),
+    (('SHOCK',), 'Shock absorber', 'Suspension part that absorbs bumps and keeps the ride smooth.'),
+    (('CARBURETOR', 'CARB '), 'Carburetor part', 'Mixes air and fuel before it goes into the engine.'),
+    (('THROTTLE',), 'Throttle part', 'Part of the throttle control that sets the engine speed.'),
+    (('MUFFLER', 'EXHAUST'), 'Exhaust part', 'Carries exhaust gas away from the engine and reduces noise.'),
+    (('STATOR', 'CDI', 'RECTIFIER', 'REGULATOR', 'IGNITION COIL'), 'Electrical part', 'Part of the charging or ignition system of the motorcycle.'),
+    (('HORN',), 'Horn', 'Warns people around you.'),
+    (('SIGNAL', 'BLINKER'), 'Turn signal', 'Shows other road users where you are turning.'),
+    (('STARTER', 'KICK'), 'Starter part', 'Part used to start the engine.'),
+    (('SIDE STAND', 'CENTER STAND', 'STAND'), 'Stand', 'Holds the motorcycle upright when parked.'),
+    (('FOOTREST', 'FOOT STEP', 'FOOTPEG'), 'Footrest', 'Place for the rider or passenger to rest their feet.'),
+    (('SEAT',), 'Seat', 'Seat for the rider or passenger.'),
+    (('LEVER',), 'Lever', 'Hand or foot control lever.'),
+    (('BUSHING', 'BUSH '), 'Bushing', 'Cushions and guides a moving part.'),
+    (('STICKER', 'DECAL'), 'Sticker / decal', 'Body decoration.'),
+    (('COVER', 'FAIRING'), 'Body cover', 'Protects or covers a part of the motorcycle body.'),
+    (('BOLT', 'NUT', 'WASHER', 'SCREW'), 'Fastener', 'Holds motorcycle parts together.'),
+    (('FUEL',), 'Fuel part', 'Part of the fuel system that carries or controls the fuel.'),
+    (('VALVE',), 'Valve part', 'Part of the engine valve system.'),
     (('CHAIN', 'SPROCKET'), 'Drive part', 'Carries power from the engine to the rear wheel.'),
     (('CVT', 'PULLEY', 'ROLLER', 'DRIVE BELT'), 'CVT part', 'Part of the scooter transmission (CVT) that moves power to the rear wheel.'),
     (('CLUTCH',), 'Clutch part', 'Connects and disconnects engine power to the transmission.'),
@@ -48,6 +70,8 @@ TYPE_RULES = [
     (('TIRE', 'TYRE'), 'Tire', 'A motorcycle tire for everyday riding.'),
     (('BACK PLATE',), 'Back plate', 'Replacement back plate. Check the "Fits" line before you buy.'),
 ]
+KNOWN_BRANDS = ('Vee Rubber', 'Speed Motor', 'Honda', 'Yamaha', 'Suzuki', 'Kawasaki', 'Kymco', 'Michelin', 'Pirelli', 'Dunlop', 'Maxxis', 'Motolite',
+                'NGK', 'Denso', 'Bosch', 'Kryon', 'GPC', 'Apido', 'Gateway', 'Yamalube', 'Motul', 'Castrol', 'Shell', 'Petron', 'Repsol', 'Silock')
 PART_NO_RE = re.compile(r'\b(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{5,}\b', re.I)
 
 
@@ -68,9 +92,9 @@ def draft(name, category, motor_model):
     t = TIRE_RE.search(name)
     if t:
         w, a, rim = t.groups()
-        brand = re.split(r'\s+tire\b', name, flags=re.I)[0].strip()
+        brand = re.sub(r'\b(tire|tyre)\b', '', TIRE_RE.sub('', name), flags=re.I).strip(' -,/')
         if brand and brand != name.strip():
-            specs.insert(1, ('Brand', brand))
+            specs.insert(1, ('Brand / model', brand))
         specs += [('Size', f'{w}/{a}-{rim}'), ('Section width', f'{w} mm'), ('Aspect ratio', f'{a}%'), ('Rim size', f'{rim} inch')]
     else:
         m = [x for x in PART_NO_RE.findall(name) if not GRADE_RE.fullmatch(x)]
@@ -83,9 +107,31 @@ def draft(name, category, motor_model):
     if v:
         unit = 'ml' if v.group(2).lower() == 'ml' else 'L'
         specs.append(('Volume', f'{v.group(1)} {unit}'))
+    if not t:
+        low = name.strip().lower()
+        for b in sorted(KNOWN_BRANDS, key=len, reverse=True):
+            if low.startswith(b.lower() + ' '):
+                specs.insert(1, ('Brand', b))
+                break
     if motor_model and motor_model.strip():
         specs.append(('Fits', motor_model.strip()))
     return '\n'.join([sentence, 'Specifications:'] + [f'• {k}: {val}' for k, val in specs])[:1500]
+
+
+def has_specific_type(name, category):
+    """False when the product matched none of the part types above and so only got the general line."""
+    haystack = f'{category or ""} {name}'.upper()
+    return bool(TIRE_RE.search(name)) or any(any(w in haystack for w in words) for words, _l, _s in TYPE_RULES)
+
+
+def just_the_name(name, description):
+    """True when the description is empty, very short, or only repeats the product name (a title typed into both boxes).
+    The customer pages use the same rule, so what is saved here is what they would have shown anyway."""
+    norm = lambda x: re.sub(r'[^a-z0-9]+', '', (x or '').lower())
+    own, nm = norm(description), norm(name)
+    if len(own) < 10:
+        return True
+    return own == nm or own in nm or (nm in own and len(own) <= len(nm) + 12)
 
 
 def main():
@@ -95,33 +141,40 @@ def main():
     cur = conn.cursor()
 
     if args and args[0] == '--undo':
-        ids = json.load(open(args[1], encoding='utf8'))
-        for pid in ids:
-            cur.execute("UPDATE product SET description = NULL WHERE id = %s", (pid,))
+        saved = json.load(open(args[1], encoding='utf8'))
+        # a backup of this version is {id: old text}; an older one is only a list of ids (those were empty before)
+        old = saved if isinstance(saved, dict) else {str(i): None for i in saved}
+        for pid, text in old.items():
+            cur.execute("UPDATE product SET description = %s WHERE id = %s", (text, int(pid)))
         conn.commit()
-        print(f'Blanked the description of {len(ids)} products from {args[1]}.')
+        print(f'Put back the old description of {len(old)} products from {args[1]}.')
         return
 
-    cur.execute("SELECT id, name, category, motor_model FROM product WHERE description IS NULL OR TRIM(description) = '' ORDER BY id")
-    todo = [(i, n, c, m, draft(n, c, m)) for i, n, c, m in cur.fetchall()]
+    cur.execute("SELECT id, name, category, motor_model, description FROM product ORDER BY id")
+    todo = [(i, n, c, m, draft(n, c, m), old) for i, n, c, m, old in cur.fetchall() if just_the_name(n, old)]
     cur.execute("SELECT COUNT(*) FROM product")
     total = cur.fetchone()[0]
-    for i, n, c, m, d in todo:
+    for i, n, c, m, d, old in todo:
         print(f'{i} | {n}\n{d}\n')
-    print(f'{len(todo)} of {total} products have no description.')
+    print(f'{len(todo)} of {total} products have no real description (empty, very short, or only the name).')
+    general = [(n, c) for i, n, c, m, d, old in todo if not has_specific_type(n, c)]
+    print(f'{len(todo) - len(general)} got a line for their kind of part; {len(general)} only got the general line "A spare part for your motorcycle."')
+    for cat in sorted({(c or '(no category)') for n, c in general}):
+        print('   general line:', cat, '-', ', '.join(n for n, c in general if (c or '(no category)') == cat)[:120])
     if '--csv' in args:
         path = args[args.index('--csv') + 1]
         with open(path, 'w', newline='', encoding='utf8') as f:
             w = csv.writer(f); w.writerow(['id', 'name', 'category', 'fits', 'draft'])
-            for row in todo: w.writerow(row)
+            for row in todo: w.writerow(row[:5])
         print('Saved', path)
     if '--apply' not in args:
         print('Preview only. Nothing was saved. Add --apply to save.')
         return
     backup = f'description_backup_{datetime.now():%Y%m%d_%H%M%S}.json'
-    json.dump([r[0] for r in todo], open(backup, 'w', encoding='utf8'))
-    for i, n, c, m, d in todo:
-        cur.execute("UPDATE product SET description = %s WHERE id = %s AND (description IS NULL OR TRIM(description) = '')", (d, i))
+    json.dump({str(r[0]): r[5] for r in todo}, open(backup, 'w', encoding='utf8'))
+    for i, n, c, m, d, old in todo:
+        # only if it is still what we read a moment ago, so a description someone just wrote is never overwritten
+        cur.execute("UPDATE product SET description = %s WHERE id = %s AND (description <=> %s)", (d, i, old))
     conn.commit()
     print(f'Saved {len(todo)} descriptions. To undo: python fill_product_descriptions.py --undo {backup}')
 

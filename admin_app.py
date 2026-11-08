@@ -6455,7 +6455,7 @@ def _product_change_response(product, saved_msg):
 
 
 def _product_description_error():
-    msg = 'Add a description with the product’s specifications (at least 10 characters).'
+    msg = 'A description, if you write one, needs at least 10 characters. Leave it empty and one is written automatically.'
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': False, 'error': msg})
     flash(msg, 'danger')
@@ -6470,7 +6470,8 @@ def add_product():
     _img = _save_product_image(_file)
     if _file and _file.filename and not _img:
         return _product_photo_error()
-    if len((request.form.get('description') or '').strip()) < 10:
+    _d = (request.form.get('description') or '').strip()
+    if _d and len(_d) < 10:                        # empty is fine: the customer pages write one from the name, category and fit
         return _product_description_error()
     new_p = Product(
         name=request.form['name'], category=request.form['category'],
@@ -6492,7 +6493,8 @@ def edit_product(pid):
         flash('Access denied.', 'danger')
         return redirect(url_for('admin_dashboard'))
     p             = Product.query.get_or_404(pid)
-    if len((request.form.get('description') or '').strip()) < 10:
+    _d = (request.form.get('description') or '').strip()
+    if _d and len(_d) < 10:                        # empty is fine: the customer pages write one from the name, category and fit
         return _product_description_error()
     p.barcode     = request.form.get('barcode', '').strip() or None
     p.name        = request.form['name']

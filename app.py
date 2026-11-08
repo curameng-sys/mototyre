@@ -825,6 +825,35 @@ def product_card_img(p):
 app.jinja_env.filters['product_card_img'] = product_card_img
 
 
+# ── A description for every product ──────────────────────────────────────────────────────────────────────────────
+# The words the shop wrote are always used. A product with none gets a short description made only from what the shop did enter
+# (its name, its category and the motorcycles it fits), plus one plain line about that kind of part. It never states a
+# specification the shop did not enter. Nothing is stored: write one later and yours takes over.
+def product_auto_description(p):
+    """The same draft the fill_product_descriptions.py script would save: made only from the product's own name, category and fit."""
+    from fill_product_descriptions import draft
+    return draft((p.name or 'This product').strip(), p.category, p.motor_model)
+
+
+def _is_just_the_name(p):
+    """True when the description is empty, very short, or only repeats the product's name (a title typed into both boxes)."""
+    import re
+    norm = lambda x: re.sub(r'[^a-z0-9]+', '', (x or '').lower())
+    own, name = norm(p.description), norm(p.name)
+    if len(own) < 10:
+        return True
+    return own == name or own in name or (name in own and len(own) <= len(name) + 12)
+
+
+def product_card_desc(p):
+    """What a customer reads about a product: the shop's own description, or, when there is none (or it only repeats the name),
+    the one made from its name, category and fit."""
+    return product_auto_description(p) if _is_just_the_name(p) else (p.description or '').strip()
+
+
+app.jinja_env.filters['product_card_desc'] = product_card_desc
+
+
 class Order(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
