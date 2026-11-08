@@ -71,6 +71,13 @@ def _ensure_database():
 _ensure_database()
 
 app = Flask(__name__)
+
+
+@app.route('/healthz')
+def healthz():
+    """For a free uptime pinger (UptimeRobot, cron-job.org): answers at once and never touches the database or a login, so pinging it
+    every few minutes keeps the free host awake without adding any load."""
+    return 'ok', 200, {'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8'}
 import gzip_responses
 gzip_responses.register(app)          # pages and JSON are sent compressed (about 85% smaller)
 _secure_cookies = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
