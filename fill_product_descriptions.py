@@ -124,53 +124,13 @@ def _type_of(text):
     return None
 
 
-def draft(name, category, motor_model):
-    label, sentence = None, None
+def draft(name, category, motor_model=None):
+    """One plain sentence about what the part is for, from its kind (read from the name first, then the category). Nothing about the
+    brand, size, part number or fit: those are already in the product's own fields, and a sentence reads cleaner without them."""
     if TIRE_RE.search(name):
-        label, sentence = 'Tire', 'A motorcycle tire for everyday riding.'
-    else:
-        # the name says what the part is more exactly than the category ("Brake pad" vs "Brakes"), so it is read first
-        found = _type_of(name) or _type_of(category)
-        if found:
-            label, sentence = found
-    if not label:
-        label = (category or 'Spare part').strip().title()
-        sentence = 'A spare part for your motorcycle.'          # no guessing from an unknown name or a category such as "1,101.00"
-    specs = [('Product', name.strip()), ('Type', label), ('Category', (category or '').strip().title())]
-    t = TIRE_RE.search(name)
-    if t:
-        w, a, rim = t.groups()
-        parts = [x.strip() for x in name.split(',')] if ',' in name else [name]       # also "BRAND, TIRE, SIZE, MODEL"
-        kept = [re.sub(r'\b(tire|tyre)\b', '', TIRE_RE.sub('', x), flags=re.I).strip(' -/') for x in parts]
-        brand = ' '.join(' '.join(x for x in kept if x).split())          # one space between words
-        if brand.isupper():
-            brand = brand.title()
-        if brand and brand.lower() != name.strip().lower():
-            specs.insert(1, ('Brand / model', brand))
-        specs += [('Size', f'{w}/{a}-{rim} ({w} mm wide, {a}% aspect ratio, {rim}-inch rim)')]
-    else:
-        m = [x for x in PART_NO_RE.findall(name) if not GRADE_RE.fullmatch(x)]
-        if m:
-            specs.append(('Part no.', m[0].upper()))
-    g = GRADE_RE.search(name)
-    if g:
-        specs.append(('Viscosity grade', g.group(1).upper()))
-    v = VOLUME_RE.search(name)
-    if v:
-        unit = 'ml' if v.group(2).lower() == 'ml' else 'L'
-        specs.append(('Volume', f'{v.group(1)} {unit}'))
-    if not t:
-        low = name.strip().lower()
-        for b in sorted(KNOWN_BRANDS, key=len, reverse=True):
-            if low.startswith(b.lower() + ' '):
-                specs.insert(1, ('Brand', b))
-                break
-    if motor_model and motor_model.strip():
-        specs.append(('Fits', motor_model.strip()))
-    # Sentences, not a table that repeats the title: what the part is for, then what the name itself says about it (brand,
-    # size, part number, grade, volume, the motorcycles it fits). The product name and category are not repeated.
-    details = ' '.join(f'{k}: {val}.' for k, val in specs if k not in ('Product', 'Type', 'Category'))
-    return (sentence + ('\n' + details if details else ''))[:1500]
+        return 'A motorcycle tire for everyday riding.'
+    found = _type_of(name) or _type_of(category)
+    return found[1] if found else 'A spare part for your motorcycle.'
 
 
 def has_specific_type(name, category):
@@ -223,7 +183,7 @@ def main():
         return
 
     cur.execute("SELECT id, name, category, motor_model, description FROM product ORDER BY id")
-    todo = [(i, n, c, m, with_listed_fit(draft(n, c, m), old, m), old) for i, n, c, m, old in cur.fetchall() if just_the_name(n, old, c)]
+    todo = [(i, n, c, m, draft(n, c, m), old) for i, n, c, m, old in cur.fetchall() if just_the_name(n, old, c)]
     cur.execute("SELECT COUNT(*) FROM product")
     total = cur.fetchone()[0]
     for i, n, c, m, d, old in todo:
