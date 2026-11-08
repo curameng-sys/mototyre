@@ -37,6 +37,42 @@ TYPE_RULES = [
     (('GASKET',), 'Gasket', 'Seals two engine surfaces together to prevent leaks.'),
     (('ROCKER',), 'Rocker arm', 'Part of the valve train that opens and closes the engine valves.'),
     (('AIR SCREW',), 'Air screw', 'Adjusting screw on the carburetor that sets the air and fuel mix.'),
+    (('ENGINE OIL', 'GEAR OIL'), 'Lubricant', 'Lubricates and protects moving engine parts.'),
+    (('FORK OIL',), 'Fork oil', 'Oil inside the front fork that smooths out bumps.'),
+    (('TERMINAL',), 'Terminal', 'An electrical terminal that connects a wire.'),
+    (('MASTER REPAIR KIT',), 'Master cylinder repair kit', 'Replacement seals and parts to repair the brake master cylinder.'),
+    (('CYLINDER SET MASTER', 'MASTER CYLINDER'), 'Brake master cylinder', 'Pushes brake fluid to the caliper when you squeeze the brake lever.'),
+    (('REPAIR KIT',), 'Repair kit', 'Replacement seals and small parts to repair the unit.'),
+    (('O RING',), 'O-ring', 'A rubber ring that seals a joint so oil or fuel does not leak.'),
+    (('CALIPER',), 'Brake caliper', 'Holds the brake pads and squeezes them against the disc.'),
+    (('BRG', 'RADIAL BALL'), 'Bearing', 'Lets a wheel or shaft spin smoothly with less friction.'),
+    (('BOSHING', 'BUSHING'), 'Bushing', 'Cushions and guides a moving part.'),
+    (('FLY BALL',), 'Fly ball', 'CVT weight that moves outward as the engine speeds up.'),
+    (('DRIVE FACE',), 'CVT drive face', 'Part of the front pulley of a scooter CVT.'),
+    (('BELT',), 'Drive belt', 'Carries power between the pulleys of a scooter CVT.'),
+    (('CONNECTING ROD',), 'Connecting rod', 'Connects the piston to the crankshaft.'),
+    (('CRANK SHAFT', 'CRANKSHAFT'), 'Crankshaft', 'Turns the up-and-down motion of the pistons into rotation.'),
+    (('CRANK CASE', 'CRANKCASE'), 'Crankcase part', 'Part of the engine crankcase.'),
+    (('CYLINDER',), 'Cylinder part', 'Part of the cylinder where the piston moves.'),
+    (('CAMSHAFT', 'CAMS'), 'Cam', 'Engine cam part that opens and closes the valves.'),
+    (('INJECTOR',), 'Fuel injector', 'Sprays fuel into the engine.'),
+    (('JETTING',), 'Carburetor jet', 'Controls how much fuel goes through the carburetor.'),
+    (('TPS',), 'Throttle position sensor', 'Tells the engine computer how far the throttle is open.'),
+    (('LIFTER', 'TENSIONER'), 'Cam chain tensioner', 'Keeps the timing chain at the right tension.'),
+    (('CAM CHAIN',), 'Cam chain part', 'Part of the timing chain that drives the camshaft.'),
+    (('CHAIN GUIDE',), 'Chain guide', 'Guides the chain so it stays in place.'),
+    (('CARBON BRUSH',), 'Carbon brush', 'Carries electricity inside the starter motor and wears down with use.'),
+    (('CIR CLIP', 'CIRCLIP'), 'Circlip', 'Keeps a part from sliding off its shaft or groove.'),
+    (('COLLAR',), 'Collar', 'A spacer that sets the distance between two parts.'),
+    (('CAP TANK', 'TANK CAP'), 'Fuel tank cap', 'Closes the fuel tank.'),
+    (('DRAIN PLUG',), 'Drain plug', 'Closes the drain hole so oil does not leak out.'),
+    (('HEAD LIGHT',), 'Lighting', 'Gives light for the road and keeps you visible.'),
+    (('COOLANT',), 'Coolant', 'Helps keep the engine from overheating.'),
+    (('DEGREASER', 'DE RUST', 'DISINFECTING', 'CLEANER'), 'Cleaning product', 'For cleaning and caring for motorcycle parts. Read the label before use.'),
+    (('PUSH PIN',), 'Push pin', 'A fastener that holds covers in place.'),
+    (('SPRING',), 'Spring', 'A spring that returns or holds a part in place.'),
+    (('GEAR BOX',), 'Gear box part', 'Part of the transmission gears.'),
+    (('CP HOLDER',), 'Phone holder', 'Holds a phone on the handlebar.'),
     (('OIL SEAL', ' SEAL'), 'Oil seal', 'Keeps oil and grease from leaking out around a shaft or fork.'),
     (('PISTON RING', 'RING SET'), 'Piston ring', 'Seals the piston against the cylinder wall.'),
     (('FORK',), 'Front fork part', 'Part of the front suspension that absorbs bumps.'),
@@ -98,14 +134,14 @@ def draft(name, category, motor_model):
             label, sentence = found
     if not label:
         label = (category or 'Spare part').strip().title()
-        sentence = 'A spare part for your motorcycle.' if 'spare' in label.lower() or not category else f'{label} for your motorcycle.'
+        sentence = 'A spare part for your motorcycle.'          # no guessing from an unknown name or a category such as "1,101.00"
     specs = [('Product', name.strip()), ('Type', label), ('Category', (category or '').strip().title())]
     t = TIRE_RE.search(name)
     if t:
         w, a, rim = t.groups()
         parts = [x.strip() for x in name.split(',')] if ',' in name else [name]       # also "BRAND, TIRE, SIZE, MODEL"
         kept = [re.sub(r'\b(tire|tyre)\b', '', TIRE_RE.sub('', x), flags=re.I).strip(' -/') for x in parts]
-        brand = ' '.join(x for x in kept if x)
+        brand = ' '.join(' '.join(x for x in kept if x).split())          # one space between words
         if brand.isupper():
             brand = brand.title()
         if brand and brand.lower() != name.strip().lower():
@@ -141,14 +177,15 @@ def has_specific_type(name, category):
     return bool(TIRE_RE.search(name)) or bool(_type_of(name) or _type_of(category))
 
 
-def just_the_name(name, description):
-    """True when the description is empty, very short, or only repeats the product name (a title typed into both boxes).
-    The customer pages use the same rule, so what is saved here is what they would have shown anyway."""
-    norm = lambda x: re.sub(r'[^a-z0-9]+', '', (x or '').lower())
-    own, nm = norm(description), norm(name)
-    if len(own) < 10:
+def just_the_name(name, description, category=None):
+    """True when the description is empty, very short, or only restates the product: the same words as its name (and category),
+    in any order or with repeats, as in "BEAST TIRE, TIRE, 80/90-14" for "Beast Tire 80/90-14". A description that says anything
+    more than the name and category is a real one. The customer pages use the same rule."""
+    words = lambda x: set(re.findall(r'[a-z0-9]+', (x or '').lower()))
+    own = words(description)
+    if len(re.sub(r'[^a-z0-9]+', '', (description or '').lower())) < 10:
         return True
-    return own == nm or own in nm or (nm in own and len(own) <= len(nm) + 12)
+    return own <= (words(name) | words(category))
 
 
 def main():
@@ -168,7 +205,7 @@ def main():
         return
 
     cur.execute("SELECT id, name, category, motor_model, description FROM product ORDER BY id")
-    todo = [(i, n, c, m, draft(n, c, m), old) for i, n, c, m, old in cur.fetchall() if just_the_name(n, old)]
+    todo = [(i, n, c, m, draft(n, c, m), old) for i, n, c, m, old in cur.fetchall() if just_the_name(n, old, c)]
     cur.execute("SELECT COUNT(*) FROM product")
     total = cur.fetchone()[0]
     for i, n, c, m, d, old in todo:

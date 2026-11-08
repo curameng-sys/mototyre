@@ -836,13 +836,9 @@ def product_auto_description(p):
 
 
 def _is_just_the_name(p):
-    """True when the description is empty, very short, or only repeats the product's name (a title typed into both boxes)."""
-    import re
-    norm = lambda x: re.sub(r'[^a-z0-9]+', '', (x or '').lower())
-    own, name = norm(p.description), norm(p.name)
-    if len(own) < 10:
-        return True
-    return own == name or own in name or (name in own and len(own) <= len(name) + 12)
+    """True when the description is empty, very short, or only restates the name and category (see fill_product_descriptions.py)."""
+    from fill_product_descriptions import just_the_name
+    return just_the_name(p.name, p.description, p.category)
 
 
 def product_card_desc(p):
