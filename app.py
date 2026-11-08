@@ -699,6 +699,132 @@ def product_photo(pid):
 app.jinja_env.filters['product_img'] = product_img_src
 
 
+# ── A picture for every product ───────────────────────────────────────────────────────────────────────────────────
+# A product with no photo gets an illustration made from ITS OWN category and name (and the motorcycles it fits), so each one
+# reads as that product. Nothing is stored: rename it or move it to another category and the picture follows; upload a real
+# photo and the photo takes over.
+import math
+
+
+def _art_kind(category, name):
+    s = f'{category or ""} {name or ""}'.lower()
+    rules = (
+        ('tire', ('tire', 'tyre', 'gulong')), ('brake', ('brake', 'pad', 'shoe', 'disc', 'caliper', 'rotor')),
+        ('filter', ('filter',)), ('oil', ('oil', 'lube', 'lubric', 'grease', 'coolant', 'fluid')),
+        ('chain', ('chain', 'sprocket', 'belt')), ('battery', ('battery', 'batt')),
+        ('spark', ('spark', 'plug', 'ignition', 'coil')), ('light', ('light', 'bulb', 'lamp', 'signal', 'headlight')),
+        ('wire', ('wire', 'cable', 'throttle', 'clutch cable')), ('bearing', ('bearing', 'ball race', 'race')),
+        ('helmet', ('helmet', 'glove', 'accessor', 'mirror', 'cover')),
+    )
+    for kind, words in rules:
+        if any(w in s for w in words):
+            return kind
+    return 'gear'
+
+
+def _art_icon(kind):
+    """The drawing for a kind of part: simple shapes in the shop's black and red, centred on 200,170."""
+    ink, red, soft = '#1f2937', '#d00019', '#e5e7eb'
+    if kind == 'tire':
+        return (f'<circle cx="200" cy="170" r="92" fill="{ink}"/><circle cx="200" cy="170" r="58" fill="{soft}"/><circle cx="200" cy="170" r="40" fill="#fff"/>'
+                f'<circle cx="200" cy="170" r="14" fill="{red}"/>'
+                + ''.join(f'<rect x="196" y="72" width="8" height="16" rx="3" fill="#6b7280" transform="rotate({a} 200 170)"/>' for a in range(0, 360, 30)))
+    if kind == 'brake':
+        return (f'<circle cx="200" cy="170" r="88" fill="{soft}" stroke="{ink}" stroke-width="8"/><circle cx="200" cy="170" r="26" fill="#fff" stroke="{ink}" stroke-width="6"/>'
+                + ''.join(f'<circle cx="{200 + 54 * math.cos(math.radians(a)):.1f}" cy="{170 + 54 * math.sin(math.radians(a)):.1f}" r="7" fill="#fff" stroke="{ink}" stroke-width="3"/>' for a in range(0, 360, 60))
+                + f'<path d="M262 96 a100 100 0 0 1 28 74 l-34 0 a66 66 0 0 0 -18 -48z" fill="{red}"/>')
+    if kind == 'filter':
+        return (f'<rect x="132" y="94" width="136" height="150" rx="12" fill="{soft}" stroke="{ink}" stroke-width="7"/><rect x="124" y="80" width="152" height="24" rx="8" fill="{ink}"/>'
+                f'<rect x="124" y="234" width="152" height="24" rx="8" fill="{ink}"/>'
+                + ''.join(f'<line x1="{x}" y1="112" x2="{x}" y2="228" stroke="{red}" stroke-width="5" stroke-linecap="round"/>' for x in range(150, 260, 20)))
+    if kind == 'oil':
+        return (f'<path d="M168 84h64v22l24 28v108a14 14 0 0 1-14 14H158a14 14 0 0 1-14-14V134l24-28z" fill="{soft}" stroke="{ink}" stroke-width="7" stroke-linejoin="round"/>'
+                f'<rect x="176" y="64" width="48" height="24" rx="6" fill="{ink}"/><path d="M200 150c-16 22-26 34-26 48a26 26 0 0 0 52 0c0-14-10-26-26-48z" fill="{red}"/>')
+    if kind == 'chain':
+        return (f'<circle cx="200" cy="170" r="70" fill="{soft}" stroke="{ink}" stroke-width="7"/><circle cx="200" cy="170" r="22" fill="#fff" stroke="{ink}" stroke-width="6"/>'
+                + ''.join(f'<rect x="190" y="82" width="20" height="26" rx="4" fill="{ink}" transform="rotate({a} 200 170)"/>' for a in range(0, 360, 30))
+                + f'<circle cx="200" cy="170" r="8" fill="{red}"/>')
+    if kind == 'battery':
+        return (f'<rect x="120" y="110" width="160" height="110" rx="12" fill="{soft}" stroke="{ink}" stroke-width="7"/><rect x="146" y="92" width="26" height="22" rx="4" fill="{ink}"/>'
+                f'<rect x="228" y="92" width="26" height="22" rx="4" fill="{red}"/><path d="M206 128l-26 44h22l-8 38 30-48h-22z" fill="{red}"/>')
+    if kind == 'spark':
+        return (f'<rect x="184" y="70" width="32" height="46" rx="6" fill="{ink}"/><rect x="176" y="116" width="48" height="30" rx="6" fill="{soft}" stroke="{ink}" stroke-width="6"/>'
+                f'<rect x="188" y="146" width="24" height="64" fill="#9ca3af"/><path d="M200 210v26m-14 0h28" stroke="{red}" stroke-width="8" stroke-linecap="round"/>')
+    if kind == 'light':
+        return (f'<path d="M200 82a62 62 0 0 1 36 112v26h-72v-26a62 62 0 0 1 36-112z" fill="#fef3c7" stroke="{ink}" stroke-width="7" stroke-linejoin="round"/>'
+                f'<rect x="168" y="222" width="64" height="18" rx="6" fill="{ink}"/><path d="M186 160l14 22 14-22" stroke="{red}" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>')
+    if kind == 'wire':
+        return (f'<path d="M110 220c40-90 70 50 110-30s50-40 70-70" fill="none" stroke="{ink}" stroke-width="10" stroke-linecap="round"/>'
+                f'<path d="M110 220c40-90 70 50 110-30s50-40 70-70" fill="none" stroke="{red}" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 14"/>'
+                f'<rect x="96" y="212" width="28" height="22" rx="5" fill="{ink}"/><rect x="278" y="106" width="28" height="22" rx="5" fill="{ink}"/>')
+    if kind == 'bearing':
+        return (f'<circle cx="200" cy="170" r="84" fill="{soft}" stroke="{ink}" stroke-width="8"/><circle cx="200" cy="170" r="46" fill="#fff" stroke="{ink}" stroke-width="7"/>'
+                + ''.join(f'<circle cx="{200 + 65 * math.cos(math.radians(a)):.1f}" cy="{170 + 65 * math.sin(math.radians(a)):.1f}" r="9" fill="{red}"/>' for a in range(0, 360, 45)))
+    if kind == 'helmet':
+        return (f'<path d="M110 190a90 90 0 0 1 180 0v36a14 14 0 0 1-14 14H124a14 14 0 0 1-14-14z" fill="{ink}"/><path d="M150 168h140v34H150a24 24 0 0 1 0-34z" fill="{soft}"/>'
+                f'<rect x="110" y="206" width="180" height="12" fill="{red}"/>')
+    return (f'<circle cx="200" cy="170" r="62" fill="{soft}" stroke="{ink}" stroke-width="8"/><circle cx="200" cy="170" r="22" fill="#fff" stroke="{ink}" stroke-width="6"/>'
+            + ''.join(f'<rect x="188" y="84" width="24" height="30" rx="5" fill="{ink}" transform="rotate({a} 200 170)"/>' for a in range(0, 360, 45))
+            + f'<circle cx="200" cy="170" r="8" fill="{red}"/>')
+
+
+def _art_lines(text, width=24, max_lines=2):
+    words, lines, cur = (text or '').split(), [], ''
+    for w in words:
+        if len(cur) + len(w) + (1 if cur else 0) <= width:
+            cur = (cur + ' ' + w).strip()
+        else:
+            if cur:
+                lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+        lines[-1] = lines[-1][:max(0, width - 1)].rstrip() + '…'
+    return lines or ['']
+
+
+def product_art_svg(p):
+    from xml.sax.saxutils import escape
+    cat = (p.category or '').strip().upper() or 'PRODUCT'
+    kind = _art_kind(p.category, p.name)
+    name_lines = _art_lines(p.name)
+    fits = (p.motor_model or '').strip()
+    text = ''.join(f'<text x="200" y="{318 + i * 24}" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="19" font-weight="700" fill="#111827">{escape(l)}</text>'
+                   for i, l in enumerate(name_lines))
+    if fits:
+        text += f'<text x="200" y="{318 + len(name_lines) * 24 + 4}" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="13" fill="#6b7280">{escape(_art_lines("Fits " + fits, 34, 1)[0])}</text>'
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="{escape(p.name or "Product")}">'
+            f'<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9fafb"/><stop offset="1" stop-color="#eceef1"/></linearGradient></defs>'
+            f'<rect width="400" height="400" fill="url(#bg)"/><rect x="0" y="0" width="400" height="8" fill="#d00019"/>'
+            f'<text x="200" y="44" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="2.5" fill="#d00019">{escape(cat[:28])}</text>'
+            f'{_art_icon(kind)}{text}</svg>')
+
+
+@app.route('/product-art/<int:pid>')
+def product_art(pid):
+    """The made-for-this-product picture of a product that has no photo (see above)."""
+    p = Product.query.get_or_404(pid)
+    resp = make_response(product_art_svg(p))
+    resp.headers['Content-Type'] = 'image/svg+xml; charset=utf-8'
+    resp.headers['Cache-Control'] = 'public, max-age=3600'
+    return resp
+
+
+def product_card_img(p):
+    """What a customer sees for a product: its photo, or the picture made from its category and name."""
+    real = product_img_src(p)
+    if real:
+        return real
+    import hashlib
+    v = hashlib.md5(f'{p.category}|{p.name}|{p.motor_model}'.encode('utf8')).hexdigest()[:8]
+    return url_for('product_art', pid=p.id, v=v)
+
+
+app.jinja_env.filters['product_card_img'] = product_card_img
+
+
 class Order(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)

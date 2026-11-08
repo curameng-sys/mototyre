@@ -2138,10 +2138,10 @@
         data-price="{{ p.price }}"
         data-stock="{{ p.stock }}"
         data-description="{{ (p.description or '')|e }}"
-        data-image="{{ p|product_img }}"
+        data-image="{{ p|product_card_img }}"
         onclick="openProductInfo(this)">
         {% if _oos %}<div class="oos-badge">Out of Stock</div>{% elif p.stock <= 2 %}<div class="low-stock-badge">Only {{ p.stock }} left</div>{% endif %}
-        {% set _img = p|product_img %}
+        {% set _img = p|product_card_img %}
         {% if _img %}
         <div class="product-photo"><img src="{{ _img }}" alt="{{ p.name|e }}" loading="lazy"></div>
         {% else %}

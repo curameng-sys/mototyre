@@ -278,7 +278,7 @@
   {% if not products %}<p style="text-align:center;color:var(--fg-3);">Products are being updated. Please check back soon.</p>{% endif %}
   <div class="products-grid" id="productsGrid">
     {% for p in products %}
-    {% set src = p|product_img %}
+    {% set src = p|product_card_img %}
     {% set _oos = not (p.stock and p.stock > 0) %}
     <div class="product-card{{ ' out-of-stock' if _oos }}" data-cat="{{ p.category|trim|lower }}">
       <div class="product-img">
