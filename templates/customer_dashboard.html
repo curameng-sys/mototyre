@@ -597,6 +597,14 @@
     .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
     .btn-cancel-modal { background: var(--bg-subtle); border: 1px solid var(--line-2); color: var(--fg-1); padding: 0.6rem 1.25rem; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.15s; }
     .btn-cancel-modal:hover { background: var(--line-1); }
+    /* My Bookings: filter tabs (All / Active / Completed / Cancelled) */
+    .mb-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0 0 0.85rem; }
+    .mb-tab { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.8rem; padding: 0.45rem 0.9rem; border-radius: 99px; background: var(--bg-subtle); border: 1px solid var(--line-2); color: var(--fg-2); cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background .15s, color .15s, border-color .15s; }
+    .mb-tab:hover { border-color: var(--fg-3); }
+    .mb-tab.active { background: var(--fg-1); border-color: var(--fg-1); color: #fff; }
+    .mb-tab-n { font-size: 0.7rem; font-weight: 700; min-width: 1.35em; text-align: center; padding: 0.05em 0.45em; border-radius: 99px; background: rgba(0,0,0,.08); }
+    .mb-tab.active .mb-tab-n { background: rgba(255,255,255,.22); }
+
     /* the two buttons at the bottom of a window are always the same size and weight */
     .modal-actions .btn-cancel-modal, .modal-actions .btn-submit { box-sizing: border-box; min-width: 130px; height: 44px; padding: 0 1.5rem; margin: 0; font-size: 0.875rem; font-weight: 700; border-radius: 8px; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; line-height: 1; }
     .modal-actions .btn-cancel-modal { border-color: var(--line-2); }
@@ -2058,6 +2066,14 @@
     <div><div class="section-title">MY <span>BOOKINGS</span></div><div class="section-sub">Track all your service appointments.</div></div>
     <a class="section-link" href="#" onclick="showSection('book', null)">+ New Booking</a>
   </div>
+  {% if bookings %}
+  <div class="mb-tabs" role="tablist" aria-label="Filter bookings">
+    <button type="button" class="mb-tab active" data-mbf="all" role="tab" aria-selected="true" onclick="filterMyBookings('all')">All <span class="mb-tab-n" data-mbn="all"></span></button>
+    <button type="button" class="mb-tab" data-mbf="active" role="tab" aria-selected="false" onclick="filterMyBookings('active')">Active <span class="mb-tab-n" data-mbn="active"></span></button>
+    <button type="button" class="mb-tab" data-mbf="completed" role="tab" aria-selected="false" onclick="filterMyBookings('completed')">Completed <span class="mb-tab-n" data-mbn="completed"></span></button>
+    <button type="button" class="mb-tab" data-mbf="cancelled" role="tab" aria-selected="false" onclick="filterMyBookings('cancelled')">Cancelled <span class="mb-tab-n" data-mbn="cancelled"></span></button>
+  </div>
+  {% endif %}
   <div class="card">
     {% if bookings %}
     <div style="overflow-x:auto;">
@@ -2066,7 +2082,7 @@
         <tbody>
           {% for b in bookings %}
           <tr class="booking-row" data-booking-id="{{ b.id }}" style="cursor:pointer;" onclick="openBookingDetails({{ b.id }})">
-            <td><span style="font-family:'Inter',sans-serif;font-weight:700;color:var(--fg-1);">{{ loop.index }}</span></td>
+            <td><span class="mb-num" style="font-family:'Inter',sans-serif;font-weight:700;color:var(--fg-1);">{{ loop.index }}</span></td>
             {% set _first = (b.service or '').split(',')[0].strip() %}
             <td>
               <div style="display:flex;align-items:flex-start;gap:0.7rem;min-width:0;">
@@ -2131,6 +2147,7 @@
             </td>
           </tr>
           {% endfor %}
+          <tr id="mb-empty-row" style="display:none;"><td colspan="6" style="text-align:center;padding:2rem 1rem;color:var(--fg-3);font-size:0.9rem;">No bookings in this group.</td></tr>
         </tbody>
       </table>
     </div>
@@ -9314,6 +9331,42 @@ function refreshCatalogStock() {
 }
 setInterval(() => { if (!document.hidden && document.getElementById('product-grid')) refreshCatalogStock(); }, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && document.getElementById('product-grid')) refreshCatalogStock(); });
+
+// ── My Bookings: filter tabs. A row's group comes from its status badge, so a booking that changes while the page is open
+// (completed, cancelled) moves to the right group by itself. ──
+let _mbFilter = 'all';
+function _mbGroup(row) {
+  const b = row.querySelector('[data-mb-status]');
+  const c = b ? b.className : '';
+  return c.split(/\s+/).indexOf('badge-completed') > -1 ? 'completed' : c.split(/\s+/).indexOf('badge-cancelled') > -1 ? 'cancelled' : 'active';
+}
+function applyMyBookingsFilter() {
+  const rows = Array.from(document.querySelectorAll('#sec-bookings tr.booking-row'));
+  if (!rows.length) return;
+  const n = { all: rows.length, active: 0, completed: 0, cancelled: 0 };
+  let shown = 0;
+  rows.forEach(r => {
+    const g = _mbGroup(r); n[g]++;
+    const show = _mbFilter === 'all' || _mbFilter === g;
+    r.style.display = show ? '' : 'none';
+    if (show) { shown++; const num = r.querySelector('.mb-num'); if (num && num.textContent !== String(shown)) num.textContent = shown; }
+  });
+  Object.keys(n).forEach(k => { const el = document.querySelector('[data-mbn="' + k + '"]'); if (el) el.textContent = n[k]; });
+  const empty = document.getElementById('mb-empty-row'); if (empty) empty.style.display = shown ? 'none' : '';
+}
+function filterMyBookings(f) {
+  _mbFilter = f;
+  document.querySelectorAll('#sec-bookings .mb-tab').forEach(t => { const on = t.dataset.mbf === f; t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
+  applyMyBookingsFilter();
+}
+(function () {
+  const body = document.querySelector('#sec-bookings tbody');
+  if (!body) return;
+  applyMyBookingsFilter();
+  let t = null;
+  new MutationObserver(() => { clearTimeout(t); t = setTimeout(applyMyBookingsFilter, 60); })
+    .observe(body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true, characterData: true });
+})();
 
 // Quantity limit, shown nicely: the + button dims once the limit is reached, a small "max" note sits beside the box, and a
 // click on the dimmed + pops a little bubble above it (and nudges the box) saying why.
