@@ -2230,7 +2230,7 @@
               <tr style="cursor:pointer;" onclick="openEditProductFromRow(this)"
                   data-id="{{ p.id }}" data-name="{{ p.name|e }}" data-motor-model="{{ (p.motor_model or '')|e }}" data-category="{{ p.category|e }}"
                   data-price="{{ p.price }}" data-stock="{{ p.stock }}"
-                  data-description="{{ (p.description or '')|e }}"
+                  data-description="{{ (p|product_edit_desc)|e }}"
                   data-image="{{ p|product_img }}">
                 <td>{{ p.id }}</td>
                 <td style="font-weight:600;color:var(--text);">{{ p.name }}</td>

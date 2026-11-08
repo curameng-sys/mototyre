@@ -387,6 +387,18 @@ def product_photo(pid):
 admin_app.jinja_env.filters['product_img'] = product_img_src
 
 
+def product_edit_desc(p):
+    """What the Edit Product window starts with: the shop's own description, or, when there is none (empty, very short, or only the
+    name), the draft made from the name, category and fit (the same text the customer pages show). Saving the window stores it."""
+    from fill_product_descriptions import draft, just_the_name
+    if just_the_name(p.name, p.description):
+        return draft((p.name or '').strip(), p.category, p.motor_model)
+    return p.description or ''
+
+
+admin_app.jinja_env.filters['product_edit_desc'] = product_edit_desc
+
+
 class Order(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
