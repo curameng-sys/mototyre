@@ -279,6 +279,23 @@
       /* Shown inside the dashboard's Billing section: the dashboard already has the top bar and the profile menu. */
     html.embedded .topbar{display:none;}
     html.embedded .main{max-width:none;}
+    /* the dashboard's frame is narrower than the screen (about 880px on a small laptop): that is not a phone, so keep the two columns */
+    @media (max-width:859px){
+      /* too narrow for two columns: the Recent panel goes under the table, and the frame scrolls as a whole */
+      html.embedded .bill-layout{display:block;overflow-y:auto;}
+      html.embedded .bill-left{display:block;}
+      html.embedded .pend-box.active{display:block;}
+      html.embedded .pend-box .tbl-wrap{max-height:none;overflow:visible;}
+      html.embedded .bill-layout > *{margin-bottom:1rem;}
+      html.embedded .recent-panel{position:static;max-height:none;display:block;}
+      html.embedded .recent-scroll{max-height:none;overflow:visible;}
+    }
+    @media (max-width:1000px) and (min-width:860px){
+      html.embedded .bill-layout{grid-template-columns:minmax(0,1fr) 270px;}
+      html.embedded .recent-panel{position:static;}
+      html.embedded thead th:nth-child(3), html.embedded td:nth-child(3){display:table-cell;}
+      html.embedded table th, html.embedded table td{padding-left:.5rem !important;padding-right:.5rem !important;}
+    }
     html.embedded body{background:transparent;}
       .recent-all:hover{background:#f9fafb;color:#d00019;}
 </style>

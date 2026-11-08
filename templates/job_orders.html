@@ -145,6 +145,7 @@
     @media(max-width:640px){ #admin-notif-panel,#admin-profile-menu{right:.75rem;width:calc(100vw - 1.5rem);} }
     /* Shown inside the dashboard (a quotation converted to a job order lands here): no second top bar. */
     html.embedded .topbar{display:none;}
+    html.embedded .stats-row{grid-template-columns:repeat(3,1fr);}      /* the frame is narrower than the screen, but still wide enough for three cards */
     html.embedded .main{max-width:none;padding:0 2rem 1.5rem;}
     html.embedded body{background:transparent;}
   </style>

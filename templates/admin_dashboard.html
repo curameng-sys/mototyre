@@ -315,6 +315,12 @@
       body.parts-lock #parts-pay-cash > div:first-child { margin-bottom: 0.35rem !important; }
       body.parts-lock .parts-right .card-body > div { margin-bottom: 0.6rem !important; }
       body.parts-lock .parts-right .card-body > div:last-child { margin-bottom: 0 !important; }
+      /* a short window: the cart scrolls, but the Process button stays in view at its bottom edge */
+      @media (max-height: 760px) {
+        body.parts-lock .parts-right { padding-bottom: 0; }
+        body.parts-lock .parts-right > .card { overflow: visible !important; }      /* a card that clips would stop the button from sticking */
+        body.parts-lock .parts-process-wrap { position: sticky; bottom: 0; z-index: 3; background: #fff; padding: 0.5rem 0 0.15rem; margin-top: 0.2rem; }
+      }
     }
 
     /* Page header row */
@@ -2780,10 +2786,12 @@
               </div>
 
               <!-- Process button -->
+              <div class="parts-process-wrap">
               <button onclick="processPartsTxn()" id="parts-process-btn" disabled
                 style="width:100%;padding:0.7rem;border:none;border-radius:8px;background:var(--green);color:#fff;font-family:inherit;font-weight:700;font-size:0.92rem;cursor:not-allowed;letter-spacing:0.02em;opacity:0.5;">
                 Process Transaction
               </button>
+              </div>
             </div>
           </div>
         </div>

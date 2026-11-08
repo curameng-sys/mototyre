@@ -227,3 +227,71 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, summary:fo
 .page-section a[onclick], .card a[onclick] { transition: color .15s; }
 .page-section a[onclick]:hover, .card a[onclick]:hover { text-decoration: underline; text-underline-offset: 3px; }
 .btn-cancel[onclick*="markNoShow"]:hover { background: #ffedd5 !important; border-color: #fb923c !important; }
+
+/* ═══ LAPTOP SCREENS ═══════════════════════════════════════════════════════════════════════════════════════════════
+   A laptop shows far less than a desktop monitor: 1366x768 minus the browser bar, or a 1080p screen at 125% or 150% scaling,
+   leaves only 500 to 700 pixels of height. The page keeps its content and only gives back the space around it: a slimmer top
+   bar, a smaller title, and no subtitle on the shortest windows. */
+@media (min-width: 901px) and (max-height: 780px) {
+  .main { padding-top: 3.6rem !important; padding-bottom: 1rem !important; }
+  #admin-topright { top: 0.55rem !important; right: 1.25rem !important; gap: 0.45rem !important; }
+  .topright-bell { width: 32px !important; height: 32px !important; }
+  .topright-profile { padding: 0.18rem 0.7rem 0.18rem 0.2rem !important; }
+  .topright-avatar { width: 26px !important; height: 26px !important; }
+  .page-header { margin-bottom: 0.75rem !important; }
+  .page-title { font-size: 1.7rem !important; }
+  .page-sub { font-size: 0.76rem !important; margin-top: 0.1rem !important; }
+  body.embed-lock .embed-frame { height: calc(100vh - 3.6rem) !important; }
+}
+@media (min-width: 901px) and (max-height: 640px) {
+  .main { padding-top: 3.2rem !important; }
+  .page-sub { display: none !important; }
+  .page-header { margin-bottom: 0.55rem !important; }
+  .page-title { font-size: 1.5rem !important; }
+  body.embed-lock .embed-frame { height: calc(100vh - 3.2rem) !important; }
+}
+/* the same inside the dashboard's frames (Walk-In, Billing, Job Orders, the quotation builder): their window is shorter still */
+@media (max-height: 700px) {
+  html.embedded .page-title { font-size: 1.7rem !important; }
+  html.embedded .page-sub { font-size: 0.76rem !important; margin-top: 0.1rem !important; }
+  html.embedded .page-header { margin-bottom: 0.6rem !important; }
+}
+@media (max-height: 560px) {
+  html.embedded .page-sub { display: none !important; }
+  html.embedded .page-title { font-size: 1.5rem !important; }
+}
+
+/* ═══ NARROW LAPTOP WINDOWS (about 900 to 1180px wide: a 1080p screen at 150 to 200%, or a 1366px screen at 125%) ═══════════════════
+   The menu, the side spaces and the table cells give back width so each page keeps its layout instead of being cut off. */
+@media (min-width: 901px) and (max-width: 1180px) {
+  .admin-wrap { grid-template-columns: 196px 1fr !important; }
+  .main { padding-left: 1.1rem !important; padding-right: 1.1rem !important; }
+  .stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important; gap: 0.7rem !important; }
+  .stat-card { padding: 0.9rem 1rem !important; }
+  .stat-card .stat-icon { width: 34px !important; height: 34px !important; margin-bottom: 0.55rem !important; }
+  .table th, .table td { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+  .table { font-size: 0.8rem !important; }
+  .page-section > .card { overflow-x: auto; }                       /* a table wider than the page scrolls sideways instead of being cut off */
+  #insp-list, #wq-list { overflow-x: auto; }
+  .ds-tab { font-size: 0.6rem !important; padding: 0 0.25rem !important; letter-spacing: 0 !important; }
+  .ds-tab .n { min-width: 16px !important; padding: 0 0.25rem !important; }
+  body.ds-lock .ds-layout { grid-template-columns: 310px minmax(0, 1fr) !important; gap: 1rem !important; }
+}
+@media (min-width: 901px) and (max-width: 1060px) {
+  .admin-wrap { grid-template-columns: 184px 1fr !important; }
+  .stat-card .stat-value, .stat-card .stat-num { font-size: 1.7rem !important; }
+}
+/* the pages inside the dashboard's frames (Billing, Walk-In, Job Orders, the builder) on a narrow window */
+@media (max-width: 900px) {
+  html.embedded .main { padding-left: 1rem !important; padding-right: 1rem !important; }
+}
+/* Parts Purchase on a short, narrow window: shorter product cards so more than one fits */
+@media (min-width: 901px) and (max-height: 640px) {
+  body.parts-lock #parts-product-grid { grid-auto-rows: 118px !important; }
+  body.parts-lock #parts-product-grid > * { padding: 0.5rem 0.7rem !important; }
+}
+@media (min-width: 901px) and (max-width: 1060px) {
+  .sidebar .sidebar-logo { font-size: 1.1rem !important; gap: 0.35rem !important; padding-left: 0.6rem !important; padding-right: 0.4rem !important; }
+  .sidebar .sidebar-logo img { width: 30px !important; height: 30px !important; }
+  .sidebar .sidebar-logo .brand-word, .sidebar .sidebar-logo span { font-size: inherit !important; }
+}

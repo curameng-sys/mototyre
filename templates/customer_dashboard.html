@@ -1191,6 +1191,36 @@
       .bw-pane[data-bstep="3"] .slot-lunch { margin: 0.45rem 0; }
     }
 
+    /* LAPTOP SCREENS: a laptop window is only 500 to 700px tall (a 768px screen minus the browser bar, or a 1080p screen at 125 or 150%
+       scaling). The top bar and the booking steps give back height so the part you are working on is not squeezed. */
+    @media (min-width: 700px) and (max-height: 720px) {
+      .top-nav { height: 58px !important; }
+      .nav-logo { font-size: 1.45rem; }
+      .nav-logo-img { width: 36px; height: 36px; }
+      .nav-links a { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+      #sec-book.active { padding-top: 0.55rem !important; padding-bottom: 0.7rem !important; }
+      .bw { gap: 0.5rem; }
+      .bw-head { gap: 0.8rem; }
+      .bw-head .section-title { font-size: 1.35rem; }
+      .bw-steps .d { width: 22px; height: 22px; font-size: 0.66rem; }
+      .bw-pane[data-bstep="1"] .bw-q { font-size: 1.3rem; margin-bottom: 0.4rem; }
+      .bw .cal-day { height: 30px !important; font-size: 0.9rem; }
+      .bw .appt-cal-body { padding-top: 0.3rem; padding-bottom: 0.3rem; }
+      .bw .appt-cal-header { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+      #sec-shop.active, #sec-orders.active, #sec-bookings.active { padding-top: 0.75rem !important; }
+      /* the calendar keeps its own height instead of stretching to match the list of upcoming bookings beside it */
+      .bw-pane[data-bstep="1"] .appt-cal-card { flex: 0 0 auto; }
+      .bw-pane[data-bstep="1"] .appt-cal-body { flex: 0 0 auto; }
+      .bw-pane[data-bstep="1"] #cal-grid { flex: 0 0 auto; grid-auto-rows: 32px; }
+      .bw-pane[data-bstep="1"] .cal-day { height: 32px; min-height: 0; }
+    }
+    @media (min-width: 700px) and (max-height: 600px) {
+      .top-nav { height: 52px !important; }
+      .bw-head .section-title { font-size: 1.15rem; }
+      .bw-pane[data-bstep="1"] .bw-q { font-size: 1.1rem; margin-bottom: 0.25rem; }
+      .bw .cal-day { height: 26px !important; }
+    }
+
     /* Step 4: model (searchable, like registration) and year model as two separate fields, then the odometer */
     .mc-form { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(210px, 1fr); gap: 1rem; }
     .mc-form > .form-group { margin: 0; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; justify-content: center; border: 1px solid var(--line-2); border-radius: 14px; background: #fff; }

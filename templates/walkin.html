@@ -213,6 +213,13 @@
     .cart-panel .totals { margin-bottom: 0.5rem; }
     .cart-panel .cart-footer { padding: 0.65rem 1.1rem; }
     .cart-panel .est-box { margin-top: 0.35rem; padding: 0.35rem 0.6rem; }
+    @media (max-height: 640px) {
+      .cart-panel .cart-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; }
+      .cart-panel .cart-footer .totals { flex: 1 1 100%; margin-bottom: 0; }
+      .cart-panel .cart-footer .total-row.grand { font-size: 1.2rem; margin-top: 0; padding-top: 0.2rem; }
+      .cart-panel .cart-footer .btn-save { flex: 1 1 60%; width: auto; padding: 0.45rem 0.6rem; margin: 0; }
+      .cart-panel .cart-footer .btn-clear-cart { flex: 1 1 28%; width: auto; padding: 0.45rem 0.6rem; margin: 0; }
+    }
     .cart-panel-scroll #cart-items {
       flex: 1 1 0; min-height: 112px; overflow-y: auto;
       scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.15) transparent;
@@ -511,7 +518,7 @@
     }
     .mob-cart-badge.show { display: block; }
 
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
       .topbar { padding: 0 1rem; height: 52px; }
       .topbar-clock { display: none; }
       .walkin-wrap { grid-template-columns: 1fr; height: calc(100vh - 52px - 58px); }
@@ -543,18 +550,19 @@
     /* Shown inside the dashboard: it already has the top bar, so the layout takes the whole frame. */
     html.embedded .topbar{display:none;}
     html.embedded .walkin-wrap{height:100vh;}
-    @media (max-width: 768px) { html.embedded .walkin-wrap{height:calc(100vh - 58px);} }
+    @media (max-width: 600px) { html.embedded .walkin-wrap{height:calc(100vh - 58px);} }
 
     /* ── Same look as the rest of the dashboard: light page, a page title, cards ── */
     .page-header{display:none;}
     html.embedded body{display:flex;flex-direction:column;background:var(--ink);padding:0 2rem 1.25rem;box-sizing:border-box;}
-    @media (max-width: 768px) { html.embedded body{padding:0 1rem 58px;} }
+    @media (max-width: 600px) { html.embedded body{padding:0 1rem 58px;} }
     html.embedded .page-header{display:block;flex-shrink:0;margin-bottom:.9rem;}
     html.embedded .page-title{font-family:'Barlow Condensed',sans-serif;font-size:2.2rem;letter-spacing:.04em;color:#111827;line-height:1;}
     html.embedded .page-title .accent{color:var(--red);}
     html.embedded .page-sub{color:#6b7280;font-size:.84rem;margin-top:.2rem;}
     html.embedded .walkin-wrap{flex:1;min-height:0;height:auto;grid-template-columns:minmax(0,1fr) 380px;gap:1.5rem;}
-    @media (max-width: 768px) { html.embedded .walkin-wrap{grid-template-columns:1fr;} }
+    @media (max-width: 900px) { html.embedded .walkin-wrap{grid-template-columns:minmax(0,1fr) 320px;gap:1rem;} html.embedded body{padding-left:1rem;padding-right:1rem;} }
+    @media (max-width: 600px) { html.embedded .walkin-wrap{grid-template-columns:1fr;} }
     html.embedded .catalog{background:transparent;border:0;}
     html.embedded .catalog-header{background:transparent;border:0;padding:0 0 .75rem;}
     html.embedded .tab-btn{background:#fff;border:1px solid var(--border);color:#6b7280;}
