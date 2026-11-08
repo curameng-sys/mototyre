@@ -3439,6 +3439,7 @@
         <button type="button" class="pi-qty-btn" onclick="changeInfoQty(1)" style="width:30px;height:30px;border-radius:6px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);font-size:1.1rem;cursor:pointer;">+</button>
       </div>
     </div>
+    <div id="pi-qty-msg" role="alert" style="display:none;margin:-0.6rem 0 1.1rem;padding:0.55rem 0.75rem;border-radius:8px;font-size:0.8rem;line-height:1.45;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;"></div>
     <div class="modal-actions">
       <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-product-info')">Cancel</button>
       <button type="button" class="btn-submit" id="pi-add-btn" style="width:auto;" onclick="addToCartFromInfo()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Add to Cart</button>
@@ -9204,6 +9205,7 @@ function openProductInfo(card) {
   if (currentProductInfo.fits) _fits.appendChild(document.createTextNode(currentProductInfo.fits));
   document.getElementById('pi-description').textContent = currentProductInfo.description || (currentProductInfo.name + ' (' + currentProductInfo.category + '). Ask the shop for the full specifications.');
   document.getElementById('pi-qty').value               = 1;
+  hideInfoQtyLimit();
   document.getElementById('pi-qty').max                 = currentProductInfo.stock;
   paintProductStockState();
   paintFitNote();
@@ -9301,10 +9303,31 @@ function refreshCatalogStock() {
 setInterval(() => { if (!document.hidden && document.getElementById('product-grid')) refreshCatalogStock(); }, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && document.getElementById('product-grid')) refreshCatalogStock(); });
 
+// Tells the customer, right under the quantity box, why the number will not go any higher (and shakes the box).
+let _qtyMsgTimer = null;
+function showInfoQtyLimit() {
+  const box = document.getElementById('pi-qty-msg'), input = document.getElementById('pi-qty');
+  if (!box || !currentProductInfo) return;
+  const stock = currentProductInfo.stock;
+  box.textContent = stock < MAX_ONLINE_QTY
+    ? (stock === 1 ? 'Only 1 is available in stock, so you can’t add more.' : 'Only ' + stock + ' are available in stock, so you can’t add more than ' + stock + '.')
+    : 'You can order up to ' + MAX_ONLINE_QTY + ' of this item online.';
+  box.style.display = 'block';
+  if (input && input.animate) input.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(0)' }], { duration: 280 });
+  clearTimeout(_qtyMsgTimer);
+  _qtyMsgTimer = setTimeout(hideInfoQtyLimit, 3500);
+}
+function hideInfoQtyLimit() {
+  const box = document.getElementById('pi-qty-msg');
+  if (box) box.style.display = 'none';
+  clearTimeout(_qtyMsgTimer);
+}
+
 function changeInfoQty(delta) {
   const input = document.getElementById('pi-qty');
-  let val = parseInt(input.value) + delta;
+  let val = (parseInt(input.value) || 1) + delta;
   const max = currentProductInfo ? Math.min(currentProductInfo.stock, MAX_ONLINE_QTY) : 99;
+  if (delta > 0 && val > max) showInfoQtyLimit(); else hideInfoQtyLimit();
   val = Math.max(1, Math.min(max, val));
   input.value = val;
 }
@@ -9313,6 +9336,7 @@ function clampInfoQty() {
   const input = document.getElementById('pi-qty');
   const max   = currentProductInfo ? Math.min(currentProductInfo.stock, MAX_ONLINE_QTY) : 99;
   let val     = parseInt(input.value) || 1;
+  if (val > max) showInfoQtyLimit(); else hideInfoQtyLimit();
   input.value = Math.max(1, Math.min(max, val));
 }
 
@@ -9327,7 +9351,8 @@ async function addToCartFromInfo() {
   if (existing) {
     const newQty = existing.qty + qty;
     if (newQty > Math.min(currentProductInfo.stock, MAX_ONLINE_QTY)) {
-      showCartToast(newQty > MAX_ONLINE_QTY ? `Up to ${MAX_ONLINE_QTY} per item online` : 'Not enough stock for ' + currentProductInfo.name);
+      showCartToast(newQty > MAX_ONLINE_QTY && currentProductInfo.stock >= MAX_ONLINE_QTY ? `Up to ${MAX_ONLINE_QTY} per item online`
+        : `You already have ${existing.qty} in your cart. Only ${currentProductInfo.stock} ${currentProductInfo.stock === 1 ? 'is' : 'are'} available.`);
       return;
     }
     existing.qty = newQty;
