@@ -387,18 +387,6 @@ def product_photo(pid):
 admin_app.jinja_env.filters['product_img'] = product_img_src
 
 
-def product_edit_desc(p):
-    """What the Edit Product window starts with: the shop's own description, or, when there is none (empty, very short, or only the
-    name), the draft made from the name, category and fit (the same text the customer pages show). Saving the window stores it."""
-    from fill_product_descriptions import draft, just_the_name
-    if just_the_name(p.name, p.description):
-        return draft((p.name or '').strip(), p.category, p.motor_model)
-    return p.description or ''
-
-
-admin_app.jinja_env.filters['product_edit_desc'] = product_edit_desc
-
-
 class Order(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -6467,7 +6455,7 @@ def _product_change_response(product, saved_msg):
 
 
 def _product_description_error():
-    msg = 'A description, if you write one, needs at least 10 characters. Leave it empty and one is written automatically.'
+    msg = 'Add a description with the product’s specifications (at least 10 characters).'
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': False, 'error': msg})
     flash(msg, 'danger')
@@ -6482,8 +6470,7 @@ def add_product():
     _img = _save_product_image(_file)
     if _file and _file.filename and not _img:
         return _product_photo_error()
-    _d = (request.form.get('description') or '').strip()
-    if _d and len(_d) < 10:                        # empty is fine: the customer pages write one from the name, category and fit
+    if len((request.form.get('description') or '').strip()) < 10:
         return _product_description_error()
     new_p = Product(
         name=request.form['name'], category=request.form['category'],
@@ -6505,8 +6492,7 @@ def edit_product(pid):
         flash('Access denied.', 'danger')
         return redirect(url_for('admin_dashboard'))
     p             = Product.query.get_or_404(pid)
-    _d = (request.form.get('description') or '').strip()
-    if _d and len(_d) < 10:                        # empty is fine: the customer pages write one from the name, category and fit
+    if len((request.form.get('description') or '').strip()) < 10:
         return _product_description_error()
     p.barcode     = request.form.get('barcode', '').strip() or None
     p.name        = request.form['name']
