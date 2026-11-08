@@ -176,11 +176,19 @@
         {% if pmt.payment_method == 'cash' %}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
         Cash
+        {% elif pmt.payment_method == 'split' %}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+        Cash + GCash
         {% else %}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
         GCash
         {% endif %}
       </div>
+      {% if pmt.payment_method == 'split' %}
+      {% set _cp = (pmt.cash_received or 0) - (pmt.change_given or 0) %}
+      <div class="rec-ref-no">Cash &#8369;{{ '{:,.2f}'.format(_cp) }} &middot; GCash &#8369;{{ '{:,.2f}'.format(pmt.amount - _cp) }}</div>
+      {% if pmt.change_given %}<div class="rec-ref-no">Cash received &#8369;{{ '{:,.2f}'.format(pmt.cash_received) }} &middot; Change &#8369;{{ '{:,.2f}'.format(pmt.change_given) }}</div>{% endif %}
+      {% endif %}
       {% if pmt.reference_no %}
       <div class="rec-ref-no">Ref: {{ pmt.reference_no }}</div>
       {% endif %}

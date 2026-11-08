@@ -173,10 +173,11 @@
     .bill-total-label{font-family:'Inter',sans-serif;font-weight:700;font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
     .bill-total-val{font-family:'Barlow Condensed',sans-serif;font-size:1.75rem;color:#111827;letter-spacing:.03em;}
     .bill-section-label{font-family:'Inter',sans-serif;font-weight:700;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
-    .pay-toggle{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem;}
+    .pay-toggle{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:.5rem;margin-bottom:.75rem;}
     .pay-opt{padding:.55rem;border-radius:8px;border:2px solid #d1d5db;background:#fff;color:var(--muted);font-family:'Inter',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;}
     .pay-opt.active-cash{border-color:var(--green);background:rgba(22,163,74,.08);color:#15803d;}
     .pay-opt.active-gcash{border-color:var(--blue);background:rgba(37,99,235,.08);color:#1d4ed8;}
+    .pay-opt.active-split{border-color:#7c3aed;background:rgba(124,58,237,.08);color:#6d28d9;}
     .bill-input{width:100%;padding:.5rem .85rem;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;font-family:'Inter',sans-serif;font-size:.85rem;outline:none;margin-bottom:.65rem;}
     .bill-input:focus{border-color:var(--green);}
     .bill-input::placeholder{color:#9ca3af;}
@@ -559,7 +560,8 @@
           <td><span class="amount">₱{{ '{:,.2f}'.format(jo.total_amount) }}</span></td>
           <td>
             {% if jo.payment %}
-            <span class="badge b-{{ jo.payment.payment_method }}">{{ jo.payment.payment_method|upper }}</span>
+            <span class="badge b-{{ jo.payment.payment_method }}">{{ 'CASH + GCASH' if jo.payment.payment_method == 'split' else jo.payment.payment_method|upper }}</span>
+            {% if jo.payment.payment_method == 'split' %}{% set _jcp = (jo.payment.cash_received or 0) - (jo.payment.change_given or 0) %}<div class="sub">Cash ₱{{ '{:,.2f}'.format(_jcp) }} · GCash ₱{{ '{:,.2f}'.format(jo.payment.amount - _jcp) }}</div>{% endif %}
             {% if jo.payment.reference_no %}<div class="sub">Ref: {{ jo.payment.reference_no }}</div>{% endif %}
             {% endif %}
           </td>
@@ -589,8 +591,9 @@
             {% if b.is_backjob and b.bj_state != 'approved' %}
               <span class="badge b-nocharge">NO CHARGE</span>
             {% else %}
-              <span class="badge b-{{ used_method }}">{{ used_method|upper }}</span>
-              {% if used_method == 'gcash' and b.invoice_gcash_ref %}<div class="sub">Ref {{ b.invoice_gcash_ref }}</div>{% endif %}
+              <span class="badge b-{{ used_method }}">{{ 'CASH + GCASH' if used_method == 'split' else used_method|upper }}</span>
+              {% if used_method == 'split' %}{% set _bcp = (b.invoice_cash_received or 0) - (b.invoice_change or 0) %}<div class="sub">Cash ₱{{ '{:,.2f}'.format(_bcp) }} · GCash ₱{{ '{:,.2f}'.format(b.total_amount - _bcp) }}</div>{% endif %}
+              {% if used_method in ('gcash', 'split') and b.invoice_gcash_ref %}<div class="sub">Ref {{ b.invoice_gcash_ref }}</div>{% endif %}
             {% endif %}
           </td>
          <td class="date-cell">{{ b.paid_at_display.strftime('%b %d, %Y') }}<br><span style="font-size:.7rem;">{{ b.paid_at_display.strftime('%I:%M %p') }}</span></td>
@@ -664,7 +667,7 @@
         </div>
         <div class="ri-side">
           <div class="ri-amt">₱{{ '{:,.2f}'.format(r.amount or 0) }}</div>
-          <div><span class="badge b-{{ r.method }}">{{ r.method|upper }}</span></div>
+          <div><span class="badge b-{{ r.method }}">{{ 'CASH + GCASH' if r.method == 'split' else r.method|upper }}</span></div>
           <div class="ri-time">{{ r.time }}</div>
         </div>
       </div>
@@ -756,11 +759,24 @@
       <div class="pay-toggle">
         <button class="pay-opt active-cash" id="pay-opt-cash" onclick="selectPayMethod('cash')">Cash</button>
         <button class="pay-opt" id="pay-opt-gcash" onclick="selectPayMethod('gcash')">GCash</button>
+        <button class="pay-opt" id="pay-opt-split" onclick="selectPayMethod('split')">Cash + GCash</button>
+      </div>
+
+      <!-- Cash + GCash: how much goes in cash; the rest goes to GCash -->
+      <div id="split-wrap" style="display:none;margin-top:.75rem;padding:.75rem .85rem;border:1px solid #ddd6fe;background:#f5f3ff;border-radius:10px;">
+        <div style="font-size:.76rem;color:#4c1d95;line-height:1.5;margin-bottom:.55rem;"><b>Cash + GCash.</b> Type how much is paid in cash. The rest is paid by GCash.</div>
+        <div class="bill-section-label" style="color:#5b21b6;">Cash share (&#8369;)</div>
+        <input type="text" id="bill-cash-part" class="bill-input" inputmode="decimal" placeholder="0.00" autocomplete="off" style="margin-bottom:.5rem;" oninput="this.value=this.value.replace(/[^0-9.]/g,''); onSplitInput()">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.8rem;color:var(--muted);font-weight:600;">GCash share</span>
+          <span id="bill-gcash-part" style="font-family:'Barlow Condensed',sans-serif;font-size:1.5rem;letter-spacing:.03em;color:#1d4ed8;">&#8369;0.00</span>
+        </div>
+        <div class="bill-field-error" id="bill-split-error" style="display:none;margin:.35rem 0 0;"></div>
       </div>
 
       <!-- Cash: type what the customer hands over, the change shows by itself -->
       <div id="cash-wrap" style="margin-top:.75rem;padding:.75rem .85rem;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:10px;">
-        <div class="bill-section-label" style="color:#166534;">Cash received (₱)</div>
+        <div class="bill-section-label" id="cash-wrap-label" style="color:#166534;">Cash received (₱)</div>
         <input type="text" id="bill-cash-input" class="bill-input" inputmode="decimal" placeholder="0.00" autocomplete="off" style="margin-bottom:.5rem;" oninput="this.value=this.value.replace(/[^0-9.]/g,''); onCashInput()">
         <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem;" id="cash-quick"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -903,6 +919,7 @@ function openBillingModal(el) {
   };
   _payMethod = 'cash';
   document.getElementById('bill-cash-input').value = '';
+  document.getElementById('bill-cash-part').value = '';
 
   document.getElementById('bill-modal-title').textContent =
     _bill.type === 'booking' ? 'Customer Booking' :
@@ -947,14 +964,16 @@ function closeBillingModal() {
 
 function selectPayMethod(m) {
   _payMethod = m;
-  const cash  = document.getElementById('pay-opt-cash');
-  const gcash = document.getElementById('pay-opt-gcash');
-  const gcashWrap = document.getElementById('gcash-ref-wrap');
-  cash.className  = 'pay-opt' + (m === 'cash'  ? ' active-cash'  : '');
-  gcash.className = 'pay-opt' + (m === 'gcash' ? ' active-gcash' : '');
-  gcashWrap.style.display = m === 'gcash' ? '' : 'none';
-  document.getElementById('cash-wrap').style.display = m === 'cash' ? '' : 'none';
-  if (m === 'cash') onCashInput();
+  document.getElementById('pay-opt-cash').className  = 'pay-opt' + (m === 'cash'  ? ' active-cash'  : '');
+  document.getElementById('pay-opt-gcash').className = 'pay-opt' + (m === 'gcash' ? ' active-gcash' : '');
+  document.getElementById('pay-opt-split').className = 'pay-opt' + (m === 'split' ? ' active-split' : '');
+  document.getElementById('gcash-ref-wrap').style.display = (m === 'gcash' || m === 'split') ? '' : 'none';
+  document.getElementById('split-wrap').style.display = m === 'split' ? '' : 'none';
+  document.getElementById('cash-wrap').style.display = (m === 'cash' || m === 'split') ? '' : 'none';
+  document.getElementById('cash-wrap-label').textContent = m === 'split' ? 'Cash received for the cash share (\u20b1)' : 'Cash received (\u20b1)';
+  if (m === 'split') onSplitInput();
+  buildCashQuick();
+  if (m === 'cash' || m === 'split') onCashInput();
   hideBillErrors();
 }
 
@@ -965,23 +984,44 @@ function _billTotal() {
   return total;
 }
 function _pesoFmt(n) { return '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+// What the cash drawer has to take: the whole total, or only the cash share when the payment is split
+function _cashDue() {
+  if (_payMethod !== 'split') return _billTotal();
+  return Math.max(0, parseFloat(document.getElementById('bill-cash-part').value) || 0);
+}
+function _splitProblem() {
+  const total = _billTotal(), part = parseFloat(document.getElementById('bill-cash-part').value);
+  if (!(part > 0)) return 'Type how much is paid in cash.';
+  if (part >= total - 0.004) return 'The cash share must be less than the total. For cash only, choose Cash.';
+  return '';
+}
+function onSplitInput() {
+  const total = _billTotal(), part = parseFloat(document.getElementById('bill-cash-part').value) || 0;
+  const g = Math.max(0, Math.round((total - part) * 100) / 100);
+  document.getElementById('bill-gcash-part').textContent = _pesoFmt(part > 0 && part < total ? g : 0);
+  const err = document.getElementById('bill-split-error');
+  document.getElementById('bill-cash-part').classList.remove('field-invalid');
+  err.style.display = 'none';
+  buildCashQuick(); onCashInput();
+}
 function buildCashQuick() {
-  const total = _billTotal(), box = document.getElementById('cash-quick');
+  const total = _cashDue(), box = document.getElementById('cash-quick');
   const opts = [total, Math.ceil(total / 100) * 100, Math.ceil(total / 500) * 500, Math.ceil(total / 1000) * 1000].filter((v, i, a) => v > 0 && a.indexOf(v) === i).slice(0, 4);
   box.innerHTML = opts.map((v, i) => '<button type="button" class="pay-opt" style="flex:0 0 auto;padding:.25rem .6rem;font-size:.72rem;" onclick="setCash(' + v + ')">' + (i === 0 ? 'Exact ' : '') + _pesoFmt(v) + '</button>').join('');
 }
 function setCash(v) { document.getElementById('bill-cash-input').value = String(v); onCashInput(); }
 function onCashInput() {
-  const total = _billTotal(), raw = document.getElementById('bill-cash-input').value;
+  const total = _cashDue(), raw = document.getElementById('bill-cash-input').value;
   const got = parseFloat(raw), ch = document.getElementById('bill-change'), err = document.getElementById('bill-cash-error');
   document.getElementById('bill-cash-input').classList.remove('field-invalid');
   if (!raw || isNaN(got)) { ch.textContent = '₱0.00'; err.style.display = 'none'; return; }
   const short = got + 0.004 < total;
+  err.textContent = _payMethod === 'split' ? 'The cash received is less than the cash share.' : 'The cash received is less than the total.';
   ch.textContent = short ? '₱0.00' : _pesoFmt(got - total);
   ch.style.color = short ? '#b91c1c' : '#166534';
   err.style.display = short ? 'flex' : 'none';
 }
-document.getElementById('bill-amount-input').addEventListener('input', function() { buildCashQuick(); onCashInput(); });
+document.getElementById('bill-amount-input').addEventListener('input', function() { if (_payMethod === 'split') onSplitInput(); else { buildCashQuick(); onCashInput(); } });
 
 function hideBillErrors() {
   document.getElementById('bill-error-banner').style.display = 'none';
@@ -1018,7 +1058,7 @@ async function submitBilling() {
   const btn = document.getElementById('bill-submit-btn');
   const ref = document.getElementById('bill-gcash-ref').value.trim();
   hideBillErrors();
-  if (_payMethod === 'gcash' && !ref) {
+  if ((_payMethod === 'gcash' || _payMethod === 'split') && !ref) {
     showBillFieldError('bill-gcash-ref', 'bill-ref-error');
     return;
   }
@@ -1033,12 +1073,20 @@ async function submitBilling() {
     amount = inp;
   }
 
-  let cashIn = null, changeDue = 0;
-  if (_payMethod === 'cash') {
+  let cashIn = null, changeDue = 0, cashPart = null, gcashPart = null;
+  if (_payMethod === 'split') {
+    const problem = (amount > 0) ? '' : 'Enter the amount to collect first.';
+    cashPart = parseFloat(document.getElementById('bill-cash-part').value);
+    const bad = problem || (!(cashPart > 0) ? 'Type how much is paid in cash.' : (cashPart >= amount - 0.004 ? 'The cash share must be less than the total. For cash only, choose Cash.' : ''));
+    if (bad) { const e = document.getElementById('bill-split-error'); e.textContent = bad; e.style.display = 'flex'; document.getElementById('bill-cash-part').classList.add('field-invalid'); return; }
+    gcashPart = Math.round((amount - cashPart) * 100) / 100;
+  }
+  if (_payMethod === 'cash' || _payMethod === 'split') {
+    const due = _payMethod === 'split' ? cashPart : amount;
     cashIn = parseFloat(document.getElementById('bill-cash-input').value);
     if (isNaN(cashIn)) { showBillFieldError('bill-cash-input', 'bill-cash-error'); document.getElementById('bill-cash-error').textContent = 'Type the cash the customer handed over.'; return; }
-    if (cashIn + 0.004 < amount) { showBillFieldError('bill-cash-input', 'bill-cash-error'); document.getElementById('bill-cash-error').textContent = 'The cash received is less than the total.'; return; }
-    changeDue = Math.round((cashIn - amount) * 100) / 100;
+    if (cashIn + 0.004 < due) { showBillFieldError('bill-cash-input', 'bill-cash-error'); document.getElementById('bill-cash-error').textContent = _payMethod === 'split' ? 'The cash received is less than the cash share.' : 'The cash received is less than the total.'; return; }
+    changeDue = Math.round((cashIn - due) * 100) / 100;
   }
 
   btn.disabled = true;
@@ -1051,6 +1099,7 @@ async function submitBilling() {
       fd.append('payment_method', _payMethod);
       if (ref) fd.append('reference_no', ref);
       if (cashIn !== null) fd.append('cash_received', cashIn);
+      if (cashPart !== null) fd.append('cash_part', cashPart);
       res  = await fetch(`/payments/process/${_bill.id}`, {method:'POST', body:fd});
       data = await res.json();
 
@@ -1060,6 +1109,7 @@ async function submitBilling() {
       fd.append('amount', amount);
       if (ref) fd.append('reference_no', ref);
       if (cashIn !== null) fd.append('cash_received', cashIn);
+      if (cashPart !== null) fd.append('cash_part', cashPart);
       res  = await fetch(`/payments/booking/${_bill.id}`, {method:'POST', body:fd});
       data = await res.json();
 
@@ -1072,7 +1122,9 @@ async function submitBilling() {
       closeBillingModal();
       document.getElementById('s-ref').textContent    = _bill.ref;
       document.getElementById('s-amount').textContent = '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits:2});
-      document.getElementById('s-method').textContent = _payMethod === 'cash'
+      document.getElementById('s-method').textContent = _payMethod === 'split'
+        ? `Cash ${_pesoFmt(cashPart)} (received ${_pesoFmt(cashIn)} · change ${_pesoFmt(changeDue)}) + GCash ${_pesoFmt(gcashPart)}${ref ? ' · Ref: ' + ref : ''}`
+        : _payMethod === 'cash'
         ? `Cash · received ${_pesoFmt(cashIn)} · change ${_pesoFmt(changeDue)}`
         : `GCash${ref ? ' · Ref: ' + ref : ''}`;
       document.getElementById('success-overlay').classList.add('open');
@@ -1438,8 +1490,15 @@ async function openReceiptModal(bid) {
 
   document.getElementById('rcpt-total-val').textContent = '₱' + inv.total.toLocaleString('en-PH', {minimumFractionDigits:2});
 
-  let paymentHtml = `<div class="rcpt-row"><span>Payment</span><span>${(inv.payment_method || '').toUpperCase()}</span></div>`;
-  if (inv.payment_method === 'cash') {
+  let paymentHtml = `<div class="rcpt-row"><span>Payment</span><span>${inv.payment_method === 'split' ? 'CASH + GCASH' : (inv.payment_method || '').toUpperCase()}</span></div>`;
+  if (inv.payment_method === 'split') {
+    const pf = n => '₱' + Number(n || 0).toLocaleString('en-PH', {minimumFractionDigits:2});
+    paymentHtml += `<div class="rcpt-row"><span>Cash share</span><span>${pf(inv.cash_part)}</span></div>`;
+    if (inv.cash_received != null) paymentHtml += `<div class="rcpt-row"><span>Cash received</span><span>${pf(inv.cash_received)}</span></div>`;
+    if (inv.change != null) paymentHtml += `<div class="rcpt-row"><span>Change</span><span>${pf(inv.change)}</span></div>`;
+    paymentHtml += `<div class="rcpt-row"><span>GCash share</span><span>${pf(inv.gcash_part)}</span></div>`;
+    if (inv.gcash_ref) paymentHtml += `<div class="rcpt-row"><span>GCash Ref.</span><span>${inv.gcash_ref}</span></div>`;
+  } else if (inv.payment_method === 'cash') {
     if (inv.cash_received != null) paymentHtml += `<div class="rcpt-row"><span>Cash received</span><span>₱${inv.cash_received.toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>`;
     if (inv.change != null) paymentHtml += `<div class="rcpt-row"><span>Change</span><span>₱${inv.change.toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>`;
   } else if (inv.payment_method === 'gcash' && inv.gcash_ref) {

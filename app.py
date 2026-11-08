@@ -2756,7 +2756,7 @@ def _mask_phone(p):
 
 def _tx_method(raw):
     m = (raw or 'cash').lower()
-    return 'gcash' if m == 'gcash' else 'cash'
+    return m if m in ('gcash', 'split') else 'cash'
 
 
 def _tx_dt(dt):

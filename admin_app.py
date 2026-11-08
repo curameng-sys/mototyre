@@ -282,7 +282,7 @@ class Booking(db.Model):
     cancelled_at     = db.Column(db.DateTime, nullable=True)   # when it was cancelled — lets the queue tell a customer they moved up
     was_rescheduled  = db.Column(db.Boolean, default=False)  # set once, first time this booking's date/time changes after creation
     completed_at     = db.Column(db.DateTime, nullable=True)  # when status actually reached completed — the warranty window's start
-    invoice_payment_method = db.Column(db.String(10), nullable=True)  # customer's pick on the post-completion invoice: 'cash' or 'gcash'
+    invoice_payment_method = db.Column(db.String(10), nullable=True)  # customer's pick on the post-completion invoice: 'cash' or 'gcash' ('split' = the counter took part cash, part GCash)
     invoice_paid     = db.Column(db.Boolean, default=False)   # true once that invoice is actually settled (cash confirmed, or GCash succeeded)
     invoice_paid_at  = db.Column(db.DateTime, nullable=True)
     invoice_cash_received = db.Column(db.Float, nullable=True)
@@ -1332,7 +1332,7 @@ def _revenue_transactions(date_from=None, date_to=None):
         cust = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown')
         txns.append({
             'ref': f'BKG-{b.id:03d}', 'type': 'booking', 'customer': cust or 'Unknown',
-            'payment': (b.invoice_payment_method or b.payment_method or 'cash').upper(),
+            'payment': _pay_label(b.invoice_payment_method or b.payment_method),
             'amount': b.total_amount, 'date': d, 'status': 'Completed', 'record_id': b.id,
         })
 
@@ -1342,7 +1342,7 @@ def _revenue_transactions(date_from=None, date_to=None):
             continue
         txns.append({
             'ref': f'JO-{jo.id:03d}', 'type': 'job_order', 'customer': jo.customer_name or 'Unknown',
-            'payment': (jo.payment.payment_method or 'cash').upper(),
+            'payment': _pay_label(jo.payment.payment_method),
             'amount': jo.total_amount, 'date': d, 'status': 'Paid', 'record_id': jo.id,
         })
 
@@ -2875,6 +2875,8 @@ def api_booking_invoice_data(bid):
         'items': items, 'total': booking.total_amount,
         'paid': is_paid, 'payment_method': payment_method_used,
         'cash_received': booking.invoice_cash_received, 'change': booking.invoice_change,
+        'cash_part': (round((booking.invoice_cash_received or 0) - (booking.invoice_change or 0), 2) if (is_paid and payment_method_used == 'split') else None),
+        'gcash_part': (round((booking.total_amount or 0) - ((booking.invoice_cash_received or 0) - (booking.invoice_change or 0)), 2) if (is_paid and payment_method_used == 'split') else None),
         'gcash_ref': booking.invoice_gcash_ref if is_paid else None,      # before it is paid this is only the open checkout's id
         'paid_at': paid_at.strftime('%b %d, %Y %I:%M %p') if paid_at else None,
         'completed_at': booking.completed_at.strftime('%b %d, %Y %I:%M %p') if booking.completed_at else None,
@@ -8113,6 +8115,36 @@ def _cash_handed_over(owed):
     return received, round(received - owed, 2), None
 
 
+def _split_handed_over(owed):
+    """Part cash, part GCash at the counter. The form sends 'cash_part' (the share paid in cash) and 'cash_received' (what the customer
+    handed over for that share; nothing typed = exact). The GCash share is the rest of the total. Returns
+    (cash_part, gcash_part, received, change, error). Only the cash share can have change."""
+    owed = round(float(owed or 0), 2)
+    try:
+        cash_part = round(float((request.form.get('cash_part') or '').strip()), 2)
+    except ValueError:
+        return None, None, None, None, 'Please enter how much of the total is paid in cash.'
+    if cash_part <= 0 or cash_part >= owed - 0.004:
+        return None, None, None, None, 'The cash share must be more than 0 and less than the total. For cash only or GCash only, choose that method instead.'
+    gcash_part = round(owed - cash_part, 2)
+    raw = (request.form.get('cash_received') or '').strip()
+    if not raw:
+        return cash_part, gcash_part, cash_part, 0.0, None
+    try:
+        received = round(float(raw), 2)
+    except ValueError:
+        return None, None, None, None, 'Please enter the cash received.'
+    if received < cash_part - 0.004:
+        return None, None, None, None, f'The cash received (\u20b1{received:,.2f}) is less than the cash share (\u20b1{cash_part:,.2f}).'
+    return cash_part, gcash_part, received, round(received - cash_part, 2), None
+
+
+def _pay_label(method):
+    """How a payment method reads in lists: CASH, GCASH or CASH + GCASH."""
+    m = (method or 'cash').lower()
+    return 'CASH + GCASH' if m == 'split' else m.upper()
+
+
 @admin_app.route('/payments/process/<int:joid>', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -8122,13 +8154,18 @@ def payment_submit(joid):
         return jsonify({'success': False, 'error': 'Already paid'}), 400
     method    = request.form.get('payment_method', 'cash')
     ref_no    = request.form.get('reference_no', '').strip() or None
-    if method not in ('cash', 'gcash'):
+    if method not in ('cash', 'gcash', 'split'):
         return jsonify({'success': False, 'error': 'Invalid payment method'}), 400
-    if method == 'gcash' and not ref_no:
+    if method in ('gcash', 'split') and not ref_no:
         return jsonify({'success': False, 'error': 'GCash reference number is required'}), 400
     cash_in, change, cash_err = (None, None, None)
+    cash_part = gcash_part = None
     if method == 'cash':
         cash_in, change, cash_err = _cash_handed_over(jo.total_amount)
+        if cash_err:
+            return jsonify({'success': False, 'error': cash_err}), 400
+    elif method == 'split':
+        cash_part, gcash_part, cash_in, change, cash_err = _split_handed_over(jo.total_amount)
         if cash_err:
             return jsonify({'success': False, 'error': cash_err}), 400
     try:
@@ -8146,7 +8183,8 @@ def payment_submit(joid):
         jo.completed_at = datetime.utcnow() + timedelta(hours=8)
         db.session.commit()
         return jsonify({'success': True, 'ref': f'JO-{jo.id:03d}', 'amount': jo.total_amount,
-                        'method': method, 'payment_id': pmt.id, 'cash_received': cash_in, 'change': change})
+                        'method': method, 'payment_id': pmt.id, 'cash_received': cash_in, 'change': change,
+                        'cash_part': cash_part, 'gcash_part': gcash_part})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -8170,9 +8208,9 @@ def booking_payment_submit(bid):
     ref_no  = request.form.get('reference_no', '').strip() or None
     amount  = request.form.get('amount', '0')
 
-    if method not in ('cash', 'gcash'):
+    if method not in ('cash', 'gcash', 'split'):
         return jsonify({'success': False, 'error': 'Invalid payment method'}), 400
-    if method == 'gcash' and not ref_no:
+    if method in ('gcash', 'split') and not ref_no:
         return jsonify({'success': False, 'error': 'GCash reference number is required'}), 400
 
     try:
@@ -8180,8 +8218,13 @@ def booking_payment_submit(bid):
     except ValueError:
         return jsonify({'success': False, 'error': 'Invalid amount'}), 400
     cash_in, change, cash_err = (None, None, None)
+    cash_part = gcash_part = None
     if method == 'cash':
         cash_in, change, cash_err = _cash_handed_over(amount_f)
+        if cash_err:
+            return jsonify({'success': False, 'error': cash_err}), 400
+    elif method == 'split':
+        cash_part, gcash_part, cash_in, change, cash_err = _split_handed_over(amount_f)
         if cash_err:
             return jsonify({'success': False, 'error': cash_err}), 400
     if booking.status == 'completed' and booking.invoice_paid:
@@ -8211,6 +8254,8 @@ def booking_payment_submit(bid):
             booking.invoice_cash_received = cash_in
             booking.invoice_change = change
             booking.invoice_received_by = current_user.fullname
+            if method == 'split':
+                booking.invoice_gcash_ref = ref_no
         for _qq in _qs_all:
             _deduct_quotation_parts(_qq, booking)
         db.session.commit()
@@ -8229,7 +8274,7 @@ def booking_payment_submit(bid):
             'amount':    amount_f,
             'method':    method,
             'booking_id': booking.id,
-            'cash_received': cash_in, 'change': change,
+            'cash_received': cash_in, 'change': change, 'cash_part': cash_part, 'gcash_part': gcash_part,
         })
     except Exception as e:
         db.session.rollback()
@@ -9521,12 +9566,16 @@ def _booking_report_data(first, last, include_cancelled):
 
         is_paid = bool(b.invoice_paid) or b.id not in invoiced
         method = (b.invoice_payment_method or b.payment_method or 'cash').lower()
-        if is_paid:
+        if is_paid and method == 'split':
+            _cp = max(0.0, min(total, float(b.invoice_cash_received or 0) - float(b.invoice_change or 0)))
+            paid['cash'] += _cp
+            paid['gcash'] += total - _cp
+        elif is_paid:
             paid['gcash' if method == 'gcash' else 'cash'] += total
         else:
             unpaid_completed += 1
         rows.append({**base, 'status': 'Completed',
-                     'payment': ('GCash' if method == 'gcash' else 'Cash') if is_paid else 'Unpaid',
+                     'payment': ('Cash + GCash' if method == 'split' else 'GCash' if method == 'gcash' else 'Cash') if is_paid else 'Unpaid',
                      'extra_note': note, 'booked': booked, 'extra': extra, 'materials': materials, 'total': total})
         for k, v in (('booked', booked), ('extra', extra), ('materials', materials), ('total', total)):
             sums[k] += v

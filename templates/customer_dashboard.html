@@ -5768,7 +5768,7 @@ function renderNotifications() {
 
       let bottomHTML;
       if (inv.status === 'paid') {
-        bottomHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;color:#166534;margin-top:0.5rem;">✓ Paid ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} by ${inv.payment_method === 'gcash' ? 'GCash' : 'cash'}.</div>`;
+        bottomHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;color:#166534;margin-top:0.5rem;">✓ Paid ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} by ${inv.payment_method === 'gcash' ? 'GCash' : inv.payment_method === 'split' ? 'cash + GCash' : 'cash'}.</div>`;
       } else if (inv.status === 'cash_pending') {
         bottomHTML = `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0.65rem 0.8rem;font-size:0.8rem;color:#92400e;margin-top:0.5rem;"><strong>Pay ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} at the shop counter.</strong> We'll mark this invoice paid once the cashier receives your cash.</div>`;
       } else {
@@ -8014,7 +8014,7 @@ function _renderReceiptView(inv) {
   document.getElementById('inv-view-invoice').style.display = 'none';
   document.getElementById('inv-view-receipt').style.display = 'block';
   document.getElementById('inv-receipt-subtext').textContent =
-    `You paid ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} by ${inv.payment_method === 'gcash' ? 'GCash' : 'cash'}. Thank you for choosing MotoTyres!`;
+    `You paid ₱${Number(inv.total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} by ${inv.payment_method === 'gcash' ? 'GCash' : inv.payment_method === 'split' ? 'cash + GCash' : 'cash'}. Thank you for choosing MotoTyres!`;
   document.getElementById('rcpt-ref-left').textContent = `Receipt for #${inv.inv_ref}`;
   document.getElementById('rcpt-date-right').textContent = inv.paid_at
     ? new Date(inv.paid_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
@@ -11034,7 +11034,7 @@ function txIcon(t) {
   return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>';
 }
 function txClass(t) { return t.type === 'refund' ? 'refund' : t.method; }
-function txLabelText(t) { return t.type === 'refund' ? (t.method === 'cash' ? 'Cash refund' : 'GCash refund') : (t.method === 'cash' ? 'Cash' : 'GCash'); }
+function txLabelText(t) { return t.type === 'refund' ? (t.method === 'cash' ? 'Cash refund' : 'GCash refund') : (t.method === 'cash' ? 'Cash' : t.method === 'split' ? 'Cash + GCash' : 'GCash'); }
 
 function renderTransactions() {
   const sum = a => a.reduce((n, t) => n + t.amount, 0);
@@ -11050,7 +11050,7 @@ function renderTransactions() {
   const list = document.getElementById('tx-list');
   if (!rows.length) { list.innerHTML = '<div class="tx-empty">Nothing here yet.</div>'; return; }
   const ST = { paid: 'Paid', refunded: 'Refunded', hold: 'On hold', nocharge: 'No charge' };
-  const method = t => t.status === 'nocharge' ? '—' : (t.method === 'cash' ? 'Cash at the shop' : 'GCash');
+  const method = t => t.status === 'nocharge' ? '—' : (t.method === 'cash' ? 'Cash at the shop' : t.method === 'split' ? 'Cash + GCash' : 'GCash');
   list.innerHTML = `<div style="overflow-x:auto;"><table class="tx-table"><thead><tr><th>Date</th><th>Reference</th><th>Details</th><th>Method</th><th style="text-align:right;">Amount</th><th>Status</th></tr></thead><tbody>` +
     rows.map(t => {
       const click = (t.status === 'paid' || t.status === 'refunded') ? `onclick="openTxReceipt('${t.key}')"` : (t.order_id ? `onclick="openOrderDetails(${t.order_id})"` : '');
@@ -11073,8 +11073,8 @@ function openTxReceipt(key) {
   if (!t) return;
   txOpenKey = key;
   const refund = t.type === 'refund';
-  const badge = refund ? (t.method === 'cash' ? 'Refunded in cash' : 'Refunded to your GCash') : (t.method === 'cash' ? 'Paid in cash' : 'Paid by GCash');
-  const bcol = t.method === 'cash' ? ['#dcfce7', '#15803d'] : ['#dbeafe', '#1d4ed8'];
+  const badge = refund ? (t.method === 'cash' ? 'Refunded in cash' : 'Refunded to your GCash') : (t.method === 'cash' ? 'Paid in cash' : t.method === 'split' ? 'Paid by cash + GCash' : 'Paid by GCash');
+  const bcol = t.method === 'cash' ? ['#dcfce7', '#15803d'] : t.method === 'split' ? ['#ede9fe', '#6d28d9'] : ['#dbeafe', '#1d4ed8'];
   const head = refund ? 'REFUND RECEIPT' : (t.kind === 'order' ? 'ORDER RECEIPT' : 'BOOKING RECEIPT');
   const row = (a, b) => b ? `<div class="rc-row"><span>${a}</span><span>${txEsc(b)}</span></div>` : '';
   const when = `${txFmtDate(t.at)}, ${txFmtTime(t.at)}`;
