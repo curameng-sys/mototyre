@@ -124,13 +124,83 @@ def _type_of(text):
     return None
 
 
+# ── Different sentences for the same kind of part ────────────────────────────────────────────────────────────────────
+# Every kind of part has a few ways to say what it is for, and a few short, true tips. Which one a product gets is picked from
+# its name (always the same one for the same product), so two tires are not word for word the same, yet each still says what
+# its own part does. The tips are general advice, never a specification.
+VARIANTS = {
+    'Tire': ['A motorcycle tire for everyday riding.', 'A tire that gives your motorcycle grip on the road.',
+             'A replacement tire for your motorcycle, made for daily riding.', 'A road tire for motorcycles and scooters.',
+             'Fresh rubber for better grip when your old tire is worn.'],
+    'Air filter': ['Keeps dust and dirt out of the engine so it breathes clean air.', 'Cleans the air going into your engine.',
+                   'Filters the air before it reaches the engine.', 'Helps your engine breathe clean air and run smoothly.'],
+    'Oil filter': ['Catches dirt and metal particles so the engine oil stays clean.', 'Cleans the engine oil as it circulates.',
+                   'Keeps harmful particles out of the engine oil.'],
+    'Piston ring': ['Seals the piston against the cylinder wall.', 'Keeps compression in the cylinder and oil out of the combustion chamber.',
+                    'Part of the piston set that seals the cylinder.'],
+    'Brake pad': ['Presses on the disc to stop the wheel.', 'Grips the brake disc to slow down and stop your motorcycle.',
+                  'The part that squeezes the disc when you brake.'],
+    'Brake shoe': ['Presses on the drum to stop the wheel.', 'Grips the brake drum to slow down and stop your motorcycle.',
+                   'The part that pushes against the drum when you brake.'],
+    'Bearing': ['Lets a wheel or shaft spin smoothly with less friction.', 'Helps rotating parts turn smoothly and quietly.',
+                'Reduces friction on a spinning shaft or wheel.'],
+    'Ball race': ['Steering bearing set that lets the handlebar turn smoothly.', 'Lets the handlebar and front fork turn smoothly.',
+                  'The bearings at the steering head of your motorcycle.'],
+    'Drive belt': ['Carries power between the pulleys of a scooter CVT.', 'The drive belt of a scooter that moves power to the rear wheel.',
+                   'Transfers power from the engine to the rear wheel in a CVT scooter.'],
+    'Oil seal': ['Keeps oil and grease from leaking out around a shaft or fork.', 'A rubber seal that stops oil leaks around a shaft.',
+                 'Prevents oil from escaping where a shaft passes through.'],
+    'Gasket': ['Seals two engine surfaces together to prevent leaks.', 'Stops oil, gas or coolant from leaking between engine parts.',
+               'A seal that sits between two engine parts.'],
+    'Lubricant': ['Lubricates and protects moving engine parts.', 'Keeps engine parts running smoothly and reduces wear.',
+                  'Oil that reduces friction inside the engine.'],
+    'O-ring': ['A rubber ring that seals a joint so oil or fuel does not leak.', 'Seals a joint to stop leaks of oil, fuel or air.'],
+    'Battery': ['Powers the starter, lights and electrical parts.', 'Stores the power your motorcycle needs to start and run its lights.'],
+    'CVT part': ['Part of the scooter transmission (CVT) that moves power to the rear wheel.', 'Part of a scooter CVT that changes the drive ratio by itself.'],
+    'Spark plug': ['Ignites the fuel and air mix inside the cylinder.', 'Creates the spark that starts each engine cycle.'],
+    'Clutch part': ['Connects and disconnects engine power to the transmission.', 'Lets the engine power reach the wheel smoothly when you pull away.'],
+    'Fastener': ['Holds motorcycle parts together.', 'Keeps parts of your motorcycle fastened in place.'],
+}
+TIPS = {
+    'Tire': ['Check the size printed on the side of your current tire before ordering.', 'Check the tire pressure regularly so it lasts longer.',
+             'Replace a tire that is cracked or worn down to the wear marks.'],
+    'Air filter': ['Change it on the schedule in your motorcycle manual.', 'A clogged filter can make the engine feel weak, so replace it on time.',
+                   'Change it more often if you ride on dusty roads.'],
+    'Oil filter': ['Change it every time you change the engine oil, if your manual says so.'],
+    'Piston ring': ['Replace the rings together as a set.', 'Best fitted by a mechanic after the cylinder is checked.'],
+    'Brake pad': ['Replace the pads when they are worn thin.', 'Check the thickness of your pads regularly.'],
+    'Brake shoe': ['Replace the shoes when they are worn thin.', 'Check the shoes regularly, especially before long rides.'],
+    'Bearing': ['Replace a bearing that is noisy or rough when turned.', 'Have the mechanic fit it so it sits straight.'],
+    'Ball race': ['Replace it when the steering feels notchy or loose.'],
+    'Drive belt': ['Check it for cracks and wear on schedule.', 'Replace it when it shows cracks or has worn thin.'],
+    'Oil seal': ['Replace it when you see oil leaking.', 'Fit a new seal whenever the part is taken apart.'],
+    'Gasket': ['Use a new gasket every time the engine part is opened.', 'Clean both surfaces before fitting.'],
+    'Lubricant': ['Use the grade your motorcycle manual recommends.', 'Change it on schedule for a smoother engine.', 'Check the oil level regularly.'],
+    'O-ring': ['Replace O-rings whenever the part is opened.'],
+    'Battery': ['Check that the size and terminals match your motorcycle.', 'Keep the terminals clean and tight.'],
+}
+GENERIC_TIPS = ['Ask the shop if you are not sure it fits your motorcycle.', 'Check that it matches the part you are replacing before ordering.',
+                'Have a mechanic fit it if you are not sure how.']
+
+
+def _pick(options, name, slot):
+    """The same option every time for the same product name; different products spread over the options."""
+    import hashlib
+    h = hashlib.md5((name or '').strip().lower().encode('utf8')).hexdigest()
+    return options[int(h[slot * 8:slot * 8 + 8], 16) % len(options)]
+
+
 def draft(name, category, motor_model=None):
-    """One plain sentence about what the part is for, from its kind (read from the name first, then the category). Nothing about the
-    brand, size, part number or fit: those are already in the product's own fields, and a sentence reads cleaner without them."""
+    """Two short sentences: what the part is for (one of a few ways to say it, from its kind: the name is read first, then the
+    category), and a general tip. Nothing about the brand, size, part number or fit: those are in the product's own fields."""
     if TIRE_RE.search(name):
-        return 'A motorcycle tire for everyday riding.'
-    found = _type_of(name) or _type_of(category)
-    return found[1] if found else 'A spare part for your motorcycle.'
+        label, base = 'Tire', 'A motorcycle tire for everyday riding.'
+    else:
+        found = _type_of(name) or _type_of(category)
+        label, base = found if found else (None, 'A spare part for your motorcycle.')
+    purpose = _pick(VARIANTS.get(label) or [base], name, 0)
+    tip = _pick((TIPS.get(label) or []) + GENERIC_TIPS, name, 1)
+    return purpose + ' ' + tip
 
 
 def has_specific_type(name, category):
