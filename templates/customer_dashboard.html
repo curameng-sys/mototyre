@@ -2224,6 +2224,15 @@
     <div><div class="section-title">MY <span>ORDERS</span></div><div class="section-sub">Track your parts and accessories orders.</div></div>
     <a class="section-link" href="#" onclick="showSection('shop', null)">+ Order Parts</a>
   </div>
+  {% if orders %}
+  <div class="mb-tabs" role="tablist" aria-label="Filter orders">
+    <button type="button" class="mb-tab active" data-omf="all" role="tab" aria-selected="true" onclick="filterMyOrders('all')">All <span class="mb-tab-n" data-omn="all"></span></button>
+    <button type="button" class="mb-tab" data-omf="active" role="tab" aria-selected="false" onclick="filterMyOrders('active')">Active <span class="mb-tab-n" data-omn="active"></span></button>
+    <button type="button" class="mb-tab" data-omf="completed" role="tab" aria-selected="false" onclick="filterMyOrders('completed')">Completed <span class="mb-tab-n" data-omn="completed"></span></button>
+    <button type="button" class="mb-tab" data-omf="cancelled" role="tab" aria-selected="false" onclick="filterMyOrders('cancelled')">Cancelled <span class="mb-tab-n" data-omn="cancelled"></span></button>
+    <button type="button" class="mb-tab" data-omf="refunded" role="tab" aria-selected="false" onclick="filterMyOrders('refunded')" style="display:none;">Refunded <span class="mb-tab-n" data-omn="refunded"></span></button>
+  </div>
+  {% endif %}
   <div class="card">
     {% if orders %}
     <div style="overflow-x:auto;">
@@ -2299,6 +2308,7 @@
             </td>
           </tr>
           {% endfor %}
+        <tr id="om-empty-row" style="display:none;"><td colspan="6" style="text-align:center;padding:2rem 1rem;color:var(--fg-3);font-size:0.9rem;">No orders in this group.</td></tr>
         </tbody>
       </table>
     </div>
@@ -9365,6 +9375,44 @@ function filterMyBookings(f) {
   applyMyBookingsFilter();
   let t = null;
   new MutationObserver(() => { clearTimeout(t); t = setTimeout(applyMyBookingsFilter, 60); })
+    .observe(body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true, characterData: true });
+})();
+
+// ── My Orders: the same filter tabs. A row's group comes from its status badge (works for both Delivery and Shop pickup),
+// so an order that changes while the page is open moves to the right group by itself. ──
+let _omFilter = 'all';
+function _omGroup(row) {
+  const b = row.querySelector('.badge');
+  const cls = b ? b.className.split(/\s+/) : [];
+  const has = n => cls.indexOf('badge-' + n) > -1 || cls.indexOf('badge-s-' + n) > -1;
+  return has('completed') ? 'completed' : has('cancelled') ? 'cancelled' : has('refunded') ? 'refunded' : 'active';
+}
+function applyMyOrdersFilter() {
+  const rows = Array.from(document.querySelectorAll('#sec-orders tr.order-row'));
+  if (!rows.length) return;
+  const n = { all: rows.length, active: 0, completed: 0, cancelled: 0, refunded: 0 };
+  let shown = 0;
+  rows.forEach(r => {
+    const g = _omGroup(r); n[g]++;
+    const show = _omFilter === 'all' || _omFilter === g;
+    if (r.style.display !== (show ? '' : 'none')) r.style.display = show ? '' : 'none';
+    if (show) shown++;
+  });
+  Object.keys(n).forEach(k => { const el = document.querySelector('[data-omn="' + k + '"]'); if (el && el.textContent !== String(n[k])) el.textContent = n[k]; });
+  const rt = document.querySelector('[data-omf="refunded"]'); if (rt) { const want = (n.refunded > 0 || _omFilter === 'refunded') ? '' : 'none'; if (rt.style.display !== want) rt.style.display = want; }
+  const empty = document.getElementById('om-empty-row'); if (empty) { const want = shown ? 'none' : ''; if (empty.style.display !== want) empty.style.display = want; }
+}
+function filterMyOrders(f) {
+  _omFilter = f;
+  document.querySelectorAll('#sec-orders .mb-tab').forEach(t => { const on = t.dataset.omf === f; t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
+  applyMyOrdersFilter();
+}
+(function () {
+  const body = document.querySelector('#sec-orders tbody');
+  if (!body) return;
+  applyMyOrdersFilter();
+  let t = null;
+  new MutationObserver(() => { clearTimeout(t); t = setTimeout(applyMyOrdersFilter, 60); })
     .observe(body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true, characterData: true });
 })();
 
