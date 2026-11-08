@@ -73,6 +73,7 @@ TYPE_RULES = [
     (('SPRING',), 'Spring', 'A spring that returns or holds a part in place.'),
     (('GEAR BOX',), 'Gear box part', 'Part of the transmission gears.'),
     (('CP HOLDER',), 'Phone holder', 'Holds a phone on the handlebar.'),
+    (('MAGS', 'MAG WHEEL'), 'Mag wheel', 'A cast alloy wheel for the motorcycle.'),
     (('OIL SEAL', ' SEAL'), 'Oil seal', 'Keeps oil and grease from leaking out around a shaft or fork.'),
     (('PISTON RING', 'RING SET'), 'Piston ring', 'Seals the piston against the cylinder wall.'),
     (('FORK',), 'Front fork part', 'Part of the front suspension that absorbs bumps.'),
@@ -178,14 +179,31 @@ def has_specific_type(name, category):
 
 
 def just_the_name(name, description, category=None):
-    """True when the description is empty, very short, or only restates the product: the same words as its name (and category),
-    in any order or with repeats, as in "BEAST TIRE, TIRE, 80/90-14" for "Beast Tire 80/90-14". A description that says anything
-    more than the name and category is a real one. The customer pages use the same rule."""
-    words = lambda x: set(re.findall(r'[a-z0-9]+', (x or '').lower()))
-    own = words(description)
-    if len(re.sub(r'[^a-z0-9]+', '', (description or '').lower())) < 10:
+    """True when the description is not a real one: empty, very short, made only of the words of the name and category (in any order,
+    with repeats, whatever the sizes look like: "BEAST TIRE, TIRE, 80/90-14", "KENDA, TIRE, 70/90X14, K488"), or an imported catalog
+    line in capitals with commas ("HONDA, BELT, 23100-K35-V01, CLICK 125 ( THAILAND)"). A description with any other word in it,
+    written the way a person writes, is a real one. The customer pages use the same rule."""
+    def words(x):
+        x = re.sub(r'(?<=\d)[xX](?=\d)', ' ', x or '')                 # 90X14 is 90 and 14, not a word "x"
+        return set(re.findall(r'[a-z]+', x.lower()))
+    d = (description or '').strip()
+    if len(re.sub(r'[^a-z0-9]+', '', d.lower())) < 10:
         return True
-    return own <= (words(name) | words(category))
+    if not re.search(r'[a-z]{2,}', d) and d.count(',') >= 2:           # BRAND, TYPE, PART NO, FITS in capitals (a lone small letter, as in MIOi): an imported line
+        return True
+    return words(d) <= (words(name) | words(category))
+
+
+def with_listed_fit(text, old, motor_model):
+    """An imported catalog line may say a little more about the fit than the Fits column ("... (THAILAND)", "... - REAR"). Keep that."""
+    d = (old or '').strip()
+    if re.search(r'[a-z]{2,}', d) or d.count(',') < 2:
+        return text
+    last = d.split(',')[-1].strip()
+    mm = (motor_model or '').strip().lower()
+    if last and len(last) > 2 and last.lower() != mm and last.lower() not in mm and re.search(r'[A-Za-z]', last) and mm and mm in last.lower():
+        return text + (' ' if '\n' in text else '\n') + f'Listed fit: {last}.'
+    return text
 
 
 def main():
@@ -205,7 +223,7 @@ def main():
         return
 
     cur.execute("SELECT id, name, category, motor_model, description FROM product ORDER BY id")
-    todo = [(i, n, c, m, draft(n, c, m), old) for i, n, c, m, old in cur.fetchall() if just_the_name(n, old, c)]
+    todo = [(i, n, c, m, with_listed_fit(draft(n, c, m), old, m), old) for i, n, c, m, old in cur.fetchall() if just_the_name(n, old, c)]
     cur.execute("SELECT COUNT(*) FROM product")
     total = cur.fetchone()[0]
     for i, n, c, m, d, old in todo:
