@@ -19,7 +19,7 @@ import re
 import sys
 from datetime import datetime
 
-TIRE_RE = re.compile(r'(\d{2,3})/(\d{2,3})\s*-\s*(\d{2})')
+TIRE_RE = re.compile(r'(\d{2,3})/(\d{2,3})\s*[-xX–]\s*(\d{2})')     # 80/90-17 or 90/90X14
 GRADE_RE = re.compile(r'\b(\d{1,2}W-?\d{2,3})\b', re.I)
 VOLUME_RE = re.compile(r'\b(\d+(?:\.\d+)?)\s?(L|LT|LTR|ML)\b', re.I)
 
@@ -75,16 +75,27 @@ KNOWN_BRANDS = ('Vee Rubber', 'Speed Motor', 'Honda', 'Yamaha', 'Suzuki', 'Kawas
 PART_NO_RE = re.compile(r'\b(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{5,}\b', re.I)
 
 
+def _type_of(text):
+    """The (label, sentence) of the first kind of part whose words appear in the text as WHOLE words, or None. (So "EUROGRIP"
+    is not a "GRIP" and "STANDARD" is not a "STAND".)"""
+    hay = ' ' + re.sub(r'[^A-Z0-9]+', ' ', (text or '').upper()) + ' '
+    for words, lab, sent in TYPE_RULES:
+        for w in words:
+            w = re.sub(r'[^A-Z0-9]+', ' ', w.upper()).strip()
+            if w and re.search(r'(?<![A-Z0-9])' + re.escape(w) + r'(S|ES)?(?![A-Z0-9])', hay):
+                return lab, sent
+    return None
+
+
 def draft(name, category, motor_model):
-    haystack = f'{category or ""} {name}'.upper()
     label, sentence = None, None
     if TIRE_RE.search(name):
         label, sentence = 'Tire', 'A motorcycle tire for everyday riding.'
     else:
-        for words, lab, sent in TYPE_RULES:
-            if any(w in haystack for w in words):
-                label, sentence = lab, sent
-                break
+        # the name says what the part is more exactly than the category ("Brake pad" vs "Brakes"), so it is read first
+        found = _type_of(name) or _type_of(category)
+        if found:
+            label, sentence = found
     if not label:
         label = (category or 'Spare part').strip().title()
         sentence = 'A spare part for your motorcycle.' if 'spare' in label.lower() or not category else f'{label} for your motorcycle.'
@@ -92,10 +103,14 @@ def draft(name, category, motor_model):
     t = TIRE_RE.search(name)
     if t:
         w, a, rim = t.groups()
-        brand = re.sub(r'\b(tire|tyre)\b', '', TIRE_RE.sub('', name), flags=re.I).strip(' -,/')
-        if brand and brand != name.strip():
+        parts = [x.strip() for x in name.split(',')] if ',' in name else [name]       # also "BRAND, TIRE, SIZE, MODEL"
+        kept = [re.sub(r'\b(tire|tyre)\b', '', TIRE_RE.sub('', x), flags=re.I).strip(' -/') for x in parts]
+        brand = ' '.join(x for x in kept if x)
+        if brand.isupper():
+            brand = brand.title()
+        if brand and brand.lower() != name.strip().lower():
             specs.insert(1, ('Brand / model', brand))
-        specs += [('Size', f'{w}/{a}-{rim}'), ('Section width', f'{w} mm'), ('Aspect ratio', f'{a}%'), ('Rim size', f'{rim} inch')]
+        specs += [('Size', f'{w}/{a}-{rim} ({w} mm wide, {a}% aspect ratio, {rim}-inch rim)')]
     else:
         m = [x for x in PART_NO_RE.findall(name) if not GRADE_RE.fullmatch(x)]
         if m:
@@ -115,13 +130,15 @@ def draft(name, category, motor_model):
                 break
     if motor_model and motor_model.strip():
         specs.append(('Fits', motor_model.strip()))
-    return '\n'.join([sentence, 'Specifications:'] + [f'• {k}: {val}' for k, val in specs])[:1500]
+    # Sentences, not a table that repeats the title: what the part is for, then what the name itself says about it (brand,
+    # size, part number, grade, volume, the motorcycles it fits). The product name and category are not repeated.
+    details = ' '.join(f'{k}: {val}.' for k, val in specs if k not in ('Product', 'Type', 'Category'))
+    return (sentence + ('\n' + details if details else ''))[:1500]
 
 
 def has_specific_type(name, category):
     """False when the product matched none of the part types above and so only got the general line."""
-    haystack = f'{category or ""} {name}'.upper()
-    return bool(TIRE_RE.search(name)) or any(any(w in haystack for w in words) for words, _l, _s in TYPE_RULES)
+    return bool(TIRE_RE.search(name)) or bool(_type_of(name) or _type_of(category))
 
 
 def just_the_name(name, description):
