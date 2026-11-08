@@ -319,6 +319,11 @@
       @media (max-height: 760px) {
         body.parts-lock .parts-right { padding-bottom: 0; }
         body.parts-lock .parts-right > .card { overflow: visible !important; }      /* a card that clips would stop the button from sticking */
+        .parts-denom { padding: 0.42rem 0.3rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--text); font-size: 0.8rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: background .12s, border-color .12s, transform .05s; }
+        .parts-denom:hover { background: #fff7f7; border-color: #fca5a5; }
+        .parts-denom:active { transform: scale(0.96); }
+        .parts-denom.exact { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+        .parts-denom.clear { color: var(--muted); font-weight: 600; }
         body.parts-lock .parts-process-wrap { position: sticky; bottom: 0; z-index: 3; background: #fff; padding: 0.5rem 0 0.15rem; margin-top: 0.2rem; }
       }
     }
@@ -2736,6 +2741,18 @@
                   <label style="font-size:0.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">Cash received (₱)</label>
                   <input type="text" id="parts-cash-received" inputmode="decimal" placeholder="0.00" oninput="this.value=this.value.replace(/[^0-9.]/g,''); onPartsCartChange()"
                     style="width:100%;padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:0.9rem;outline:none;">
+                  <!-- bills and coins: tap each one the customer hands over, they add up; Exact = the total, Clear = start again -->
+                  <div style="font-size:0.66rem;color:var(--muted);margin:0.55rem 0 0.3rem;">Tap the bills the customer hands over:</div>
+                  <div id="parts-cash-denoms" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.35rem;">
+                    <button type="button" class="parts-denom" onclick="addPartsCash(20)">₱20</button>
+                    <button type="button" class="parts-denom" onclick="addPartsCash(50)">₱50</button>
+                    <button type="button" class="parts-denom" onclick="addPartsCash(100)">₱100</button>
+                    <button type="button" class="parts-denom" onclick="addPartsCash(200)">₱200</button>
+                    <button type="button" class="parts-denom" onclick="addPartsCash(500)">₱500</button>
+                    <button type="button" class="parts-denom" onclick="addPartsCash(1000)">₱1,000</button>
+                    <button type="button" class="parts-denom exact" onclick="setPartsCashExact()">Exact</button>
+                    <button type="button" class="parts-denom clear" onclick="clearPartsCash()" style="grid-column:span 2;">Clear</button>
+                  </div>
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.55rem;">
                     <span style="font-size:0.78rem;color:var(--muted);">Change to give</span>
                     <span id="parts-cash-change" style="font-weight:800;font-size:1.1rem;color:var(--text);">₱0.00</span>
@@ -9655,6 +9672,16 @@ function _renderPartsCart() {
   onPartsCartChange();
   fitPartsCartList();
 }
+
+// Cash received: tap bills (they add up), Exact (= the total) or Clear
+function _setPartsCash(v) {
+  v = Math.round((v || 0) * 100) / 100;
+  document.getElementById('parts-cash-received').value = v > 0 ? String(v) : '';
+  onPartsCartChange();
+}
+function addPartsCash(n) { _setPartsCash((parseFloat(document.getElementById('parts-cash-received').value) || 0) + n); }
+function setPartsCashExact() { _setPartsCash(_partsCart.reduce((s, i) => s + i.price * i.qty, 0)); }
+function clearPartsCash() { _setPartsCash(0); }
 
 function onPartsCartChange() {
   const btn  = document.getElementById('parts-process-btn');
