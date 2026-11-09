@@ -1684,6 +1684,40 @@ def require_admin_or_staff(f):
     return decorated
 
 
+def _dash_today_facts():
+    """What the Dashboard shows about right now: today's bookings and schedule, what is being worked on, who is waiting in the
+    walk-in line, claims waiting for the shop, and the parts that are out or low. One place, so the page and its live refresh agree."""
+    today = ph_now().date()
+    todays = (Booking.query.options(joinedload(Booking.customer))
+              .filter(Booking.date == today, Booking.status != 'cancelled', Booking.is_archived == False)
+              .order_by(Booking.time.asc(), Booking.id.asc()).all())
+    in_progress = (Booking.query.filter(Booking.status.in_(['inspection', 'in_progress', 'inprogress']), Booking.is_archived == False).count()
+                   + JobOrder.query.filter(JobOrder.status == 'in_progress').count())
+    try:
+        queue_waiting = len(_waiting_today())
+    except Exception:
+        queue_waiting = 0
+    low = Product.query.filter(Product.stock < 5).order_by(Product.stock.asc(), Product.name.asc()).all()
+    schedule = []
+    for b in todays[:8]:
+        schedule.append({
+            'id': b.id, 'ref': f'BKG-{b.id:03d}',
+            'time': b.time.strftime('%I:%M %p').lstrip('0') if b.time else '',
+            'customer': (b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown')) or 'Unknown',
+            'service': b.service[len('Back job — '):] if (b.service or '').startswith('Back job — ') else (b.service or ''),
+            'is_backjob': (b.service or '').startswith('Back job — '),
+            'mechanic': b.assigned_mechanic_name or '', 'status': b.status,
+        })
+    return {
+        'bookings_today': len(todays), 'bookings_today_done': sum(1 for b in todays if b.status == 'completed'),
+        'in_progress_now': in_progress, 'queue_waiting': queue_waiting,
+        'returns_waiting': ReturnRequest.query.filter(ReturnRequest.status.in_(['submitted', 'under_review'])).count(),
+        'stock_out': sum(1 for p in low if (p.stock or 0) <= 0), 'stock_low': sum(1 for p in low if (p.stock or 0) > 0),
+        'restock': [{'id': p.id, 'name': p.name, 'category': p.category, 'stock': int(p.stock or 0), 'price': float(p.price or 0)} for p in low[:6]],
+        'schedule': schedule, 'schedule_total': len(todays),
+    }
+
+
 @admin_app.route('/dashboard')
 @login_required
 @require_admin_or_staff
@@ -1792,6 +1826,7 @@ def admin_dashboard():
     return render_template('admin_dashboard.html',
         pending_billing_count=_pending_billing_count,
         billing_new_count=_billing_new_count(current_user),
+        dash=_dash_today_facts(),
         total_bookings=Booking.query.filter_by(is_archived=False).count(),
         total_orders=Order.query.filter_by(is_archived=False).filter(Order.items.any()).count(),
         total_users=User.query.count(),
@@ -2036,6 +2071,7 @@ def api_dashboard_stats():
         'pending_billing_count': _pending_billing_count,
         'billing_new_count': _billing_new_count(current_user),
         'recent_bookings': recent_bookings,
+        'dash': _dash_today_facts(),
     })
 
 

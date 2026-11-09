@@ -560,16 +560,38 @@
     .inv-out { background:#dc2626; } .inv-low { background:#f59e0b; } .inv-ok { background:#15803d; } .inv-all { background:#2563eb; }
     .inv-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; align-items:stretch; }
     .inv-grid > .card { margin-bottom:0; }
-    .dash-tabs { display:flex; gap:0.5rem; flex-wrap:wrap; margin:0 0 0.9rem; }
-    .dash-tab { height:34px; padding:0 1rem; border-radius:8px; border:1px solid var(--border); background:#fff; color:#6b7280; font-family:'Inter',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; cursor:pointer; transition:all 0.15s; }
-    .dash-tab:hover { color:var(--text); border-color:#d1d5db; }
-    .dash-tab.on { background:var(--red); border-color:var(--red); color:#fff; }
-    .dash-pane { display:none; }
-    .dash-pane.dash-on { display:block; }
-    .dash-pane[data-pane="bookings"].dash-on { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:1rem; align-items:start; }
-    .dash-pane[data-pane="bookings"] .card { margin-bottom:0; }
-    @media (max-width: 1100px) { .dash-pane[data-pane="bookings"].dash-on { grid-template-columns:1fr; } }
-    /* Dashboard on a computer: the browser page does not scroll. The numbers stay on top; the open tab scrolls inside itself. */
+    /* Reports & Sales: every row has the same two columns (wide + narrow), so the cards line up edge to edge and in height */
+    .rpt-row { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:1rem; margin-bottom:1rem; align-items:stretch; }
+    .rpt-row > .card { margin-bottom:0; min-width:0; display:flex; flex-direction:column; }
+    .rpt-row > .card > .card-body { flex:1; }
+    .rpt-row:last-child { margin-bottom:0; }
+    #sec-reports .stats-grid { grid-template-columns:repeat(4, minmax(0,1fr)); gap:0.9rem; margin-bottom:0.9rem; }
+    #sec-reports .stat-card { padding:0.8rem 1rem; }
+    #sec-reports .stat-card .stat-icon { width:34px; height:34px; margin-bottom:0.4rem; }
+    #sec-reports .stat-card .stat-value { font-size:1.55rem; }
+    @media (max-width: 1100px) { #sec-reports .stats-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .rpt-row { grid-template-columns:1fr; } }
+    /* Reports & Sales on a computer: the browser page does not scroll. The period and the four numbers stay on top; the rest scrolls inside itself. */
+    @media (min-width: 901px) {
+      body.rpt-lock { overflow:hidden; }
+      body.rpt-lock .admin-wrap { height:100vh; min-height:0; }
+      body.rpt-lock .main { height:100vh; box-sizing:border-box; overflow:hidden; display:flex; flex-direction:column; padding-bottom:1rem; }
+      body.rpt-lock #sec-reports.active { display:flex; flex-direction:column; flex:1; min-height:0; }
+      body.rpt-lock #sec-reports.active > * { flex-shrink:0; }
+      body.rpt-lock #sec-reports .page-header { margin-bottom:0.6rem; }
+      body.rpt-lock #sec-reports .rpt-body { flex:1 1 0; min-height:0; overflow-y:auto; padding:2px 4px 0.5rem 2px; }
+    }
+    /* Dashboard: four numbers on top, then Needs Attention next to Needs Restocking, then today's schedule */
+    .dash-two { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); gap:1rem; margin-bottom:1rem; align-items:stretch; }
+    .dash-two > .card { margin-bottom:0; }
+    @media (max-width: 1100px) { .dash-two { grid-template-columns:1fr; } }
+    #sec-dashboard .stat-card.clickable { cursor:pointer; transition:transform .12s, box-shadow .12s; }
+    #sec-dashboard .stat-card.clickable:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.1); }
+    #sec-dashboard .stat-sub { font-size:0.66rem; font-weight:500; color:var(--muted); text-transform:none; letter-spacing:0; margin-left:0.25rem; }
+    #sec-dashboard .dash-more { padding:0.7rem 1rem; border-top:1px solid var(--border); font-size:0.72rem; color:var(--muted); }
+    #sec-dashboard .dash-more a { color:var(--red); font-weight:700; cursor:pointer; }
+    #sec-dashboard .dash-table td, #sec-dashboard .dash-table th { vertical-align:middle; }
+    #sec-dashboard .dash-table tbody tr:hover { background:#f9fafb; }
+    /* Dashboard on a computer: the browser page does not scroll. The four numbers stay on top; the rest scrolls inside itself. */
     @media (min-width: 901px) {
       body.dash-lock { overflow:hidden; }
       body.dash-lock .admin-wrap { height:100vh; min-height:0; }
@@ -577,23 +599,14 @@
       body.dash-lock #sec-dashboard.active { display:flex; flex-direction:column; flex:1; min-height:0; }
       body.dash-lock #sec-dashboard.active > * { flex-shrink:0; }
       body.dash-lock #sec-dashboard .page-header { margin-bottom:0.6rem; }
-      body.dash-lock #sec-dashboard .stats-grid { margin-bottom:0.7rem; }
+      body.dash-lock #sec-dashboard .stats-grid { margin-bottom:0.8rem; }
       body.dash-lock #sec-dashboard .stat-card { padding:0.65rem 1rem; display:grid; grid-template-columns:auto 1fr; column-gap:0.9rem; align-items:center; }
       body.dash-lock #sec-dashboard .stat-card .stat-icon { grid-area:1 / 1 / span 2 / 2; margin:0; }
       body.dash-lock #sec-dashboard .stat-card .stat-value { grid-area:1 / 2; margin:0; line-height:1.1; }
       body.dash-lock #sec-dashboard .stat-card .stat-label { grid-area:2 / 2; margin:0; }
-      body.dash-lock #sec-dashboard .inv-head { margin-bottom:0.4rem; }
-      body.dash-lock #sec-dashboard .inv-cards { margin-bottom:0.7rem; gap:0.75rem; }
-      body.dash-lock #sec-dashboard .inv-card { padding:0.6rem 0.95rem; }
-      body.dash-lock #sec-dashboard .inv-card .ic-count { font-size:1.5rem; margin:0.15rem 0; }
-      body.dash-lock #sec-dashboard .inv-card .ic-bar { margin-top:0.35rem; }
-      body.dash-lock #sec-dashboard .dash-tabs { margin-bottom:0.6rem; }
-      body.dash-lock #sec-dashboard .dash-pane.dash-on { flex:1 1 0; min-height:0; overflow-y:auto; padding:2px 4px 0.5rem 2px; }
-      body.dash-lock #sec-dashboard .pending-box { padding:0.45rem 0.9rem; margin-bottom:0.45rem; }
+      body.dash-lock #sec-dashboard .dash-body { flex:1 1 0; min-height:0; overflow-y:auto; padding:2px 4px 0.5rem 2px; }
+      body.dash-lock #sec-dashboard .pending-box { padding:0.5rem 0.9rem; margin-bottom:0.5rem; }
       body.dash-lock #sec-dashboard #pending-actions-body { padding:0.7rem 0.9rem; }
-      body.dash-lock #sec-dashboard .inv-grid > .card > .card-body { padding-top:0.7rem; padding-bottom:0.7rem; }
-      body.dash-lock #sec-dashboard .inv-donut-wrap { width:120px; height:120px; margin-bottom:0.5rem; }
-      body.dash-lock #sec-dashboard .inv-donut-wrap svg { width:120px; height:120px; }
     }
     /* the category list is shown 10 at a time, with Previous / Next, so the page never stretches */
     .inv-pager { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; margin-top:0.9rem; padding-top:0.8rem; border-top:1px solid var(--border); font-size:0.76rem; color:var(--muted); }
@@ -1062,14 +1075,6 @@
         </div>
       </div>
       <div class="stats-grid">
-        <div class="stat-card red">
-          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-          <div class="stat-value" id="stat-total-bookings">{{ total_bookings }}</div><div class="stat-label">Total Bookings</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
-          <div class="stat-value" id="stat-total-orders">{{ total_orders }}</div><div class="stat-label">Total Orders</div>
-        </div>
         <div class="stat-card green">
           <div class="stat-icon" style="font-size:20px;font-weight:700;line-height:1;">₱</div>
           <div class="stat-value" id="stat-total-revenue">₱{{ total_revenue }}</div>
@@ -1083,187 +1088,106 @@
             </select>
           </div>
         </div>
-        <div class="stat-card orange">
+        <div class="stat-card red clickable" onclick="goToSection('day-schedule')" title="Open the Day Schedule">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="stat-value" id="stat-bookings-today">{{ dash.bookings_today }}</div>
+          <div class="stat-label">Bookings Today <span class="stat-sub" id="stat-bookings-today-sub">{{ dash.bookings_today_done }} done</span></div>
+        </div>
+        <div class="stat-card blue clickable" onclick="goToBookingsTab('inprogress')" title="Open the bookings being worked on">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+          <div class="stat-value" id="stat-in-progress">{{ dash.in_progress_now }}</div>
+          <div class="stat-label">In Progress <span class="stat-sub">right now</span></div>
+        </div>
+        <div class="stat-card orange clickable" onclick="goToSection('walkqueue')" title="Open the Walk-In Queue">
           <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-          <div class="stat-value" id="stat-total-users">{{ total_users }}</div><div class="stat-label">Registered Users</div>
+          <div class="stat-value" id="stat-queue">{{ dash.queue_waiting }}</div>
+          <div class="stat-label">Walk-In Queue <span class="stat-sub">waiting</span></div>
         </div>
       </div>
-      {# ── INVENTORY ── low = 4 or fewer left, same rule as Manage Products ── #}
-      {% set inv_total = all_products|length %}
-      {% set inv_out = all_products|selectattr('stock','le',0)|list|length %}
-      {% set inv_low = all_products|selectattr('stock','gt',0)|selectattr('stock','lt',5)|list|length %}
-      {% set inv_ok  = inv_total - inv_out - inv_low %}
-      {% set inv_cats = all_products|groupby('category') %}
-      {% set inv_cat_counts = {} %}
-      {% for cname, items in inv_cats %}
-        {% set co = items|selectattr('stock','le',0)|list|length %}
-        {% set cl = items|selectattr('stock','gt',0)|selectattr('stock','lt',5)|list|length %}
-        {% set _u = inv_cat_counts.update({ (cname or ''): [co, cl, items|length - co - cl, items|length] }) %}
-      {% endfor %}
-      <div class="inv-head">
-        <div><h4>Inventory</h4><div class="inv-sub" id="inv-sub">{{ inv_total }} products. Low stock means 4 or fewer left.</div></div>
-        <div style="display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;">
-          <select id="inv-cat-select" onchange="setInvCategory(this.value)" title="Show the numbers of one category"
-            style="padding:0.4rem 0.7rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-family:inherit;font-size:0.78rem;font-weight:600;max-width:240px;">
-            <option value="">All categories ({{ inv_cats|length }})</option>
-            {% for cname, items in inv_cats %}<option value="{{ (cname or '')|e }}">{{ cname or 'Uncategorized' }} ({{ items|length }})</option>{% endfor %}
-          </select>
-          <a onclick="goToSection('products')">Manage products</a>
-        </div>
-      </div>
-      {# per category: [out of stock, low stock, in stock, total] (the cards and the donut follow the picked category) #}
-      <script>
-        const INV_BY_CAT = {{ inv_cat_counts|tojson }};
-        const INV_ALL = [{{ inv_out }}, {{ inv_low }}, {{ inv_ok }}, {{ inv_total }}];
-        const INV_CAT_COUNT = {{ inv_cats|length }};
-      </script>
-      <div class="inv-cards">
-        {% for key, cls, label, n in [('out','inv-out','Out of stock',inv_out),('low','inv-low','Low stock',inv_low),('in','inv-ok','In stock',inv_ok),('all','inv-all','Total products',inv_total)] %}
-        {% set pct = ((n / inv_total * 100)|round|int) if inv_total else 0 %}
-        <button type="button" class="inv-card {{ cls }}" onclick="openProductsFiltered('{{ key }}')">
-          <div class="ic-label">{{ label }}</div>
-          <div class="ic-count" id="inv-count-{{ key }}">{{ n }}</div>
-          <div class="ic-pct" id="inv-pct-{{ key }}">{% if key == 'all' %}in {{ inv_cats|length }} categor{{ 'y' if inv_cats|length == 1 else 'ies' }}{% else %}{{ pct }}% of products{% endif %}</div>
-          <div class="ic-bar"><div id="inv-bar-{{ key }}" style="width:{{ pct if key != 'all' else 100 }}%;"></div></div>
-        </button>
-        {% endfor %}
-      </div>
-      <div class="dash-tabs" id="dash-tabs">
-        <button type="button" class="dash-tab on" data-pane="stock" onclick="setDashPane('stock')">Stock &amp; Actions</button>
-        <button type="button" class="dash-tab" data-pane="restock" onclick="setDashPane('restock')">Needs Restocking</button>
-        <button type="button" class="dash-tab" data-pane="bookings" onclick="setDashPane('bookings')">Bookings</button>
-      </div>
-      <div class="dash-pane dash-on" data-pane="stock">
-      <div class="inv-grid">
+      <div class="dash-body">
+      <div class="dash-two">
         <div class="card">
-          <div class="card-head"><h5>Stock Status</h5></div>
-          <div class="card-body">
-            {% set circ = 251.33 %}
-            <div class="inv-donut-wrap">
-              <svg id="inv-donut" viewBox="0 0 100 100" width="170" height="170" style="transform:rotate(-90deg);">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" stroke-width="16"/>
-                {% set off = namespace(v=0) %}
-                {% for n, col in [(inv_out,'#dc2626'),(inv_low,'#f59e0b'),(inv_ok,'#15803d')] if n and inv_total %}
-                  {% set seg = n / inv_total * circ %}
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ col }}" stroke-width="16" stroke-dasharray="{{ seg }} {{ circ - seg }}" stroke-dashoffset="{{ -off.v }}"/>
-                  {% set off.v = off.v + seg %}
-                {% endfor %}
-              </svg>
-              <div class="donut-mid"><b id="inv-donut-total">{{ inv_total }}</b><span>products</span></div>
-            </div>
-            {% for n, col, label, k in [(inv_out,'#dc2626','Out of stock','out'),(inv_low,'#f59e0b','Low stock','low'),(inv_ok,'#15803d','In stock','in')] %}
-            <div class="inv-status-row" style="--c:{{ col }};"><span class="sr-name">{{ label }}</span><span><b id="inv-row-{{ k }}">{{ n }}</b> &nbsp;<span id="inv-row-{{ k }}-pct" style="color:var(--muted);">{{ ((n / inv_total * 100)|round|int) if inv_total else 0 }}%</span></span></div>
-            {% endfor %}
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h5>Pending Actions</h5></div>
+          <div class="card-head"><h5>Needs Attention</h5><span style="font-size:0.7rem;color:var(--muted);">Click a row to open it</span></div>
           <div class="card-body" id="pending-actions-body">
+            <div class="pending-box{% if pending_billing_count > 0 %} amber-highlight{% endif %}" id="pending-box-billing" onclick="goToSection('billing')">
+              <div><span>To collect in Billing</span><div class="pending-sub">Payments waiting at the counter</div></div>
+              <span class="pending-num" id="pending-num-billing" style="color:#15803d;">{{ pending_billing_count }}</span>
+            </div>
             <div class="pending-box{% if awaiting_quotation_count > 0 %} amber-highlight{% endif %}" id="pending-box-quotation" onclick="goToSection('inspection'); setInspFilter('waiting')">
               <div><span>Awaiting Quotation Answer</span><div class="pending-sub">Quotations sent, waiting for the customer</div></div>
               <span class="pending-num" id="pending-num-quotation" style="color:#b45309;">{{ awaiting_quotation_count }}</span>
             </div>
-            <div class="pending-box" onclick="goToBookingsTab('inprogress')">
-              <span>In Progress Bookings</span><span class="pending-num" id="pending-num-inprogress" style="color:var(--warning);">{{ booking_status_counts.get('in_progress', 0) }}</span>
+            <div class="pending-box{% if dash.returns_waiting > 0 %} amber-highlight{% endif %}" id="pending-box-returns" onclick="goToSection('returns')">
+              <div><span>Returns to Review</span><div class="pending-sub">Claims waiting for the shop</div></div>
+              <span class="pending-num" id="pending-num-returns" style="color:#b91c1c;">{{ dash.returns_waiting }}</span>
             </div>
-            <div class="pending-box" onclick="goToSection('orders')">
-              <span>Pending Orders</span><span class="pending-num" id="pending-num-orders" style="color:var(--blue);">{{ order_status_counts.get('pending', 0) }}</span>
-            </div>
-            <div class="pending-box" onclick="goToSection('users')">
-              <span>New Users Today</span><span class="pending-num" id="pending-num-users" style="color:var(--green);">{{ new_users_today }}</span>
+            <div class="pending-box" id="pending-box-orders" onclick="goToSection('orders')">
+              <div><span>Pending Orders</span><div class="pending-sub">Online orders not yet handled</div></div>
+              <span class="pending-num" id="pending-num-orders" style="color:var(--blue);">{{ order_status_counts.get('pending', 0) }}</span>
             </div>
           </div>
         </div>
-      </div>
-      </div>{# /pane stock #}
-      <div class="dash-pane" data-pane="restock">
-      {% set restock_all = all_products|selectattr('stock','lt',5)|sort(attribute='stock')|list %}
-      <div class="card" style="margin-bottom:1rem;">
-        <div class="card-head"><h5>Needs Restocking</h5><span style="font-size:0.7rem;color:var(--muted);">Out of stock first, then lowest stock</span></div>
-        {% if restock_all %}
-        <div class="inv-restock-row head"><span>Product</span><span>Stock</span><span>Price</span><span></span></div>
-        {% for p in restock_all[:8] %}
-        <div class="inv-restock-row">
-          <div><div class="p-name">{{ p.name }}</div><div class="p-cat">{{ p.category }}</div></div>
-          <div>{% if p.stock <= 0 %}<span class="stock-label stock-label-out">Out of stock</span>{% else %}<span class="stock-label stock-label-low">{{ p.stock }} left</span>{% endif %}</div>
-          <div>₱{{ '{:,.2f}'.format(p.price) }}</div>
-          <div><button type="button" class="btn-restock" onclick="restockProduct({{ p.id }})">Restock</button></div>
-        </div>
-        {% endfor %}
-        <div style="padding:0.7rem 1rem;border-top:1px solid var(--border);font-size:0.72rem;color:var(--muted);">Showing {{ [restock_all|length, 8]|min }} of {{ restock_all|length }}. <a onclick="openProductsFiltered('low')" style="color:var(--red);font-weight:700;cursor:pointer;">View all in Manage Products</a></div>
-        {% else %}
-        <div class="empty-state"><p>Every product is well stocked.</p></div>
-        {% endif %}
-      </div>
-      </div>{# /pane restock #}
-      <div class="dash-pane" data-pane="bookings">
-      <div class="charts-grid" style="grid-template-columns:1fr;">
         <div class="card">
           <div class="card-head">
-            <h5>Bookings by Status</h5>
-            <span style="font-size:0.7rem;color:var(--muted);">Click a status to open it in Manage Bookings</span>
+            <h5>Needs Restocking</h5>
+            <span style="font-size:0.7rem;color:var(--muted);"><b id="dash-stock-out" style="color:#b91c1c;">{{ dash.stock_out }}</b> out of stock · <b id="dash-stock-low" style="color:#b45309;">{{ dash.stock_low }}</b> low</span>
           </div>
-          <div class="card-body">
-            <div class="chart-bar-wrap" id="booking-status-chart">
-              {% set booking_statuses = [('confirmed','Confirmed','bk-bar-confirmed','confirmed'),('in_progress','In Progress','bk-bar-inprogress','inprogress'),('completed','Completed','bk-bar-completed','completed'),('cancelled','Cancelled','bk-bar-cancelled','cancelled')] %}
-              {% for status, label, cls, tab in booking_statuses %}
-                {% set count = booking_status_counts.get(status, 0) %}
-                {% set pct = ((count / total_bookings * 100)|int) if total_bookings > 0 else 0 %}
-                <div class="chart-bar-item clickable" data-status="{{ status }}" onclick="goToBookingsTab('{{ tab }}')">
-                  <span class="bar-label"><span class="bk-dot {{ cls }}"></span>{{ label }}</span>
-                  <div class="chart-bar-track"><div class="chart-bar-fill {{ cls }}" data-width="{{ pct }}" id="bk-bar-{{ status }}"></div></div>
-                  <span class="bar-val" id="bk-count-{{ status }}">{{ count }}</span>
-                </div>
-              {% endfor %}
+          <div id="dash-restock-wrap">
+            {% if dash.restock %}
+            <div class="inv-restock-row head"><span>Product</span><span>Stock</span><span>Price</span><span></span></div>
+            {% for p in dash.restock %}
+            <div class="inv-restock-row">
+              <div><div class="p-name">{{ p.name }}</div><div class="p-cat">{{ p.category }}</div></div>
+              <div>{% if p.stock <= 0 %}<span class="stock-label stock-label-out">Out of stock</span>{% else %}<span class="stock-label stock-label-low">{{ p.stock }} left</span>{% endif %}</div>
+              <div>₱{{ '{:,.2f}'.format(p.price) }}</div>
+              <div><button type="button" class="btn-restock" onclick="restockProduct({{ p.id }})">Restock</button></div>
             </div>
+            {% endfor %}
+            {% if dash.stock_out + dash.stock_low > dash.restock|length %}
+            <div class="dash-more">Showing {{ dash.restock|length }} of {{ dash.stock_out + dash.stock_low }}. <a onclick="openProductsFiltered('low')">View all in Manage Products</a></div>
+            {% endif %}
+            {% else %}
+            <div class="empty-state"><p>Every product is well stocked.</p></div>
+            {% endif %}
           </div>
         </div>
       </div>
-      <div class="card">
+      {% set bk_status_colors = {
+        'confirmed':  {'bg': '#eff6ff', 'fg': '#1d4ed8'},
+        'inspection': {'bg': '#fffbeb', 'fg': '#92400e'},
+        'in_progress':{'bg': '#fff7ed', 'fg': '#c2410c'},
+        'inprogress': {'bg': '#fff7ed', 'fg': '#c2410c'},
+        'completed':  {'bg': '#f0fdf4', 'fg': '#15803d'},
+      } %}
+      <div class="card" style="margin-bottom:0;">
         <div class="card-head">
-          <h5>Recent Bookings</h5>
-          <button class="btn-primary-custom" onclick="goToSection('bookings')">View All</button>
+          <h5>Today's Schedule</h5>
+          <button class="btn-primary-custom" onclick="goToSection('day-schedule')">Open Day Schedule</button>
         </div>
-        {% set bk_status_colors = {
-          'confirmed':  {'bg': '#eff6ff', 'fg': '#1d4ed8'},
-          'inspection': {'bg': '#fffbeb', 'fg': '#92400e'},
-          'in_progress':{'bg': '#fff7ed', 'fg': '#c2410c'},
-          'inprogress': {'bg': '#fff7ed', 'fg': '#c2410c'},
-          'completed':  {'bg': '#f0fdf4', 'fg': '#15803d'},
-          'cancelled':  {'bg': '#fef2f2', 'fg': '#b91c1c'},
-        } %}
-        {% if recent_bookings %}
-        <div style="overflow-x:auto;" id="recent-bookings-wrap">
-          <table class="table">
-            <thead><tr><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+        <div id="dash-today-wrap">
+          {% if dash.schedule %}
+          <table class="table dash-table">
+            <thead><tr><th style="width:90px;">Time</th><th>Customer</th><th>Service</th><th>Mechanic</th><th style="width:150px;">Status</th></tr></thead>
             <tbody>
-              {% for b in recent_bookings %}
+              {% for b in dash.schedule %}
               {% set sc = bk_status_colors.get(b.status, {'bg':'#f3f4f6','fg':'#4b5563'}) %}
-              <tr>
-                <td>
-                  {{ b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown') }}
-                  <div class="pending-sub">BKG-{{ '%03d'|format(b.id) }}</div>
-                </td>
-                <td>
-                  {% if b.service.startswith('Back job — ') %}{{ b.service[11:] }}<span class="backjob-tag">Back job</span>{% else %}{{ b.service }}{% endif %}
-                </td>
-                <td>{{ b.date.strftime('%b %d, %Y') }}</td>
-                <td>{{ b.time.strftime('%I:%M %p') }}</td>
-                <td>
-                  <span class="badge" style="background:{{ sc.bg }};color:{{ sc.fg }};border:1px solid {{ sc.fg }}33;">
-                    {% if b.status == 'inspection' and b.quotation and b.quotation.status == 'awaiting_customer' %}Inspection &amp; Estimation · Quotation sent{% else %}{{ b.status|replace('_',' ')|title }}{% endif %}
-                  </span>
-                </td>
+              <tr onclick="goToSection('day-schedule')" style="cursor:pointer;">
+                <td><b>{{ b.time }}</b></td>
+                <td>{{ b.customer }}<div class="pending-sub">{{ b.ref }}</div></td>
+                <td>{{ b.service }}{% if b.is_backjob %}<span class="backjob-tag">Back job</span>{% endif %}</td>
+                <td>{% if b.mechanic %}{{ b.mechanic }}{% else %}<span style="color:var(--muted);">Not assigned</span>{% endif %}</td>
+                <td><span class="badge" style="background:{{ sc.bg }};color:{{ sc.fg }};border:1px solid {{ sc.fg }}33;">{{ b.status|replace('_',' ')|title }}</span></td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
+          {% if dash.schedule_total > dash.schedule|length %}<div class="dash-more">Showing {{ dash.schedule|length }} of {{ dash.schedule_total }} bookings today. <a onclick="goToSection('day-schedule')">See all in the Day Schedule</a></div>{% endif %}
+          {% else %}
+          <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings today.</p></div>
+          {% endif %}
         </div>
-        {% else %}
-        <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings yet.</p></div>
-        {% endif %}
       </div>
-      </div>{# /pane bookings #}
+      </div>{# /dash-body #}
     </section>
 
     <!-- BOOKINGS -->
@@ -2471,7 +2395,7 @@
           <div class="page-sub">Overview of revenue, services, and order performance.</div>
         </div>
       </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <div class="rpt-period" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:0.65rem 1.1rem;margin-bottom:0.9rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;">
         <div style="font-family:inherit;font-weight:700;font-size:0.88rem;color:var(--text);margin-right:0.5rem;">Report Period</div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <label style="font-size:0.78rem;color:var(--muted);font-family:inherit;font-weight:600;">From</label>
@@ -2511,7 +2435,8 @@
           <div style="font-size:0.68rem;color:var(--muted);">Collected, before refunds</div>
         </div>
       </div>
-      <div class="charts-grid">
+      <div class="rpt-body">
+      <div class="rpt-row">
         <div class="card">
           <div class="card-head">
             <h5>Revenue Trend</h5>
@@ -2545,7 +2470,7 @@
           </div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:1rem;align-items:start;">
+      <div class="rpt-row">
         <div class="card">
           <div class="card-head">
             <h5>Recent Transactions Log</h5>
@@ -2563,7 +2488,7 @@
           </div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start;margin-top:1rem;">
+      <div class="rpt-row">
         <div class="card">
           <div class="card-head">
             <h5>Mechanic Performance</h5>
@@ -2636,6 +2561,7 @@
           <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Includes online orders, in-store sales, and parts used in bookings and job orders. Refunded items are excluded. Sales of the same product are added together, even if the product was renamed.</div>
         </div>
       </div>
+      </div>{# /rpt-body #}
     </section>
 
     <!-- Billing, Quotations and Walk-In live inside the dashboard: each one is loaded into its frame the first time it is opened -->
@@ -4156,6 +4082,7 @@
     document.body.classList.toggle('parts-lock', name === 'parts');
     document.body.classList.toggle('ds-lock', name === 'day-schedule');
     document.body.classList.toggle('dash-lock', name === 'dashboard');
+    document.body.classList.toggle('rpt-lock', name === 'reports');
     document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products', 'bookings', 'returns', 'archive'].includes(name));
     openSidebarGroupOfActive();
     document.body.classList.toggle('embed-lock', !!EMBEDS[name]);
@@ -7887,37 +7814,7 @@
     if (input) { input.focus(); input.select(); }
   }
 
-  // The lower part of the dashboard: one tab at a time (Stock & Actions, Needs Restocking, Bookings).
-  function setDashPane(k) {
-    window._dashPane = k;
-    document.querySelectorAll('#dash-tabs .dash-tab').forEach(t => t.classList.toggle('on', t.dataset.pane === k));
-    document.querySelectorAll('#sec-dashboard .dash-pane').forEach(p => p.classList.toggle('dash-on', p.dataset.pane === k));
-  }
   document.body.classList.toggle('dash-lock', !!document.querySelector('#sec-dashboard.active'));
-
-  // Inventory category picker: the four cards and the Stock Status donut show the numbers of the chosen category.
-  let invCategory = '';
-  function setInvCategory(cat) {
-    invCategory = cat;
-    const c = cat ? (INV_BY_CAT[cat] || [0, 0, 0, 0]) : null;
-    const out = c ? c[0] : INV_ALL[0], low = c ? c[1] : INV_ALL[1], ok = c ? c[2] : INV_ALL[2], total = c ? c[3] : INV_ALL[3];
-    const pct = n => total ? Math.round(n / total * 100) : 0;
-    [['out', out], ['low', low], ['in', ok]].forEach(([k, n]) => {
-      document.getElementById('inv-count-' + k).textContent = n;
-      document.getElementById('inv-pct-' + k).textContent = pct(n) + '% of products';
-      document.getElementById('inv-bar-' + k).style.width = pct(n) + '%';
-      document.getElementById('inv-row-' + k).textContent = n;
-      document.getElementById('inv-row-' + k + '-pct').textContent = pct(n) + '%';
-    });
-    document.getElementById('inv-count-all').textContent = total;
-    document.getElementById('inv-pct-all').textContent = cat ? 'in this category' : 'in ' + INV_CAT_COUNT + ' categor' + (INV_CAT_COUNT === 1 ? 'y' : 'ies');
-    document.getElementById('inv-sub').textContent = total + ' product' + (total === 1 ? '' : 's') + (cat ? ' in ' + (cat || 'Uncategorized') : '') + '. Low stock means 4 or fewer left.';
-    document.getElementById('inv-donut-total').textContent = total;
-    const circ = 251.33; let off = 0;
-    const segs = [[out, '#dc2626'], [low, '#f59e0b'], [ok, '#15803d']].filter(x => x[0] && total);
-    document.getElementById('inv-donut').innerHTML = '<circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" stroke-width="16"/>' +
-      segs.map(([n, col]) => { const seg = n / total * circ; const h = `<circle cx="50" cy="50" r="40" fill="none" stroke="${col}" stroke-width="16" stroke-dasharray="${seg} ${circ - seg}" stroke-dashoffset="${-off}"/>`; off += seg; return h; }).join('');
-  }
 
   function setStockFilter(f) {
     productStockFilter = (productStockFilter === f && f !== 'all') ? 'all' : f;
@@ -10072,60 +9969,73 @@ async function refreshDashboardOverview() {
     if (!res.ok) return;
     const d = await res.json();
 
-    _setStatText('stat-total-bookings', String(d.total_bookings));
-    _setStatText('stat-total-orders', String(d.total_orders));
     _setStatText('stat-total-revenue', '₱' + d.total_revenue);
-    _setStatText('stat-total-users', String(d.total_users));
+    const dd = d.dash || {};
+    _setStatText('stat-bookings-today', String(dd.bookings_today || 0));
+    _setStatText('stat-in-progress', String(dd.in_progress_now || 0));
+    _setStatText('stat-queue', String(dd.queue_waiting || 0));
+    const sub = document.getElementById('stat-bookings-today-sub');
+    if (sub) sub.textContent = (dd.bookings_today_done || 0) + ' done';
 
-    const counts = d.booking_status_counts || {};
-    const total = d.total_bookings || 0;
-    ['confirmed', 'in_progress', 'completed', 'cancelled'].forEach(status => {
-      const count = counts[status] || 0;
-      const pct = total > 0 ? Math.floor(count / total * 100) : 0;
-      const bar = document.getElementById('bk-bar-' + status);
-      if (bar) bar.style.width = pct + '%';
-      const countEl = document.getElementById('bk-count-' + status);
-      if (countEl) countEl.textContent = count;
-    });
-
-    const qBox = document.getElementById('pending-box-quotation');
-    if (qBox) qBox.classList.toggle('amber-highlight', d.awaiting_quotation_count > 0);
-    const qNum = document.getElementById('pending-num-quotation');
-    if (qNum) qNum.textContent = d.awaiting_quotation_count;
-    const ipNum = document.getElementById('pending-num-inprogress');
-    if (ipNum) ipNum.textContent = counts.in_progress || 0;
+    // "Needs Attention": the number on each row, and the row lights up while there is something to do
+    const attn = (rowId, numId, n) => {
+      const box = document.getElementById(rowId), num = document.getElementById(numId);
+      if (num) num.textContent = n;
+      if (box) box.classList.toggle('amber-highlight', n > 0);
+    };
+    attn('pending-box-billing', 'pending-num-billing', d.pending_billing_count || 0);
+    attn('pending-box-quotation', 'pending-num-quotation', d.awaiting_quotation_count || 0);
+    attn('pending-box-returns', 'pending-num-returns', dd.returns_waiting || 0);
     const ordNum = document.getElementById('pending-num-orders');
     if (ordNum) ordNum.textContent = (d.order_status_counts || {}).pending || 0;
-    const usrNum = document.getElementById('pending-num-users');
-    if (usrNum) usrNum.textContent = d.new_users_today;
 
-    _renderRecentBookings(d.recent_bookings || []);
+    _renderDashRestock(dd);
+    _renderDashToday(dd);
   } catch (e) { /* quiet — next tick will retry */ }
 }
 
-function _renderRecentBookings(rows) {
-  const wrap = document.getElementById('recent-bookings-wrap');
+const _dEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function _renderDashRestock(dd) {
+  const so = document.getElementById('dash-stock-out'), sl = document.getElementById('dash-stock-low');
+  if (so) so.textContent = dd.stock_out || 0;
+  if (sl) sl.textContent = dd.stock_low || 0;
+  const wrap = document.getElementById('dash-restock-wrap');
   if (!wrap) return;
+  const rows = dd.restock || [], total = (dd.stock_out || 0) + (dd.stock_low || 0);
+  if (!rows.length) { wrap.innerHTML = '<div class="empty-state"><p>Every product is well stocked.</p></div>'; return; }
+  wrap.innerHTML = '<div class="inv-restock-row head"><span>Product</span><span>Stock</span><span>Price</span><span></span></div>' + rows.map(p => `
+    <div class="inv-restock-row">
+      <div><div class="p-name">${_dEsc(p.name)}</div><div class="p-cat">${_dEsc(p.category)}</div></div>
+      <div>${p.stock <= 0 ? '<span class="stock-label stock-label-out">Out of stock</span>' : `<span class="stock-label stock-label-low">${p.stock} left</span>`}</div>
+      <div>₱${Number(p.price).toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
+      <div><button type="button" class="btn-restock" onclick="restockProduct(${p.id})">Restock</button></div>
+    </div>`).join('') + (total > rows.length ? `<div class="dash-more">Showing ${rows.length} of ${total}. <a onclick="openProductsFiltered('low')">View all in Manage Products</a></div>` : '');
+}
+
+function _renderDashToday(dd) {
+  const wrap = document.getElementById('dash-today-wrap');
+  if (!wrap) return;
+  const rows = dd.schedule || [];
   if (!rows.length) {
-    wrap.outerHTML = '<div class="empty-state" id="recent-bookings-wrap"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings yet.</p></div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No bookings today.</p></div>';
     return;
   }
-  const bodyRows = rows.map(b => {
+  const body = rows.map(b => {
     const sc = BK_STATUS_COLORS[b.status] || { bg: '#f3f4f6', fg: '#4b5563' };   // an unknown status stays neutral, never red
-    const label = b.awaiting_quotation ? 'Inspection &amp; Estimation · Quotation sent'
-      : (b.status || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    return `<tr>
-      <td>${b.customer}<div class="pending-sub">${b.ref}</div></td>
-      <td>${b.service}${b.is_backjob ? '<span class="backjob-tag">Back job</span>' : ''}</td>
-      <td>${b.date}</td>
-      <td>${b.time}</td>
+    const label = (b.status || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return `<tr onclick="goToSection('day-schedule')" style="cursor:pointer;">
+      <td><b>${_dEsc(b.time)}</b></td>
+      <td>${_dEsc(b.customer)}<div class="pending-sub">${_dEsc(b.ref)}</div></td>
+      <td>${_dEsc(b.service)}${b.is_backjob ? '<span class="backjob-tag">Back job</span>' : ''}</td>
+      <td>${b.mechanic ? _dEsc(b.mechanic) : '<span style="color:var(--muted);">Not assigned</span>'}</td>
       <td><span class="badge" style="background:${sc.bg};color:${sc.fg};border:1px solid ${sc.fg}33;">${label}</span></td>
     </tr>`;
   }).join('');
-  wrap.innerHTML = `<table class="table">
-    <thead><tr><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
-    <tbody>${bodyRows}</tbody>
-  </table>`;
+  const total = dd.schedule_total || rows.length;
+  wrap.innerHTML = `<table class="table dash-table">
+    <thead><tr><th style="width:90px;">Time</th><th>Customer</th><th>Service</th><th>Mechanic</th><th style="width:150px;">Status</th></tr></thead>
+    <tbody>${body}</tbody></table>` + (total > rows.length ? `<div class="dash-more">Showing ${rows.length} of ${total} bookings today. <a onclick="goToSection('day-schedule')">See all in the Day Schedule</a></div>` : '');
 }
 
 setInterval(() => { const d = document.getElementById('sec-dashboard'); if (!document.hidden && d && d.classList.contains('active')) refreshDashboardOverview(); }, 60000);
@@ -10293,7 +10203,7 @@ function _renderRptTrend(tr) {
     body.innerHTML = '<div class="empty-state"><p>No sales in this period.</p></div>';
     return;
   }
-  const W = 640, H = 230, L = 52, R = 14, T = 14, B = 30;
+  const W = 640, H = 200, L = 52, R = 14, T = 12, B = 28;
   const max = Math.max.apply(null, pts.map(p => p.amount).concat([1]));
   const niceMax = (() => { const e = Math.pow(10, Math.floor(Math.log10(max))); const m = Math.ceil(max / e); return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * e; })();
   const x = i => L + (pts.length === 1 ? (W - L - R) / 2 : i * (W - L - R) / (pts.length - 1));
@@ -10314,7 +10224,7 @@ function _renderRptTrend(tr) {
   const line = pts.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.amount).toFixed(1)).join(' ');
   const area = line + ` L${x(pts.length - 1).toFixed(1)} ${y(0)} L${x(0).toFixed(1)} ${y(0)} Z`;
   const dots = pts.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.amount).toFixed(1)}" r="${pts.length > 31 ? 2 : 3.2}" fill="#dc2626"><title>${p.label}: ₱${Number(p.amount).toLocaleString('en-PH', {minimumFractionDigits:2})}</title></circle>`).join('');
-  body.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-height:260px;" role="img" aria-label="Net revenue over time">${grid}${xl}<path d="${area}" fill="rgba(220,38,38,0.08)"/><path d="${line}" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
+  body.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-height:200px;" role="img" aria-label="Net revenue over time">${grid}${xl}<path d="${area}" fill="rgba(220,38,38,0.08)"/><path d="${line}" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
 }
 
 function _applyReportsData(d) {
