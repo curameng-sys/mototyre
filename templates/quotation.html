@@ -906,7 +906,7 @@
       const _stk = (!item.locked && item.product_id) ? stockOfProduct(item.product_id) : Infinity;
       const _used = (!item.locked && item.product_id) ? qtyInQuote(item.product_id, -1) : 0;
       const _atMax = _stk !== Infinity && _used >= _stk, _over = _stk !== Infinity && _used > _stk;
-      const _hint = _over ? `<span class="stk-hint over">Only ${_stk} left. Lower the amount.</span>` : (_atMax ? `<span class="stk-hint">Max reached (${_stk} in stock)</span>` : '');
+      const _hint = _over ? `<span class="stk-hint over">Only ${_stk} left. Lower the amount.</span>` : (_atMax ? `<span class="stk-hint">Max reached</span>` : '');
       return `<div class="q-item${_over ? ' limit-over' : ''}" data-pid="${item.product_id || ''}">
         <div class="ci-icon material">${ICON_BOX}</div>
         <div class="ci-info">

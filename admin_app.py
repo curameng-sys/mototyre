@@ -1853,6 +1853,7 @@ def _live_signature_payload():
     """The "what changed" fingerprint for the admin pages: one short hash per area, plus the booking-tab badge counts.
     Everything in it is shop-wide (not per user), so one computation serves every connected admin / staff page."""
     import hashlib
+    process_late_bookings()                  # the live check is what keeps the grace time running while staff are at the counter
 
     def fp(rows):
         return hashlib.md5(repr([tuple(str(c) for c in r) for r in rows]).encode()).hexdigest()
@@ -3926,7 +3927,7 @@ def _cancel_note(b):
 admin_app.jinja_env.globals['cancel_note'] = _cancel_note
 
 
-NO_SHOW_GRACE_MIN = 15          # a confirmed booking that has not started this many minutes after its time can be marked a no-show
+NO_SHOW_GRACE_MIN = 30          # the grace period: a Confirmed booking not started this many minutes after its time is a no-show and joins the walk-in line
 
 
 def _minutes_late(b):
@@ -3944,6 +3945,95 @@ def _no_show_count(user_id):
     return Booking.query.filter(Booking.user_id == user_id, Booking.no_show == True).count()
 
 
+def _apply_no_show(booking, to_queue=False, queue_at=None):
+    """Cancels a still-Confirmed booking as a no-show (the mechanic's time is free again), keeps it on record, optionally writes the
+    customer into the walk-in line, and tells them. Claims the booking in one UPDATE, so two requests at once can only do it once.
+    Returns (no_show_count, emailed), or None if somebody else already did it."""
+    try:
+        _q_before = _queue_day_numbers(booking.date)
+    except Exception:
+        _q_before = None
+    claimed = Booking.query.filter(Booking.id == booking.id, Booking.status == 'confirmed').update(
+        {Booking.status: 'cancelled', Booking.cancelled_at: ph_now(), Booking.cancelled_by: 'shop',
+         Booking.cancel_reason: 'No-show', Booking.no_show: True}, synchronize_session=False)
+    if not claimed:
+        db.session.rollback()
+        return None
+    if to_queue:
+        _put_in_walkin_line(booking, queue_at)
+    db.session.commit()
+    db.session.refresh(booking)
+    if _q_before is not None:
+        _notify_queue_moved(booking.date, _q_before)
+    ref = f'BKG-{booking.id:03d}'
+    n = _no_show_count(booking.user_id)
+    body = (f"We did not see you within {NO_SHOW_GRACE_MIN} minutes of your {booking.service} appointment ({ref}) on "
+            f"{booking.date.strftime('%b %d, %Y')} at {booking.time.strftime('%I:%M %p')}, so your time was given up and it was marked a no-show. "
+            + ("If you still come to the shop today, you are in our walk-in line and we will call you in the order you came. " if to_queue else '')
+            + "You can also book again anytime. If something came up, just let the shop know."
+            + (f" This is your no-show number {n}; repeated no-shows can make it harder to get slots." if n >= 2 else ''))
+    emailed = _notify_customer(booking, f'No-show — {booking.date.strftime("%b %d")}', body, priority=True, status='cancelled', cta_label='Book Again')
+    return n, emailed
+
+
+def _put_in_walkin_line(booking, queued_at=None):
+    """Writes a late booked customer into today's walk-in line. They gave up their time slot, so they wait their turn like any walk-in:
+    first come, first served, counted from when the grace time ran out. Never twice for the same booking. (Added to the session; the
+    caller commits.)"""
+    ref = f'BKG-{booking.id:03d}'
+    start = datetime.combine(ph_now().date(), datetime.min.time())
+    note = f'Late booking {ref}: {booking.service}'[:200]
+    if WalkInQueue.query.filter(WalkInQueue.created_at >= start, WalkInQueue.note.like(f'Late booking {ref}:%')).first():
+        return None
+    customer = None if booking.walkin_customer_id else User.query.get(booking.user_id)
+    phone = booking.contact_mobile if booking.walkin_customer_id else (customer.phone if customer else '')
+    w = WalkInQueue(customer_name=clean_str(_booking_customer_name(booking) or 'Customer', max_len=100),
+                    customer_phone=clean_str(phone or '', max_len=20),
+                    motorcycle_model=clean_str(_moto_label(booking) or '', max_len=100), note=note,
+                    created_at=max(queued_at or ph_now(), start))
+    db.session.add(w)
+    return w
+
+
+def _line_booking_ids():
+    """Ids of today's bookings that were moved into the walk-in line (read from the line's own notes)."""
+    start = datetime.combine(ph_now().date(), datetime.min.time())
+    ids = set()
+    for (note,) in db.session.query(WalkInQueue.note).filter(WalkInQueue.created_at >= start, WalkInQueue.note.like('Late booking BKG-%')).all():
+        m = re.match(r'Late booking BKG-(\d+):', note or '')
+        if m:
+            ids.add(int(m.group(1)))
+    return ids
+
+
+_late_sweep_at = None
+
+
+def process_late_bookings(force=False):
+    """The grace period. A booking for today that is still Confirmed this many minutes after its time (nobody started it) is a no-show:
+    it is cancelled, its time is free for others, and the customer joins the walk-in line (counted from when the grace time ran out).
+    A booking the shop has told the customer is running late (the shop's own delay) is left alone. Runs whenever staff look at
+    the schedule or the line, at most every 20 seconds."""
+    global _late_sweep_at
+    now = ph_now()
+    if not force and _late_sweep_at and (now - _late_sweep_at).total_seconds() < 20:
+        return 0
+    _late_sweep_at = now
+    done = 0
+    try:
+        rows = Booking.query.filter(Booking.status == 'confirmed', Booking.date == now.date(), Booking.late_notice_at.is_(None)).all()
+        for b in rows:
+            if not b.time:
+                continue
+            due = datetime.combine(b.date, b.time) + timedelta(minutes=NO_SHOW_GRACE_MIN)
+            if due <= now and _apply_no_show(b, to_queue=True, queue_at=due) is not None:
+                done += 1
+    except Exception:
+        db.session.rollback()
+        admin_app.logger.exception('process_late_bookings failed')
+    return done
+
+
 @admin_app.route('/booking/<int:bid>/no-show', methods=['POST'])
 @login_required
 @require_admin_or_staff
@@ -3956,27 +4046,13 @@ def booking_no_show(bid):
     late = _minutes_late(booking)
     if not late:
         return jsonify({'success': False, 'error': f'Wait until {NO_SHOW_GRACE_MIN} minutes after the booking time before marking a no-show.'}), 400
-    try:
-        _q_before = _queue_day_numbers(booking.date)
-    except Exception:
-        _q_before = None
-    booking.status = 'cancelled'
-    booking.cancelled_at = ph_now()
-    booking.cancelled_by = 'shop'
-    booking.cancel_reason = 'No-show'
-    booking.no_show = True
-    db.session.commit()
-    if _q_before is not None:
-        _notify_queue_moved(booking.date, _q_before)
     ref = f'BKG-{booking.id:03d}'
-    n = _no_show_count(booking.user_id)
-    body = (f"We marked your {booking.service} appointment ({ref}) on {booking.date.strftime('%b %d, %Y')} at "
-            f"{booking.time.strftime('%I:%M %p')} as a no-show because we did not see you within {NO_SHOW_GRACE_MIN} minutes of your time. "
-            f"You can book again anytime. If something came up, just let the shop know."
-            + (f" This is your no-show number {n}; repeated no-shows can make it harder to get slots." if n >= 2 else ''))
-    emailed = _notify_customer(booking, f'No-show — {booking.date.strftime("%b %d")}', body, priority=True, status='cancelled', cta_label='Book Again')
+    res = _apply_no_show(booking, to_queue=(booking.date == ph_now().date()))
+    if res is None:
+        return jsonify({'success': False, 'error': 'This booking was already handled.'}), 400
+    n, emailed = res
     return jsonify({'success': True, 'emailed': emailed, 'no_shows': n,
-                    'message': f'{ref} marked as a no-show' + (' — customer notified.' if emailed else '.')})
+                    'message': f'{ref} marked as a no-show' + (' and added to the walk-in line' if booking.date == ph_now().date() else '') + (' — customer notified.' if emailed else '.')})
 
 
 @admin_app.route('/booking/<int:bid>/undo-status', methods=['POST'])
@@ -4132,6 +4208,8 @@ def api_day_panel():
     except ValueError:
         return jsonify({'error': 'Invalid date'}), 400
 
+    process_late_bookings()                  # a booking past its grace time is given up first, so the day shows it as it really is
+    _day_in_line = _line_booking_ids()
     bookings = Booking.query.options(joinedload(Booking.customer)).filter(Booking.date == the_date).order_by(Booking.time).all()
     active = [b for b in bookings if b.status != 'cancelled']
 
@@ -4326,6 +4404,7 @@ def api_day_panel():
                 'shop_to_assign': (not b.preferred_mechanic_name and not b.assigned_mechanic_name),
                 'own_parts': bool(b.own_parts), 'own_parts_note': b.own_parts_note or '',
                 'late_min': _minutes_late(b), 'no_shows': (_no_show_count(b.user_id) if _minutes_late(b) else 0),
+                'grace_min': NO_SHOW_GRACE_MIN, 'in_walkin_line': (b.id in _day_in_line),
                 'cancel_note': _cancel_note(b),
                 'rebooked_from': (f'BKG-{b.rebooked_from:03d}' if b.rebooked_from else ''),
                 'is_new': bool(b.created_at and (ph_now() - b.created_at) < timedelta(hours=24) and b.status == 'confirmed'),
@@ -8630,6 +8709,7 @@ def _waiting_today():
 
 
 def _queue_payload():
+    process_late_bookings()
     now = ph_now()
     start_min = now.hour * 60 + now.minute
     free = [r for r in _mech_availability(now.date(), start_min, start_min + 30, starts_now=True) if r['group'] == 'free']

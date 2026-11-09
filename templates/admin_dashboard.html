@@ -5474,6 +5474,8 @@
       + (c.late_min > 0 ? `<span class="badge" style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74;font-size:0.6rem;">Late ${c.late_min >= 120 ? Math.floor(c.late_min / 60) + ' h' : c.late_min + ' min'}</span> ` : '')
       + (c.own_parts ? `<span class="own-parts-tag" style="margin-left:0;" title="${String(c.own_parts_note || '').replace(/"/g, '&quot;')}">Own parts · labor only${c.own_parts_note ? ': ' + String(c.own_parts_note).replace(/</g, '&lt;') : ''}</span> ` : '');
     const cancelNote = (cancelled && c.cancel_note) ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.2rem;">${String(c.cancel_note).replace(/</g, '&lt;')}</div>` : '';
+    // a booking that ran past its grace time was given up and its customer put in the Walk-In Queue: say so on the card
+    const inLine = (cancelled && c.in_walkin_line) ? `<div style="display:inline-flex;align-items:center;gap:0.35rem;margin-top:0.35rem;font-size:0.72rem;font-weight:700;color:#6d28d9;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:99px;padding:0.15rem 0.65rem;">Moved to the Walk-In Queue · if they come, call them in order</div>` : '';
     const pill = cancelled ? '' : `<span class="badge" style="background:${st.bg};color:${st.color};border:1px solid ${st.border};font-size:0.64rem;display:inline-flex;align-items:center;gap:0.3rem;"><span style="width:6px;height:6px;border-radius:50%;background:${st.dot};"></span>${st.label}</span>`;
     const mechLine = c.mechanic
       ? `${c.mechanic}${c.specialization ? ` — ${c.specialization}` : ''}`
@@ -5558,6 +5560,7 @@
         <div style="font-size:0.76rem;color:var(--muted);margin-top:0.2rem;">${c.motorcycle || '—'}</div>
         <div style="font-size:0.76rem;color:var(--muted);">${serviceLine}</div>
         ${cancelNote}
+        ${inLine}
         ${cancelled ? '' : dsProgressBar(c)}
         ${note}
         ${assignPanel}
@@ -5579,10 +5582,7 @@
         ${c.late_notice ? `<div style="margin-top:0.5rem;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:0.4rem 0.7rem;font-size:0.72rem;color:#9a3412;display:flex;flex-wrap:wrap;gap:0.3rem 1rem;align-items:center;">
           <span style="color:#15803d;font-weight:600;">✓ ${c.late_notice.first_name} notified in the portal</span>
           ${c.late_notice.email ? `<span style="color:#15803d;font-weight:600;">✓ Email sent to ${c.late_notice.email}</span>` : ''}
-          <span style="margin-left:auto;color:#9a3412;">${c.late_notice.text} · sent ${c.late_notice.sent_at}</span></div>` : ''}` : (cancelled ? `
-        <div style="margin-top:0.6rem;">
-          <button type="button" class="btn-primary-custom" style="padding:0.3rem 0.6rem;font-size:0.71rem;" onclick="restoreCardBooking(${c.id})">Restore</button>
-        </div>` : '')}
+          <span style="margin-left:auto;color:#9a3412;">${c.late_notice.text} · sent ${c.late_notice.sent_at}</span></div>` : ''}` : ''}
       </div>`;
   }
 

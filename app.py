@@ -463,7 +463,7 @@ def send_booking_confirmation_email(booking):
             <div style="margin-top:16px;padding-top:16px;border-top:1px dashed #e5e7eb;color:#374151;font-size:13px;">
               Please arrive 10 minutes early so we can start on time.
               <ul style="margin:10px 0 0 18px;padding:0;color:#6b7280;font-size:12px;line-height:1.7;">
-                <li>Your booking is valid only for the date and time above. It is held for {NO_SHOW_GRACE_MIN} minutes after your time; after that the shop may mark it a no-show and cancel it.</li>
+                <li>Your booking is valid only for the date and time above. It is held for {NO_SHOW_GRACE_MIN} minutes after your time; after that it is cancelled as a no-show, and if you still come you join the walk-in line.</li>
                 <li>You can cancel while it is Confirmed. Once the shop starts the work, it can no longer be cancelled online.</li>
                 <li>You can change the date or time up to {MAX_CUSTOMER_RESCHEDULES} times, and not within {RESCHEDULE_CUTOFF_HOURS} hours of your appointment.</li>
                 <li>You pay at the shop after the service. If the mechanic finds more work, the shop sends you a quotation first and you decide.</li>
@@ -2555,7 +2555,7 @@ def book_service():
         current_user.id, f"Confirmed — {cf['date_short']} at {cf['time_str']}",
         f"Your {cf['services']} appointment ({cf['ref']}) on {cf['date_str']} — {cf['time_label']}. "
         f"{cf['finish_label']}. Mechanic: {cf['mechanic_label']}. Motorcycle: {cf['motorcycle']}. "
-        f"Please arrive 10 minutes early so we can start on time. Your time is held for {NO_SHOW_GRACE_MIN} minutes; after that the shop may mark it a no-show. "
+        f"Please arrive 10 minutes early so we can start on time. Your time is held for {NO_SHOW_GRACE_MIN} minutes; after that it is cancelled as a no-show, and if you still come you join the walk-in line. "
         f"You can cancel while it is Confirmed, or change the date or time up to {MAX_CUSTOMER_RESCHEDULES} times.",
         type='booking', status='confirmed', booking_id=booking.id,
     )
@@ -2618,7 +2618,7 @@ def customer_cancel_booking(bid):
     return jsonify({'success': True})
 
 
-NO_SHOW_GRACE_MIN = 15              # a Confirmed booking not started this many minutes after its time can be marked a no-show (same number as the admin app)
+NO_SHOW_GRACE_MIN = 30              # the grace period: a Confirmed booking not started this many minutes after its time is a no-show and the customer joins the walk-in line (same number as the admin app)
 MAX_CUSTOMER_RESCHEDULES = 2        # how many times a customer can move one booking on their own
 RESCHEDULE_CUTOFF_HOURS = 2         # and not any closer to the start than this (after that, call the shop)
 
@@ -3252,7 +3252,7 @@ def _book_multiple_impl():
                 current_user.id, f"Confirmed — {cf['date_short']} at {cf['time_str']}",
                 f"Your {cf['services']} appointment ({cf['ref']}) on {cf['date_str']} — {cf['time_label']}. "
                 f"{cf['finish_label']}. Mechanic: {cf['mechanic_label']}. Motorcycle: {cf['motorcycle']}. "
-                f"Please arrive 10 minutes early so we can start on time. Your time is held for {NO_SHOW_GRACE_MIN} minutes; after that the shop may mark it a no-show. "
+                f"Please arrive 10 minutes early so we can start on time. Your time is held for {NO_SHOW_GRACE_MIN} minutes; after that it is cancelled as a no-show, and if you still come you join the walk-in line. "
                 f"You can cancel while it is Confirmed, or change the date or time up to {MAX_CUSTOMER_RESCHEDULES} times.",
                 type='booking', status='confirmed', booking_id=created_bookings[0].id,
             )

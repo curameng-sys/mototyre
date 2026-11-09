@@ -2693,7 +2693,7 @@
 
     <div id="bd-booking-notes" style="display:none;margin-top:1rem;padding:0.75rem 0.9rem;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:0.78rem;line-height:1.5;">
       <div style="font-family:'Inter',sans-serif;font-weight:700;margin-bottom:0.25rem;">Booking notes</div>
-      <div>Valid only for this date and time. Arrive 10 minutes early: your time is held for {{ policy.grace }} minutes, then the shop may mark it a no-show.</div>
+      <div>Valid only for this date and time. Arrive 10 minutes early: your time is held for {{ policy.grace }} minutes, then it is cancelled as a no-show. If you still come, you join the walk-in line.</div>
       <div style="margin-top:0.2rem;">Cancel while it is Confirmed. Change the date or time up to {{ policy.resched_max }} times, not within {{ policy.resched_hours }} hours of the start.</div>
       <div style="margin-top:0.2rem;">You pay after the service. Extra work needs your approval first.</div>
     </div>
@@ -5009,7 +5009,7 @@ function toggleUpcomingServices(key) {
 // Cancel booking (Confirmed only) opens the same confirmation as the one in the booking's details.
 // Who cancelled a booking and why, in the customer's words (the shop's page says the same thing).
 function cancelNoteText(b) {
-  if (b.no_show) return 'The shop marked this booking as a no-show because you did not arrive within the grace time. You can book again anytime.';
+  if (b.no_show) return 'This booking was marked a no-show because you did not arrive within the grace time. If you still come to the shop, you join the walk-in line. You can also book again anytime.';
   if (b.cancelled_by === 'customer') return 'You cancelled this booking.';
   if (b.cancelled_by === 'shop') return 'The shop cancelled this booking.' + (b.cancel_reason ? ' Reason: ' + b.cancel_reason : '');
   return 'This booking was cancelled.';
@@ -11317,7 +11317,7 @@ updateMechNote();
       const side = document.getElementById('rv-side');
       if (side) side.innerHTML = `<div class="rv-info"><b class="t">Good to know</b><ul>
         <li><b>Not booked yet.</b> It is reserved when you press Confirm.</li>
-        <li><b>Valid for this date and time.</b> Held ${POLICY.grace} min, then a no-show.</li>
+        <li><b>Valid for this date and time.</b> Held ${POLICY.grace} min, then a no-show. You can still come as a walk-in.</li>
         <li><b>Change it</b> up to ${POLICY.resched_max} times, not within ${POLICY.resched_hours} hours of the start.</li>
         <li><b>Pay at the shop</b> after the service.</li>
         ${q.is_multiday ? '<li><b>Several days:</b> drop off on this date; we tell you when it is ready.</li>' : ''}
