@@ -323,6 +323,37 @@
       }
     }
 
+    /* Transactions: the details panel that slides in from the right when a row is clicked */
+    .txn-row { cursor:pointer; transition:background .12s; }
+    .txn-row:hover { background:#f9fafb; }
+    .txn-row.is-open { background:#eff6ff; }
+    #txn-drawer-overlay { position:fixed; inset:0; background:rgba(17,24,39,0.35); z-index:9000; opacity:0; pointer-events:none; transition:opacity .2s; }
+    #txn-drawer-overlay.open { opacity:1; pointer-events:auto; }
+    #txn-drawer { position:fixed; top:0; right:0; bottom:0; width:min(420px, 100vw); background:#fff; z-index:9001; box-shadow:-12px 0 40px rgba(0,0,0,0.18); transform:translateX(102%); transition:transform .25s ease; display:flex; flex-direction:column; }
+    #txn-drawer.open { transform:translateX(0); }
+    .td-head { display:flex; align-items:center; justify-content:space-between; padding:1.1rem 1.4rem; border-bottom:1px solid var(--border); }
+    .td-head h4 { margin:0; font-size:0.95rem; font-weight:700; color:var(--text); }
+    .td-close { background:none; border:none; font-size:1.3rem; line-height:1; color:var(--muted); cursor:pointer; padding:0.2rem 0.4rem; border-radius:6px; }
+    .td-close:hover { background:#f3f4f6; color:var(--text); }
+    .td-body { flex:1; overflow-y:auto; padding:1.2rem 1.4rem 1.4rem; }
+    .td-kind { display:flex; align-items:center; gap:0.55rem; font-size:0.82rem; color:var(--muted); }
+    .td-kind i { width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#fee2e2; color:#dc2626; font-style:normal; font-size:0.8rem; }
+    .td-kind i.in { background:#dcfce7; color:#16a34a; }
+    .td-amount { font-family:'Inter','Segoe UI',Arial,sans-serif; font-size:1.9rem; font-weight:800; margin:0.4rem 0 1.1rem; color:var(--text); letter-spacing:-0.01em; }
+    .td-amount.neg { color:var(--red); }
+    .td-field { margin-bottom:1rem; }
+    .td-label { font-size:0.72rem; color:var(--muted); margin-bottom:0.2rem; }
+    .td-value { font-size:0.9rem; color:var(--text); font-weight:500; overflow-wrap:anywhere; }
+    .td-status { display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:600; }
+    .td-status.ok { color:#15803d; } .td-status.wait { color:#b45309; } .td-status.refund { color:#b91c1c; }
+    .td-sep { height:1px; background:var(--border); margin:1.1rem 0; }
+    .td-sub { font-size:0.74rem; color:var(--muted); margin-top:0.15rem; }
+    .td-items .td-item { display:flex; justify-content:space-between; gap:0.8rem; font-size:0.84rem; padding:0.35rem 0; border-bottom:1px dashed #e5e7eb; }
+    .td-items .td-item:last-child { border-bottom:none; }
+    .td-copy { margin-left:0.4rem; background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; padding:0 0.2rem; }
+    .td-actions { padding:1rem 1.4rem; border-top:1px solid var(--border); display:flex; gap:0.6rem; }
+    .td-actions button { flex:1; padding:0.6rem; border-radius:8px; font-family:inherit; font-weight:700; font-size:0.85rem; cursor:pointer; }
+    .td-actions .close { background:#fff; color:var(--text); border:1px solid var(--border); }
     /* Cash received in In-Store Parts: the bill buttons look the same on every screen size */
     .parts-denom { appearance: none; -webkit-appearance: none; padding: 0.3rem 0.1rem; min-width: 0; border-radius: 7px; border: 1px solid var(--border); background: #fff; color: var(--text); font-size: 0.72rem; font-weight: 700; white-space: nowrap; font-family: inherit; cursor: pointer; transition: background .12s, border-color .12s, transform .05s; }
     .parts-denom:hover { background: #fff7f7; border-color: #fca5a5; }
@@ -592,6 +623,11 @@
     #sec-dashboard .dash-table td, #sec-dashboard .dash-table th { vertical-align:middle; padding-top:0.45rem; padding-bottom:0.45rem; }
     #sec-dashboard .inv-restock-row { padding:0.45rem 1rem; }
     #sec-dashboard .btn-restock { padding:0.3rem 0.8rem; }
+    #sec-dashboard .dash-pager { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; }
+    #sec-dashboard .dash-arrows { display:inline-flex; gap:0.35rem; flex-shrink:0; }
+    #sec-dashboard .dash-pg { width:30px; height:28px; border-radius:7px; border:1px solid var(--border); background:#fff; color:var(--text); font-size:1.1rem; line-height:1; font-weight:700; cursor:pointer; transition:background .12s, border-color .12s; }
+    #sec-dashboard .dash-pg:hover:not(:disabled) { background:#374151; color:#fff; border-color:#374151; }
+    #sec-dashboard .dash-pg:disabled { opacity:0.3; cursor:not-allowed; }
     #sec-dashboard .dash-empty { padding:0.9rem 1rem; }
     #sec-dashboard .dash-empty p { margin:0; }
     #sec-dashboard .dash-more { padding:0.5rem 1rem; }
@@ -1175,7 +1211,13 @@
             <div class="empty-state"><p>Every product is well stocked.</p></div>
             {% endif %}
           </div>
-          <div class="dash-more" id="dash-restock-more" style="display:none;"></div>
+          <div class="dash-more dash-pager" id="dash-restock-more" style="display:none;">
+            <span id="dash-restock-note"></span>
+            <span class="dash-arrows">
+              <button type="button" id="dash-restock-prev" class="dash-pg" onclick="restockPage(-1)" aria-label="Previous products" title="Previous">&#8249;</button>
+              <button type="button" id="dash-restock-next" class="dash-pg" onclick="restockPage(1)" aria-label="Next products" title="Next">&#8250;</button>
+            </span>
+          </div>
         </div>
       </div>
       {% set bk_status_colors = {
@@ -1860,7 +1902,7 @@
       <div class="page-header">
         <div class="page-header-left">
           <div class="page-title">Manage <span class="accent">Orders</span></div>
-          <div class="page-sub">Track and update parts and accessories orders.</div>
+          <div class="page-sub">Track and update the online orders of customers. Counter sales are in Billing &rsaquo; History.</div>
         </div>
         <div class="page-actions">
           <button type="button" class="btn-export-pdf" onclick="openOrdersExport()">
@@ -1869,15 +1911,11 @@
           </button>
         </div>
       </div>
-      {% set ord_online = all_orders|rejectattr('is_instore')|list|length %}
-      {% set ord_instore = all_orders|length - ord_online %}
+      {% set mo_orders = [] %}
+      {% for o in all_orders %}{% if not o.is_instore and not o.walkin_customer_id %}{% set _x = mo_orders.append(o) %}{% endif %}{% endfor %}
       <div class="filter-bar" style="align-items:center;">
         <input type="text" placeholder="Search order #, customer or product..." id="orders-search" oninput="applyOrderFilters()">
-        <select id="orders-type-filter" onchange="applyOrderFilters()">
-          <option value="">All types ({{ all_orders|length }})</option>
-          <option value="online">Online orders ({{ ord_online }})</option>
-          <option value="instore">In-store sales ({{ ord_instore }})</option>
-        </select>
+        <select id="orders-type-filter" style="display:none;" aria-hidden="true"><option value=""></option></select>
         <select id="orders-status-filter" onchange="applyOrderFilters()">
           <option value="">All statuses</option>
           <option>pending</option>
@@ -1896,7 +1934,7 @@
         <a id="orders-clear" onclick="clearOrderFilters()" style="display:none;font-size:0.74rem;font-weight:700;color:var(--red);cursor:pointer;white-space:nowrap;">Clear filters</a>
       </div>
       <div class="card">
-        {% if all_orders %}
+        {% if mo_orders %}
         <div style="overflow-x:auto;">
           <table class="table" id="orders-table" style="table-layout:fixed;width:100%;min-width:1280px;">
             <colgroup>
@@ -1920,7 +1958,7 @@
              <th style="white-space:nowrap;">Archive</th>
            </tr></thead>
             <tbody>
-              {% for o in all_orders %}
+              {% for o in mo_orders %}
               {% set o_display_name = o.contact_name if o.is_instore else o.customer.fullname %}
               {% set o_display_ref = ('SALE-%03d'|format(o.id)) if o.is_instore else ('ORD-%03d'|format(o.id)) %}
               {% set sh = (not o.is_instore) and o.delivery_method == 'ship' and o.status in ['confirmed','in_progress','done_packaging','shipping','completed','cancelled','refunded'] %}
@@ -2791,6 +2829,12 @@
 
     <!-- TRANSACTIONS -->
     <section id="sec-transactions" class="page-section">
+      <div id="txn-drawer-overlay" onclick="closeTxnDetail()"></div>
+      <aside id="txn-drawer" aria-hidden="true" aria-label="Transaction details">
+        <div class="td-head"><h4>Transaction details</h4><button type="button" class="td-close" onclick="closeTxnDetail()" aria-label="Close">&times;</button></div>
+        <div class="td-body" id="txn-drawer-body"></div>
+        <div class="td-actions"><button type="button" class="close" onclick="closeTxnDetail()">Close</button></div>
+      </aside>
       <div class="page-header">
         <div class="page-header-left">
           <div class="page-title">Transaction <span class="accent">History</span></div>
@@ -9828,7 +9872,7 @@ function _applyTxnPagination(filtered) {
   const pageRows = filtered.slice(start, start + TXN_PER_PAGE);
 
   const rows = pageRows.map(t => `
-    <tr${t.is_new ? ' style="background:rgba(22,163,74,.08);"' : ''}>
+    <tr class="txn-row" data-ref="${t.ref}" onclick="openTxnDetail('${t.ref}')" title="Click to see the details"${t.is_new ? ' style="background:rgba(22,163,74,.08);"' : ''}>
       <td style="font-weight:700;font-size:.8rem;color:var(--text);">${t.trx_id}${t.is_new ? ' <span style="display:inline-block;margin-left:.35rem;padding:.12rem .4rem;border-radius:5px;background:var(--green);color:#fff;font-size:.58rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;">New</span>' : ''}</td>
       <td style="font-size:.78rem;color:var(--muted);">${t.ref}</td>
       <td><span style="display:inline-block;padding:.2rem .55rem;border-radius:99px;font-size:.63rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;${typeColors[t.type]||''}">${t.type}</span></td>
@@ -9857,6 +9901,47 @@ function _applyTxnPagination(filtered) {
   html += `<button class="parts-page-btn" onclick="goTxnPage(${_txnPage+1})" ${_txnPage===totalPages?'disabled':''}>→</button>`;
   pg.innerHTML = html;
 }
+
+// ── Transactions: click a row, the details slide in from the right ──
+let _txnDetail = null;
+const _tdEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+async function openTxnDetail(ref) {
+  document.querySelectorAll('.txn-row').forEach(r => r.classList.toggle('is-open', r.dataset.ref === ref));
+  const body = document.getElementById('txn-drawer-body');
+  body.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">Loading…</div>';
+  document.getElementById('txn-drawer-overlay').classList.add('open');
+  const dr = document.getElementById('txn-drawer'); dr.classList.add('open'); dr.setAttribute('aria-hidden', 'false');
+  try {
+    const res = await fetch('/api/transaction-detail?ref=' + encodeURIComponent(ref));
+    const d = await res.json();
+    if (!d.success) { body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">${_tdEsc(d.error || 'Could not load this transaction.')}</div>`; _txnDetail = null; return; }
+    _txnDetail = d;
+    const neg = d.amount < 0;
+    const field = (label, value, sub) => value ? `<div class="td-field"><div class="td-label">${label}</div><div class="td-value">${value}</div>${sub ? `<div class="td-sub">${sub}</div>` : ''}</div>` : '';
+    const icon = d.tone === 'ok' ? '✓' : (d.tone === 'refund' ? '↺' : '…');
+    const payLines = (d.payment.lines || []).map(([l, v]) => `<div class="td-field" style="margin-bottom:0.6rem;"><div class="td-label">${_tdEsc(l)}</div><div class="td-value">${_tdEsc(v)}</div></div>`).join('');
+    const items = (d.items || []).length ? `<div class="td-sep"></div><div class="td-label" style="margin-bottom:0.3rem;">Items</div><div class="td-items">${d.items.map(i => `<div class="td-item"><span>${_tdEsc(i.name)}${i.qty > 1 ? ` × ${i.qty}` : ''}</span><span>₱${Number(i.price * i.qty).toLocaleString('en-PH', {minimumFractionDigits: 2})}</span></div>`).join('')}</div>` : '';
+    const meta = (d.meta || []).map(([l, v]) => field(_tdEsc(l), _tdEsc(v))).join('');
+    body.innerHTML = `
+      <div class="td-kind"><i class="${neg ? '' : 'in'}">${neg ? '↙' : '↗'}</i>${_tdEsc(d.kind)}</div>
+      <div class="td-amount${neg ? ' neg' : ''}">${neg ? '' : '+ '}${_tdEsc(d.amount_text)}</div>
+      <div class="td-field"><div class="td-label">Status</div><div class="td-status ${d.tone}">${icon} ${_tdEsc(d.status)}</div></div>
+      ${field('Time', _tdEsc(d.when))}
+      ${field('Reference', _tdEsc(d.ref) + `<button type="button" class="td-copy" title="Copy" onclick="navigator.clipboard && navigator.clipboard.writeText('${_tdEsc(d.ref)}')">⧉</button>`, d.receipt_no ? 'Receipt no. ' + _tdEsc(d.receipt_no) : '')}
+      ${field('Customer', _tdEsc(d.customer), d.phone ? _tdEsc(d.phone) : '')}
+      ${field('For', _tdEsc(d.subject))}
+      <div class="td-field"><div class="td-label">Payment method</div><div class="td-value">${_tdEsc(d.payment.method)}</div></div>
+      ${payLines}
+      ${meta}
+      ${items}`;
+  } catch (e) { body.innerHTML = '<div style="color:var(--red);font-size:0.85rem;">Network error. Please try again.</div>'; }
+}
+function closeTxnDetail() {
+  document.getElementById('txn-drawer-overlay').classList.remove('open');
+  const dr = document.getElementById('txn-drawer'); dr.classList.remove('open'); dr.setAttribute('aria-hidden', 'true');
+  document.querySelectorAll('.txn-row.is-open').forEach(r => r.classList.remove('is-open'));
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('txn-drawer') && document.getElementById('txn-drawer').classList.contains('open')) closeTxnDetail(); });
 
 function goTxnPage(p) {
   _txnPage = p;
@@ -10023,13 +10108,16 @@ async function refreshDashboardOverview() {
 
 const _dEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+let _rsOffset = 0;          // where the Needs Restocking list starts (the arrows move it)
+let _rsPer = 4;             // how many rows fit on one page right now (set by fitDashRows)
 function _renderDashRestock(dd) {
   const so = document.getElementById('dash-stock-out'), sl = document.getElementById('dash-stock-low');
   if (so) so.textContent = dd.stock_out || 0;
   if (sl) sl.textContent = dd.stock_low || 0;
   const wrap = document.getElementById('dash-restock-wrap');
   if (!wrap) return;
-  const rows = dd.restock || [], total = (dd.stock_out || 0) + (dd.stock_low || 0);
+  if (_rsOffset > 0 && !dd._page) { loadRestockPage(_rsOffset); return; }      // stay on the page being read
+  const rows = dd.restock || [], total = dd._page ? dd.total : (dd.stock_out || 0) + (dd.stock_low || 0);
   if (!rows.length) { wrap.innerHTML = '<div class="empty-state"><p>Every product is well stocked.</p></div>'; return; }
   wrap.dataset.total = total;
   wrap.innerHTML = '<div class="inv-restock-row head"><span>Product</span><span>Stock</span><span>Price</span><span></span></div>' + rows.map(p => `
@@ -10068,6 +10156,24 @@ function _renderDashToday(dd) {
     <thead><tr><th style="width:90px;">Time</th><th>Customer</th><th>Service</th><th>Mechanic</th><th style="width:150px;">Status</th></tr></thead>
     <tbody>${body}</tbody></table>`;
   fitDashRows();
+}
+
+// The arrows under Needs Restocking: one page = the rows that fit now
+async function loadRestockPage(offset) {
+  try {
+    const r = await fetch('/api/dashboard-restock?limit=8&offset=' + Math.max(0, offset));
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d.items.length && offset > 0) { _rsOffset = Math.max(0, offset - _rsPer); return loadRestockPage(_rsOffset); }   // the list got shorter
+    _rsOffset = d.offset;
+    _renderDashRestock({ restock: d.items, total: d.total, _page: true, stock_out: parseInt((document.getElementById('dash-stock-out') || {}).textContent, 10) || 0, stock_low: parseInt((document.getElementById('dash-stock-low') || {}).textContent, 10) || 0 });
+  } catch (e) { /* quiet */ }
+}
+function restockPage(dir) {
+  const total = parseInt((document.getElementById('dash-restock-wrap') || {}).dataset.total, 10) || 0;
+  const next = dir > 0 ? _rsOffset + _rsPer : Math.max(0, _rsOffset - _rsPer);
+  if (dir > 0 && next >= total) return;
+  loadRestockPage(next);
 }
 
 // The Dashboard never scrolls inside itself: each list shows as many rows as the screen has room for, and the "Showing x of y"
@@ -10109,7 +10215,15 @@ function fitDashRows() {
   };
   const rt = parseInt((document.getElementById('dash-restock-wrap') || {}).dataset.total, 10) || 0;
   const st = parseInt((document.getElementById('dash-today-wrap') || {}).dataset.total, 10) || 0;
-  note('dash-restock-more', vr, rt, `Showing ${vr} of ${rt}. <a onclick="openProductsFiltered('low')">View all in Manage Products</a>`);
+  _rsPer = vr < rrows.length ? Math.max(1, vr) : Math.max(_rsPer, vr);   // a short last page does not shrink the page size
+  const rf = document.getElementById('dash-restock-more');
+  if (rf) {
+    rf.style.display = (rt > vr || _rsOffset > 0) ? '' : 'none';
+    const from = rt ? _rsOffset + 1 : 0, to = Math.min(rt, _rsOffset + vr);
+    document.getElementById('dash-restock-note').innerHTML = `${from}–${to} of ${rt} · <a onclick="openProductsFiltered('low')">View all in Manage Products</a>`;
+    document.getElementById('dash-restock-prev').disabled = _rsOffset <= 0;
+    document.getElementById('dash-restock-next').disabled = _rsOffset + vr >= rt;
+  }
   note('dash-today-more', vs, st, `Showing ${vs} of ${st} bookings today. <a onclick="goToSection('day-schedule')">See all in the Day Schedule</a>`);
 }
 window.addEventListener('resize', () => { clearTimeout(window._dashFitT); window._dashFitT = setTimeout(fitDashRows, 120); });

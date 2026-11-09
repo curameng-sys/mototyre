@@ -1718,6 +1718,24 @@ def _dash_today_facts():
     }
 
 
+@admin_app.route('/api/dashboard-restock')
+@login_required
+@require_admin_or_staff
+def api_dashboard_restock():
+    """One page of the parts that are out of stock or low (out first, then the lowest), for the arrows on the Dashboard's
+    Needs Restocking card."""
+    try:
+        offset = max(0, int(request.args.get('offset', 0)))
+        limit = min(12, max(1, int(request.args.get('limit', 6))))
+    except ValueError:
+        return jsonify({'error': 'Bad page.'}), 400
+    q = Product.query.filter(Product.stock < 5)
+    total = q.count()
+    rows = q.order_by(Product.stock.asc(), Product.name.asc()).offset(offset).limit(limit).all()
+    return jsonify({'total': total, 'offset': offset,
+                    'items': [{'id': p.id, 'name': p.name, 'category': p.category, 'stock': int(p.stock or 0), 'price': float(p.price or 0)} for p in rows]})
+
+
 @admin_app.route('/dashboard')
 @login_required
 @require_admin_or_staff
@@ -8615,6 +8633,99 @@ def api_transactions():
     _set_app_state('last_viewed_transactions_at', ph_now().isoformat())
     db.session.commit()
     return jsonify(result)
+
+
+@admin_app.route('/api/transaction-detail')
+@login_required
+@require_admin_or_staff
+def api_transaction_detail():
+    """Everything about one row of the Transactions page, in one shape, for the side panel: what it was, who, how it was paid
+    (cash handed over and change, GCash reference, the two shares of a split), the items, who recorded it. Read only."""
+    ref = (request.args.get('ref') or '').strip().upper()
+    m = re.match(r'^(RF-ORD|RF|BKG|JO|SALE|ORD)-(\d+)$', ref)
+    if not m:
+        return jsonify({'success': False, 'error': 'Unknown transaction.'}), 400
+    prefix, rid = m.group(1), int(m.group(2))
+    money = lambda n: f'\u20b1{float(n or 0):,.2f}'
+    when = lambda d: d.strftime('%b %d, %Y \u00b7 %I:%M %p') if d else ''
+
+    def pay_block(method, received=None, change=None, cash_part=None, gcash_part=None, ref_no=None):
+        mm = (method or 'cash').lower()
+        lines = []
+        if mm == 'split':
+            if cash_part is not None: lines.append(['Cash share', money(cash_part)])
+            if received is not None: lines.append(['Cash received', money(received)])
+            if change is not None: lines.append(['Change given', money(change)])
+            if gcash_part is not None: lines.append(['GCash share', money(gcash_part)])
+        elif mm == 'cash':
+            if received is not None: lines.append(['Cash received', money(received)])
+            if change is not None: lines.append(['Change given', money(change)])
+        if mm in ('gcash', 'split') and ref_no:
+            lines.append(['GCash reference no.', ref_no])
+        return {'method': _pay_label(mm), 'lines': lines}
+
+    out = {'success': True, 'ref': ref, 'status': 'Paid', 'tone': 'ok', 'customer': '', 'phone': '', 'subject': '', 'items': [], 'meta': [],
+           'payment': {'method': '\u2014', 'lines': []}, 'amount': 0.0, 'when': '', 'kind': '', 'receipt_no': ''}
+
+    if prefix == 'BKG':
+        b = Booking.query.get_or_404(rid)
+        d = api_booking_invoice_data(rid).get_json()
+        cash_part, gcash_part = d.get('cash_part'), d.get('gcash_part')
+        out.update(kind='Service booking', amount=d['total'], when=d.get('paid_at') and d['paid_at'].replace(',', ',', 1) or '',
+                   customer=d['customer_name'], phone=d.get('customer_phone', ''), subject=' \u00b7 '.join(x for x in (d.get('service'), d.get('motorcycle')) if x),
+                   items=[{'name': i['name'], 'qty': 1, 'price': i['price']} for i in d['items']], receipt_no=d.get('receipt_no') or '',
+                   payment=pay_block(d.get('payment_method'), d.get('cash_received'), d.get('change'), cash_part, gcash_part, d.get('gcash_ref')),
+                   status='Paid' if d.get('paid') else 'Not paid yet', tone='ok' if d.get('paid') else 'wait')
+        if d.get('mechanic'): out['meta'].append(['Mechanic', d['mechanic']])
+        if b.invoice_received_by: out['meta'].append(['Received by', b.invoice_received_by])
+    elif prefix == 'JO':
+        jo = JobOrder.query.get_or_404(rid)
+        p = jo.payment
+        cp = ((p.cash_received or 0) - (p.change_given or 0)) if (p and (p.payment_method or '') == 'split') else None
+        cashier = User.query.get(p.created_by) if (p and p.created_by) else None
+        out.update(kind='Job order', amount=jo.total_amount, when=when(p.paid_at if p else None), customer=jo.customer_name, phone=jo.customer_phone or '',
+                   subject=' \u00b7 '.join(x for x in (jo.motorcycle_model, jo.motorcycle_plate) if x), receipt_no=f'OR-JO-{jo.id:05d}',
+                   items=[{'name': i.name, 'qty': int(i.quantity or 1), 'price': float(i.unit_price or 0)} for i in jo.items],
+                   payment=pay_block(p.payment_method if p else None, p.cash_received if p else None, p.change_given if p else None,
+                                     cp, (jo.total_amount - cp) if cp is not None else None, p.reference_no if p else None))
+        if jo.mechanic_name: out['meta'].append(['Mechanic', jo.mechanic_name])
+        if cashier: out['meta'].append(['Received by', cashier.fullname])
+    elif prefix in ('SALE', 'ORD'):
+        o = Order.query.options(joinedload(Order.customer)).get_or_404(rid)
+        sale = bool(o.is_instore or o.walkin_customer_id)
+        ship = (o.delivery_method == 'ship' and not o.is_instore)
+        amt = (o.total_amount or 0) + ((o.shipping_fee or 0) if o.delivery_method == 'ship' else 0)
+        items = [{'name': (i.product.name if i.product else 'Unknown'), 'qty': int(i.quantity or 1), 'price': float(i.unit_price or 0)} for i in o.items]
+        if ship and o.shipping_fee:
+            items.append({'name': f"Shipping fee ({(o.shipping_option or '').title()})", 'qty': 1, 'price': float(o.shipping_fee)})
+        pm = ('gcash' if o.delivery_method == 'ship' else (o.payment_method or 'cash'))
+        out.update(kind='In-store sale' if sale else 'Online order', amount=amt, customer=(o.contact_name if o.is_instore else (o.customer.fullname if o.customer else 'Customer')) or 'Walk-in',
+                   phone=('' if o.is_instore else (o.customer.phone if o.customer else '') or ''), receipt_no=f'OR-ORD-{o.id:05d}', items=items,
+                   when=when((o.paid_at if (ship and o.paid_at) else None) or o.delivered_at or o.created_at),
+                   payment=pay_block(pm, None, None, o.cash_amount, o.gcash_amount, (o.payment_ref if (o.is_instore and pm in ('gcash', 'split')) else None)),
+                   status={'completed': 'Completed', 'voided': 'Voided', 'refunded': 'Refunded'}.get(o.status, (o.status or '').replace('_', ' ').title()),
+                   tone='ok' if o.status == 'completed' else ('refund' if o.status in ('voided', 'refunded') else 'wait'))
+        out['meta'].append(['Purchase type', 'In-store' if sale else ('Ship to Address' if ship else 'Shop pickup')])
+        if o.recorded_by: out['meta'].append(['Rung up by', o.recorded_by])
+        if o.status == 'voided' and o.void_reason: out['meta'].append(['Void reason', o.void_reason])
+    else:                                              # RF-ORD (a shop-cancelled paid order) or RF (a return claim)
+        if prefix == 'RF-ORD':
+            o = Order.query.options(joinedload(Order.customer)).get_or_404(rid)
+            out.update(kind='Refund', amount=-(o.refund_amount or 0), when=when(o.refunded_at), customer=o.customer.fullname if o.customer else 'Customer',
+                       phone=(o.customer.phone if o.customer else '') or '', subject=f'Order ORD-{o.id:03d} cancelled by the shop', status='Refunded', tone='refund',
+                       payment={'method': 'GCash', 'lines': [['Refunded through', 'PayMongo (GCash)']]},
+                       items=[{'name': (i.product.name if i.product else 'Unknown'), 'qty': int(i.quantity or 1), 'price': float(i.unit_price or 0)} for i in o.items])
+        else:
+            rr = ReturnRequest.query.get_or_404(rid)
+            u = User.query.get(rr.user_id)
+            orig = f'ORD-{rr.order_id:03d}' if rr.kind == 'product' else f'BKG-{rr.booking_id:03d}'
+            lines = [['Refund method', 'GCash' if rr.refund_method == 'gcash' else 'Cash at the counter']]
+            if rr.refund_given_by: lines.append(['Handed over by', rr.refund_given_by])
+            out.update(kind='Refund', amount=-(rr.refund_amount or 0), when=when(rr.resolved_at), customer=u.fullname if u else 'Customer', phone=(u.phone if u else '') or '',
+                       subject=f'{_return_ref(rr)} for {orig}', status='Refunded', tone='refund', payment={'method': '\u2014', 'lines': lines})
+            out['meta'].append(['Claim', _return_ref(rr)])
+    out['amount_text'] = ('\u2212' if out['amount'] < 0 else '') + money(abs(out['amount']))
+    return jsonify(out)
 
 
 @admin_app.route('/api/products')
