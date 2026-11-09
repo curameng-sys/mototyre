@@ -130,6 +130,12 @@
     .ci-unit{font-size:.7rem;color:var(--muted);margin-top:.1rem;}
     .ci-info{flex:1;min-width:0;}
     .ci-controls{display:flex;align-items:center;gap:.35rem;flex-shrink:0;}
+    .q-item, .product-card { transition: outline-color .15s, box-shadow .15s, background .15s; }
+    .limit-flash { outline: 2px solid #dc2626 !important; outline-offset: -2px; box-shadow: 0 0 0 3px rgba(220,38,38,.18) !important; border-radius: 8px; }
+    .q-item.limit-over { background: #fef2f2; }
+    .qty-btn.at-max { opacity: .35; cursor: not-allowed; }
+    .stk-hint { color: #b45309; font-weight: 600; }
+    .stk-hint.over { color: #b91c1c; }
     .qty-btn{width:22px;height:22px;border-radius:5px;background:#f9fafb;border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;}
     .qty-btn:hover{border-color:rgba(208,0,25,.4);color:var(--red);}
     .qty-val{font-family:'Inter',sans-serif;font-size:.78rem;font-weight:700;min-width:18px;text-align:center;color:var(--text);}
@@ -730,6 +736,30 @@
     allProducts.forEach(c => c.style.display = (c.dataset.name + ' ' + (c.dataset.motorModel || '')).toLowerCase().includes(q) ? '' : 'none');
   }
 
+  // ── How many of a part the shop really has: a quotation can never ask for more than that ──
+  // The stock comes from the product cards (kept fresh by syncStock). Lines already locked on the job order took their parts
+  // when it was created, so only the new lines count.
+  function stockOfProduct(pid) {
+    const card = document.querySelector('.product-card[data-id="' + pid + '"]');
+    return card ? (parseInt(card.dataset.stock, 10) || 0) : Infinity;
+  }
+  function qtyInQuote(pid, exceptIdx) {
+    return items.reduce((n, it, i) => n + ((it.item_type === 'product' && !it.locked && String(it.product_id) === String(pid) && i !== exceptIdx) ? it.quantity : 0), 0);
+  }
+  function limitMessage(name, stock) { return stock <= 0 ? name + ' is out of stock.' : 'Only ' + stock + ' left in stock of ' + name + '.'; }
+  // red outline on the line and on the part's card, so it is clear why the number did not go up
+  function flashStockLimit(pid) {
+    const els = [].slice.call(document.querySelectorAll('.q-item[data-pid="' + pid + '"], .product-card[data-id="' + pid + '"]'));
+    els.forEach(el => el.classList.remove('limit-flash'));
+    void document.body.offsetWidth;
+    els.forEach(el => el.classList.add('limit-flash'));
+    clearTimeout(window._qLimitTimer);
+    window._qLimitTimer = setTimeout(() => els.forEach(el => el.classList.remove('limit-flash')), 900);
+  }
+  function overStockItems() {
+    return items.filter((it, i) => it.item_type === 'product' && !it.locked && it.product_id && qtyInQuote(it.product_id, -1) > stockOfProduct(it.product_id));
+  }
+
   function addProduct(el) {
     addItem({
       item_type: 'product',
@@ -798,6 +828,12 @@
   }
 
   function addItem(item) {
+    if (item.item_type === 'product' && item.product_id) {
+      const stock = stockOfProduct(item.product_id);
+      if (qtyInQuote(item.product_id, -1) + (item.quantity || 1) > stock) {
+        toast(limitMessage(item.name, stock), 'error'); flashStockLimit(item.product_id); return;
+      }
+    }
     const existing = items.find(i => i.name === item.name && i.item_type === item.item_type && !i.locked);
     if (existing) { existing.quantity++; }
     else { items.push({ ...item }); }
@@ -867,16 +903,20 @@
       </div>`;
     }
     if (g === 'mat') {
-      return `<div class="q-item">
+      const _stk = (!item.locked && item.product_id) ? stockOfProduct(item.product_id) : Infinity;
+      const _used = (!item.locked && item.product_id) ? qtyInQuote(item.product_id, -1) : 0;
+      const _atMax = _stk !== Infinity && _used >= _stk, _over = _stk !== Infinity && _used > _stk;
+      const _hint = _over ? `<span class="stk-hint over">Only ${_stk} left. Lower the amount.</span>` : (_atMax ? `<span class="stk-hint">Max reached (${_stk} in stock)</span>` : '');
+      return `<div class="q-item${_over ? ' limit-over' : ''}" data-pid="${item.product_id || ''}">
         <div class="ci-icon material">${ICON_BOX}</div>
         <div class="ci-info">
           <div class="ci-name">${escH(item.name)}</div>
-          <div class="ci-unit">${peso(item.unit_price)} each</div>
+          <div class="ci-unit">${peso(item.unit_price)} each${_hint ? ' · ' + _hint : ''}</div>
         </div>
         <div class="ci-controls">
           <div class="qty-btn" onclick="changeQty(${idx},-1)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
           <span class="qty-val">${item.quantity}</span>
-          <div class="qty-btn" onclick="changeQty(${idx},1)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+          <div class="qty-btn${_atMax ? ' at-max' : ''}" onclick="changeQty(${idx},1)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
           <div class="ci-amt">${peso(item.unit_price * item.quantity)}</div>
         </div>
       </div>`;
@@ -954,6 +994,13 @@
 
   function changeQty(idx, delta) {
     if (items[idx] && items[idx].locked) return;
+    const it = items[idx];
+    if (delta > 0 && it.item_type === 'product' && it.product_id) {
+      const stock = stockOfProduct(it.product_id);
+      if (qtyInQuote(it.product_id, -1) + delta > stock) {
+        toast(limitMessage(it.name, stock), 'error'); flashStockLimit(it.product_id); return;
+      }
+    }
     items[idx].quantity += delta;
     if (items[idx].quantity <= 0) items.splice(idx, 1);
     renderItems();
@@ -984,7 +1031,7 @@
   function validateForm() {
     const hasName  = document.getElementById('cust-name').value.trim().length > 0;
     const hasItems = IS_JO ? items.some(i => !i.locked) : items.length > 0;     // a job order needs something new to add
-    document.getElementById('save-btn').disabled = !(hasName && hasItems) || !!BLOCKED_BY;
+    document.getElementById('save-btn').disabled = !(hasName && hasItems) || !!BLOCKED_BY || overStockItems().length > 0;
   }
 
   function clearAll() {
@@ -1028,6 +1075,11 @@
       if (!document.getElementById('nc-reason').value.trim()) { toast("Say why it isn't covered — the reason is required.", 'error'); return; }
       if (notCovered.photos.length === 0) { toast("Add at least one photo showing why it isn't covered.", 'error'); return; }
     }
+
+    // right before sending: ask the database what is left now (somebody may have sold the part since this page loaded)
+    await syncStock();
+    { const bad = overStockItems()[0];
+      if (bad) { toast(limitMessage(bad.name, stockOfProduct(bad.product_id)) + ' Lower the amount first.', 'error'); flashStockLimit(bad.product_id); return; } }
 
     if (IS_JO) { return saveToJobOrder(); }
     const atShop = HAS_BOOKING && document.getElementById('atshop-check') && document.getElementById('atshop-check').checked;
@@ -1313,7 +1365,13 @@
       const data = await res.json();
       const map  = {};
       data.forEach(p => { map[p.id] = p.stock; });
+      const sig = () => items.filter(i => i.item_type === 'product' && i.product_id).map(i => i.product_id + ':' + stockOfProduct(i.product_id)).join(',');
+      const was = sig();
       applyStockUpdate(map);
+      if (sig() !== was) {                 // a part in this quotation changed in the database: the lines show "max reached" / "only N left" again
+        renderItems();
+        const bad = overStockItems()[0]; if (bad) toast(limitMessage(bad.name, stockOfProduct(bad.product_id)) + ' Lower the amount.', 'error');
+      }
       if (manual && btn) { btn.textContent = '✓'; setTimeout(() => btn.textContent = '↻', 1000); }
     } catch(e) {
       if (manual && btn) btn.textContent = '↻';
@@ -1321,7 +1379,9 @@
   }
 
   syncStock();
-  setInterval(syncStock, 60000);
+  setInterval(() => { if (!document.hidden) syncStock(); }, 15000);                       // the products in the database change as the shop sells
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) syncStock(); });
+  window.addEventListener('focus', () => syncStock());
 
   if (HAS_BOOKING) {
     if (document.getElementById('insp-mech-choose')) loadMechanicChoices();
