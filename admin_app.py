@@ -9675,7 +9675,7 @@ def api_reports_data():
         'order_status_counts': rpt['order_status_counts'],
         'top_services': rpt['top_services'],
         'mechanic_performance': rpt['mechanic_performance'],
-        'top_products': rpt['top_products'],
+        'top_products': [{**t, 'name': readable_item(t['name'])} for t in rpt['top_products']],
         'transactions': txns_json,
         'transaction_count': len(rpt['transactions']),
     })
