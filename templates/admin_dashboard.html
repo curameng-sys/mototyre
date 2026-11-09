@@ -319,14 +319,16 @@
       @media (max-height: 760px) {
         body.parts-lock .parts-right { padding-bottom: 0; }
         body.parts-lock .parts-right > .card { overflow: visible !important; }      /* a card that clips would stop the button from sticking */
-        .parts-denom { padding: 0.42rem 0.3rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--text); font-size: 0.8rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: background .12s, border-color .12s, transform .05s; }
-        .parts-denom:hover { background: #fff7f7; border-color: #fca5a5; }
-        .parts-denom:active { transform: scale(0.96); }
-        .parts-denom.exact { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
-        .parts-denom.clear { color: var(--muted); font-weight: 600; }
         body.parts-lock .parts-process-wrap { position: sticky; bottom: 0; z-index: 3; background: #fff; padding: 0.5rem 0 0.15rem; margin-top: 0.2rem; }
       }
     }
+
+    /* Cash received in In-Store Parts: the bill buttons look the same on every screen size */
+    .parts-denom { appearance: none; -webkit-appearance: none; padding: 0.42rem 0.3rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--text); font-size: 0.8rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: background .12s, border-color .12s, transform .05s; }
+    .parts-denom:hover { background: #fff7f7; border-color: #fca5a5; }
+    .parts-denom:active { transform: scale(0.96); }
+    .parts-denom.exact { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+    .parts-denom.clear { color: var(--muted); font-weight: 600; }
 
     /* Page header row */
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; }
