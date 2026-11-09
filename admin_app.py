@@ -1297,6 +1297,23 @@ def admin_logout():
 
 # Admin routes
 
+def _pay_parts(method, amount, received=None, change=None, cash_amount=None, gcash_amount=None):
+    """(cash, gcash) a payment brought in: all cash, all GCash, or for a split the cash share (what was handed over minus the change)
+    and the rest by GCash. Refunds are not part of either (they are listed on their own)."""
+    m = (method or 'cash').lower()
+    amount = float(amount or 0)
+    if m == 'gcash':
+        return 0.0, amount
+    if m == 'split':
+        if cash_amount is not None or gcash_amount is not None:
+            c = float(cash_amount or 0)
+        else:
+            c = float(received or 0) - float(change or 0)
+        c = max(0.0, min(amount, c))
+        return c, round(amount - c, 2)
+    return amount, 0.0
+
+
 def _revenue_transactions(date_from=None, date_to=None):
     """Every money-moving event in one list: completed bookings, paid job
     orders, completed orders (online + in-store), and released refunds
@@ -1330,20 +1347,22 @@ def _revenue_transactions(date_from=None, date_to=None):
         if not in_range(d):
             continue
         cust = b.contact_name if b.walkin_customer_id else (b.customer.fullname if b.customer else 'Unknown')
+        _c, _g = _pay_parts(b.invoice_payment_method or b.payment_method, b.total_amount, b.invoice_cash_received, b.invoice_change)
         txns.append({
             'ref': f'BKG-{b.id:03d}', 'type': 'booking', 'customer': cust or 'Unknown',
             'payment': _pay_label(b.invoice_payment_method or b.payment_method),
-            'amount': b.total_amount, 'date': d, 'status': 'Completed', 'record_id': b.id,
+            'amount': b.total_amount, 'date': d, 'status': 'Completed', 'record_id': b.id, 'cash': _c, 'gcash': _g,
         })
 
     for jo in JobOrder.query.join(Payment, Payment.job_order_id == JobOrder.id).all():
         d = jo.payment.paid_at
         if not in_range(d):
             continue
+        _c, _g = _pay_parts(jo.payment.payment_method, jo.total_amount, jo.payment.cash_received, jo.payment.change_given)
         txns.append({
             'ref': f'JO-{jo.id:03d}', 'type': 'job_order', 'customer': jo.customer_name or 'Unknown',
             'payment': _pay_label(jo.payment.payment_method),
-            'amount': jo.total_amount, 'date': d, 'status': 'Paid', 'record_id': jo.id,
+            'amount': jo.total_amount, 'date': d, 'status': 'Paid', 'record_id': jo.id, 'cash': _c, 'gcash': _g,
         })
 
     _walkin_cache = {}
@@ -1362,12 +1381,14 @@ def _revenue_transactions(date_from=None, date_to=None):
             cust = wc.name if wc else 'Walk-in'
         else:
             cust = o.customer.fullname if o.customer else 'Unknown'
+        _amt = (o.total_amount or 0) + ((o.shipping_fee or 0) if o.delivery_method == 'ship' else 0)
+        _c, _g = _pay_parts('gcash' if o.delivery_method == 'ship' else o.payment_method, _amt, cash_amount=o.cash_amount, gcash_amount=o.gcash_amount)
         txns.append({
             'ref': (f'SALE-{o.id:03d}' if is_sale else f'ORD-{o.id:03d}'),
             'type': ('sale' if is_sale else 'online'), 'customer': cust,
             'payment': _order_pay_label(o),
-            'amount': (o.total_amount or 0) + ((o.shipping_fee or 0) if o.delivery_method == 'ship' else 0),
-            'date': d, 'status': 'Completed', 'record_id': o.id,
+            'amount': _amt,
+            'date': d, 'status': 'Completed', 'record_id': o.id, 'cash': _c, 'gcash': _g,
         })
 
     # A paid Ship to Address order the shop cancelled was refunded in full through PayMongo: the sale stays on
@@ -1377,7 +1398,8 @@ def _revenue_transactions(date_from=None, date_to=None):
         ref = f'ORD-{o.id:03d}'
         if in_range(o.paid_at):
             txns.append({'ref': ref, 'type': 'online', 'customer': cust, 'payment': (o.payment_method or 'gcash').upper(),
-                         'amount': o.refund_amount, 'date': o.paid_at, 'status': 'Completed', 'record_id': o.id})
+                         'amount': o.refund_amount, 'date': o.paid_at, 'status': 'Completed', 'record_id': o.id,
+                         'cash': 0.0, 'gcash': float(o.refund_amount or 0)})
         if in_range(o.refunded_at):
             txns.append({'ref': f'RF-ORD-{o.id:03d}', 'type': 'refund', 'customer': cust, 'payment': '—',
                          'amount': -o.refund_amount, 'date': o.refunded_at, 'status': 'Refunded',
@@ -1443,6 +1465,40 @@ def _revenue_for_period(period):
     return period, _reports_summary(date_from, today if date_from else None)['net_revenue']
 
 
+def _revenue_trend(txns, date_from=None, date_to=None):
+    """Net revenue per day (a range up to about two months) or per month (longer), refunds taken off on the day they were released.
+    Days with no sales are 0, so the line shows the real shape of the period."""
+    pts = {}
+    dates = []
+    for t in txns:
+        d = t['date'].date() if hasattr(t['date'], 'date') else t['date']
+        dates.append(d)
+        pts[d] = pts.get(d, 0.0) + float(t['amount'] or 0)
+    first = date_from or (min(dates) if dates else None)
+    last = date_to or (max(dates) if dates else None)
+    if not first or not last or first > last:
+        return {'unit': 'day', 'points': []}
+    if (last - first).days + 1 <= 62:
+        out, d = [], first
+        while d <= last:
+            out.append({'label': d.strftime('%b %d').replace(' 0', ' '), 'amount': round(pts.get(d, 0.0), 2)})
+            d += timedelta(days=1)
+        return {'unit': 'day', 'points': out}
+    months = {}
+    for d, v in pts.items():
+        months[(d.year, d.month)] = months.get((d.year, d.month), 0.0) + v
+    out, y, m = [], first.year, first.month
+    while (y, m) <= (last.year, last.month) and len(out) < 60:
+        out.append({'label': date(y, m, 1).strftime('%b %Y'), 'amount': round(months.get((y, m), 0.0), 2)})
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return {'unit': 'month', 'points': out}
+
+
+def _net_revenue_between(date_from, date_to):
+    """Just the net revenue of a range (used to compare a period with the one before it)."""
+    return round(sum(float(t['amount'] or 0) for t in _revenue_transactions(date_from, date_to)), 2)
+
+
 def _reports_summary(date_from=None, date_to=None):
     """Everything the Dashboard's revenue card, the Reports & Sales page,
     and Transaction History all read from — one computation, so they can
@@ -1467,6 +1523,9 @@ def _reports_summary(date_from=None, date_to=None):
     refund_txns = [t for t in txns if t['type'] == 'refund']
     refund_total = sum(-t['amount'] for t in refund_txns)
     net_revenue = gross_total - refund_total
+    cash_total = round(sum(t.get('cash', 0.0) for t in txns if t['type'] != 'refund'), 2)
+    gcash_total = round(sum(t.get('gcash', 0.0) for t in txns if t['type'] != 'refund'), 2)
+    trend = _revenue_trend(txns, date_from, date_to)
 
     services_completed = sum(1 for t in txns if t['type'] in ('booking', 'job_order'))
 
@@ -1602,6 +1661,7 @@ def _reports_summary(date_from=None, date_to=None):
         'refund_total': refund_total,
         'refund_count': len(refund_txns),
         'net_revenue': net_revenue,
+        'cash_total': cash_total, 'gcash_total': gcash_total, 'trend': trend,
         'services_completed': services_completed,
         'orders_fulfilled': orders_fulfilled,
         'refunded_orders_excluded': refunded_orders_excluded,
@@ -9549,6 +9609,14 @@ def api_reports_data():
 
     rpt = _reports_summary(date_from, date_to)
     total_customers = User.query.filter_by(role='customer').count()
+    previous = None
+    if date_from and date_to:                      # the period right before this one, as long as this one: is the shop doing better or worse?
+        _days = (date_to - date_from).days + 1
+        _pto = date_from - timedelta(days=1)
+        _pfrom = _pto - timedelta(days=_days - 1)
+        _pnet = _net_revenue_between(_pfrom, _pto)
+        previous = {'net': _pnet, 'from': _pfrom.strftime('%b %d, %Y'), 'to': _pto.strftime('%b %d, %Y'), 'days': _days,
+                    'change_pct': (round((rpt['net_revenue'] - _pnet) / _pnet * 100, 1) if _pnet else None)}
 
     txns_json = [{
         'ref': t['ref'], 'type': t['type'], 'customer': t['customer'], 'payment': t['payment'],
@@ -9563,6 +9631,7 @@ def api_reports_data():
         'refund_total': rpt['refund_total'],
         'refund_count': rpt['refund_count'],
         'net_revenue': rpt['net_revenue'],
+        'cash_total': rpt['cash_total'], 'gcash_total': rpt['gcash_total'], 'trend': rpt['trend'], 'previous': previous,
         'services_completed': rpt['services_completed'],
         'orders_fulfilled': rpt['orders_fulfilled'],
         'refunded_orders_excluded': rpt['refunded_orders_excluded'],
