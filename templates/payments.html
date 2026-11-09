@@ -153,13 +153,13 @@
     /* ── BILLING MODAL ── */
     .bill-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9000;align-items:center;justify-content:center;padding:1rem;}
     .bill-overlay.open{display:flex;}
-    .bill-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;overflow:hidden;}
-    .bill-head{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .bill-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 2rem);max-height:calc(100dvh - 2rem);}
+    .bill-head{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
     .bill-head-title{font-family:'Inter',sans-serif;font-weight:700;font-size:.95rem;color:#111827;}
     .bill-ref{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
     .bill-close{background:none;border:none;color:var(--muted);cursor:pointer;padding:.2rem;}
     .bill-close:hover{color:#111827;}
-    .bill-body{padding:1.25rem 1.5rem;}
+    .bill-body{padding:1.25rem 1.5rem;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;}
     .bill-info{margin-bottom:1rem;}
     .bill-info-row{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.2rem 0;}
     .bill-info-label{color:var(--muted);}
@@ -189,7 +189,18 @@
     .bill-input.field-invalid{border-color:#dc2626;}
     .bill-field-error{display:flex;align-items:center;gap:.35rem;color:#dc2626;font-size:.75rem;font-family:'Inter',sans-serif;margin:-.4rem 0 .65rem;}
     .bill-error-banner{display:flex;align-items:center;gap:.5rem;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:.8rem;font-family:'Inter',sans-serif;padding:.6rem .85rem;border-radius:8px;margin-bottom:.85rem;}
-    .bill-foot{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.65rem;}
+    .bill-foot{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.65rem;flex-shrink:0;background:var(--surface);}
+    /* a short screen: tighter spacing, and the explanation lines go, so more of the form is in view without scrolling */
+    @media (max-height: 800px) {
+      .bill-head{padding:.7rem 1.2rem;} .bill-body{padding:.8rem 1.2rem;} .bill-foot{padding:.7rem 1.2rem;}
+      #split-wrap{margin-top:.5rem !important;padding:.55rem .7rem !important;} #split-wrap > div:first-child{display:none;}
+      #cash-wrap{margin-top:.5rem !important;padding:.55rem .7rem !important;}
+      #cash-quick{gap:.3rem !important;margin-bottom:.4rem !important;} #cash-quick + div{margin-top:0;}
+      #cash-wrap > div[style*='font-size:.68rem']{display:none;}
+      .bill-denom{padding:.3rem .2rem;font-size:.76rem;}
+      .bill-total-row{margin-bottom:.6rem !important;} .bill-input{margin-bottom:.45rem;}
+    }
+    @media (max-height: 640px) { #cash-quick-hint, #cash-wrap .bill-section-label + div[style*='font-size:.68rem']{display:none;} .bill-items{max-height:90px;overflow-y:auto;} }
     .btn-cancel-bill{flex:1;padding:.6rem;border-radius:8px;border:1px solid var(--border);background:#f9fafb;color:var(--muted);font-family:'Inter',sans-serif;font-weight:700;font-size:.8rem;cursor:pointer;transition:all .15s;}
     .btn-cancel-bill:hover{color:#374151;border-color:#9ca3af;}
     .btn-mark-paid{flex:2;padding:.6rem;border-radius:8px;border:none;background:var(--green);color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;transition:all .15s;letter-spacing:.02em;}
@@ -1053,12 +1064,14 @@ function showBillFieldError(fieldId, errorId) {
   field.classList.add('field-invalid');
   document.getElementById(errorId).style.display = 'flex';
   field.focus();
+  try { field.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* older browser */ }
 }
 
 function showBillBannerError(msg) {
   const banner = document.getElementById('bill-error-banner');
   banner.textContent = msg;
   banner.style.display = 'flex';
+  try { banner.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* older browser */ }
 }
 
 document.getElementById('bill-gcash-ref').addEventListener('input', function() {
