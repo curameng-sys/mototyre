@@ -35,7 +35,7 @@
     /* ═══════════════════════════════════════
        LAYOUT
     ═══════════════════════════════════════ */
-    .admin-wrap { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+    .admin-wrap { display: grid; grid-template-columns: clamp(184px, 16.5vw, 220px) 1fr; min-height: 100vh; }
 
     /* ═══════════════════════════════════════
        SIDEBAR
@@ -193,7 +193,7 @@
     /* Extra top padding reserves room below the fixed top-right notif/profile
        widget so it never overlaps a section's own right-aligned header button
        (Add Product, New Walk-In Quotation, View All, etc.). */
-    .main { padding: 5rem 2rem 1.75rem; overflow-x: hidden; background: var(--ink); }
+    .main { padding: 5rem clamp(1rem, 2.2vw, 2rem) 1.75rem; overflow-x: hidden; background: var(--ink); }
     .page-section { display: none; }
     .page-section.active { display: block; }
     .order-cancel-btn { background: #fff; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; padding: 0.3rem 0.65rem; font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer; margin-left: 0.35rem; white-space: nowrap; }
@@ -355,7 +355,7 @@
     .td-actions button { flex:1; padding:0.6rem; border-radius:8px; font-family:inherit; font-weight:700; font-size:0.85rem; cursor:pointer; }
     .td-actions .close { background:#fff; color:var(--text); border:1px solid var(--border); }
     /* Cash received in In-Store Parts: the bill buttons look the same on every screen size */
-    .parts-denom { appearance: none; -webkit-appearance: none; padding: 0.3rem 0.1rem; min-width: 0; border-radius: 7px; border: 1px solid var(--border); background: #fff; color: var(--text); font-size: 0.72rem; font-weight: 700; white-space: nowrap; font-family: inherit; cursor: pointer; transition: background .12s, border-color .12s, transform .05s; }
+    .parts-denom { appearance: none; -webkit-appearance: none; padding: 0.34rem 0.2rem; min-width: 0; border-radius: 7px; border: 1px solid var(--border); background: #fff; color: var(--text); font-size: 0.72rem; font-weight: 700; white-space: nowrap; font-family: inherit; cursor: pointer; transition: background .12s, border-color .12s, transform .05s; }
     .parts-denom:hover { background: #fff7f7; border-color: #fca5a5; }
     .parts-denom:active { transform: scale(0.96); }
     .parts-denom.exact { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
@@ -2725,15 +2725,15 @@
                   <input type="text" id="parts-cash-received" inputmode="decimal" placeholder="0.00" oninput="this.value=this.value.replace(/[^0-9.]/g,''); onPartsCartChange()"
                     style="width:100%;padding:0.45rem 0.75rem;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font-size:0.9rem;outline:none;">
                   <!-- bills and coins: tap each one the customer hands over, they add up; Exact = the total, Clear = start again -->
-                  <div id="parts-cash-denoms" title="Tap the bills the customer hands over" style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.3rem;margin-top:0.5rem;">
+                  <div id="parts-cash-denoms" title="Tap the bills the customer hands over" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.3rem;margin-top:0.5rem;">
                     <button type="button" class="parts-denom" onclick="addPartsCash(20)">₱20</button>
                     <button type="button" class="parts-denom" onclick="addPartsCash(50)">₱50</button>
                     <button type="button" class="parts-denom" onclick="addPartsCash(100)">₱100</button>
                     <button type="button" class="parts-denom" onclick="addPartsCash(200)">₱200</button>
                     <button type="button" class="parts-denom" onclick="addPartsCash(500)">₱500</button>
                     <button type="button" class="parts-denom" onclick="addPartsCash(1000)">₱1,000</button>
-                    <button type="button" class="parts-denom exact" onclick="setPartsCashExact()" style="grid-column:span 3;">Exact</button>
-                    <button type="button" class="parts-denom clear" onclick="clearPartsCash()" style="grid-column:span 3;">Clear</button>
+                    <button type="button" class="parts-denom exact" onclick="setPartsCashExact()">Exact</button>
+                    <button type="button" class="parts-denom clear" onclick="clearPartsCash()">Clear</button>
                   </div>
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.55rem;">
                     <span style="font-size:0.78rem;color:var(--muted);">Change to give</span>

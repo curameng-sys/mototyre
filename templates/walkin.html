@@ -80,7 +80,10 @@
       border-bottom: 1px solid var(--border);
       background: var(--panel); flex-shrink: 0;
     }
-    .tab-bar { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; }
+    .tab-bar { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; overflow-x: auto; scrollbar-width: none; }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-bar .tab-btn { flex: 0 0 auto; }
+    @media (max-width: 480px) { .tab-bar .tab-btn { flex: 1 1 0; padding-left: 0.4rem; padding-right: 0.4rem; font-size: 0.74rem; white-space: nowrap; } }
     .tab-btn {
       display: flex; align-items: center; gap: 0.4rem;
       padding: 0.45rem 1rem; border-radius: 8px;
