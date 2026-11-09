@@ -8411,12 +8411,53 @@ def billing_order_void(oid):
 @login_required
 @require_admin_or_staff
 def billing_order_complete(oid):
+    """Hands over a pick-up order. An order the customer already paid by GCash online only needs this confirmation. An order that is
+    still to be paid at the counter is collected exactly like a booking or a job order: Cash (with the cash handed over and the
+    change), GCash (with its reference no.), or part cash and part GCash."""
     order = Order.query.get_or_404(oid)
     if order.status == 'completed':
         return jsonify({'success': False, 'error': 'Order already completed'}), 400
     if order.delivery_method != 'pickup':
         return jsonify({'success': False, 'error': 'Only pick-up orders can be billed here'}), 400
+    data = request.get_json(silent=True) or {}
     is_cash = (order.payment_method or 'cash') == 'cash'
+    method = (data.get('payment_method') or '').strip().lower()
+    owed = round(float(order.total_amount or 0), 2)
+    cash_in = change = cash_part = gcash_part = None
+    ref_no = clean_str(str(data.get('reference_no') or ''), max_len=50) or None
+    if is_cash:
+        method = method or 'cash'
+        if method not in ('cash', 'gcash', 'split'):
+            return jsonify({'success': False, 'error': 'Invalid payment method'}), 400
+        if method in ('gcash', 'split') and not ref_no:
+            return jsonify({'success': False, 'error': 'GCash reference number is required'}), 400
+        if method in ('cash', 'split'):
+            if method == 'split':
+                try:
+                    cash_part = round(float(data.get('cash_part')), 2)
+                except (TypeError, ValueError):
+                    return jsonify({'success': False, 'error': 'Please enter how much of the total is paid in cash.'}), 400
+                if cash_part <= 0 or cash_part >= owed - 0.004:
+                    return jsonify({'success': False, 'error': 'The cash share must be more than 0 and less than the total. For cash only or GCash only, choose that method instead.'}), 400
+                gcash_part = round(owed - cash_part, 2)
+            due = cash_part if method == 'split' else owed
+            raw = data.get('cash_received')
+            if raw in (None, ''):
+                cash_in = due                                   # nothing typed = exact money
+            else:
+                try:
+                    cash_in = round(float(raw), 2)
+                except (TypeError, ValueError):
+                    return jsonify({'success': False, 'error': 'Please enter the cash received.'}), 400
+                if cash_in < due - 0.004:
+                    return jsonify({'success': False, 'error': f'The cash received (\u20b1{cash_in:,.2f}) is less than the {"cash share" if method == "split" else "total"} (\u20b1{due:,.2f}).'}), 400
+            change = round(cash_in - due, 2)
+        order.payment_method = method
+        if method in ('gcash', 'split'):
+            order.payment_ref = ref_no
+        if method == 'split':
+            order.cash_amount, order.gcash_amount = cash_part, gcash_part
+        order.recorded_by = current_user.fullname
     order.status = 'completed'
     if not order.delivered_at:
         order.delivered_at = ph_now()
@@ -8424,7 +8465,8 @@ def billing_order_complete(oid):
     body = (f'Your order ORD-{order.id:03d} has been picked up and payment collected. Thank you!' if is_cash
             else f'Your order ORD-{order.id:03d} has been picked up. Thank you!')
     _notify_order_customer(order, 'Order Completed!', body, status='completed')
-    return jsonify({'success': True, 'ref': f'ORD-{order.id:03d}', 'amount': order.total_amount})
+    return jsonify({'success': True, 'ref': f'ORD-{order.id:03d}', 'amount': order.total_amount, 'method': order.payment_method,
+                    'cash_received': cash_in, 'change': change, 'cash_part': cash_part, 'gcash_part': gcash_part})
 
 
 def _get_app_state(key, default=None):

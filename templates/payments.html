@@ -177,6 +177,11 @@
     .pay-opt{padding:.55rem;border-radius:8px;border:2px solid #d1d5db;background:#fff;color:var(--muted);font-family:'Inter',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;}
     .pay-opt.active-cash{border-color:var(--green);background:rgba(22,163,74,.08);color:#15803d;}
     .pay-opt.active-gcash{border-color:var(--blue);background:rgba(37,99,235,.08);color:#1d4ed8;}
+    .bill-denom{appearance:none;-webkit-appearance:none;padding:.42rem .3rem;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#111827;font-family:'Inter',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:background .12s,border-color .12s,transform .05s;}
+    .bill-denom:hover{background:#f0fdf4;border-color:#86efac;}
+    .bill-denom:active{transform:scale(.96);}
+    .bill-denom.exact{background:#f0fdf4;border-color:#bbf7d0;color:#166534;}
+    .bill-denom.clear{color:var(--muted);font-weight:600;}
     .pay-opt.active-split{border-color:#7c3aed;background:rgba(124,58,237,.08);color:#6d28d9;}
     .bill-input{width:100%;padding:.5rem .85rem;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;font-family:'Inter',sans-serif;font-size:.85rem;outline:none;margin-bottom:.65rem;}
     .bill-input:focus{border-color:var(--green);}
@@ -778,7 +783,8 @@
       <div id="cash-wrap" style="margin-top:.75rem;padding:.75rem .85rem;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:10px;">
         <div class="bill-section-label" id="cash-wrap-label" style="color:#166534;">Cash received (₱)</div>
         <input type="text" id="bill-cash-input" class="bill-input" inputmode="decimal" placeholder="0.00" autocomplete="off" style="margin-bottom:.5rem;" oninput="this.value=this.value.replace(/[^0-9.]/g,''); onCashInput()">
-        <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem;" id="cash-quick"></div>
+        <div style="font-size:.68rem;color:var(--muted);margin:-.1rem 0 .3rem;">Tap the bills the customer hands over:</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.6rem;" id="cash-quick"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:.8rem;color:var(--muted);font-weight:600;">Change to give</span>
           <span id="bill-change" style="font-family:'Barlow Condensed',sans-serif;font-size:1.7rem;letter-spacing:.03em;color:#111827;">₱0.00</span>
@@ -1004,12 +1010,22 @@ function onSplitInput() {
   err.style.display = 'none';
   buildCashQuick(); onCashInput();
 }
+// Bills the customer hands over: each tap adds to Cash received (so ₱500 + ₱200 + ₱100 = ₱800); Exact = what is due; Clear starts again
 function buildCashQuick() {
-  const total = _cashDue(), box = document.getElementById('cash-quick');
-  const opts = [total, Math.ceil(total / 100) * 100, Math.ceil(total / 500) * 500, Math.ceil(total / 1000) * 1000].filter((v, i, a) => v > 0 && a.indexOf(v) === i).slice(0, 4);
-  box.innerHTML = opts.map((v, i) => '<button type="button" class="pay-opt" style="flex:0 0 auto;padding:.25rem .6rem;font-size:.72rem;" onclick="setCash(' + v + ')">' + (i === 0 ? 'Exact ' : '') + _pesoFmt(v) + '</button>').join('');
+  const box = document.getElementById('cash-quick');
+  if (box.dataset.built) return;                       // the buttons never change, only what they add to
+  box.dataset.built = '1';
+  box.innerHTML = [20, 50, 100, 200, 500, 1000].map(n => '<button type="button" class="bill-denom" onclick="addCash(' + n + ')">' + _pesoFmt(n).replace('.00', '') + '</button>').join('')
+    + '<button type="button" class="bill-denom exact" onclick="setCashExact()">Exact</button>'
+    + '<button type="button" class="bill-denom clear" onclick="setCash(0)" style="grid-column:span 2;">Clear</button>';
 }
-function setCash(v) { document.getElementById('bill-cash-input').value = String(v); onCashInput(); }
+function setCash(v) {
+  v = Math.round((v || 0) * 100) / 100;
+  document.getElementById('bill-cash-input').value = v > 0 ? String(v) : '';
+  onCashInput();
+}
+function addCash(n) { setCash((parseFloat(document.getElementById('bill-cash-input').value) || 0) + n); }
+function setCashExact() { setCash(_cashDue()); }
 function onCashInput() {
   const total = _cashDue(), raw = document.getElementById('bill-cash-input').value;
   const got = parseFloat(raw), ch = document.getElementById('bill-change'), err = document.getElementById('bill-cash-error');
@@ -1114,7 +1130,8 @@ async function submitBilling() {
       data = await res.json();
 
     } else {
-      res  = await fetch(`/billing/order/${_bill.id}/complete`, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+      res  = await fetch(`/billing/order/${_bill.id}/complete`, {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ payment_method: _payMethod, reference_no: ref || null, cash_received: cashIn, cash_part: cashPart })});
       data = await res.json();
     }
 
@@ -1397,14 +1414,22 @@ async function openRecordCashModal(bid) {
   document.getElementById('rc-error-banner').style.display = 'none';
 
   const quickWrap = document.getElementById('rc-quick-amounts');
-  quickWrap.innerHTML = buildQuickAmounts(inv.total).map(a =>
-    `<button type="button" class="quick-amt-btn" onclick="document.getElementById('rc-cash-input').value=${a};updateChangeBox();">₱${a.toLocaleString('en-PH',{minimumFractionDigits:2})}</button>`
-  ).join('');
+  quickWrap.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin:.1rem 0 .75rem;';
+  quickWrap.innerHTML = '<div style="grid-column:1/-1;font-size:.68rem;color:var(--muted);">Tap the bills the customer hands over:</div>' + [20, 50, 100, 200, 500, 1000].map(n => '<button type="button" class="bill-denom" onclick="rcAddCash(' + n + ')">' + _pesoFmt(n).replace('.00', '') + '</button>').join('')
+    + '<button type="button" class="bill-denom exact" onclick="rcSetCash(_rcBooking.total)">Exact</button>'
+    + '<button type="button" class="bill-denom clear" onclick="rcSetCash(0)" style="grid-column:span 2;">Clear</button>';
 
   updateChangeBox();
   document.getElementById('rc-overlay').classList.add('open');
   document.addEventListener('keydown', _rcEscHandler);
 }
+
+function rcSetCash(v) {
+  v = Math.round((v || 0) * 100) / 100;
+  document.getElementById('rc-cash-input').value = v > 0 ? String(v) : '';
+  updateChangeBox();
+}
+function rcAddCash(n) { rcSetCash((parseFloat(document.getElementById('rc-cash-input').value) || 0) + n); }
 
 function closeRecordCashModal() {
   document.getElementById('rc-overlay').classList.remove('open');
