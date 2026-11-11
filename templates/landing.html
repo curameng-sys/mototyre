@@ -188,6 +188,9 @@
     .step-num{font-family:var(--font-mono);font-size:11px;letter-spacing:0.18em;color:var(--brand-red);font-weight:600;margin-top:4px}
     .step-title{font-family:var(--font-display);font-size:22px;letter-spacing:0.04em;color:var(--fg-1);text-transform:uppercase}
     .step-desc{font-family:var(--font-body);font-size:14px;color:var(--fg-2);line-height:1.55}
+    .steps-track{font-family:var(--font-mono);font-size:12px;letter-spacing:0.18em;font-weight:700;color:var(--fg-1);margin:28px 0 14px;display:flex;align-items:center;gap:12px}
+    .steps-track::after{content:'';flex:1;height:1px;background:var(--line-1)}
+    .steps-track:first-of-type{margin-top:8px}
 
     /* ── TESTIMONIALS ── */
     .testi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
@@ -606,9 +609,10 @@
       <div>
         <div class="eyebrow">SIMPLE PROCESS</div>
         <h2>HOW IT <span class="accent">WORKS</span></h2>
-        <p>Book your appointment in just a few steps — no hassle, no waiting in line.</p>
+        <p>Book a service or order parts online in just a few steps — no hassle, no waiting in line.</p>
       </div>
     </div>
+    <div class="steps-track">BOOK A SERVICE</div>
     <div class="steps-wrap">
       <div class="steps-line"></div>
       <div class="steps-grid">
@@ -616,25 +620,55 @@
           <div class="step-circle"><i data-lucide="bike" style="width:22px;height:22px"></i></div>
           <div class="step-num">STEP 01</div>
           <div class="step-title">CREATE ACCOUNT</div>
-          <p class="step-desc">Register for free with your name, email, and motorcycle details.</p>
+          <p class="step-desc">Register for free with your name, email and mobile number, then verify it with a code.</p>
         </div>
         <div class="step">
           <div class="step-circle"><i data-lucide="list-checks" style="width:22px;height:22px"></i></div>
           <div class="step-num">STEP 02</div>
           <div class="step-title">PICK A SERVICE</div>
-          <p class="step-desc">Choose from our list of available motorcycle services and parts.</p>
+          <p class="step-desc">Choose one or more motorcycle services and tell us which motorcycle it is for.</p>
         </div>
         <div class="step">
           <div class="step-circle"><i data-lucide="calendar" style="width:22px;height:22px"></i></div>
           <div class="step-num">STEP 03</div>
           <div class="step-title">BOOK A SCHEDULE</div>
-          <p class="step-desc">Select your preferred date and time slot from our live calendar.</p>
+          <p class="step-desc">Select your preferred date and time from our live calendar, and a mechanic if you have a favorite.</p>
         </div>
         <div class="step">
           <div class="step-circle"><i data-lucide="badge-check" style="width:22px;height:22px"></i></div>
           <div class="step-num">STEP 04</div>
           <div class="step-title">WE GOT YOU</div>
-          <p class="step-desc">Show up on time and our mechanics will take care of the rest.</p>
+          <p class="step-desc">Show up on time. We inspect first and tell you about any extra work before we do it. Pay after the service.</p>
+        </div>
+      </div>
+    </div>
+    <div class="steps-track">ORDER PARTS</div>
+    <div class="steps-wrap">
+      <div class="steps-line"></div>
+      <div class="steps-grid">
+        <div class="step">
+          <div class="step-circle"><i data-lucide="shopping-cart" style="width:22px;height:22px"></i></div>
+          <div class="step-num">STEP 01</div>
+          <div class="step-title">ADD TO CART</div>
+          <p class="step-desc">Browse our parts and accessories and add what you need to your cart.</p>
+        </div>
+        <div class="step">
+          <div class="step-circle"><i data-lucide="truck" style="width:22px;height:22px"></i></div>
+          <div class="step-num">STEP 02</div>
+          <div class="step-title">PICK UP OR DELIVERY</div>
+          <p class="step-desc">Pick it up at the shop, or have it delivered within North Caloocan and Northern Quezon City.</p>
+        </div>
+        <div class="step">
+          <div class="step-circle"><i data-lucide="wallet" style="width:22px;height:22px"></i></div>
+          <div class="step-num">STEP 03</div>
+          <div class="step-title">PAY ONLINE</div>
+          <p class="step-desc">Pay for your items with GCash. Shop Pickup can also be paid in cash at the counter.</p>
+        </div>
+        <div class="step">
+          <div class="step-circle"><i data-lucide="package-check" style="width:22px;height:22px"></i></div>
+          <div class="step-num">STEP 04</div>
+          <div class="step-title">GET YOUR ORDER</div>
+          <p class="step-desc">We pack it and let you know. For delivery, we agree on the delivery fee with you before it goes out.</p>
         </div>
       </div>
     </div>
