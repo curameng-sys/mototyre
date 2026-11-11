@@ -2082,8 +2082,8 @@
   </div>
   {% if bookings %}
   <div class="mb-tabs" role="tablist" aria-label="Filter bookings">
-    <button type="button" class="mb-tab active" data-mbf="all" role="tab" aria-selected="true" onclick="filterMyBookings('all')">All <span class="mb-tab-n" data-mbn="all"></span></button>
-    <button type="button" class="mb-tab" data-mbf="active" role="tab" aria-selected="false" onclick="filterMyBookings('active')">Active <span class="mb-tab-n" data-mbn="active"></span></button>
+    <button type="button" class="mb-tab" data-mbf="all" role="tab" aria-selected="false" onclick="filterMyBookings('all')">All <span class="mb-tab-n" data-mbn="all"></span></button>
+    <button type="button" class="mb-tab active" data-mbf="active" role="tab" aria-selected="true" onclick="filterMyBookings('active')">Active <span class="mb-tab-n" data-mbn="active"></span></button>
     <button type="button" class="mb-tab" data-mbf="completed" role="tab" aria-selected="false" onclick="filterMyBookings('completed')">Completed <span class="mb-tab-n" data-mbn="completed"></span></button>
     <button type="button" class="mb-tab" data-mbf="cancelled" role="tab" aria-selected="false" onclick="filterMyBookings('cancelled')">Cancelled <span class="mb-tab-n" data-mbn="cancelled"></span></button>
   </div>
@@ -2240,8 +2240,8 @@
   </div>
   {% if orders %}
   <div class="mb-tabs" role="tablist" aria-label="Filter orders">
-    <button type="button" class="mb-tab active" data-omf="all" role="tab" aria-selected="true" onclick="filterMyOrders('all')">All <span class="mb-tab-n" data-omn="all"></span></button>
-    <button type="button" class="mb-tab" data-omf="active" role="tab" aria-selected="false" onclick="filterMyOrders('active')">Active <span class="mb-tab-n" data-omn="active"></span></button>
+    <button type="button" class="mb-tab" data-omf="all" role="tab" aria-selected="false" onclick="filterMyOrders('all')">All <span class="mb-tab-n" data-omn="all"></span></button>
+    <button type="button" class="mb-tab active" data-omf="active" role="tab" aria-selected="true" onclick="filterMyOrders('active')">Active <span class="mb-tab-n" data-omn="active"></span></button>
     <button type="button" class="mb-tab" data-omf="completed" role="tab" aria-selected="false" onclick="filterMyOrders('completed')">Completed <span class="mb-tab-n" data-omn="completed"></span></button>
     <button type="button" class="mb-tab" data-omf="cancelled" role="tab" aria-selected="false" onclick="filterMyOrders('cancelled')">Cancelled <span class="mb-tab-n" data-omn="cancelled"></span></button>
     <button type="button" class="mb-tab" data-omf="refunded" role="tab" aria-selected="false" onclick="filterMyOrders('refunded')" style="display:none;">Refunded <span class="mb-tab-n" data-omn="refunded"></span></button>
@@ -3610,6 +3610,9 @@
     if (name === 'book') loadMechanics();
     if (name === 'returns') setReturnsTab(_returnsActiveTab);
     if (name === 'transactions') loadTransactions();
+    // My Bookings / My Orders open on Active (or on All when nothing is active), not on whatever was picked last time
+    if (name === 'bookings' && typeof resetMyBookingsFilter === 'function') resetMyBookingsFilter();
+    if (name === 'orders' && typeof resetMyOrdersFilter === 'function') resetMyOrdersFilter();
     document.querySelectorAll('.c-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-links a, .mobile-nav-menu a').forEach(a => a.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
@@ -9447,10 +9450,14 @@ function filterMyBookings(f) {
   document.querySelectorAll('#sec-bookings .mb-tab').forEach(t => { const on = t.dataset.mbf === f; t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
   applyMyBookingsFilter();
 }
+function resetMyBookingsFilter() {
+  const rows = Array.from(document.querySelectorAll('#sec-bookings tr.booking-row'));
+  filterMyBookings(rows.some(r => _mbGroup(r) === 'active') ? 'active' : 'all');
+}
 (function () {
   const body = document.querySelector('#sec-bookings tbody');
   if (!body) return;
-  applyMyBookingsFilter();
+  resetMyBookingsFilter();
   let t = null;
   new MutationObserver(() => { clearTimeout(t); t = setTimeout(applyMyBookingsFilter, 60); })
     .observe(body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true, characterData: true });
@@ -9485,10 +9492,14 @@ function filterMyOrders(f) {
   document.querySelectorAll('#sec-orders .mb-tab').forEach(t => { const on = t.dataset.omf === f; t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
   applyMyOrdersFilter();
 }
+function resetMyOrdersFilter() {
+  const rows = Array.from(document.querySelectorAll('#sec-orders tr.order-row'));
+  filterMyOrders(rows.some(r => _omGroup(r) === 'active') ? 'active' : 'all');
+}
 (function () {
   const body = document.querySelector('#sec-orders tbody');
   if (!body) return;
-  applyMyOrdersFilter();
+  resetMyOrdersFilter();
   let t = null;
   new MutationObserver(() => { clearTimeout(t); t = setTimeout(applyMyOrdersFilter, 60); })
     .observe(body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true, characterData: true });
