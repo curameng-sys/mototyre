@@ -501,7 +501,7 @@
           <td><span class="amount">₱{{ '{:,.2f}'.format(o.total_amount) }}</span></td>
           <td>
             <span class="badge b-pending">{{ 'Ready For Pickup' if o.status == 'shipped' else o.status|replace('_',' ')|title }}</span>{% if o.pickup_due %}<span class="due-badge{{ ' last' if o.pickup_due.last_day else '' }}">Due{{ ' · last day' if o.pickup_due.last_day else '' }}</span>{% endif %}
-            {% if o.pickup_due %}<div class="due-note{{ ' last' if o.pickup_due.last_day else '' }}">Waiting {{ o.pickup_due.days_label }} · auto-cancels {{ o.pickup_due.cancel_at }}</div>{% endif %}
+            {% if o.pickup_due %}<div class="due-note{{ ' last' if o.pickup_due.last_day else '' }}">Waiting {{ o.pickup_due.days_label }}{% if o.pickup_due.no_cancel %} · paid, stays until picked up{% else %} · auto-cancels {{ o.pickup_due.cancel_at }}{% endif %}</div>{% endif %}
             {% if (o.payment_method or '')|lower == 'gcash' %}<div class="sub" style="margin-top:.2rem;">GCash · already paid</div>{% endif %}
           </td>
           <td>

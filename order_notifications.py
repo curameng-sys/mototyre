@@ -20,12 +20,14 @@ SHOP_NAME = 'MotoTyres North Caloocan'
 
 # Shop Pickup: how long a ready order is held for the customer. After this it is cancelled automatically, the items
 # go back to stock, and a GCash payment is refunded to the same GCash account.
-PICKUP_HOLD_DAYS = 3
+PICKUP_HOLD_DAYS = 2
 
 
 def pickup_hold_line(deadline_text, paid_with_gcash):
     """The sentence added to the 'ready for pickup' message, so the customer knows the last day up front."""
-    refund = ' Your GCash payment will then be refunded to the same GCash account.' if paid_with_gcash else ''
+    if paid_with_gcash:          # already paid: the shop keeps it until the customer collects it
+        return ' Your order is paid, so we keep it for you until you pick it up.'
+    refund = ''
     return (f' We hold it until {deadline_text}. Orders not picked up by then are cancelled automatically '
             f'and the items go back on the shelf.{refund}')
 
@@ -129,7 +131,7 @@ def _pickup_messages(ref):
             f'Your order {ref} is being processed.'),
         'shipped': (
             'Order Ready for Pickup! 📦',
-            f'Your order {ref} is ready for pickup at {SHOP_NAME}.'),
+            f'Your order {ref} is ready for pickup at {SHOP_NAME}. You can come yourself, or book your own courier (Lalamove, Grab, etc.) to collect it: the rider just shows your order number {ref} at the counter.'),
         'delivered': (
             'Order Delivered!',
             f'Your order {ref} has been delivered.'),
@@ -166,6 +168,8 @@ def _peso(n):
 
 def _prices_line(prices):
     prices = prices or {}
+    if prices.get('fee'):
+        return f"Delivery fee {_peso(prices['fee'])}"
     pool = _peso(prices['pooling']) if prices.get('pooling') else 'n/a'
     return f"Priority {_peso(prices.get('priority') or 0)} · Regular {_peso(prices.get('regular') or 0)} · Pooling {pool}"
 
@@ -180,9 +184,17 @@ def ship_notice(kind, ref, **c):
     if kind == 'packing':
         return ('Order Being Packed 📦',
                 f"Your order {ref} is being packed. We'll send your shipping options once it's done.", 'in_progress')
+    if kind == 'packed' and c.get('two_step'):
+        return ('Order Packed ✅',
+                f"{ref} is packed and your items are already paid. The shop will contact you about the delivery, then send you the delivery fee to pay.", 'done_packaging')
     if kind == 'packed':
         return ('Order Packed ✅',
                 f"{ref} is packed. We're checking courier prices now and will send your shipping options shortly.", 'done_packaging')
+    if kind in ('options', 'options_updated') and c.get('two_step'):
+        title = 'Pay Your Delivery Fee 🚚' if kind == 'options' else 'Delivery Fee Updated 🚚'
+        return (title,
+                f'{ref} is packed and goes by Courier {c.get("vehicle", "")}. {_prices_line(c.get("prices"))}. '
+                f'Your items are already paid. Pay only the delivery fee so we can book the courier.', 'done_packaging')
     if kind in ('options', 'options_updated'):
         title = 'Choose Your Shipping 🚚' if kind == 'options' else 'Shipping Options Updated 🚚'
         return (title,
@@ -191,6 +203,9 @@ def ship_notice(kind, ref, **c):
     if kind == 'two_hours':
         return ('2 Hours Left to Pay ⏰',
                 f'Choose your shipping and pay for {ref} by {c.get("deadline", "")}. If not, your order will be cancelled automatically.', 'done_packaging')
+    if kind == 'paid' and c.get('two_step'):
+        return ('Delivery Fee Received 💳',
+                f"We got your {_peso(c.get('fee', 0))} GCash payment for the delivery of {ref} (Courier {c.get('vehicle', '')}). We're booking your courier now.", 'paid')
     if kind == 'paid':
         return ('Payment Received 💳',
                 f"We got your {_peso(c.get('total', 0))} GCash payment for {ref}. We're booking your {c.get('option', '')} Courier {c.get('vehicle', '')} now.", 'paid')
@@ -264,7 +279,9 @@ def ship_email_extra(kind, **c):
         why = f'<p style="margin:0 0 10px;">Your order goes by Courier <strong>{vehicle}</strong>.</p>'
     rows = [('Priority', prices.get('priority'), 'Highest fee · fastest, goes straight to you'),
             ('Regular', prices.get('regular'), 'Standard delivery')]
-    if prices.get('pooling'):
+    if prices.get('fee'):
+        rows = [('Delivery fee', prices.get('fee'), 'What you and the shop agreed on')]
+    elif prices.get('pooling'):
         rows.append(('Pooling', prices.get('pooling'), 'Lowest fee · may take longer, can carry other orders'))
     tr = ''.join(
         f'<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;"><strong>{n}</strong><br>'
@@ -273,9 +290,11 @@ def ship_email_extra(kind, **c):
         for n, v, d in rows)
     return (why +
             f'<table style="width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 10px;">{tr}</table>'
-            f'<p style="margin:0 0 6px;">Items total: <strong>{_peso(c.get("items_total", 0))}</strong> (the shipping fee you choose is added when you pay).</p>'
-            f'<p style="margin:0 0 6px;">Pay by: <strong>{c.get("deadline", "")}</strong> (24 hours). '
-            f"We'll remind you 2 hours before.</p>")
+            + (f'<p style="margin:0 0 6px;">Your items ({_peso(c.get("items_total", 0))}) are already paid. You only pay the delivery fee.</p>'
+               if c.get('two_step') else
+               f'<p style="margin:0 0 6px;">Items total: <strong>{_peso(c.get("items_total", 0))}</strong> (the shipping fee you choose is added when you pay).</p>'
+               f'<p style="margin:0 0 6px;">Pay by: <strong>{c.get("deadline", "")}</strong> (24 hours). '
+               f"We'll remind you 2 hours before.</p>"))
 
 
 def build_order_email(name, body, extra_html='', when=None):

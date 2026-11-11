@@ -416,6 +416,10 @@ class Order(db.Model):
     delivered_at    = db.Column(db.DateTime, nullable=True)  # when status actually reached delivered/completed — the return window's start
     # ── Ship to Address (Courier) ──
     paid_at                 = db.Column(db.DateTime, nullable=True)
+    # Ship to Address, paid in two steps: the items at checkout (paid_at), the delivery fee later (fee_paid_at). Older orders keep the one-payment flow.
+    ship_two_step           = db.Column(db.Boolean, default=False)
+    fee_paid_at             = db.Column(db.DateTime, nullable=True)
+    fee_payment_id          = db.Column(db.String(80), nullable=True)
     shipping_vehicle        = db.Column(db.String(40), nullable=True)
     shipping_reason         = db.Column(db.String(200), nullable=True)
     shipping_prices         = db.Column(db.Text, nullable=True)
@@ -1366,7 +1370,7 @@ def _revenue_transactions(date_from=None, date_to=None):
         })
 
     _walkin_cache = {}
-    _ship_paid = (Order.delivery_method == 'ship') & Order.paid_at.isnot(None) & Order.status.in_(['done_packaging', 'shipping', 'completed'])
+    _ship_paid = (Order.delivery_method == 'ship') & Order.paid_at.isnot(None) & Order.status.in_(['confirmed', 'in_progress', 'done_packaging', 'shipping', 'completed'])
     for o in Order.query.options(joinedload(Order.customer)).filter(((Order.status == 'completed') & ((Order.delivery_method != 'ship') | Order.paid_at.isnot(None))) | _ship_paid).filter(Order.items.any()).all():
         d = (o.paid_at if (o.delivery_method == 'ship' and o.paid_at) else o.created_at)
         if not in_range(d):
@@ -3990,9 +3994,9 @@ def cancel_booking_day_panel(bid):
     if booking.status in ('inspection', 'in_progress', 'inprogress', 'completed'):
         return jsonify({'success': False, 'error': "Cancel isn't available once work has started."}), 400
     data = request.get_json() or {}
-    notify = data.get('notify', True)
+    notify = True                       # the customer is always told (bell + email), whatever the request says
     reason = clean_str(data.get('reason', ''), max_len=300)
-    if notify and not reason:
+    if not reason:
         return jsonify({'success': False, 'error': 'Say why you are cancelling — the customer sees this reason.'}), 400
     try:
         _q_before = _queue_day_numbers(booking.date)
@@ -5935,7 +5939,7 @@ def api_set_capacity():
 
 
 # ═══════════════ SHIP TO ADDRESS (Courier) — the shop's side of the flow ═══════════════
-SHIP_OPTION_LABELS = {'priority': 'Priority', 'regular': 'Regular', 'pooling': 'Pooling'}
+SHIP_OPTION_LABELS = {'priority': 'Priority', 'regular': 'Regular', 'pooling': 'Pooling', 'fee': 'Delivery'}   # 'fee' = the single delivery fee of a two-step order
 SHIP_ACTIVE = ('confirmed', 'in_progress', 'done_packaging', 'shipping')
 SHIP_VEHICLES = ('Motorcycle', 'Sedan', 'Small Crossover SUV', '7-seater SUV / Minivan', 'Pickup', 'L300 / Cargo Van')
 
@@ -5980,7 +5984,7 @@ def _order_pay_detail(o):
 
 
 def _pickup_due(o):
-    """A Shop Pickup order that has been Ready to Pick Up for a day or more is DUE. After PICKUP_HOLD_DAYS (3) the customer
+    """A Shop Pickup order that has been Ready to Pick Up for a day or more is DUE. After PICKUP_HOLD_DAYS (2) the customer
     app cancels it by itself, so this also says when. None when the order is not waiting at the counter or is under a day old."""
     if o.delivery_method == 'ship' or o.is_instore or o.status != 'shipped' or not o.ready_at:
         return None
@@ -5989,11 +5993,12 @@ def _pickup_due(o):
     if waited < timedelta(days=1):
         return None
     cancel_at = o.ready_at + timedelta(days=PICKUP_HOLD_DAYS)
-    last_day = (cancel_at - now) <= timedelta(days=1)
+    paid = (o.payment_method or '').lower() == 'gcash'      # paid orders are never auto-cancelled
+    last_day = (not paid) and (cancel_at - now) <= timedelta(days=1)
     days = max(1, waited.days)
     return {'days': days, 'days_label': f"{days} day{'' if days == 1 else 's'}", 'last_day': last_day,
             'cancel_at': f"{cancel_at.strftime('%b')} {cancel_at.day}, {cancel_at.strftime('%I:%M %p').lstrip('0')}",
-            'hold_days': PICKUP_HOLD_DAYS}
+            'hold_days': PICKUP_HOLD_DAYS, 'no_cancel': paid}
 
 
 def _ship_grand_total(o):
@@ -6063,6 +6068,30 @@ def paymongo_refund(order, reason):
         "Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}",
         "Content-Type": "application/json",
     }
+    if order.ship_two_step:
+        parts = []
+        if order.paymongo_payment_id:
+            parts.append((order.paymongo_payment_id, float(order.total_amount or 0)))
+        if order.fee_paid_at and order.fee_payment_id and (order.shipping_fee or 0) > 0:
+            parts.append((order.fee_payment_id, float(order.shipping_fee)))
+        if not parts:
+            return False, 'We could not find this payment in PayMongo, so it could not be refunded automatically.'
+        done = []
+        for pid, amt in parts:
+            payload = {"data": {"attributes": {"amount": int(round(amt * 100)), "payment_id": pid,
+                                               "reason": "requested_by_customer", "notes": (reason or 'Order cancelled by the shop')[:200]}}}
+            try:
+                res = requests.post(f"{PAYMONGO_API_URL}/refunds", json=payload, headers=headers, timeout=20)
+            except Exception as e:
+                return False, f'Could not reach PayMongo: {e}' + (' (the first payment was already refunded; do the rest from PayMongo)' if done else '')
+            if res.status_code not in (200, 201):
+                try:
+                    detail = res.json()['errors'][0]['detail']
+                except Exception:
+                    detail = f'PayMongo answered {res.status_code}.'
+                return False, f'PayMongo could not refund this payment: {detail}' + (' (the first payment was already refunded; do the rest from PayMongo)' if done else '')
+            done.append(pid)
+        return True, None
     payment_id = order.paymongo_payment_id
     if not payment_id and order.payment_ref:           # older record: look the payment up from its checkout session
         try:
@@ -6103,6 +6132,8 @@ def ship_set_status(oid):
     order.status = new
     db.session.commit()
     notice = order_status_message(new, order.id, delivery_method='ship', ship_address=order.ship_address, when=ph_now())
+    if new == 'done_packaging' and order.ship_two_step:
+        notice = ship_notice('packed', f'ORD-{order.id:03d}', two_step=True)[:2]
     if notice:
         _notify_order_customer(order, notice[0], notice[1], status=new)
     return jsonify({'success': True, 'status': new})
@@ -6116,12 +6147,19 @@ def ship_send_options(oid):
     Sending or editing both start a fresh 24 hours and a fresh reminder."""
     order, err = _ship_order_or_error(oid, ('done_packaging',))
     if err: return err
-    if order.paid_at:
-        return jsonify({'success': False, 'error': 'This order is already paid.'}), 400
+    if (order.fee_paid_at if order.ship_two_step else order.paid_at):
+        return jsonify({'success': False, 'error': 'The delivery is already paid.' if order.ship_two_step else 'This order is already paid.'}), 400
     d = request.get_json(silent=True) or {}
     vehicle = clean_str(d.get('vehicle', ''), max_len=40)
     reason  = clean_str(d.get('reason', ''), max_len=120)
     errors, fields = [], []
+    two_fee = None
+    if order.ship_two_step:
+        raw_fee = str(d.get('fee') if d.get('fee') is not None else '').replace(',', '').replace('\u20b1', '').strip()
+        if not raw_fee.isdigit() or not (1 <= int(raw_fee) <= 20000):
+            errors.append('Type the delivery fee, from \u20b11 to \u20b120,000.'); fields.append('fee')
+        else:
+            two_fee = int(raw_fee)
     if vehicle not in SHIP_VEHICLES:
         errors.append('Choose the vehicle for this order.'); fields.append('vehicle')
         vehicle = ''
@@ -6141,17 +6179,20 @@ def ship_send_options(oid):
             return None, True
         return int(raw), False
     prices, price_bad = {}, False
-    for key in ('priority', 'regular'):
-        v, bad = peso(key)
-        prices[key] = v
-        if v is None:
-            price_bad = True; fields.append(key)
-    if price_bad:
-        errors.append('Type the courier price for Priority and Regular, from \u20b11 to \u20b120,000. Pooling can be left blank.')
-    v, bad = peso('pooling')
-    prices['pooling'] = v
-    if bad:
-        errors.append('Pooling must be from \u20b11 to \u20b120,000, or leave it blank.'); fields.append('pooling')
+    if order.ship_two_step:
+        prices = {'fee': two_fee}
+    else:
+        for key in ('priority', 'regular'):
+            v, bad = peso(key)
+            prices[key] = v
+            if v is None:
+                price_bad = True; fields.append(key)
+        if price_bad:
+            errors.append('Type the courier price for Priority and Regular, from \u20b11 to \u20b120,000. Pooling can be left blank.')
+        v, bad = peso('pooling')
+        prices['pooling'] = v
+        if bad:
+            errors.append('Pooling must be from \u20b11 to \u20b120,000, or leave it blank.'); fields.append('pooling')
     if errors:
         return jsonify({'success': False, 'error': errors[0], 'errors': errors, 'fields': fields}), 400
     first = not order.shipping_options_sent_at
@@ -6159,14 +6200,15 @@ def ship_send_options(oid):
     order.shipping_reason = reason or None
     order.shipping_prices = json.dumps(prices)
     order.shipping_options_sent_at = ph_now()
-    order.shipping_deadline_at = ph_now() + timedelta(hours=24)
+    order.shipping_deadline_at = None if order.ship_two_step else ph_now() + timedelta(hours=24)
     order.shipping_reminder_at = None
     db.session.commit()
     ref = f'ORD-{order.id:03d}'
+    _dl = _ship_when(order.shipping_deadline_at) if order.shipping_deadline_at else ''
     _t, _m, _s = ship_notice('options' if first else 'options_updated', ref, vehicle=vehicle, prices=prices,
-                             deadline=_ship_when(order.shipping_deadline_at))
+                             deadline=_dl, two_step=bool(order.ship_two_step))
     extra = ship_email_extra('options', vehicle=vehicle, reason=reason, prices=prices,
-                             items_total=order.total_amount, deadline=_ship_when(order.shipping_deadline_at))
+                             items_total=order.total_amount, deadline=_dl, two_step=bool(order.ship_two_step))
     _notify_order_customer(order, _t, _m, status=_s, extra_html=extra)
     return jsonify({'success': True, 'first': first})
 
@@ -6178,8 +6220,8 @@ def ship_start_shipping(oid):
     """After payment: the courier is booked, the order goes to Shipping, and the rider/driver details are saved."""
     order, err = _ship_order_or_error(oid, ('done_packaging',))
     if err: return err
-    if not order.paid_at:
-        return jsonify({'success': False, 'error': 'Shipping unlocks once the customer pays.'}), 400
+    if not (order.fee_paid_at if order.ship_two_step else order.paid_at):
+        return jsonify({'success': False, 'error': 'Shipping unlocks once the customer pays' + (' the delivery fee.' if order.ship_two_step else '.')}), 400
     d = request.get_json(silent=True) or {}
     rtype = 'rider' if (order.shipping_vehicle or '') == 'Motorcycle' else 'driver'
     who = rtype
@@ -8236,7 +8278,7 @@ def payments():
         _when = (o.paid_at if _ship and o.paid_at else None) or o.delivered_at or o.created_at
         _items = [{'name': (i.product.name if i.product else 'Unknown'), 'qty': i.quantity, 'price': i.unit_price} for i in o.items]
         if _ship and o.shipping_fee:
-            _items.append({'name': f"Shipping fee ({(o.shipping_option or '').title()} \u00b7 Courier {o.shipping_vehicle or ''})", 'qty': 1, 'price': o.shipping_fee})
+            _items.append({'name': f"Shipping fee ({'Delivery' if o.shipping_option == 'fee' else (o.shipping_option or '').title()} \u00b7 Courier {o.shipping_vehicle or ''})", 'qty': 1, 'price': o.shipping_fee})
         _recent.append({'tag': 'SALE' if o.is_instore else 'ORD', 'kind': 'ord', 'id': o.id, 'ref': _ref, 'customer': _name,
                         'amount': _amt, 'method': (o.payment_method or 'cash').lower(), 'paid_at': _when,
                         'ord': {'ref': _ref, 'customer': _name, 'phone': '' if o.is_instore else (o.customer.phone or ''),
@@ -8697,7 +8739,7 @@ def api_transaction_detail():
         amt = (o.total_amount or 0) + ((o.shipping_fee or 0) if o.delivery_method == 'ship' else 0)
         items = [{'name': (i.product.name if i.product else 'Unknown'), 'qty': int(i.quantity or 1), 'price': float(i.unit_price or 0)} for i in o.items]
         if ship and o.shipping_fee:
-            items.append({'name': f"Shipping fee ({(o.shipping_option or '').title()})", 'qty': 1, 'price': float(o.shipping_fee)})
+            items.append({'name': f"Shipping fee ({'Delivery' if o.shipping_option == 'fee' else (o.shipping_option or '').title()})", 'qty': 1, 'price': float(o.shipping_fee)})
         pm = ('gcash' if o.delivery_method == 'ship' else (o.payment_method or 'cash'))
         out.update(kind='In-store sale' if sale else 'Online order', amount=amt, customer=(o.contact_name if o.is_instore else (o.customer.fullname if o.customer else 'Customer')) or 'Walk-in',
                    phone=('' if o.is_instore else (o.customer.phone if o.customer else '') or ''), receipt_no=f'OR-ORD-{o.id:05d}', items=items,
@@ -8829,9 +8871,7 @@ def pos_checkout():
                         type='order', status='completed')
 
     if new_cart_items:
-        customer_name = clean_str(data.get('customer_name', ''), max_len=100)
-        if not customer_id and not customer_name:
-            return jsonify({'success': False, 'error': 'Customer name is required.'}), 400
+        customer_name = clean_str(data.get('customer_name', ''), max_len=100) or 'Walk-in Customer'     # the name is optional at the counter
         uid = int(customer_id) if customer_id else current_user.id
         new_total = sum(item['quantity'] * float(item['unit_price']) for item in new_cart_items)
         order = Order(user_id=uid, total_amount=new_total, status='completed', payment_method=payment_method,
@@ -10421,7 +10461,7 @@ def generate_report():
 
     def order_counts_as_revenue(o):
         if o.delivery_method == 'ship':      # Courier orders count once paid, never on hold, cancelled or refunded
-            return bool(o.paid_at) and o.status in ('done_packaging', 'shipping', 'completed')
+            return bool(o.paid_at) and o.status in ('confirmed', 'in_progress', 'done_packaging', 'shipping', 'completed')
         return (o.status not in ('cancelled', 'awaiting_payment', 'voided')
                 and not (o.payment_method == 'cash' and o.delivery_method == 'pickup' and o.status != 'completed'))
 
@@ -10900,6 +10940,9 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN void_reason VARCHAR(300) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN voided_by VARCHAR(100) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN paid_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN ship_two_step TINYINT(1) DEFAULT 0",
+        "ALTER TABLE `order` ADD COLUMN fee_paid_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN fee_payment_id VARCHAR(80) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",
         "ALTER TABLE `order` ADD COLUMN shipping_prices TEXT",

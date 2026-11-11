@@ -873,6 +873,10 @@ class Order(db.Model):
     delivered_at    = db.Column(db.DateTime, nullable=True)  # when status actually reached delivered/completed — the return window's start
     # ── Ship to Address (Courier) ──
     paid_at                 = db.Column(db.DateTime, nullable=True)
+    # Ship to Address, paid in two steps: the items at checkout (paid_at), the delivery fee later (fee_paid_at). Older orders keep the one-payment flow.
+    ship_two_step           = db.Column(db.Boolean, default=False)
+    fee_paid_at             = db.Column(db.DateTime, nullable=True)
+    fee_payment_id          = db.Column(db.String(80), nullable=True)
     shipping_vehicle        = db.Column(db.String(40), nullable=True)
     shipping_reason         = db.Column(db.String(200), nullable=True)
     shipping_prices         = db.Column(db.Text, nullable=True)
@@ -1898,7 +1902,7 @@ def customer_dashboard():
 
     for o in orders:
         o.return_window = return_window_info('product', o.delivered_at) if o.status in ('delivered', 'completed') else None
-        o.pickup_by = _pickup_last_day(o) if (o.delivery_method != 'ship' and o.status == 'shipped' and o.ready_at) else None
+        o.pickup_by = _pickup_last_day(o) if (o.delivery_method != 'ship' and o.status == 'shipped' and o.ready_at and (o.payment_method or '').lower() != 'gcash') else None
         o.ship_state = ship_order_state(o) if o.delivery_method == 'ship' else None
         o.open_claim = open_by_order.get(o.id)
         o.replacement_stats = _order_replacement_stats(o) if o.return_window else None
@@ -3396,12 +3400,13 @@ def _cart_checkout_impl(data):
 
     total = sum(p.price * q for p, q in resolved)
     is_ship = delivery_method == 'ship'
-    # Ship to Address: Confirmed straight away, payment on hold until the customer picks a shipping option.
-    order_status = 'confirmed' if is_ship else ('awaiting_payment' if payment_method.lower() == 'gcash' else 'pending')
+    # Ship to Address: the ITEMS are paid now with GCash like any online order (the order is Confirmed once PayMongo confirms it).
+    # The delivery fee comes later, after the shop has talked to the customer and quoted it (ship_two_step).
+    order_status = 'awaiting_payment' if payment_method.lower() == 'gcash' else 'pending'
 
     order = Order(user_id=current_user.id, total_amount=total,
                   payment_method=payment_method, delivery_method=delivery_method,
-                  ship_address=ship_address, status=order_status)
+                  ship_address=ship_address, status=order_status, ship_two_step=bool(is_ship))
     db.session.add(order)
     db.session.flush()
 
@@ -3413,17 +3418,6 @@ def _cart_checkout_impl(data):
 
     ref = f'ORD-{order.id:03d}'
     items_desc = ', '.join(f"{p.name} x{q}" for p, q in resolved)
-
-    if is_ship:
-        held = sum(q for _, q in resolved)
-        _t, _m, _s = ship_notice('placed', ref)
-        _notify_order_customer(order, _t, _m, status=_s)
-        for admin in User.query.filter_by(role='admin').all():
-            send_notification(admin.id, f'New order {ref}',
-                f'New order {ref}: {current_user.fullname} · Ship to Address · GCash on hold until the customer chooses shipping. {held} held from stock.',
-                type='order', status='confirmed')
-        flash(f'Order {ref} placed. Nothing was charged. We\'ll send your shipping options once it\'s packed.', 'success')
-        return jsonify({'success': True, 'gcash': False, 'placed': True, 'ref': ref, 'order_id': order.id})
 
     if payment_method.lower() == 'gcash':
         desc   = f"MotoTyres Order #{order.id:03d}: " + ', '.join(f"{p.name} x{q}" for p, q in resolved)
@@ -4752,7 +4746,19 @@ def _confirm_gcash_order(order, checkout_id):
     order.status = 'confirmed'
     order.payment_method = 'gcash'
     order.payment_ref = checkout_id or order.payment_ref
+    if order.delivery_method == 'ship' and order.ship_two_step:
+        order.paid_at = ph_now()                                # the items are paid; the delivery fee is a second payment
+        if checkout_id:
+            _ok, _pid = _paymongo_session_paid(checkout_id)
+            if _pid:
+                order.paymongo_payment_id = _pid
     db.session.commit()
+    if order.delivery_method == 'ship' and order.ship_two_step:
+        _who = User.query.get(order.user_id)
+        for admin in User.query.filter_by(role='admin').all():
+            send_notification(admin.id, f'New order ORD-{order.id:03d}',
+                f'{_who.fullname if _who else "A customer"} paid ₱{order.total_amount:,.2f} for the items of a Ship to Address order. '
+                f'Pack it, then talk to the customer about the delivery fee.', type='order', status='confirmed')
     items_desc = ", ".join([f"{item.product.name} x{item.quantity}" for item in order.items])
     _is_ship   = order.delivery_method == 'ship'
     _dest      = shipping_destination(order.ship_address)
@@ -4827,7 +4833,12 @@ def payment_success():
         try:
             order = Order.query.get(int(order_id))
             if order and order.delivery_method == 'ship' and order.status == 'done_packaging':
-                if _mark_ship_order_paid(order, checkout_id):
+                if order.ship_two_step:
+                    if _mark_fee_paid(order, checkout_id):
+                        flash("Delivery fee paid. Thank you! We'll book your courier next.", 'success')
+                    else:
+                        flash(_NOT_CONFIRMED_YET, 'warning')
+                elif _mark_ship_order_paid(order, checkout_id):
                     flash("GCash payment successful. Thank you! We'll book your courier delivery next.", 'success')
                 else:
                     flash(_NOT_CONFIRMED_YET, 'warning')
@@ -4960,9 +4971,11 @@ def paymongo_webhook():
                     _confirm_gcash_booking(booking)
                 elif booking.status == 'completed' and not booking.invoice_paid:
                     _mark_booking_invoice_paid_gcash(booking, cid)
-            if order and order.status in ('awaiting_payment', 'pending') and order.delivery_method != 'ship':
+            if order and order.status in ('awaiting_payment', 'pending') and (order.delivery_method != 'ship' or order.ship_two_step):
                 _confirm_gcash_order(order, cid)
                 send_order_receipt_email(order)
+            elif order and order.delivery_method == 'ship' and order.ship_two_step and order.status == 'done_packaging' and not order.fee_paid_at:
+                _mark_fee_paid(order, cid)
         except Exception as e:
             db.session.rollback()
             print(f'[webhook/paymongo] {cid}: {e}')
@@ -4995,7 +5008,7 @@ def api_services():
 # ═══════════════ SHIP TO ADDRESS (Courier) — the customer's side of the flow ═══════════════
 import json as _json_ship
 
-SHIP_OPTION_LABELS = {'priority': 'Priority', 'regular': 'Regular', 'pooling': 'Pooling'}
+SHIP_OPTION_LABELS = {'priority': 'Priority', 'regular': 'Regular', 'pooling': 'Pooling', 'fee': 'Delivery'}   # 'fee' = the single delivery fee of a two-step order
 
 
 def ship_prices(o):
@@ -5119,6 +5132,41 @@ def _mark_ship_order_paid(order, checkout_id=None):
     return True
 
 
+def _mark_fee_paid(order, checkout_id=None):
+    """Ship to Address paid in two steps: the DELIVERY FEE checkout PayMongo confirmed. Only a checkout started for the fee counts
+    (the items were paid at checkout), and the amount kept is the one actually paid."""
+    if order.fee_paid_at or order.status != 'done_packaging':
+        return bool(order.fee_paid_at)
+    try:
+        sessions = _json_ship.loads(order.pay_sessions or '{}') or {}
+    except ValueError:
+        sessions = {}
+    paid, pid, info = False, None, {}
+    for cid, inf in sessions.items():
+        if inf.get('kind') != 'fee':
+            continue
+        ok, p = _paymongo_session_paid(cid)
+        if ok:
+            paid, pid, info = True, p, inf
+            break
+    if not paid:
+        return False
+    order.shipping_option, order.shipping_fee = info.get('option'), float(info.get('fee') or 0)
+    order.fee_paid_at = ph_now()
+    order.fee_payment_id = pid
+    db.session.commit()
+    ref = f'ORD-{order.id:03d}'
+    label = ''
+    _t, _m, _s = ship_notice('paid', ref, two_step=True, fee=order.shipping_fee, option=label, vehicle=order.shipping_vehicle or '')
+    _notify_order_customer(order, _t, _m, status=_s)
+    _who = User.query.get(order.user_id)
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(admin.id, f'{ref} delivery fee paid · ₱{order.shipping_fee:,.2f}',
+            f'{_who.fullname if _who else "The customer"} paid the ₱{order.shipping_fee:,.2f} delivery fee with GCash via PayMongo. '
+            f'Book a Courier {order.shipping_vehicle or "vehicle"}, then set the order to Shipping.', type='order', status='paid', order_id=order.id)
+    return True
+
+
 @app.route('/customer/order/<int:oid>/choose-shipping', methods=['POST'])
 @login_required
 @require_active_account
@@ -5128,28 +5176,45 @@ def choose_shipping_option(oid):
     option = clean_str((request.get_json(silent=True) or {}).get('option', ''), max_len=12)
     if order.delivery_method != 'ship' or order.status != 'done_packaging' or not order.shipping_options_sent_at:
         return jsonify({'success': False, 'error': 'There are no shipping options to choose for this order right now.'}), 400
-    if order.paid_at:
-        return jsonify({'success': False, 'error': 'This order is already paid.'}), 400
-    if order.shipping_deadline_at and ph_now() > order.shipping_deadline_at:
+    two = bool(order.ship_two_step)
+    if (order.fee_paid_at if two else order.paid_at):
+        return jsonify({'success': False, 'error': 'The delivery fee is already paid.' if two else 'This order is already paid.'}), 400
+    if not two and order.shipping_deadline_at and ph_now() > order.shipping_deadline_at:
         return jsonify({'success': False, 'error': 'The 24 hours to choose have passed, so this order was cancelled.'}), 400
+    if two:
+        option = 'fee'
     fee = ship_prices(order).get(option)
     if option not in SHIP_OPTION_LABELS or not fee:
         return jsonify({'success': False, 'error': 'That shipping option is not available.'}), 400
-    amount = round((order.total_amount or 0) + float(fee), 2)
-    ref = f'ORD-{order.id:03d}'
     items_desc = ', '.join(f"{i.product.name} x{i.quantity}" for i in order.items if i.product)
-    desc = f"MotoTyres Order #{order.id:03d}: {items_desc} + {SHIP_OPTION_LABELS[option]} shipping"
-    result = create_gcash_payment(amount=amount, description=desc[:100], order_id=order.id, origin=request.host_url,
-        line_items=[{'name': f"Subtotal ({items_desc})"[:100], 'amount': float(order.total_amount or 0)},
-                    {'name': f"Shipping fee ({SHIP_OPTION_LABELS[option]} · Courier {order.shipping_vehicle or 'vehicle'})", 'amount': float(fee)}])
+    if two:                                                     # the items are already paid: only the delivery fee is charged
+        amount = round(float(fee), 2)
+        desc = f"MotoTyres Order #{order.id:03d}: delivery fee"
+        lines = [{'name': f"Delivery fee (Courier {order.shipping_vehicle or 'vehicle'})", 'amount': float(fee)}]
+    else:
+        amount = round((order.total_amount or 0) + float(fee), 2)
+        desc = f"MotoTyres Order #{order.id:03d}: {items_desc} + {SHIP_OPTION_LABELS[option]} shipping"
+        lines = [{'name': f"Subtotal ({items_desc})"[:100], 'amount': float(order.total_amount or 0)},
+                 {'name': f"Shipping fee ({SHIP_OPTION_LABELS[option]} · Courier {order.shipping_vehicle or 'vehicle'})", 'amount': float(fee)}]
+    result = create_gcash_payment(amount=amount, description=desc[:100], order_id=order.id, origin=request.host_url, line_items=lines)
     if not result['success']:
         return jsonify({'success': False, 'error': 'Could not start the GCash payment. Please try again.'}), 502
-    sessions = _ship_sessions(order)
-    sessions[result['checkout_id']] = {'option': option, 'fee': float(fee)}
-    order.pay_sessions = _json_ship.dumps(sessions)
-    order.shipping_option = option
-    order.shipping_fee = float(fee)
-    order.payment_ref = result['checkout_id']
+    if two:
+        try:
+            sessions = _json_ship.loads(order.pay_sessions or '{}') or {}
+        except ValueError:
+            sessions = {}
+        sessions[result['checkout_id']] = {'option': option, 'fee': float(fee), 'kind': 'fee'}
+        order.pay_sessions = _json_ship.dumps(sessions)
+        order.shipping_option = option                         # shipping_fee is set only once the fee is really paid
+        order.payment_ref = result['checkout_id']
+    else:
+        sessions = _ship_sessions(order)
+        sessions[result['checkout_id']] = {'option': option, 'fee': float(fee)}
+        order.pay_sessions = _json_ship.dumps(sessions)
+        order.shipping_option = option
+        order.shipping_fee = float(fee)
+        order.payment_ref = result['checkout_id']
     order.pay_started_at = ph_now()
     db.session.commit()
     return jsonify({'success': True, 'checkout_url': result['checkout_url']})
@@ -5187,14 +5252,16 @@ def order_badge(o):
 def ship_order_state(o):
     """The moving parts of a Ship to Address order, as the customer's page needs them."""
     return {
-        'status': o.status, 'paid': bool(o.paid_at),
-        'paid_at': _fmt_when(o.paid_at), 'options_sent': bool(o.shipping_options_sent_at),
+        'status': o.status, 'paid': bool(o.fee_paid_at if o.ship_two_step else o.paid_at),
+        'two_step': bool(o.ship_two_step), 'items_paid': bool(o.paid_at),
+        'paid_at': _fmt_when(o.fee_paid_at if o.ship_two_step else o.paid_at), 'options_sent': bool(o.shipping_options_sent_at),
         'options_sent_at': _fmt_when(o.shipping_options_sent_at),
         'deadline_iso': o.shipping_deadline_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if o.shipping_deadline_at else None,
         'deadline': _fmt_when(o.shipping_deadline_at),
         'vehicle': o.shipping_vehicle or '', 'reason': o.shipping_reason or '', 'prices': ship_prices(o),
-        'option': (o.shipping_option or '') if o.paid_at else '', 'fee': o.shipping_fee if o.paid_at else None,
-        'grand_total': ship_grand_total(o) if o.paid_at else (o.total_amount or 0),
+        'option': (o.shipping_option or '') if (o.fee_paid_at if o.ship_two_step else o.paid_at) else '',
+        'fee': o.shipping_fee if (o.fee_paid_at if o.ship_two_step else o.paid_at) else None,
+        'grand_total': ship_grand_total(o) if (o.fee_paid_at if o.ship_two_step else o.paid_at) else (o.total_amount or 0),
         'reminder_sent': bool(o.shipping_reminder_at), 'cancel_reason': o.cancel_reason or '',
         'rider_type': o.rider_type or '', 'rider_name': o.rider_name or '', 'rider_phone': o.rider_phone or '',
         'rider_plate': o.rider_plate or '', 'rider_model': o.rider_model or '', 'lalamove_link': o.lalamove_link or '',
@@ -5313,7 +5380,9 @@ def process_pickup_holds():
     and it is tried again later."""
     with app.app_context():
         now = ph_now()
-        ready = Order.query.filter(Order.delivery_method != 'ship', Order.status == 'shipped').all()
+        # A GCash order is already paid, so the shop keeps it for as long as it takes: only unpaid (cash) orders are auto-cancelled.
+        ready = [o for o in Order.query.filter(Order.delivery_method != 'ship', Order.status == 'shipped').all()
+                 if (o.payment_method or '').lower() != 'gcash']
         for o in ready:
             try:
                 ref = f'ORD-{o.id:03d}'
@@ -5435,6 +5504,9 @@ with app.app_context():
         "ALTER TABLE `user` ADD COLUMN billing_seen_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN payment_ref VARCHAR(80) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN paid_at DATETIME",
+        "ALTER TABLE `order` ADD COLUMN ship_two_step TINYINT(1) DEFAULT 0",
+        "ALTER TABLE `order` ADD COLUMN fee_paid_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN fee_payment_id VARCHAR(80) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",
         "ALTER TABLE `order` ADD COLUMN shipping_prices TEXT",
