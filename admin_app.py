@@ -1720,6 +1720,65 @@ def _dash_today_facts():
     }
 
 
+INV_WINDOW_DAYS = 30      # how far back the selling speed is measured
+INV_SLOW_DAYS = 60        # a part with no sale in this long is a slow mover
+INV_COVER_DAYS = 30       # the restock suggestion covers this many days of selling
+
+
+def _inventory_insights():
+    """Inventory analytics. Predictive: how fast each part sells and how many days its stock will last at that speed.
+    Prescriptive: what to reorder now, and how many, and which parts are not moving at all.
+    Sales are counted like Top Products Sold: online orders and in-store sales (Order rows) plus parts billed on job orders,
+    leaving out cancelled, voided, refunded and unpaid orders."""
+    now = ph_now()
+    since_w, since_s = now - timedelta(days=INV_WINDOW_DAYS), now - timedelta(days=INV_SLOW_DAYS)
+    sold_w, sold_s = {}, {}
+
+    def add(pid, when, qty):
+        if pid is None or not qty:
+            return
+        sold_s[pid] = sold_s.get(pid, 0) + qty
+        if when >= since_w:
+            sold_w[pid] = sold_w.get(pid, 0) + qty
+
+    for pid, when, qty in (db.session.query(OrderItem.product_id, Order.created_at, OrderItem.quantity)
+                           .join(Order, Order.id == OrderItem.order_id)
+                           .filter(Order.created_at >= since_s,
+                                   Order.status.notin_(['cancelled', 'voided', 'awaiting_payment', 'refunded'])).all()):
+        add(pid, when, qty)
+    for pid, when, qty in (db.session.query(JobOrderItem.product_id, JobOrder.created_at, JobOrderItem.quantity)
+                           .join(JobOrder, JobOrder.id == JobOrderItem.job_order_id)
+                           .filter(JobOrder.created_at >= since_s, JobOrder.status != 'cancelled',
+                                   JobOrderItem.item_type == 'product', JobOrderItem.product_id.isnot(None)).all()):
+        add(pid, when, qty)
+
+    reorder, slow = [], []
+    for p in Product.query.all():
+        stock = int(p.stock or 0)
+        units = sold_w.get(p.id, 0)
+        rate = units / INV_WINDOW_DAYS                       # units a day
+        if units > 0:
+            days_left = stock / rate if stock > 0 else 0
+            if days_left > 14:
+                continue                                      # plenty left: nothing to do
+            suggest = max(1, int(-(-rate * INV_COVER_DAYS // 1)) - stock)   # enough for INV_COVER_DAYS of selling
+            level = 'out' if stock <= 0 else ('critical' if days_left <= 7 else 'soon')
+            reorder.append({'id': p.id, 'name': p.name, 'category': p.category, 'stock': stock,
+                            'per_week': round(rate * 7, 1), 'days_left': (None if stock <= 0 else max(1, int(days_left))),
+                            'suggest': suggest, 'level': level})
+        elif stock > 0 and sold_s.get(p.id, 0) == 0:
+            slow.append({'id': p.id, 'name': p.name, 'category': p.category, 'stock': stock,
+                         'value': round(stock * float(p.price or 0), 2)})
+    reorder.sort(key=lambda r: (0 if r['level'] == 'out' else 1, r['days_left'] or 0, r['name']))
+    slow.sort(key=lambda r: -r['value'])
+    return {
+        'reorder': reorder, 'slow': slow,
+        'reorder_count': len(reorder), 'critical_count': sum(1 for r in reorder if r['level'] in ('out', 'critical')),
+        'slow_count': len(slow), 'slow_value': round(sum(r['value'] for r in slow), 2),
+        'window_days': INV_WINDOW_DAYS, 'slow_days': INV_SLOW_DAYS, 'cover_days': INV_COVER_DAYS,
+    }
+
+
 @admin_app.route('/api/dashboard-restock')
 @login_required
 @require_admin_or_staff
@@ -1855,6 +1914,7 @@ def admin_dashboard():
         order_status_counts=_rpt['order_status_counts'],
         top_services=_rpt['top_services'],
         rpt=_rpt,
+        inv=_inventory_insights(),
         new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
         recent_bookings=_all_bookings_list[:5],
         awaiting_quotation_count=_awaiting_quotation_count,

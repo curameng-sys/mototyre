@@ -2640,6 +2640,53 @@
           <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Includes online orders, in-store sales, and parts used in bookings and job orders. Refunded items are excluded. Sales of the same product are added together, even if the product was renamed.</div>
         </div>
       </div>
+      <div class="card" id="rpt-inventory" style="margin-top:1.25rem;">
+        <div class="card-head">
+          <h5>Inventory Insights</h5>
+          <span style="font-size:0.7rem;color:var(--muted);">Based on the last {{ inv.window_days }} days of sales (not affected by the date filter)</span>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.75rem;margin-bottom:1rem;">
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:0.65rem 0.85rem;"><div style="font-size:1.35rem;font-weight:800;color:#b91c1c;line-height:1.1;">{{ inv.critical_count }}</div><div style="font-size:0.7rem;color:#7f1d1d;">Out or running out within a week</div></div>
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:0.65rem 0.85rem;"><div style="font-size:1.35rem;font-weight:800;color:#b45309;line-height:1.1;">{{ inv.reorder_count }}</div><div style="font-size:0.7rem;color:#78350f;">Parts to reorder</div></div>
+            <div style="background:#f3f4f6;border:1px solid var(--border);border-radius:9px;padding:0.65rem 0.85rem;"><div style="font-size:1.35rem;font-weight:800;color:var(--text);line-height:1.1;">{{ inv.slow_count }}</div><div style="font-size:0.7rem;color:var(--muted);">Not selling for {{ inv.slow_days }} days · ₱{{ '{:,.0f}'.format(inv.slow_value) }} tied up</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.25rem;">
+            <div>
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.45rem;">Reorder recommendation</div>
+              {% if inv.reorder %}
+                {% for r in inv.reorder[:8] %}
+                <div style="display:grid;grid-template-columns:minmax(0,1.6fr) auto auto;align-items:center;gap:0.7rem;padding:0.45rem 0;border-bottom:1px solid var(--border);">
+                  <div style="min-width:0;"><div title="{{ r.name }}" style="font-size:0.8rem;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+                    <div style="font-size:0.68rem;color:var(--muted);">{{ r.stock }} in stock · sells {{ r.per_week }}/week</div></div>
+                  <span style="font-size:0.7rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:99px;white-space:nowrap;{% if r.level in ('out','critical') %}background:#fee2e2;color:#991b1b;{% else %}background:#fef3c7;color:#92400e;{% endif %}">{% if r.level == 'out' %}Out of stock{% else %}~{{ r.days_left }} day{{ '' if r.days_left == 1 else 's' }} left{% endif %}</span>
+                  <span style="font-size:0.78rem;font-weight:800;color:var(--text);white-space:nowrap;">Order {{ r.suggest }}</span>
+                </div>
+                {% endfor %}
+                {% if inv.reorder|length > 8 %}<div style="font-size:0.7rem;color:var(--muted);padding-top:0.45rem;">+ {{ inv.reorder|length - 8 }} more</div>{% endif %}
+              {% else %}
+                <div style="font-size:0.8rem;color:var(--muted);padding:0.6rem 0;">Nothing to reorder. Every part that sells has more than 2 weeks of stock left.</div>
+              {% endif %}
+            </div>
+            <div>
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.45rem;">Slow movers · no sale in {{ inv.slow_days }} days</div>
+              {% if inv.slow %}
+                {% for r in inv.slow[:8] %}
+                <div style="display:grid;grid-template-columns:minmax(0,1.6fr) auto;align-items:center;gap:0.7rem;padding:0.45rem 0;border-bottom:1px solid var(--border);">
+                  <div style="min-width:0;"><div title="{{ r.name }}" style="font-size:0.8rem;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+                    <div style="font-size:0.68rem;color:var(--muted);">{{ r.stock }} in stock</div></div>
+                  <span style="font-size:0.78rem;font-weight:700;color:var(--text);white-space:nowrap;">₱{{ '{:,.0f}'.format(r.value) }} tied up</span>
+                </div>
+                {% endfor %}
+                {% if inv.slow|length > 8 %}<div style="font-size:0.7rem;color:var(--muted);padding-top:0.45rem;">+ {{ inv.slow|length - 8 }} more</div>{% endif %}
+              {% else %}
+                <div style="font-size:0.8rem;color:var(--muted);padding:0.6rem 0;">Every part in stock has sold in the last {{ inv.slow_days }} days.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Days left = stock &divide; average daily sales of the last {{ inv.window_days }} days. The suggested order covers about {{ inv.cover_days }} days of selling. Parts that did not sell in the last {{ inv.window_days }} days are not forecast.</div>
+      </div>
       </div>{# /rpt-body #}
     </section>
 
