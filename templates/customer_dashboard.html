@@ -3435,10 +3435,9 @@
           <span style="font-family:'Inter',sans-serif;font-weight:700;color:var(--fg-1);">Total</span>
           <span id="conf-total" style="color:var(--brand-red);font-family:'Barlow Condensed',sans-serif;font-size:1.3rem;"></span>
         </div>
-        <div id="conf-nothing-charged" style="display:none;text-align:right;font-size:0.74rem;color:var(--fg-3);margin-top:0.2rem;">You pay for the items now. The delivery fee is paid later.</div>
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-cancel-modal" onclick="closeModal('modal-order')">Cancel Order</button>
+        <button type="button" class="btn-cancel-modal" onclick="goToStep('step-payment')">‹ Back</button>
         <button type="button" id="confirm-pay-btn" class="btn-submit" style="width:auto;background:#15803d;" onclick="submitCartOrder()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> <span id="confirm-pay-label">Confirm and Pay</span></button>
       </div>
     </div>
@@ -4249,7 +4248,6 @@ function goToConfirm() {
   ).join('');
   const ship = deliveryMethod === 'ship';
   document.getElementById('conf-total').textContent = ship ? `₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} + delivery fee later` : '₱' + Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  document.getElementById('conf-nothing-charged').style.display = ship ? 'block' : 'none';
   document.getElementById('conf-payment-hold').style.display = ship ? 'block' : 'none';
   document.getElementById('confirm-pay-label').textContent = 'Confirm and Pay';
   const paymentLabels = { cash: 'Cash', gcash: 'GCash' };
@@ -4273,7 +4271,7 @@ function goToConfirm() {
     const cityShort = addr.city === 'Caloocan City (North)' ? 'Caloocan City' : addr.city;
     const brgyLabel = (BARANGAY_LABELS[addr.city] || {})[addr.barangay] || ('Barangay ' + addr.barangay);
     const zip = addr.zip || (BARANGAY_ZIPS[addr.city] || {})[addr.barangay] || '';
-    deliveryInfo.innerHTML = `<div style="font-family:'Inter',sans-serif;font-weight:700;color:var(--fg-1);margin-bottom:0.2rem;">${addr.name} · ${addr.mobile}</div><div style="font-size:0.8rem;color:var(--fg-3);">${addr.street}, ${brgyLabel}, ${cityShort}${zip ? ', ' + zip : ''}</div><div style="font-size:0.75rem;color:#a16207;margin-top:0.3rem;">Shipping fee to be calculated</div>`;
+    deliveryInfo.innerHTML = `<div style="font-family:'Inter',sans-serif;font-weight:700;color:var(--fg-1);margin-bottom:0.2rem;">${addr.name} · ${addr.mobile}</div><div style="font-size:0.8rem;color:var(--fg-3);">${addr.street}, ${brgyLabel}, ${cityShort}${zip ? ', ' + zip : ''}</div><div style="font-size:0.75rem;color:#a16207;margin-top:0.3rem;">Delivery fee: the shop will contact you about it</div>`;
   }
   goToStep('step-confirm');
 }
