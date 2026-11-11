@@ -4967,8 +4967,7 @@ def payment_failed():
                     flash('GCash payment successful — order confirmed!', 'success')
                     return redirect(back)
                 # Not paid: the order stays (its items on hold) so the customer can continue or cancel it from My Orders.
-                flash('The payment was not completed and nothing was charged. Your order is on hold for a few minutes: '
-                      'open My Orders to continue paying or to cancel it.', 'warning')
+                flash('Payment not completed. You can continue it in My Orders.', 'warning')
         except Exception:
             db.session.rollback()
     if booking_id.isdigit():
