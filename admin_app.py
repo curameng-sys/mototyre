@@ -1130,17 +1130,14 @@ def cleanup_abandoned_gcash_orders():
         Order.created_at < cutoff
     ).all()
     for order in abandoned:
-        Notification.query.filter(
-            Notification.user_id == order.user_id,
-            Notification.type == 'order',
-            Notification.created_at >= order.created_at
-        ).delete(synchronize_session=False)
-        for item in order.items:
-            product = Product.query.get(item.product_id)
-            if product:
-                product.stock += item.quantity
-        OrderItem.query.filter_by(order_id=order.id).delete()
-        db.session.delete(order)
+        # Cancelled, not deleted: the items go back to stock, nothing was charged, and the customer is told.
+        _restock_order(order)
+        order.status = 'cancelled'
+        order.cancelled_by = 'auto'
+        order.cancel_reason = 'Not paid within 30 minutes'
+        _notify_order_customer(order, 'Order cancelled: not paid',
+            f'Your order ORD-{order.id:03d} was cancelled because the GCash payment was not completed within 30 minutes. '
+            f'You were not charged. You can order again anytime.', status='cancelled')
     db.session.commit()
     return len(abandoned)
 

@@ -6919,9 +6919,10 @@ function openOrderDetails(orderId) {
     receivedWrap.innerHTML = `
       <div style="padding:0.75rem 0.85rem;background:#fff7ed;border:1px solid #fdba74;border-radius:10px;color:#7c2d12;font-size:0.8rem;line-height:1.5;">
         <div style="font-weight:700;margin-bottom:0.15rem;">Waiting for your GCash payment</div>
-        <div>${left > 0 ? `Your items are on hold for about <b>${left} more minute${left === 1 ? '' : 's'}</b>.` : 'Your items were on hold, and this order will be removed any moment.'} Nothing has been charged yet.</div>
+        <div>${left > 0 ? `Your items are on hold for about <b>${left} more minute${left === 1 ? '' : 's'}</b>. Nothing has been charged yet.` : ''}</div>
         <div id="od-unpaid-msg" style="display:none;margin-top:0.4rem;color:#b91c1c;font-weight:600;"></div>
-        <div id="od-unpaid-btns" style="display:flex;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
+        ${left <= 0 ? `<div style="margin-top:0.5rem;font-weight:600;">The time to pay has run out. This order is being removed, so please place it again. Nothing was charged.</div>` : ''}
+        <div id="od-unpaid-btns" style="display:${left <= 0 ? 'none' : 'flex'};gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
           <button type="button" onclick="continueOrderPayment(${order.id}, this)" style="flex:1;min-width:150px;padding:0.65rem 1rem;background:#16a34a;border:none;border-radius:9px;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;">Continue payment</button>
           <button type="button" onclick="document.getElementById('od-unpaid-btns').style.display='none';document.getElementById('od-unpaid-ask').style.display='flex';" style="flex:0 0 auto;padding:0.65rem 1rem;background:#fff;border:1px solid var(--line-2);border-radius:9px;color:var(--fg-1);font-family:'Inter',sans-serif;font-weight:700;font-size:0.8rem;cursor:pointer;">Cancel order</button>
         </div>
@@ -7068,7 +7069,7 @@ function renderShipSection(order) {
     html = wrap('#fef2f2', '#fecaca', h(`Refunded ${peso(sh.refund_amount)}`, '#7f1d1d')
       + `<div style="color:#991b1b;">Reason: ${sh.refund_reason || '—'}<br>It may take a few days to show in your GCash.</div>`);
   } else if (order.status === 'cancelled') {
-    const by = { auto: 'cancelled automatically because there was no payment in 24 hours', customer: 'cancelled by you', shop: 'cancelled by the shop' }[sh.cancelled_by] || 'cancelled';
+    const by = { auto: sh.two_step ? 'cancelled automatically because the payment was not completed in time' : 'cancelled automatically because there was no payment in 24 hours', customer: 'cancelled by you', shop: 'cancelled by the shop' }[sh.cancelled_by] || 'cancelled';
     html = wrap('#f3f4f6', '#d1d5db', h('Cancelled · not charged', '#374151')
       + `<div style="color:#4b5563;">This order was ${by}.${sh.cancel_reason && sh.cancelled_by === 'shop' ? ' Reason: ' + sh.cancel_reason + '.' : ''}</div>`);
   } else if (order.status === 'completed' && sh.customer_courier) {

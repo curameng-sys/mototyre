@@ -1399,19 +1399,15 @@ def allowed_photo(filename):
 GCASH_HOLD_MINUTES = 30          # an unpaid GCash order keeps its items on hold this long
 
 
-def _discard_unpaid_order(order):
-    """Nothing was charged: the order is removed and its items go back to stock. (Caller commits.)"""
-    Notification.query.filter(
-        Notification.user_id == order.user_id,
-        Notification.type == 'order',
-        Notification.created_at >= order.created_at
-    ).delete(synchronize_session=False)
-    for item in order.items:
-        product = Product.query.get(item.product_id)
-        if product:
-            product.stock += item.quantity
-    OrderItem.query.filter_by(order_id=order.id).delete()
-    db.session.delete(order)
+UNPAID_CANCEL_REASON = 'Not paid within 30 minutes'
+
+
+def _cancel_unpaid_order(order, by, reason):
+    """An order nobody paid for is Cancelled (not deleted): its items go back to stock and nothing was charged. (Caller commits.)"""
+    _restock_order(order)
+    order.status = 'cancelled'
+    order.cancelled_by = by
+    order.cancel_reason = reason
 
 
 def cleanup_abandoned_gcash_orders():
@@ -1422,7 +1418,10 @@ def cleanup_abandoned_gcash_orders():
         Order.created_at < cutoff
     ).all()
     for order in abandoned:
-        _discard_unpaid_order(order)
+        _cancel_unpaid_order(order, 'auto', UNPAID_CANCEL_REASON)
+        _notify_order_customer(order, 'Order cancelled: not paid',
+            f'Your order ORD-{order.id:03d} was cancelled because the GCash payment was not completed within {GCASH_HOLD_MINUTES} minutes. '
+            f'You were not charged. You can order again anytime.', status='cancelled')
     db.session.commit()
     return len(abandoned)
 
@@ -4891,7 +4890,8 @@ def payment_success():
 def _unpaid_gcash_order_or_error(oid):
     order = db.session.get(Order, oid)
     if not order or order.user_id != current_user.id:
-        return None, (jsonify({'success': False, 'error': 'Order not found.'}), 404)
+        return None, (jsonify({'success': False, 'reload': True,
+                              'error': 'This order was not paid in time, so it was removed and nothing was charged. Please place the order again.'}), 404)
     if order.status != 'awaiting_payment' or (order.payment_method or '').lower() != 'gcash':
         return None, (jsonify({'success': False, 'error': 'This order is not waiting for payment.', 'reload': True}), 400)
     return order, None
@@ -4931,7 +4931,7 @@ def continue_order_payment(oid):
 @app.route('/customer/order/<int:oid>/cancel-unpaid', methods=['POST'])
 @login_required
 def cancel_unpaid_order(oid):
-    """The customer cancels an order they have not paid yet: nothing was charged, the items go back on the shelf."""
+    """The customer cancels an order they have not paid yet: it becomes Cancelled, nothing was charged, the items go back on the shelf."""
     order, err = _unpaid_gcash_order_or_error(oid)
     if err: return err
     if order.payment_ref:
@@ -4941,7 +4941,7 @@ def cancel_unpaid_order(oid):
             send_order_receipt_email(order)
             return jsonify({'success': False, 'reload': True,
                             'error': 'This order was already paid, so it was not cancelled. Contact the shop if you want to cancel it.'}), 409
-    _discard_unpaid_order(order)
+    _cancel_unpaid_order(order, 'customer', 'Cancelled by the customer before paying')
     db.session.commit()
     return jsonify({'success': True})
 
