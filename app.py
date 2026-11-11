@@ -861,7 +861,7 @@ class Order(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     total_amount    = db.Column(db.Float, nullable=False)
-    status          = db.Column(db.String(20), default='pending')
+    status          = db.Column(db.String(20), default='confirmed')
     payment_method  = db.Column(db.String(20), default='cash')
     payment_ref     = db.Column(db.String(80), nullable=True)  # PayMongo checkout id for GCash orders
     delivery_method = db.Column(db.String(20), default='pickup')
@@ -3413,7 +3413,7 @@ def _cart_checkout_impl(data):
     is_ship = delivery_method == 'ship'
     # Ship to Address: the ITEMS are paid now with GCash like any online order (the order is Confirmed once PayMongo confirms it).
     # The delivery fee comes later, after the shop has talked to the customer and quoted it (ship_two_step).
-    order_status = 'awaiting_payment' if payment_method.lower() == 'gcash' else 'pending'
+    order_status = 'awaiting_payment' if payment_method.lower() == 'gcash' else 'confirmed'
 
     order = Order(user_id=current_user.id, total_amount=total,
                   payment_method=payment_method, delivery_method=delivery_method,
@@ -3441,8 +3441,8 @@ def _cart_checkout_impl(data):
 
     send_notification(current_user.id, 'Order Placed!',
         with_stamp(
-            f'Your order {ref} for {items_desc[:80]} worth ₱{total:,.2f} is now pending.',
-            'pending', is_ship=False),
+            f'Your order {ref} for {items_desc[:80]} worth ₱{total:,.2f} is confirmed.',
+            'confirmed', is_ship=False),
         type='order', status='pending')
     for admin in User.query.filter_by(role='admin').all():
         send_notification(admin.id, 'New Order Received',
@@ -3488,9 +3488,9 @@ def place_order():
     if payment_method.lower() == 'gcash':
         order_status = 'awaiting_payment'
     else:
-        # Cash orders (pickup or ship) start as pending — payment is collected later
+        # Cash orders start as Confirmed: there is no Pending status. Payment is collected later
         # (at the counter via the Billing page for pickup).
-        order_status = 'pending'
+        order_status = 'confirmed'
 
     order = Order(
         user_id=current_user.id, total_amount=total,
@@ -5282,7 +5282,7 @@ def choose_shipping_option(oid):
     return jsonify({'success': True, 'checkout_url': result['checkout_url']})
 
 
-SHIP_STATUS_LABELS = {'confirmed': 'Confirmed', 'in_progress': 'In Progress', 'done_packaging': 'Done Packaging',
+SHIP_STATUS_LABELS = {'awaiting_payment': 'Awaiting Payment', 'confirmed': 'Confirmed', 'in_progress': 'In Progress', 'done_packaging': 'Done Packaging',
                       'shipping': 'Shipping', 'completed': 'Completed', 'refunded': 'Refunded', 'cancelled': 'Cancelled'}
 # orders placed before the Courier flow keep working: their old statuses read as the nearest new one
 _LEGACY_SHIP = {'pending': 'confirmed', 'awaiting_payment': 'confirmed', 'processing': 'in_progress',
@@ -5290,6 +5290,8 @@ _LEGACY_SHIP = {'pending': 'confirmed', 'awaiting_payment': 'confirmed', 'proces
 
 
 def ship_status_key(o):
+    if o.status == 'awaiting_payment' and getattr(o, 'ship_two_step', False):
+        return 'awaiting_payment'          # the items are not paid yet: it is not Confirmed
     return _LEGACY_SHIP.get(o.status, o.status)
 
 
@@ -5570,6 +5572,7 @@ with app.app_context():
         "ALTER TABLE `order` ADD COLUMN fee_paid_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN fee_payment_id VARCHAR(80) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN customer_courier TINYINT(1) DEFAULT 0",
+        "UPDATE `order` SET status = 'confirmed' WHERE status = 'pending'",           # there is no Pending status for online orders any more
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",
         "ALTER TABLE `order` ADD COLUMN shipping_prices TEXT",

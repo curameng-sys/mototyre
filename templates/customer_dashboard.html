@@ -301,6 +301,7 @@
     .ship-opt .tile { width:34px; height:34px; border-radius:9px; background:#dbeafe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .ship-opt .dot { width:20px; height:20px; border-radius:50%; border:2px solid var(--line-2); flex-shrink:0; }
     .ship-opt.sel .dot { border-color:var(--brand-red); background:radial-gradient(circle, var(--brand-red) 42%, #fff 46%); }
+    .badge-s-awaiting_payment { background: #fff7ed; color: #9a3412; border: 1px solid #f97316; }
     .badge-s-confirmed      { background: #dbeafe; color: #1e3a8a; border: 1px solid #3b82f6; }
     .badge-s-in_progress    { background: #ede9fe; color: #4c1d95; border: 1px solid #8b5cf6; }
     .badge-s-done_packaging { background: #ccfbf1; color: #115e59; border: 1px solid #14b8a6; }
@@ -6960,7 +6961,7 @@ let _confirmOrderIsPickup = false;
 
 const SHIP_OPTION_NAMES = { priority: 'Priority', regular: 'Regular', pooling: 'Pooling', fee: 'Delivery' };
 // Status label + colour for a Ship to Address order (global, so the order window and the live updater both use it).
-const SHIP_LABELS = { confirmed: 'Confirmed', in_progress: 'In Progress', done_packaging: 'Done Packaging', shipping: 'Shipping',
+const SHIP_LABELS = { awaiting_payment: 'Awaiting Payment', confirmed: 'Confirmed', in_progress: 'In Progress', done_packaging: 'Done Packaging', shipping: 'Shipping',
                       completed: 'Completed', refunded: 'Refunded', cancelled: 'Cancelled' };
 function shipBadge(status) {
   return { cls: 'badge badge-s-' + status, label: SHIP_LABELS[status] || String(status).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) };

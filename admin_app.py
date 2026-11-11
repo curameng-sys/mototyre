@@ -398,7 +398,7 @@ class Order(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     total_amount    = db.Column(db.Float, nullable=False)
-    status          = db.Column(db.String(20), default='pending')
+    status          = db.Column(db.String(20), default='confirmed')
     payment_method  = db.Column(db.String(20), default='cash')
     payment_ref     = db.Column(db.String(80), nullable=True)  # PayMongo checkout id for GCash orders (an in-store GCash sale keeps its reference no. here)
     cash_amount     = db.Column(db.Float, nullable=True)       # only for an in-store sale paid part cash, part GCash (payment_method 'split')
@@ -6512,6 +6512,14 @@ def update_order_status(oid):
         flash(msg, 'danger')
         return redirect(url_for('admin_dashboard'))
 
+    # A GCash order the customer has not paid yet is not the shop's to move: PayMongo confirms it when it is paid.
+    if order.status == 'awaiting_payment' and (order.payment_method or '').lower() == 'gcash' and new_status != order.status:
+        msg = "This order is waiting for the customer's GCash payment. It is confirmed by itself once paid."
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg}), 400
+        flash(msg, 'danger')
+        return redirect(url_for('admin_dashboard'))
+
     # Ship-to-address orders: staff can move it up to "shipped" (on the way); only the
     # customer's own receipt confirmation can complete it from there — see the check above.
     if not _is_pickup:
@@ -10976,6 +10984,7 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN fee_paid_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN fee_payment_id VARCHAR(80) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN customer_courier TINYINT(1) DEFAULT 0",
+        "UPDATE `order` SET status = 'confirmed' WHERE status = 'pending'",           # there is no Pending status for online orders any more
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",
         "ALTER TABLE `order` ADD COLUMN shipping_prices TEXT",

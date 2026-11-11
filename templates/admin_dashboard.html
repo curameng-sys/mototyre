@@ -1186,8 +1186,8 @@
               <span class="pending-num" id="pending-num-returns" style="color:#b91c1c;">{{ dash.returns_waiting }}</span>
             </div>
             <div class="pending-box" id="pending-box-orders" onclick="goToSection('orders')">
-              <div><span>Pending Orders</span><div class="pending-sub">Online orders not yet handled</div></div>
-              <span class="pending-num" id="pending-num-orders" style="color:var(--blue);">{{ order_status_counts.get('pending', 0) }}</span>
+              <div><span>New Orders</span><div class="pending-sub">Confirmed, not yet started</div></div>
+              <span class="pending-num" id="pending-num-orders" style="color:var(--blue);">{{ order_status_counts.get('confirmed', 0) }}</span>
             </div>
           </div>
         </div>
@@ -1915,7 +1915,7 @@
       {% for o in all_orders %}{% if not o.is_instore and not o.walkin_customer_id %}{% set _x = mo_orders.append(o) %}{% endif %}{% endfor %}
       <div class="filter-bar" style="align-items:center;">
         <input type="text" placeholder="Search order #, customer or product..." id="orders-search" oninput="applyOrderFilters()">
-        <select id="orders-type-filter" style="display:none;" aria-hidden="true"><option value=""></option></select>
+        <select id="orders-type-filter" onchange="applyOrderFilters()"><option value="">All types</option><option value="pickup">Shop Pickup</option><option value="ship">Ship to Address</option></select>
         <select id="orders-status-filter" onchange="applyOrderFilters()"><option value="">All statuses</option></select>
         <span id="orders-count" style="font-size:0.74rem;color:var(--muted);white-space:nowrap;"></span>
         <a id="orders-clear" onclick="clearOrderFilters()" style="display:none;font-size:0.74rem;font-weight:700;color:var(--red);cursor:pointer;white-space:nowrap;">Clear filters</a>
@@ -1953,7 +1953,7 @@
               {% set sh_grand = (o.total_amount or 0) + (o.shipping_fee or 0) %}
               {% set sh_sent = sh and o.shipping_options_sent_at %}
               {% set sh_paid = (o.fee_paid_at if o.ship_two_step else o.paid_at) %}
-              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if (o.fee_paid_at if o.ship_two_step else o.paid_at) else 0 }}" data-twostep="{{ 1 if o.ship_two_step else 0 }}" data-cc="{{ 1 if o.customer_courier else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ (o.fee_paid_at if o.ship_two_step else o.paid_at)|when if (o.fee_paid_at if o.ship_two_step else o.paid_at) else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-lines="{{ o.items|ship_lines|tojson|forceescape }}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
+              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}" data-delivery="{{ 'ship' if o.delivery_method == 'ship' else 'pickup' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if (o.fee_paid_at if o.ship_two_step else o.paid_at) else 0 }}" data-twostep="{{ 1 if o.ship_two_step else 0 }}" data-cc="{{ 1 if o.customer_courier else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ (o.fee_paid_at if o.ship_two_step else o.paid_at)|when if (o.fee_paid_at if o.ship_two_step else o.paid_at) else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-lines="{{ o.items|ship_lines|tojson|forceescape }}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
                 <td style="white-space:nowrap;">
                   <a href="#" onclick="viewOrder({{ o.id }}, {{ (o_display_name)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.email)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.phone)|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_model or ''))|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_plate or ''))|tojson|forceescape }}, {{ o.total_amount }}, {{ (o.status)|tojson|forceescape }}, {{ (o.payment_method)|tojson|forceescape }}, {{ (o.created_at.strftime('%b %d, %Y — %I:%M %p'))|tojson|forceescape }}, {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
@@ -2141,6 +2141,8 @@
                     <span class="ship-line ok">The customer received it. Set to Completed.</span>
                   {% endif %}
                 </div>
+                {% elif o.status == 'awaiting_payment' and (o.payment_method or '')|lower == 'gcash' %}
+                <span class="ship-line warn" style="display:block;line-height:1.4;">Waiting for the customer's GCash payment.<br>It is confirmed by itself once paid, and removed if not paid in 30 minutes.</span>
                 {% else %}
                 <form method="POST" action="{{ url_for('update_order_status', oid=o.id) }}" class="status-form">
                   <select name="status" data-current="{{ o.status }}" onchange="this.form.querySelector('button[type=submit]').disabled = (this.value === this.dataset.current)">
@@ -3588,18 +3590,13 @@
       <button onclick="closeModal('modal-order-detail')" style="width:30px;height:30px;background:#f3f4f6;border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:0.9rem;flex-shrink:0;font-family:inherit;">✕</button>
     </div>
 
-    <!-- Customer + Motorcycle -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+    <!-- Customer -->
+    <div style="margin-bottom:0.75rem;">
       <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.85rem 1rem;">
         <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">Customer</div>
         <div style="color:var(--text);font-weight:700;font-size:0.9rem;line-height:1.3;" id="od-customer"></div>
         <div style="color:var(--muted);font-size:0.78rem;margin-top:0.2rem;" id="od-email"></div>
         <div style="color:var(--muted);font-size:0.78rem;" id="od-phone"></div>
-      </div>
-      <div style="background:#f9fafb;border:1px solid var(--border);border-radius:9px;padding:0.85rem 1rem;">
-        <div style="font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">Motorcycle</div>
-        <div style="color:var(--text);font-size:0.9rem;font-weight:700;line-height:1.3;" id="od-moto-model"></div>
-        <div style="color:var(--muted);font-size:0.78rem;margin-top:0.2rem;" id="od-moto-plate"></div>
       </div>
     </div>
 
@@ -8321,25 +8318,35 @@
   }
 
   // Manage Orders: search + type + status all apply together.
-  // The status list is the statuses of the two online flows, nothing else:
-  //   Shop pick-up:     Pending / Awaiting Payment > Confirmed > Processing > Ready For Pickup > Completed (or Cancelled)
-  //   Ship to Address:  Confirmed > In Progress > Done Packaging > Shipping > Completed (or Cancelled / Refunded)
-  const ORDER_STATUSES = ['pending', 'awaiting payment', 'confirmed', 'processing', 'ready for pickup', 'in progress', 'done packaging', 'shipping', 'completed', 'cancelled', 'refunded'];
+  // The status list follows the type picked, so the two flows are never mixed in one list:
+  //   Shop Pickup:     Awaiting Payment > Confirmed > Processing > Ready For Pickup > Completed (or Cancelled)
+  //   Ship to Address: Awaiting Payment > Confirmed > In Progress > Done Packaging > Shipping > Completed (or Cancelled / Refunded)
+  const ORDER_STATUSES_BY_TYPE = {
+    pickup: ['awaiting payment', 'confirmed', 'processing', 'ready for pickup', 'completed', 'cancelled'],
+    ship:   ['awaiting payment', 'confirmed', 'in progress', 'done packaging', 'shipping', 'completed', 'cancelled', 'refunded'],
+    '':     ['awaiting payment', 'confirmed', 'processing', 'ready for pickup', 'in progress', 'done packaging', 'shipping', 'completed', 'cancelled', 'refunded']
+  };
+  function _orderStatusText(row) {
+    const b = row.cells[3] ? row.cells[3].querySelector('.badge') : null;
+    return (b ? b.textContent : (row.cells[3] ? row.cells[3].textContent : '')).trim().toLowerCase().replace(/\s+/g, ' ').replace('ready to pick up', 'ready for pickup');
+  }
   function buildOrderStatusOptions() {
-    const sel = document.getElementById('orders-status-filter');
+    const sel = document.getElementById('orders-status-filter'), typeSel = document.getElementById('orders-type-filter');
     if (!sel) return;
+    const type = typeSel ? typeSel.value : '';
+    const list = ORDER_STATUSES_BY_TYPE[type] || ORDER_STATUSES_BY_TYPE[''];
     const counts = {};
     document.querySelectorAll('#orders-table tbody tr').forEach(row => {
-      const b = row.cells[3] ? row.cells[3].querySelector('.badge') : null;
-      const t = (b ? b.textContent : '').trim().toLowerCase().replace(/\s+/g, ' ').replace('ready to pick up', 'ready for pickup');
+      if (type && row.dataset.delivery !== type) return;
+      const t = _orderStatusText(row);
       if (t) counts[t] = (counts[t] || 0) + 1;
     });
-    const sig = ORDER_STATUSES.map(k => counts[k] || 0).join(',');
+    const sig = type + '|' + list.map(k => counts[k] || 0).join(',');
     if (sel.dataset.sig === sig) return;
     sel.dataset.sig = sig;
     const keep = sel.value;
-    sel.innerHTML = '<option value="">All statuses</option>' + ORDER_STATUSES.map(k => `<option value="${k}">${k.replace(/\b\w/g, c => c.toUpperCase())} (${counts[k] || 0})</option>`).join('');
-    if (ORDER_STATUSES.includes(keep)) sel.value = keep;
+    sel.innerHTML = '<option value="">All statuses</option>' + list.map(k => `<option value="${k}">${k.replace(/\b\w/g, c => c.toUpperCase())} (${counts[k] || 0})</option>`).join('');
+    if (list.includes(keep)) sel.value = keep;
   }
   document.addEventListener('DOMContentLoaded', buildOrderStatusOptions);
   function applyOrderFilters() {
@@ -8350,10 +8357,9 @@
     const rows   = [...document.querySelectorAll('#orders-table tbody tr')];
     let shown = 0;
     rows.forEach(row => {
-      const sBadge = row.cells[3] ? row.cells[3].querySelector('.badge') : null;
-      const statusText = (sBadge ? sBadge.textContent : (row.cells[3] ? row.cells[3].textContent : '')).toLowerCase().replace('ready to pick up', 'ready for pickup').replace(/\s+/g, '');
+      const statusText = _orderStatusText(row).replace(/\s+/g, '');
       const ok = (!q || row.textContent.toLowerCase().includes(q))
-              && (!type || row.dataset.type === type)
+              && (!type || row.dataset.delivery === type)
               && (!status || statusText === status);
       row.style.display = ok ? '' : 'none';
       if (ok) shown++;
@@ -8735,8 +8741,6 @@
     document.getElementById('od-customer').textContent = customer;
     document.getElementById('od-email').textContent = email;
     document.getElementById('od-phone').textContent = phone;
-    document.getElementById('od-moto-model').textContent = motoModel || '—';
-    document.getElementById('od-moto-plate').textContent = motoPlate || '';
     document.getElementById('od-date').textContent = dateStr;
     document.getElementById('od-total').textContent = '₱' + Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
@@ -8748,9 +8752,10 @@
     const odIsPickup = ((orderShipData[id] || {}).delivery || 'pickup') !== 'ship';
     const odStatusLabel = (odIsPickup && status === 'shipped')
       ? 'Ready For Pickup'
-      : status.charAt(0).toUpperCase() + status.slice(1);
+      : status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const odBadgeCls = statusColors[status] || (['awaiting_payment', 'in_progress', 'done_packaging', 'shipping', 'refunded'].includes(status) ? (status === 'awaiting_payment' ? 'badge-awaiting_payment' : 'badge-s-' + status) : 'badge-pending');
     document.getElementById('od-status').innerHTML =
-      '<span class="badge ' + (statusColors[status] || 'badge-pending') + '">' + odStatusLabel + '</span>';
+      '<span class="badge ' + odBadgeCls + '">' + odStatusLabel + '</span>';
 
     if (payment === 'gcash') {
       document.getElementById('od-payment').innerHTML = '<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">GCash</span>';
@@ -10160,7 +10165,7 @@ async function refreshDashboardOverview() {
     attn('pending-box-quotation', 'pending-num-quotation', d.awaiting_quotation_count || 0);
     attn('pending-box-returns', 'pending-num-returns', dd.returns_waiting || 0);
     const ordNum = document.getElementById('pending-num-orders');
-    if (ordNum) ordNum.textContent = (d.order_status_counts || {}).pending || 0;
+    if (ordNum) ordNum.textContent = (d.order_status_counts || {}).confirmed || 0;
 
     _renderDashRestock(dd);
     _renderDashToday(dd);
