@@ -2514,7 +2514,13 @@
           <div style="font-size:0.68rem;color:var(--muted);">Collected, before refunds</div>
         </div>
       </div>
+      <div class="rpt-tabs" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:0 0 0.9rem;">
+        <button type="button" class="bk-tab active" data-rpt-tab="sales" onclick="rptTab('sales', this)">Sales</button>
+        <button type="button" class="bk-tab" data-rpt-tab="services" onclick="rptTab('services', this)">Services &amp; Mechanics</button>
+        <button type="button" class="bk-tab" data-rpt-tab="inventory" onclick="rptTab('inventory', this)">Products &amp; Inventory</button>
+      </div>
       <div class="rpt-body">
+      <div class="rpt-panel" id="rpt-panel-sales">
       <div class="rpt-row">
         <div class="card">
           <div class="card-head">
@@ -2524,32 +2530,13 @@
           <div class="card-body" id="rpt-trend-body" style="padding-top:0.5rem;"><div class="empty-state"><p>No sales in this period.</p></div></div>
         </div>
         <div class="card">
-          <div class="card-head"><h5>Top Services Booked</h5></div>
-          <div class="card-body">
-            <div class="chart-bar-wrap" id="rpt-top-services-chart">
-              {% if rpt.top_services %}
-                {% set rpt_top_max = rpt.top_services[0][1] %}
-                {% for service, count, backjob_count in rpt.top_services[:5] %}
-                  {% set pct = ((count / rpt_top_max * 100)|int) if rpt_top_max > 0 else 0 %}
-                  <div class="chart-bar-item">
-                    <span class="bar-label" style="width:180px;">
-                      <span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;">
-                        <span>{{ service }}</span>
-                        {% if backjob_count > 0 %}<span style="font-size:0.64rem;color:#d97706;font-weight:600;">includes {{ backjob_count }} back job{{ 's' if backjob_count != 1 else '' }}</span>{% endif %}
-                      </span>
-                    </span>
-                    <div class="chart-bar-track"><div class="chart-bar-fill bar-green" data-width="{{ pct }}"></div></div>
-                    <span class="bar-val">{{ count }}</span>
-                  </div>
-                {% endfor %}
-              {% else %}
-              <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No booking data yet.</p></div>
-              {% endif %}
-            </div>
+          <div class="card-head"><h5>Revenue Breakdown</h5></div>
+          <div class="card-body" id="rpt-breakdown-body">
+            {% include 'partials/reports_breakdown.html' %}
           </div>
         </div>
       </div>
-      <div class="rpt-row">
+      <div class="rpt-row" style="grid-template-columns:minmax(0,1fr);">
         <div class="card">
           <div class="card-head">
             <h5>Recent Transactions Log</h5>
@@ -2560,13 +2547,9 @@
           </div>
           <div id="rpt-txn-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0.75rem 0 0.25rem;flex-wrap:wrap;"></div>
         </div>
-        <div class="card">
-          <div class="card-head"><h5>Revenue Breakdown</h5></div>
-          <div class="card-body" id="rpt-breakdown-body">
-            {% include 'partials/reports_breakdown.html' %}
-          </div>
-        </div>
       </div>
+      </div>
+      <div class="rpt-panel" id="rpt-panel-services" style="display:none;">
       <div class="rpt-row">
         <div class="card">
           <div class="card-head">
@@ -2617,30 +2600,34 @@
           <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Service income reflects labor only — parts and materials billed on a quotation aren't counted toward a mechanic's income.</div>
         </div>
         <div class="card">
-          <div class="card-head">
-            <h5>Top Products Sold</h5>
-            <span style="font-size:0.7rem;color:var(--muted);">By units sold</span>
+          <div class="card-head"><h5>Top Services Booked</h5></div>
+          <div class="card-body">
+            <div class="chart-bar-wrap" id="rpt-top-services-chart">
+              {% if rpt.top_services %}
+                {% set rpt_top_max = rpt.top_services[0][1] %}
+                {% for service, count, backjob_count in rpt.top_services[:5] %}
+                  {% set pct = ((count / rpt_top_max * 100)|int) if rpt_top_max > 0 else 0 %}
+                  <div class="chart-bar-item">
+                    <span class="bar-label" style="width:180px;">
+                      <span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;">
+                        <span>{{ service }}</span>
+                        {% if backjob_count > 0 %}<span style="font-size:0.64rem;color:#d97706;font-weight:600;">includes {{ backjob_count }} back job{{ 's' if backjob_count != 1 else '' }}</span>{% endif %}
+                      </span>
+                    </span>
+                    <div class="chart-bar-track"><div class="chart-bar-fill bar-green" data-width="{{ pct }}"></div></div>
+                    <span class="bar-val">{{ count }}</span>
+                  </div>
+                {% endfor %}
+              {% else %}
+              <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No booking data yet.</p></div>
+              {% endif %}
+            </div>
           </div>
-          <div class="card-body" id="rpt-top-products-body">
-            {% if rpt.top_products %}
-              {% set rpt_prod_max = rpt.top_products[0].units %}
-              {% for p in rpt.top_products[:5] %}
-                {% set ppct = ((p.units / rpt_prod_max * 100)|int) if rpt_prod_max > 0 else 0 %}
-                <div style="display:grid;grid-template-columns:18px minmax(0,1.5fr) minmax(44px,1fr) 78px;align-items:center;gap:0.6rem;padding:0.4rem 0;">
-                  <span style="font-size:0.72rem;color:var(--muted);text-align:right;">{{ loop.index }}</span>
-                  <span title="{{ p.name|readable_item }}" style="font-size:0.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name|readable_item }}</span>
-                  <div class="chart-bar-track" style="height:7px;"><div class="chart-bar-fill" style="background:#f97316;" data-width="{{ ppct }}"></div></div>
-                  <span style="text-align:right;line-height:1.25;white-space:nowrap;"><span style="display:block;font-size:0.76rem;font-weight:700;color:var(--text);">{{ p.units|int }} sold</span><span style="display:block;font-size:0.68rem;color:var(--muted);">₱{{ '{:,.2f}'.format(p.revenue) }}</span></span>
-                </div>
-              {% endfor %}
-            {% else %}
-              <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No product sales in this period.</p></div>
-            {% endif %}
-          </div>
-          <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Includes online orders, in-store sales, and parts used in bookings and job orders. Refunded items are excluded. Sales of the same product are added together, even if the product was renamed.</div>
         </div>
       </div>
-      <div class="card" id="rpt-inventory" style="margin-top:1.25rem;">
+      </div>
+      <div class="rpt-panel" id="rpt-panel-inventory" style="display:none;">
+      <div class="card" id="rpt-inventory" style="margin-bottom:1rem;">
         <div class="card-head">
           <h5>Inventory Insights</h5>
           <span style="font-size:0.7rem;color:var(--muted);">Based on the last {{ inv.window_days }} days of sales (not affected by the date filter)</span>
@@ -2686,6 +2673,32 @@
           </div>
         </div>
         <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Days left = stock &divide; average daily sales of the last {{ inv.window_days }} days. The suggested order covers about {{ inv.cover_days }} days of selling. Parts that did not sell in the last {{ inv.window_days }} days are not forecast.</div>
+      </div>
+      <div class="rpt-row" style="grid-template-columns:minmax(0,1fr);">
+        <div class="card">
+          <div class="card-head">
+            <h5>Top Products Sold</h5>
+            <span style="font-size:0.7rem;color:var(--muted);">By units sold</span>
+          </div>
+          <div class="card-body" id="rpt-top-products-body">
+            {% if rpt.top_products %}
+              {% set rpt_prod_max = rpt.top_products[0].units %}
+              {% for p in rpt.top_products[:5] %}
+                {% set ppct = ((p.units / rpt_prod_max * 100)|int) if rpt_prod_max > 0 else 0 %}
+                <div style="display:grid;grid-template-columns:18px minmax(0,1.5fr) minmax(44px,1fr) 78px;align-items:center;gap:0.6rem;padding:0.4rem 0;">
+                  <span style="font-size:0.72rem;color:var(--muted);text-align:right;">{{ loop.index }}</span>
+                  <span title="{{ p.name|readable_item }}" style="font-size:0.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name|readable_item }}</span>
+                  <div class="chart-bar-track" style="height:7px;"><div class="chart-bar-fill" style="background:#f97316;" data-width="{{ ppct }}"></div></div>
+                  <span style="text-align:right;line-height:1.25;white-space:nowrap;"><span style="display:block;font-size:0.76rem;font-weight:700;color:var(--text);">{{ p.units|int }} sold</span><span style="display:block;font-size:0.68rem;color:var(--muted);">₱{{ '{:,.2f}'.format(p.revenue) }}</span></span>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-state"><div class="ei" style="color:var(--muted);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><p>No product sales in this period.</p></div>
+            {% endif %}
+          </div>
+          <div style="font-size:0.68rem;color:var(--muted);padding:0 1rem 0.85rem;line-height:1.5;">Includes online orders, in-store sales, and parts used in bookings and job orders. Refunded items are excluded. Sales of the same product are added together, even if the product was renamed.</div>
+        </div>
+      </div>
       </div>
       </div>{# /rpt-body #}
     </section>
@@ -8422,6 +8435,12 @@
   }
   document.addEventListener('DOMContentLoaded', () => { if (document.getElementById('orders-search')) applyOrderFilters(); });
 
+  function rptTab(name, btn) {
+    document.querySelectorAll('#sec-reports .rpt-panel').forEach(p => { p.style.display = p.id === 'rpt-panel-' + name ? '' : 'none'; });
+    document.querySelectorAll('#sec-reports .rpt-tabs .bk-tab').forEach(b => b.classList.toggle('active', b.dataset.rptTab === name));
+    const body = document.querySelector('#sec-reports .rpt-body'); if (body) body.scrollTop = 0;
+    if (name === 'sales') { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+  }
   function filterTableByCol(tableId, colIndex, value) {
     document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
       const cell = row.cells[colIndex];
