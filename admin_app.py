@@ -6321,8 +6321,7 @@ def ship_start_shipping(oid):
     link  = ''                       # no tracking link: the courier is booked by hand
     missing, bad, fields = [], [], []
     for key, label, val in (('name', f'{who} name', name), ('phone', f'{who} mobile', phone),
-                            ('model', 'motorcycle model' if rtype == 'rider' else 'car model', model),
-                            ('plate', 'plate number', plate)):
+                            ('model', 'motorcycle model' if rtype == 'rider' else 'car model', model)):   # the plate number is optional
         if not val:
             missing.append(label); fields.append(key)
     if phone and not re.fullmatch(r'09\d{9}', phone):

@@ -223,6 +223,13 @@
       body.tbl-lock #sec-archive > .card { flex: 1 1 0; min-height: 0; overflow: auto; margin-bottom: 0.9rem; }
       body.tbl-lock #sec-archive > .card:last-child { margin-bottom: 0; }
       body.tbl-lock #sec-archive > div:not(.page-header):not(.card) { margin-bottom: 0.9rem !important; }
+      /* Transaction History: the card fills the screen, only the rows scroll inside it, and the page numbers stay under them */
+      body.tbl-lock #sec-transactions.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      body.tbl-lock #sec-transactions > .card { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
+      body.tbl-lock #sec-transactions > .card > .card-head { flex-shrink: 0; }
+      body.tbl-lock #txn-table-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
+      body.tbl-lock #txn-table-wrap > div { overflow: visible !important; }
+      body.tbl-lock #txn-pagination { flex-shrink: 0; padding: 0.55rem 0 !important; }
       body.tbl-lock #products-pagination { flex-shrink: 0; margin-top: 0.7rem !important; min-height: 32px; }
     }
     .ds-count { display: none; }
@@ -2017,7 +2024,7 @@
                       <span class="ship-line ok">Paid ₱{{ '{:,.2f}'.format(sh_grand) }} · GCash</span>
                     {% endif %}
                     {% if o.status == 'shipping' %}
-                      <span class="ship-line">{{ 'Driver' if o.rider_type == 'driver' else 'Rider' }}: {{ o.rider_name }} · {{ o.rider_plate }}</span>
+                      <span class="ship-line">{{ 'Driver' if o.rider_type == 'driver' else 'Rider' }}: {{ o.rider_name }}{% if o.rider_plate %} · {{ o.rider_plate }}{% endif %}</span>
                       {% if o.received_at %}<span class="ship-line ok">Customer received it · {{ o.received_at|when }}</span>{% endif %}
                     {% elif o.status == 'completed' %}
                       {% if o.completed_by_shop %}
@@ -3524,7 +3531,7 @@
     <div class="form-group"><label><span class="ss-who">Rider</span> name</label><input type="text" id="ss-name" maxlength="100" oninput="this.classList.remove('so-err-field')"></div>
     <div class="form-group"><label><span class="ss-who">Rider</span> mobile</label><input type="text" inputmode="numeric" id="ss-phone" maxlength="11" placeholder="09XXXXXXXXX" oninput="this.value=this.value.replace(/[^0-9]/g,'');this.classList.remove('so-err-field')"></div>
     <div class="form-group"><label id="ss-model-label">Motorcycle model</label><input type="text" id="ss-model" maxlength="60" oninput="this.classList.remove('so-err-field')"></div>
-    <div class="form-group"><label>Plate number</label><input type="text" id="ss-plate" maxlength="30" style="text-transform:uppercase;" placeholder="ABC 1234" oninput="this.value=this.value.toUpperCase();this.classList.remove('so-err-field')"></div>
+    <div class="form-group"><label>Plate number (optional)</label><input type="text" id="ss-plate" maxlength="30" style="text-transform:uppercase;" placeholder="ABC 1234" oninput="this.value=this.value.toUpperCase();this.classList.remove('so-err-field')"></div>
     <div class="form-group"><label>Fare Courier charged (optional)</label><input type="text" inputmode="decimal" id="ss-fare" placeholder="0.00" oninput="this.value=this.value.replace(/[^0-9.]/g,'');this.classList.remove('so-err-field');shipFareNote()"></div>
     <div style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.78rem;color:#374151;margin-bottom:1rem;line-height:1.6;">
       <div id="ss-feebox"></div><div id="ss-farebox" style="font-weight:700;"></div></div>
@@ -4232,7 +4239,7 @@
     document.body.classList.toggle('dash-lock', name === 'dashboard');
     document.body.classList.toggle('rpt-lock', name === 'reports');
     if (name === 'dashboard') setTimeout(() => { if (typeof fitDashRows === 'function') fitDashRows(); }, 30);
-    document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products', 'bookings', 'returns', 'archive'].includes(name));
+    document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products', 'bookings', 'returns', 'archive', 'transactions'].includes(name));
     openSidebarGroupOfActive();
     document.body.classList.toggle('embed-lock', !!EMBEDS[name]);
     if (EMBEDS[name]) {
@@ -9358,7 +9365,7 @@ async function shipSubmitStart() {
   const f = {name: 'ss-name', phone: 'ss-phone', model: 'ss-model', plate: 'ss-plate'};
   const labels = {name: who + ' name', phone: who + ' mobile', model: car ? 'car model' : 'motorcycle model', plate: 'plate number'};
   document.querySelectorAll('#modal-ship-start .so-err-field').forEach(x => x.classList.remove('so-err-field'));
-  const missing = Object.keys(f).filter(k => !document.getElementById(f[k]).value.trim());
+  const missing = Object.keys(f).filter(k => k !== 'plate' && !document.getElementById(f[k]).value.trim());     // the plate number is optional
   if (missing.length) {
     missing.forEach(k => document.getElementById(f[k]).classList.add('so-err-field'));
     const names = missing.map(k => labels[k]);

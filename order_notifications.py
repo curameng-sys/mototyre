@@ -221,7 +221,8 @@ def ship_notice(kind, ref, **c):
     if kind == 'on_the_way':
         who = 'Driver' if c.get('rider_type') == 'driver' else 'Rider'
         model = c.get('model') or ''
-        det = f'{model}, plate {c.get("plate", "")}' if model else f'plate {c.get("plate", "")}'
+        plate = c.get('plate') or ''
+        det = ', '.join(x for x in (model, f'plate {plate}' if plate else '') if x) or 'details in your order'
         track = ' Open your order to track the delivery.' if c.get('link', True) else ''
         return ('Order On The Way 🚚',
                 f'{who} {c.get("name", "")} ({det}) is bringing {ref} by Courier {c.get("vehicle", "")}.{track}', 'shipping')
@@ -269,7 +270,7 @@ def ship_email_extra(kind, **c):
     if kind == 'on_the_way':
         who = 'Driver' if c.get('rider_type') == 'driver' else 'Rider'
         car = 'Car model' if c.get('rider_type') == 'driver' else 'Motorcycle model'
-        rows = [(who, c.get('name')), ('Mobile', c.get('phone')), (car, c.get('model')), ('Plate number', c.get('plate')),
+        rows = [(who, c.get('name')), ('Mobile', c.get('phone')), (car, c.get('model'))] + ([('Plate number', c.get('plate'))] if c.get('plate') else []) + [
                 ('Delivery', f"Courier {c.get('vehicle', '')} · {c.get('option', '')} shipping")]
         tr = ''.join(f'<tr><td style="padding:5px 8px;color:#6b7280;">{k}</td><td style="padding:5px 8px;text-align:right;"><strong>{v}</strong></td></tr>'
                      for k, v in rows)
@@ -326,7 +327,7 @@ def ship_on_the_way_email(customer_name, ref, c):
     rider = c.get('rider_type') == 'driver'
     who = 'Driver' if rider else 'Rider'
     model_lbl = 'Car' if rider else 'Motorcycle'
-    rows = [(who, c.get('name')), ('Mobile', c.get('phone')), (model_lbl, c.get('model')), ('Plate no.', c.get('plate'))]
+    rows = [(who, c.get('name')), ('Mobile', c.get('phone')), (model_lbl, c.get('model'))] + ([('Plate no.', c.get('plate'))] if c.get('plate') else [])
     tr = ''.join(f'<tr><td style="padding:8px 12px;color:#4b5563;">{k}</td>'
                  f'<td style="padding:8px 12px;text-align:right;font-weight:700;">{escape(str(v or ""))}</td></tr>' for k, v in rows)
     opt = f' ({c["option"]})' if c.get('option') else ''

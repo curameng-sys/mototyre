@@ -7072,7 +7072,7 @@ function renderShipSection(order) {
     const modelLbl = sh.vehicle === 'Motorcycle' ? 'Motorcycle' : 'Car';
     const row = (k, v) => `<div style="display:flex;justify-content:space-between;gap:0.6rem;padding:0.3rem 0;border-bottom:1px solid #e0f2fe;"><span style="color:#0369a1;">${k}</span><strong style="color:#0c4a6e;text-align:right;">${v}</strong></div>`;
     html = wrap('#f0f9ff', '#7dd3fc', h(sh.two_step ? `On the way with Courier ${sh.vehicle}` : `On the way with Courier ${sh.vehicle} · ${SHIP_OPTION_NAMES[sh.option]}`, '#0c4a6e')
-      + row(Rd, sh.rider_name) + row('Mobile', sh.rider_phone) + row(`${modelLbl} model`, sh.rider_model || '—') + row('Plate number', sh.rider_plate)
+      + row(Rd, sh.rider_name) + row('Mobile', sh.rider_phone) + row(`${modelLbl} model`, sh.rider_model || '—') + (sh.rider_plate ? row('Plate number', sh.rider_plate) : '')
       + `<div style="color:#0369a1;font-size:0.76rem;margin-top:0.6rem;">Shipping is already paid. Nothing to pay the ${rd}.</div>`
       + (sh.received_at ? `<div style="margin-top:0.6rem;padding:0.6rem 0.75rem;background:#dcfce7;border:1px solid #86efac;border-radius:8px;color:#14532d;font-weight:700;">You confirmed you received it on ${sh.received_at}. The shop will mark your order as Completed.</div>` : ''));
   } else if (order.status === 'refunded') {
