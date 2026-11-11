@@ -1395,25 +1395,33 @@ def allowed_photo(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in RETURN_PHOTO_EXTENSIONS
 
 
+GCASH_HOLD_MINUTES = 30          # an unpaid GCash order keeps its items on hold this long
+
+
+def _discard_unpaid_order(order):
+    """Nothing was charged: the order is removed and its items go back to stock. (Caller commits.)"""
+    Notification.query.filter(
+        Notification.user_id == order.user_id,
+        Notification.type == 'order',
+        Notification.created_at >= order.created_at
+    ).delete(synchronize_session=False)
+    for item in order.items:
+        product = Product.query.get(item.product_id)
+        if product:
+            product.stock += item.quantity
+    OrderItem.query.filter_by(order_id=order.id).delete()
+    db.session.delete(order)
+
+
 def cleanup_abandoned_gcash_orders():
-    cutoff = ph_now() - timedelta(minutes=30)
+    cutoff = ph_now() - timedelta(minutes=GCASH_HOLD_MINUTES)
     abandoned = Order.query.filter(
         Order.status == 'awaiting_payment',
         Order.payment_method == 'gcash',
         Order.created_at < cutoff
     ).all()
     for order in abandoned:
-        Notification.query.filter(
-            Notification.user_id == order.user_id,
-            Notification.type == 'order',
-            Notification.created_at >= order.created_at
-        ).delete(synchronize_session=False)
-        for item in order.items:
-            product = Product.query.get(item.product_id)
-            if product:
-                product.stock += item.quantity
-        OrderItem.query.filter_by(order_id=order.id).delete()
-        db.session.delete(order)
+        _discard_unpaid_order(order)
     db.session.commit()
     return len(abandoned)
 
@@ -1902,6 +1910,8 @@ def customer_dashboard():
 
     for o in orders:
         o.return_window = return_window_info('product', o.delivered_at) if o.status in ('delivered', 'completed') else None
+        o.pay_minutes_left = (max(0, int((o.created_at + timedelta(minutes=GCASH_HOLD_MINUTES) - ph_now()).total_seconds() // 60) + 1)
+                              if (o.status == 'awaiting_payment' and (o.payment_method or '').lower() == 'gcash') else None)
         o.pickup_by = _pickup_last_day(o) if (o.delivery_method != 'ship' and o.status == 'shipped' and o.ready_at and (o.payment_method or '').lower() != 'gcash') else None
         o.ship_state = ship_order_state(o) if o.delivery_method == 'ship' else None
         o.open_claim = open_by_order.get(o.id)
@@ -4877,6 +4887,64 @@ def payment_success():
     return redirect(safe_return_origin(request.args.get('origin')) + '/customer/dashboard')
 
 
+def _unpaid_gcash_order_or_error(oid):
+    order = db.session.get(Order, oid)
+    if not order or order.user_id != current_user.id:
+        return None, (jsonify({'success': False, 'error': 'Order not found.'}), 404)
+    if order.status != 'awaiting_payment' or (order.payment_method or '').lower() != 'gcash':
+        return None, (jsonify({'success': False, 'error': 'This order is not waiting for payment.', 'reload': True}), 400)
+    return order, None
+
+
+@app.route('/customer/order/<int:oid>/continue-payment', methods=['POST'])
+@login_required
+def continue_order_payment(oid):
+    """Back to the GCash payment of an order that is still waiting for it (same order, same amount)."""
+    order, err = _unpaid_gcash_order_or_error(oid)
+    if err: return err
+    if order.payment_ref:
+        paid_cid = _verified_checkout(order.user_id, order.payment_ref, '', tries=1)
+        if paid_cid:                                   # it was paid after all
+            _confirm_gcash_order(order, paid_cid)
+            send_order_receipt_email(order)
+            return jsonify({'success': True, 'paid': True})
+        try:                                           # the checkout page is still open on PayMongo's side: go back to it
+            headers = {"Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"}
+            res = requests.get(f"{PAYMONGO_API_URL}/checkout_sessions/{order.payment_ref}", headers=headers, timeout=15)
+            if res.status_code == 200:
+                attrs = res.json()['data']['attributes']
+                if attrs.get('status') == 'active' and attrs.get('checkout_url'):
+                    return jsonify({'success': True, 'checkout_url': attrs['checkout_url']})
+        except Exception as e:
+            print(f'[paymongo] could not reopen checkout: {e}')
+    items_desc = ', '.join(f"{i.product.name} x{i.quantity}" for i in order.items if i.product)
+    result = create_gcash_payment(amount=order.total_amount, description=f"MotoTyres Order #{order.id:03d}: {items_desc}"[:100],
+                                  order_id=order.id, origin=request.host_url)
+    if not result['success']:
+        return jsonify({'success': False, 'error': 'Could not open the GCash payment. Please try again.'}), 502
+    order.payment_ref = result['checkout_id']
+    db.session.commit()
+    return jsonify({'success': True, 'checkout_url': result['checkout_url']})
+
+
+@app.route('/customer/order/<int:oid>/cancel-unpaid', methods=['POST'])
+@login_required
+def cancel_unpaid_order(oid):
+    """The customer cancels an order they have not paid yet: nothing was charged, the items go back on the shelf."""
+    order, err = _unpaid_gcash_order_or_error(oid)
+    if err: return err
+    if order.payment_ref:
+        paid_cid = _verified_checkout(order.user_id, order.payment_ref, '', tries=1)
+        if paid_cid:                                   # already paid: it is not cancelled here
+            _confirm_gcash_order(order, paid_cid)
+            send_order_receipt_email(order)
+            return jsonify({'success': False, 'reload': True,
+                            'error': 'This order was already paid, so it was not cancelled. Contact the shop if you want to cancel it.'}), 409
+    _discard_unpaid_order(order)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @app.route('/payment/failed')
 def payment_failed():
     """The customer backed out of the GCash page. Only their own unpaid order or pending booking is taken back, and only
@@ -4897,19 +4965,9 @@ def payment_failed():
                     send_order_receipt_email(order)
                     flash('GCash payment successful — order confirmed!', 'success')
                     return redirect(back)
-                Notification.query.filter(
-                    Notification.user_id == order.user_id,
-                    Notification.type == 'order',
-                    Notification.created_at >= order.created_at
-                ).delete(synchronize_session=False)
-                for item in order.items:
-                    product = Product.query.get(item.product_id)
-                    if product:
-                        product.stock += item.quantity
-                OrderItem.query.filter_by(order_id=order.id).delete()
-                db.session.delete(order)
-                db.session.commit()
-                undone = True
+                # Not paid: the order stays (its items on hold) so the customer can continue or cancel it from My Orders.
+                flash('The payment was not completed and nothing was charged. Your order is on hold for a few minutes: '
+                      'open My Orders to continue paying or to cancel it.', 'warning')
         except Exception:
             db.session.rollback()
     if booking_id.isdigit():
