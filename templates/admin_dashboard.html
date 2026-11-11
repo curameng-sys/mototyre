@@ -1953,7 +1953,7 @@
               {% set sh_grand = (o.total_amount or 0) + (o.shipping_fee or 0) %}
               {% set sh_sent = sh and o.shipping_options_sent_at %}
               {% set sh_paid = (o.fee_paid_at if o.ship_two_step else o.paid_at) %}
-              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if (o.fee_paid_at if o.ship_two_step else o.paid_at) else 0 }}" data-twostep="{{ 1 if o.ship_two_step else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ (o.fee_paid_at if o.ship_two_step else o.paid_at)|when if (o.fee_paid_at if o.ship_two_step else o.paid_at) else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-lines="{{ o.items|ship_lines|tojson|forceescape }}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
+              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if (o.fee_paid_at if o.ship_two_step else o.paid_at) else 0 }}" data-twostep="{{ 1 if o.ship_two_step else 0 }}" data-cc="{{ 1 if o.customer_courier else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ (o.fee_paid_at if o.ship_two_step else o.paid_at)|when if (o.fee_paid_at if o.ship_two_step else o.paid_at) else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-lines="{{ o.items|ship_lines|tojson|forceescape }}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
                 <td style="white-space:nowrap;">
                   <a href="#" onclick="viewOrder({{ o.id }}, {{ (o_display_name)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.email)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.phone)|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_model or ''))|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_plate or ''))|tojson|forceescape }}, {{ o.total_amount }}, {{ (o.status)|tojson|forceescape }}, {{ (o.payment_method)|tojson|forceescape }}, {{ (o.created_at.strftime('%b %d, %Y — %I:%M %p'))|tojson|forceescape }}, {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
@@ -1995,7 +1995,9 @@
                         <span class="ship-line ok">Items paid ₱{{ '{:,.2f}'.format(o.total_amount or 0) }} · GCash</span>
                       {% endif %}
                       {% if o.status == 'done_packaging' and not o.fee_paid_at %}
-                        {% if sh_sent %}
+                        {% if o.customer_courier %}
+                          <span class="ship-line ok">The customer arranges the courier · no delivery fee</span>
+                        {% elif sh_sent %}
                           <span class="ship-line warn">Delivery fee sent · waiting for the customer to pay it</span>
                         {% else %}
                           <span class="ship-line warn">Talk to the customer about the delivery, then send the delivery fee</span>
@@ -2061,6 +2063,9 @@
                             <span class="ship-line bad">Courier charged ₱{{ '{:,.2f}'.format(o.lalamove_fare) }} · shop covers ₱{{ '{:,.2f}'.format(-sh_diff) }}</span>
                           {% endif %}
                         {% endif %}
+                      {% elif sh_sent and o.status == 'done_packaging' and o.customer_courier %}
+                        <span class="ship-line" style="color:#374151;font-weight:700;">Customer's own courier</span>
+                        <span class="ship-line">Sent {{ o.shipping_options_sent_at|when }} · waiting for their rider</span>
                       {% elif sh_sent and o.status == 'done_packaging' %}
                         <span class="ship-line" style="color:#374151;font-weight:700;">Courier {{ o.shipping_vehicle }} · {{ o.shipping_reason }}</span>
                         {% if o.ship_two_step %}<span class="ship-line">Delivery fee ₱{{ '{:,.2f}'.format(sp.get('fee') or 0) }}</span>{% else %}
@@ -2088,8 +2093,8 @@
                     <option value="confirmed"      {% if o.status=='confirmed' %}selected{% endif %} {% if sh_idx > 0 %}disabled{% endif %}>Confirmed</option>
                     <option value="in_progress"    {% if o.status=='in_progress' %}selected{% endif %} {% if sh_idx > 1 %}disabled{% endif %}>In Progress</option>
                     <option value="done_packaging" {% if o.status=='done_packaging' %}selected{% endif %} {% if sh_idx > 2 or sh_idx < 1 %}disabled{% endif %}>Done Packaging</option>
-                    {% if o.paid_at and o.status == 'done_packaging' %}
-                    <option value="shipping">Shipping</option>
+                    {% if ((o.fee_paid_at if o.ship_two_step else o.paid_at) or o.customer_courier) and o.status == 'done_packaging' %}
+                    <option value="shipping">{{ 'Shipping (handed to their courier)' if o.customer_courier else 'Shipping' }}</option>
                     {% elif o.status == 'shipping' %}
                     <option value="shipping" selected disabled>Shipping</option>
                     {% else %}
@@ -2124,6 +2129,8 @@
                     <span class="ship-line">Set to Done Packaging when it's packed.</span>
                   {% elif o.status == 'done_packaging' and not sh_sent %}
                     <span class="ship-line">{% if o.ship_two_step %}Talk to the customer about the delivery, then send the delivery fee.{% else %}Send the shipping options next.{% endif %}</span>
+                  {% elif o.status == 'done_packaging' and o.customer_courier %}
+                    <span class="ship-line">When their rider collects it, choose Shipping. Changed your mind? Press Edit options.</span>
                   {% elif o.status == 'done_packaging' and not sh_paid %}
                     <span class="ship-line">{% if o.ship_two_step %}Shipping unlocks once the customer pays the delivery fee. The items are already paid.{% else %}Shipping unlocks once the customer pays. No payment in 24 hours and it cancels by itself.{% endif %}</span>
                   {% elif o.status == 'done_packaging' %}
@@ -3391,6 +3398,10 @@
       <label>Quantity</label>
     </div>
     <div id="so-lines" style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1rem;"></div>
+    <label id="so-cc-wrap" style="display:none;gap:0.55rem;align-items:flex-start;border:1px solid var(--border);border-radius:10px;padding:0.65rem 0.8rem;margin-bottom:1rem;cursor:pointer;">
+      <input type="checkbox" id="so-cc" onchange="shipCcChanged()" style="margin-top:3px;">
+      <span style="font-size:0.82rem;color:var(--text);"><b>The customer arranges the courier</b><br><small style="color:var(--muted);">Use this when you agreed that the customer books their own courier (Lalamove, Grab, etc.) and sends a rider to the shop. No delivery fee is charged.</small></span></label>
+    <div id="so-body">
     <div class="form-group"><label>Vehicle <span class="lbl-sub">(based on the item and quantity)</span></label>
       <select id="so-vehicle" onchange="shipVehicleChanged()">
         <option value="">Choose a vehicle</option>
@@ -3433,6 +3444,7 @@
 
     <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.7rem 0.85rem;font-size:0.76rem;color:#713f12;margin:0.9rem 0 1rem;line-height:1.55;">
       <strong>If the courier's price changes:</strong> the customer pays the price you send here, and it won't change after they pay. If the courier charges more or less when you book, the shop covers or keeps the difference. If the price changes a lot before the customer pays, press <strong>Edit options</strong> to send the new prices.</div>
+    </div>
     <div id="so-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.75rem;"></div>
     <div style="display:flex;gap:0.6rem;">
       <button type="button" class="btn-secondary-custom" style="flex:1;" onclick="shipCloseOptions()">Back</button>
@@ -9101,6 +9113,10 @@ async function shipSave(btn) {
     btn.disabled = true;
     const r = await shipPost(oid, 'status', {status: v});
     if (r.ok) shipReload('Order updated.'); else { showToast(r.data.error || 'Could not update.', 'error'); btn.disabled = false; }
+  } else if (v === 'shipping' && row.dataset.cc === '1') {
+    btn.disabled = true;
+    const r = await shipPost(oid, 'start', {});
+    if (r.ok) shipReload('Handed over to the customer\'s courier. The order is now Shipping.'); else { showToast(r.data.error || 'Could not update.', 'error'); btn.disabled = false; }
   } else if (v === 'shipping') {
     const car = (row.dataset.vehicle || '') !== 'Motorcycle';
     const who = car ? 'Driver' : 'Rider', fee = Number(row.dataset.fee || 0);
@@ -9172,8 +9188,14 @@ function shipVehicleChanged() {
 function shipReasonChanged() { document.getElementById('so-reason').classList.remove('so-err-field'); shipCheck(true); }
 function shipPriceInput(el) { el.value = el.value.replace(/[^0-9]/g, ''); el.classList.remove('so-err-field'); shipCheck(true); }
 // The checks before sending, in order. quiet=true only re-checks a message already showing (so it disappears once fixed).
+function shipCcChanged() {
+  const on = document.getElementById('so-cc').checked;
+  document.getElementById('so-body').style.display = on ? 'none' : '';
+  document.getElementById('so-err').style.display = 'none';
+}
 function shipCheck(quiet) {
   const e = document.getElementById('so-err');
+  if (_soTwo && document.getElementById('so-cc').checked) { e.style.display = 'none'; return true; }
   if (quiet && e.style.display === 'none') return true;
   const val = id => document.getElementById(id).value.trim();
   const fails = [
@@ -9223,6 +9245,9 @@ function shipOpenOptions(el) {
   shipVehicleChanged();
   if (editing && vSel.value && (SHIP_REASONS[vSel.value] || []).includes(row.dataset.reason)) document.getElementById('so-reason').value = row.dataset.reason;
   _soTwo = row.dataset.twostep === '1';
+  document.getElementById('so-cc-wrap').style.display = _soTwo ? 'flex' : 'none';
+  document.getElementById('so-cc').checked = _soTwo && row.dataset.cc === '1';
+  shipCcChanged();
   document.getElementById('so-three').style.display = _soTwo ? 'none' : '';
   document.getElementById('so-fee-row').style.display = _soTwo ? '' : 'none';
   document.getElementById('so-step-prices').textContent = _soTwo ? 'Type the delivery fee you agreed on with the customer in the box below.' : 'Type the prices the courier app shows into the boxes below.';
@@ -9237,7 +9262,8 @@ async function shipSubmitOptions() {
   const r = await shipPost(document.getElementById('so-oid').value, 'options', {
     vehicle: document.getElementById('so-vehicle').value, reason: document.getElementById('so-reason').value, reason_custom: false,
     priority: document.getElementById('so-priority').value, regular: document.getElementById('so-regular').value,
-    pooling: document.getElementById('so-pooling').value, fee: document.getElementById('so-fee').value
+    pooling: document.getElementById('so-pooling').value, fee: document.getElementById('so-fee').value,
+    customer_courier: _soTwo && document.getElementById('so-cc').checked
   });
   btn.disabled = false;
   if (r.ok) { closeModal('modal-ship-options'); shipReload(r.data.first ? 'Shipping options sent to the customer.' : 'Shipping options updated and resent.'); return; }

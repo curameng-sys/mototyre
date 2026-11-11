@@ -3240,7 +3240,7 @@
           <div style="width:48px;height:48px;border-radius:10px;background:rgba(21,128,61,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#16a34a;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
           <div style="flex:1;">
             <div style="font-family:'Inter',sans-serif;font-weight:700;color:var(--fg-1);font-size:0.95rem;">Shop Pickup</div>
-            <div style="font-size:0.78rem;color:var(--fg-3);margin-top:2px;">Pick up at MotoTyres North Caloocan, or send your own courier (Lalamove, Grab, etc.)</div>
+            <div style="font-size:0.78rem;color:var(--fg-3);margin-top:2px;">Pick up at MotoTyres North Caloocan</div>
             <div style="font-size:0.75rem;color:#86efac;margin-top:4px;">FREE</div>
           </div>
           <div id="check-pickup" style="width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -3274,7 +3274,6 @@
           <div style="font-size:0.75rem;color:var(--fg-3);margin-bottom:0.35rem;">Pickup notes</div>
           <ul style="margin:0;padding-left:1.1rem;font-size:0.8rem;color:var(--fg-1);line-height:1.55;">
             <li>We tell you when your order is <b>Ready to Pick Up</b>. Show your order number (ORD-…) at the counter.</li>
-            <li><b>Want it delivered?</b> Once it is Ready to Pick Up, book your own courier (Lalamove, Grab, etc.) to collect it for you. You pay the courier yourself, and the rider shows your order number (ORD-…) at the counter.</li>
             <li><b>GCash:</b> pay within {{ policy.gcash_minutes }} minutes, or the order is cancelled. Once it is paid, we <b>keep your order for you until you pick it up</b>. It is not cancelled for being picked up late.</li>
             <li><b>Cash:</b> you pay at the counter when you pick up. Nothing is charged online. We hold it for {{ policy.pickup_days }} days from when it is ready and remind you one day before the last day. If it is not picked up in time, the order is <b>cancelled automatically</b> and the items go back on the shelf.</li>
           </ul>
@@ -3407,7 +3406,6 @@
   </div>
   <div id="ship-pay-note" style="display:none;background:#fefce8;border:1px solid #eab308;border-radius:8px;padding:0.75rem 0.9rem;margin-bottom:1rem;font-size:0.78rem;color:#713f12;line-height:1.55;">
     <div><b>You pay for your items now</b> with GCash. Once your order is packed, the shop will contact you about the delivery, then send you the <b>delivery fee</b> to pay with GCash. The courier is booked after the fee is paid.</div>
-    <div style="margin-top:0.5rem;">Don't want the shop to arrange the courier? Choose <b>Shop Pickup</b> and send your own courier (Lalamove, Grab, etc.) to collect it.</div>
   </div>
   <div class="modal-actions">
     <button type="button" class="btn-cancel-modal" onclick="goToStep('step-shipping')">‹ Back</button>
@@ -7006,7 +7004,10 @@ function renderShipSection(order) {
   const wrap = (bg, border, inner, dashed) => `<div style="background:${bg};border:1.5px ${dashed ? 'dashed' : 'solid'} ${border};border-radius:10px;padding:0.9rem 1rem;font-size:0.82rem;line-height:1.55;">${inner}</div>`;
   const h = (t, c) => `<div style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.9rem;color:${c};margin-bottom:0.3rem;">${t}</div>`;
   let html = '';
-  if (['confirmed', 'in_progress', 'done_packaging'].includes(order.status) && !sh.paid && !sh.options_sent) {
+  if (order.status === 'done_packaging' && sh.customer_courier) {
+    html = wrap('#f0fdf4', '#86efac', h('Ready for your courier', '#14532d')
+      + `<div style="color:#166534;">Your order is packed and your items are paid. <b>No delivery fee</b> is needed.<br>Book your own courier (Lalamove, Grab, etc.) and send the rider to <b>MotoTyres North Caloocan</b>. The rider shows your order number <b>ORD-${String(order.id).padStart(3, '0')}</b> at the counter. You pay the courier yourself.</div>`);
+  } else if (['confirmed', 'in_progress', 'done_packaging'].includes(order.status) && !sh.paid && !sh.options_sent) {
     const line = { confirmed: 'Your items are held for you and the shop will start packing soon.',
       in_progress: 'The shop is packing your order now.',
       done_packaging: 'Your order is packed. The shop is checking courier prices for you.' }[order.status];
@@ -7053,6 +7054,10 @@ function renderShipSection(order) {
     html = wrap('#f0fdf4', '#86efac', h(sh.two_step ? `Delivery fee ${peso(sh.fee)} paid with GCash` : `Paid ${peso(sh.grand_total)} with GCash`, '#14532d')
       + `<div style="color:#166534;">Thanks! ${sh.two_step ? '' : `You chose ${SHIP_OPTION_NAMES[sh.option]} shipping. `}We're booking your Courier ${sh.vehicle} now. You'll get the ${rd}'s details here and by email.</div>`
       + `<div style="color:#15803d;font-size:0.76rem;margin-top:0.55rem;">Need to cancel? Contact the shop before your order ships. If the shop cancels a paid order, the full amount goes back to your GCash.</div>`);
+  } else if (order.status === 'shipping' && sh.customer_courier) {
+    html = wrap('#f0f9ff', '#7dd3fc', h('Handed over to your courier', '#0c4a6e')
+      + `<div style="color:#0369a1;">${sh.rider_name ? 'Picked up by ' + sh.rider_name + (sh.rider_plate ? ' (plate ' + sh.rider_plate + ')' : '') + '.' : 'Your courier collected the order.'} Press <b>I received my order</b> once it arrives.</div>`
+      + (sh.received_at ? `<div style="margin-top:0.6rem;padding:0.6rem 0.75rem;background:#dcfce7;border:1px solid #86efac;border-radius:8px;color:#14532d;font-weight:700;">You confirmed you received it on ${sh.received_at}. The shop will mark your order as Completed.</div>` : ''));
   } else if (order.status === 'shipping') {
     const modelLbl = sh.vehicle === 'Motorcycle' ? 'Motorcycle' : 'Car';
     const row = (k, v) => `<div style="display:flex;justify-content:space-between;gap:0.6rem;padding:0.3rem 0;border-bottom:1px solid #e0f2fe;"><span style="color:#0369a1;">${k}</span><strong style="color:#0c4a6e;text-align:right;">${v}</strong></div>`;
@@ -7067,6 +7072,9 @@ function renderShipSection(order) {
     const by = { auto: 'cancelled automatically because there was no payment in 24 hours', customer: 'cancelled by you', shop: 'cancelled by the shop' }[sh.cancelled_by] || 'cancelled';
     html = wrap('#f3f4f6', '#d1d5db', h('Cancelled · not charged', '#374151')
       + `<div style="color:#4b5563;">This order was ${by}.${sh.cancel_reason && sh.cancelled_by === 'shop' ? ' Reason: ' + sh.cancel_reason + '.' : ''}</div>`);
+  } else if (order.status === 'completed' && sh.customer_courier) {
+    html = wrap('#f0fdf4', '#bbf7d0', h('Delivered', '#14532d')
+      + `<div style="color:#166534;">Delivered by your own courier. Thank you for shopping with MotoTyres!</div>`);
   } else if (order.status === 'completed' && sh.paid) {
     html = wrap('#f0fdf4', '#bbf7d0', h(`Paid ${peso(sh.grand_total)} with GCash`, '#14532d')
       + `<div style="color:#166534;">${sh.two_step ? 'Delivery fee' : (SHIP_OPTION_NAMES[sh.option] || '') + ' shipping'} ${peso(sh.fee)} · delivered. Thank you for shopping with MotoTyres!</div>`);
@@ -10711,10 +10719,12 @@ function shipProgressLine(o) {
   if (o.status === 'confirmed') return (o.ship || {}).two_step ? 'Items paid · the shop will start packing' : 'Order received · nothing charged yet';
   if (o.status === 'in_progress') return 'The shop is packing your order';
   if (o.status === 'done_packaging') {
+    if (sh.customer_courier) return 'Ready · book your courier and send the rider to the shop';
     if (sh.paid) return 'Paid · the shop is booking your courier delivery';
     if (sh.options_sent) return sh.two_step ? 'Pay the delivery fee so the courier can be booked' : `Choose your shipping and pay · ${shipTimeLeft(sh).text} left`;
     return sh.two_step ? 'Packed · the shop will contact you about the delivery' : 'Packed · shipping options coming soon';
   }
+  if (o.status === 'shipping' && sh.customer_courier) return sh.received_at ? 'You confirmed you received it · the shop will complete it' : 'Handed to your courier · press I received my order once it arrives';
   if (o.status === 'shipping') return sh.received_at ? 'You confirmed you received it · the shop will complete it' : 'On the way · press I received my order once it arrives';
   return '';
 }

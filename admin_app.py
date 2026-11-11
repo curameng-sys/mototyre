@@ -420,6 +420,7 @@ class Order(db.Model):
     ship_two_step           = db.Column(db.Boolean, default=False)
     fee_paid_at             = db.Column(db.DateTime, nullable=True)
     fee_payment_id          = db.Column(db.String(80), nullable=True)
+    customer_courier        = db.Column(db.Boolean, default=False)      # two-step ship: the customer books their own courier (no delivery fee)
     shipping_vehicle        = db.Column(db.String(40), nullable=True)
     shipping_reason         = db.Column(db.String(200), nullable=True)
     shipping_prices         = db.Column(db.Text, nullable=True)
@@ -6150,6 +6151,22 @@ def ship_send_options(oid):
     if (order.fee_paid_at if order.ship_two_step else order.paid_at):
         return jsonify({'success': False, 'error': 'The delivery is already paid.' if order.ship_two_step else 'This order is already paid.'}), 400
     d = request.get_json(silent=True) or {}
+    if order.ship_two_step and d.get('customer_courier'):
+        # Agreed outside the system: the customer books their own courier (Lalamove, Grab, etc.) and sends a rider to the shop.
+        # No delivery fee is charged; the order is ready to hand over.
+        first = not order.shipping_options_sent_at
+        order.customer_courier = True
+        order.shipping_vehicle = None
+        order.shipping_reason = None
+        order.shipping_prices = None
+        order.shipping_option = None
+        order.shipping_options_sent_at = ph_now()
+        order.shipping_deadline_at = None
+        order.shipping_reminder_at = None
+        db.session.commit()
+        _t, _m, _s = ship_notice('customer_courier', f'ORD-{order.id:03d}')
+        _notify_order_customer(order, _t, _m, status=_s)
+        return jsonify({'success': True, 'first': first})
     vehicle = clean_str(d.get('vehicle', ''), max_len=40)
     reason  = clean_str(d.get('reason', ''), max_len=120)
     errors, fields = [], []
@@ -6196,6 +6213,7 @@ def ship_send_options(oid):
     if errors:
         return jsonify({'success': False, 'error': errors[0], 'errors': errors, 'fields': fields}), 400
     first = not order.shipping_options_sent_at
+    order.customer_courier = False
     order.shipping_vehicle = vehicle
     order.shipping_reason = reason or None
     order.shipping_prices = json.dumps(prices)
@@ -6220,6 +6238,20 @@ def ship_start_shipping(oid):
     """After payment: the courier is booked, the order goes to Shipping, and the rider/driver details are saved."""
     order, err = _ship_order_or_error(oid, ('done_packaging',))
     if err: return err
+    if order.customer_courier:
+        d0 = request.get_json(silent=True) or {}
+        order.rider_type = 'customer'
+        order.rider_name = clean_str(d0.get('name', ''), max_len=100) or None
+        order.rider_phone = None
+        order.rider_plate = clean_str(d0.get('plate', ''), max_len=30).upper() or None
+        order.rider_model = None
+        order.lalamove_link = ''
+        order.status = 'shipping'
+        order.shipping_started_at = ph_now()
+        db.session.commit()
+        _t, _m, _s = ship_notice('handed_over', f'ORD-{order.id:03d}', name=order.rider_name or '', plate=order.rider_plate or '')
+        _notify_order_customer(order, _t, _m, status=_s)
+        return jsonify({'success': True})
     if not (order.fee_paid_at if order.ship_two_step else order.paid_at):
         return jsonify({'success': False, 'error': 'Shipping unlocks once the customer pays' + (' the delivery fee.' if order.ship_two_step else '.')}), 400
     d = request.get_json(silent=True) or {}
@@ -10943,6 +10975,7 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN ship_two_step TINYINT(1) DEFAULT 0",
         "ALTER TABLE `order` ADD COLUMN fee_paid_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN fee_payment_id VARCHAR(80) DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN customer_courier TINYINT(1) DEFAULT 0",
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",
         "ALTER TABLE `order` ADD COLUMN shipping_prices TEXT",

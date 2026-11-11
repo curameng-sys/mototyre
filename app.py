@@ -877,6 +877,7 @@ class Order(db.Model):
     ship_two_step           = db.Column(db.Boolean, default=False)
     fee_paid_at             = db.Column(db.DateTime, nullable=True)
     fee_payment_id          = db.Column(db.String(80), nullable=True)
+    customer_courier        = db.Column(db.Boolean, default=False)      # two-step ship: the customer books their own courier (no delivery fee)
     shipping_vehicle        = db.Column(db.String(40), nullable=True)
     shipping_reason         = db.Column(db.String(200), nullable=True)
     shipping_prices         = db.Column(db.Text, nullable=True)
@@ -5211,6 +5212,7 @@ def _mark_fee_paid(order, checkout_id=None):
         return False
     order.shipping_option, order.shipping_fee = info.get('option'), float(info.get('fee') or 0)
     order.fee_paid_at = ph_now()
+    order.customer_courier = False                     # a delivery fee that really got paid wins over "customer arranges the courier"
     order.fee_payment_id = pid
     db.session.commit()
     ref = f'ORD-{order.id:03d}'
@@ -5235,6 +5237,8 @@ def choose_shipping_option(oid):
     if order.delivery_method != 'ship' or order.status != 'done_packaging' or not order.shipping_options_sent_at:
         return jsonify({'success': False, 'error': 'There are no shipping options to choose for this order right now.'}), 400
     two = bool(order.ship_two_step)
+    if order.customer_courier:
+        return jsonify({'success': False, 'error': 'You arrange the courier for this order, so there is no delivery fee to pay.'}), 400
     if (order.fee_paid_at if two else order.paid_at):
         return jsonify({'success': False, 'error': 'The delivery fee is already paid.' if two else 'This order is already paid.'}), 400
     if not two and order.shipping_deadline_at and ph_now() > order.shipping_deadline_at:
@@ -5311,7 +5315,7 @@ def ship_order_state(o):
     """The moving parts of a Ship to Address order, as the customer's page needs them."""
     return {
         'status': o.status, 'paid': bool(o.fee_paid_at if o.ship_two_step else o.paid_at),
-        'two_step': bool(o.ship_two_step), 'items_paid': bool(o.paid_at),
+        'two_step': bool(o.ship_two_step), 'items_paid': bool(o.paid_at), 'customer_courier': bool(o.customer_courier),
         'paid_at': _fmt_when(o.fee_paid_at if o.ship_two_step else o.paid_at), 'options_sent': bool(o.shipping_options_sent_at),
         'options_sent_at': _fmt_when(o.shipping_options_sent_at),
         'deadline_iso': o.shipping_deadline_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if o.shipping_deadline_at else None,
@@ -5565,6 +5569,7 @@ with app.app_context():
         "ALTER TABLE `order` ADD COLUMN ship_two_step TINYINT(1) DEFAULT 0",
         "ALTER TABLE `order` ADD COLUMN fee_paid_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN fee_payment_id VARCHAR(80) DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN customer_courier TINYINT(1) DEFAULT 0",
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",
         "ALTER TABLE `order` ADD COLUMN shipping_prices TEXT",

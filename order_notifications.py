@@ -131,7 +131,7 @@ def _pickup_messages(ref):
             f'Your order {ref} is being processed.'),
         'shipped': (
             'Order Ready for Pickup! 📦',
-            f'Your order {ref} is ready for pickup at {SHOP_NAME}. You can come yourself, or book your own courier (Lalamove, Grab, etc.) to collect it: the rider just shows your order number {ref} at the counter.'),
+            f'Your order {ref} is ready for pickup at {SHOP_NAME}. Please show your order number {ref} at the counter.'),
         'delivered': (
             'Order Delivered!',
             f'Your order {ref} has been delivered.'),
@@ -184,6 +184,15 @@ def ship_notice(kind, ref, **c):
     if kind == 'packing':
         return ('Order Being Packed 📦',
                 f"Your order {ref} is being packed. We'll send your shipping options once it's done.", 'in_progress')
+    if kind == 'customer_courier':
+        return ('Your Order Is Ready for Your Courier \U0001F4E6',
+                f"{ref} is packed and paid, and no delivery fee is needed. Book your own courier (Lalamove, Grab, etc.) and send the rider to {SHOP_NAME}. "
+                f"The rider shows your order number {ref} at the counter. You pay the courier yourself.", 'done_packaging')
+    if kind == 'handed_over':
+        who = f" to {c.get('name')}" if c.get('name') else ' to your courier'
+        plate = f" (plate {c.get('plate')})" if c.get('plate') else ''
+        return ('Order Handed Over \U0001F69A',
+                f"{ref} was handed over{who}{plate}. Please press I received my order once it arrives.", 'shipping')
     if kind == 'packed' and c.get('two_step'):
         return ('Order Packed ✅',
                 f"{ref} is packed and your items are already paid. The shop will contact you about the delivery, then send you the delivery fee to pay.", 'done_packaging')
