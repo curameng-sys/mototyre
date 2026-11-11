@@ -5588,6 +5588,13 @@ const NOTIF_COLOR_MAP = {
   queue_moved: { bg: '#f3eefe', color: '#6d28d9' },
   default:     { bg: 'rgba(0,0,0,0.05)', color: '#484340' },
 };
+// The little status tag on a notification. A Ship to Address order says Packing / Packed where a booking says In Progress.
+function notifStatusText(n) {
+  const st = n.status || '';
+  if (st === 'done_packaging') return 'packed';
+  if (st === 'in_progress' && n.type === 'order') return 'packing';
+  return st.replace('inprogress', 'in progress').replace(/_/g, ' ');
+}
 
 async function fetchNotifications() {
   try {
@@ -5862,7 +5869,7 @@ function renderNotifications() {
           ${pending ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--brand-red);display:inline-block;flex-shrink:0;"></span>' : ''}
         </div>
         <div style="font-size:0.78rem;color:var(--fg-3);line-height:1.5;margin-bottom:0.3rem;white-space:pre-line;">${n.message}</div>
-        ${n.status ? `<span style="font-size:0.65rem;font-family:'Inter',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.2em 0.55em;border-radius:5px;">${n.status.replace('inprogress','in progress').replace(/_/g,' ')}</span>` : ''}
+        ${n.status ? `<span style="font-size:0.65rem;font-family:'Inter',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.2em 0.55em;border-radius:5px;">${notifStatusText(n)}</span>` : ''}
         ${(n.status === 'cancelled' && n.booking_id && n.type === 'booking')
           ? `<div style="margin-top:0.4rem;"><button type="button" onclick="event.stopPropagation(); notifOpen = false; document.getElementById('notif-panel').style.display = 'none'; showSection('book', null);" style="padding:0.3rem 0.8rem;background:var(--brand-red);border:none;border-radius:7px;color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:0.72rem;cursor:pointer;">Book Again</button></div>` : ''}
         ${(n.status === 'refunded' && n.return_request_id && returnsData[n.return_request_id] && returnsData[n.return_request_id].refund_receipt)
@@ -5938,7 +5945,7 @@ async function openNotifDetail(n) {
 
   const statusEl = document.getElementById('nd-status');
   statusEl.innerHTML = n.status
-    ? `<span style="font-size:0.68rem;font-family:'Inter',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.25em 0.65em;border-radius:5px;">${n.status.replace('inprogress','in progress').replace(/_/g,' ')}</span>`
+    ? `<span style="font-size:0.68rem;font-family:'Inter',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:${scheme.bg};color:${scheme.color};padding:0.25em 0.65em;border-radius:5px;">${notifStatusText(n)}</span>`
     : '';
 
   const gotoBtn = document.getElementById('nd-goto-btn');
@@ -6815,7 +6822,7 @@ function openOrderDetails(orderId) {
     : ['confirmed', 'in_progress', 'done_packaging', 'shipping', 'completed'];
   const stepLabels = isPickup
     ? { confirmed: 'Confirmed', processing: 'Processing', ready_for_pickup: 'Ready for Pickup', completed: 'Picked Up' }
-    : { confirmed: 'Confirmed', in_progress: 'In Progress', done_packaging: 'Done Packaging', shipping: 'Shipping', completed: 'Completed' };
+    : { confirmed: 'Confirmed', in_progress: 'Packing', done_packaging: 'Packed', shipping: 'Shipping', completed: 'Completed' };
   const stepIcons = { confirmed: '', processing: '', ready_for_pickup: '', shipped: '', completed: '' };
 
   // Map backend statuses to pickup step keys — the backend only ever writes
@@ -6832,7 +6839,7 @@ function openOrderDetails(orderId) {
   const isCompleted = order.status === 'completed' && isPickup;
 
   if (!isPickup && !isCancelled) {
-    const SH6 = ['Confirmed', 'In Progress', 'Done Packaging', 'Choose shipping & pay', 'Shipping', 'Completed'];
+    const SH6 = ['Confirmed', 'Packing', 'Packed', 'Choose shipping & pay', 'Shipping', 'Completed'];
     const doneN = { confirmed: 1, in_progress: 2, done_packaging: sh.paid ? 4 : 3, shipping: 5, completed: 6 }[order.status] || 1;
     const waiting = order.status === 'done_packaging' && !sh.paid && sh.options_sent;
     timeline.innerHTML = `
@@ -6965,7 +6972,7 @@ let _confirmOrderIsPickup = false;
 
 const SHIP_OPTION_NAMES = { priority: 'Priority', regular: 'Regular', pooling: 'Pooling', fee: 'Delivery' };
 // Status label + colour for a Ship to Address order (global, so the order window and the live updater both use it).
-const SHIP_LABELS = { awaiting_payment: 'Awaiting Payment', confirmed: 'Confirmed', in_progress: 'In Progress', done_packaging: 'Done Packaging', shipping: 'Shipping',
+const SHIP_LABELS = { awaiting_payment: 'Awaiting Payment', confirmed: 'Confirmed', in_progress: 'Packing', done_packaging: 'Packed', shipping: 'Shipping',
                       completed: 'Completed', refunded: 'Refunded', cancelled: 'Cancelled' };
 function shipBadge(status) {
   return { cls: 'badge badge-s-' + status, label: SHIP_LABELS[status] || String(status).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) };
@@ -10722,7 +10729,7 @@ function showToast(msg, type) {
 
 // ══ HOME: live progress under each unfinished booking / order ══
 const OVP_BOOKING = ['Confirmed', 'In Progress', 'Completed'];
-const OVP_DELIVERY = ['Confirmed', 'In Progress', 'Done Packaging', 'Shipping', 'Completed'];
+const OVP_DELIVERY = ['Confirmed', 'Packing', 'Packed', 'Shipping', 'Completed'];
 const SHIP_STEP_INDEX = { confirmed: 0, in_progress: 1, done_packaging: 2, shipping: 3 };
 // One short line about where a Ship to Address order is right now.
 function shipProgressLine(o) {

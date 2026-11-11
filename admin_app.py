@@ -6120,7 +6120,7 @@ def paymongo_refund(order, reason):
 @login_required
 @require_admin_or_staff
 def ship_set_status(oid):
-    """Confirmed -> In Progress -> Done Packaging (forward only)."""
+    """Confirmed -> Packing -> Packed (forward only)."""
     order, err = _ship_order_or_error(oid)
     if err: return err
     new = clean_str((request.get_json(silent=True) or request.form).get('status', ''), max_len=20)
@@ -6496,7 +6496,7 @@ def update_order_status(oid):
         return redirect(url_for('admin_dashboard'))
 
     if not _is_pickup:
-        msg = 'Ship to Address orders move through the courier steps: use In Progress, Done Packaging, Send shipping options, Shipping and Completed.'
+        msg = 'Ship to Address orders move through the courier steps: use Packing, Packed, Send shipping options, Shipping and Completed.'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'error': msg}), 400
         flash(msg, 'danger')
@@ -10068,7 +10068,7 @@ def bookings_export_pdf():
 from order_report import build_order_report_pdf
 
 _ORDER_UNFINISHED = {'pending': 'Pending', 'awaiting_payment': 'Awaiting Payment', 'confirmed': 'Confirmed',
-                     'in_progress': 'In Progress', 'processing': 'Processing', 'done_packaging': 'Done Packaging',
+                     'in_progress': 'Packing', 'processing': 'Processing', 'done_packaging': 'Packed',
                      'shipping': 'Shipping', 'shipped': 'Ready to Pick Up', 'delivered': 'Delivered'}
 _ORDER_CANCELLED = ('cancelled', 'refunded', 'voided')
 _ORDER_TYPE_LABEL = {'ship': 'Ship to Address', 'pickup': 'Shop Pickup', 'instore': 'In-Store'}

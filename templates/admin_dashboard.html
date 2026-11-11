@@ -1988,7 +1988,7 @@
                 </td>
                 <td>
                   {% if sh %}
-                    {% set sh_labels = {'confirmed':'Confirmed','in_progress':'In Progress','done_packaging':'Done Packaging','shipping':'Shipping','completed':'Completed','cancelled':'Cancelled','refunded':'Refunded'} %}
+                    {% set sh_labels = {'confirmed':'Confirmed','in_progress':'Packing','done_packaging':'Packed','shipping':'Shipping','completed':'Completed','cancelled':'Cancelled','refunded':'Refunded'} %}
                     <span class="badge badge-s-{{ o.status }}">{{ sh_labels[o.status] }}</span>
                     {% if o.ship_two_step %}
                       {% if o.paid_at and o.status in ['confirmed','in_progress','done_packaging','shipping','completed'] %}
@@ -2091,8 +2091,8 @@
                 <div class="ship-upd">
                   <select data-current="{{ o.status }}" onchange="shipSelectChanged(this)">
                     <option value="confirmed"      {% if o.status=='confirmed' %}selected{% endif %} {% if sh_idx > 0 %}disabled{% endif %}>Confirmed</option>
-                    <option value="in_progress"    {% if o.status=='in_progress' %}selected{% endif %} {% if sh_idx > 1 %}disabled{% endif %}>In Progress</option>
-                    <option value="done_packaging" {% if o.status=='done_packaging' %}selected{% endif %} {% if sh_idx > 2 or sh_idx < 1 %}disabled{% endif %}>Done Packaging</option>
+                    <option value="in_progress"    {% if o.status=='in_progress' %}selected{% endif %} {% if sh_idx > 1 %}disabled{% endif %}>Packing</option>
+                    <option value="done_packaging" {% if o.status=='done_packaging' %}selected{% endif %} {% if sh_idx > 2 or sh_idx < 1 %}disabled{% endif %}>Packed</option>
                     {% if ((o.fee_paid_at if o.ship_two_step else o.paid_at) or o.customer_courier) and o.status == 'done_packaging' %}
                     <option value="shipping">{{ 'Shipping (handed to their courier)' if o.customer_courier else 'Shipping' }}</option>
                     {% elif o.status == 'shipping' %}
@@ -2114,7 +2114,7 @@
                   <button type="button" class="ship-save" disabled onclick="shipSave(this)">Save</button>
                   {% if o.status in ['confirmed','in_progress'] %}
                     <button type="button" class="ship-send" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Send shipping options</button>
-                    <span class="ship-line warn">Unlocks when the order is Done Packaging</span>
+                    <span class="ship-line warn">Unlocks when the order is Packed</span>
                   {% elif o.status == 'done_packaging' and not sh_sent %}
                     <button type="button" class="ship-send" onclick="shipOpenOptions(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Send shipping options</button>
                   {% elif o.status == 'done_packaging' and not sh_paid %}
@@ -2124,9 +2124,9 @@
                     {% if o.received_reminder_at %}<span class="ship-line">Reminder sent {{ o.received_reminder_at|when }}</span>{% endif %}
                   {% endif %}
                   {% if o.status == 'confirmed' %}
-                    <span class="ship-line">Set to In Progress when you start packing.</span>
+                    <span class="ship-line">Set to Packing when you start packing.</span>
                   {% elif o.status == 'in_progress' %}
-                    <span class="ship-line">Set to Done Packaging when it's packed.</span>
+                    <span class="ship-line">Set to Packed when it's packed.</span>
                   {% elif o.status == 'done_packaging' and not sh_sent %}
                     <span class="ship-line">{% if o.ship_two_step %}Talk to the customer about the delivery, then send the delivery fee.{% else %}Send the shipping options next.{% endif %}</span>
                   {% elif o.status == 'done_packaging' and o.customer_courier %}
@@ -8320,11 +8320,11 @@
   // Manage Orders: search + type + status all apply together.
   // The status list follows the type picked, so the two flows are never mixed in one list:
   //   Shop Pickup:     Awaiting Payment > Confirmed > Processing > Ready For Pickup > Completed (or Cancelled)
-  //   Ship to Address: Awaiting Payment > Confirmed > In Progress > Done Packaging > Shipping > Completed (or Cancelled / Refunded)
+  //   Ship to Address: Awaiting Payment > Confirmed > Packing > Packed > Shipping > Completed (or Cancelled / Refunded)
   const ORDER_STATUSES_BY_TYPE = {
     pickup: ['awaiting payment', 'confirmed', 'processing', 'ready for pickup', 'completed', 'cancelled'],
-    ship:   ['awaiting payment', 'confirmed', 'in progress', 'done packaging', 'shipping', 'completed', 'cancelled', 'refunded'],
-    '':     ['awaiting payment', 'confirmed', 'processing', 'ready for pickup', 'in progress', 'done packaging', 'shipping', 'completed', 'cancelled', 'refunded']
+    ship:   ['awaiting payment', 'confirmed', 'packing', 'packed', 'shipping', 'completed', 'cancelled', 'refunded'],
+    '':     ['awaiting payment', 'confirmed', 'processing', 'ready for pickup', 'packing', 'packed', 'shipping', 'completed', 'cancelled', 'refunded']
   };
   function _orderStatusText(row) {
     const b = row.cells[3] ? row.cells[3].querySelector('.badge') : null;

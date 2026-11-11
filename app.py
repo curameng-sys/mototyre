@@ -5281,7 +5281,7 @@ def choose_shipping_option(oid):
     return jsonify({'success': True, 'checkout_url': result['checkout_url']})
 
 
-SHIP_STATUS_LABELS = {'awaiting_payment': 'Awaiting Payment', 'confirmed': 'Confirmed', 'in_progress': 'In Progress', 'done_packaging': 'Done Packaging',
+SHIP_STATUS_LABELS = {'awaiting_payment': 'Awaiting Payment', 'confirmed': 'Confirmed', 'in_progress': 'Packing', 'done_packaging': 'Packed',
                       'shipping': 'Shipping', 'completed': 'Completed', 'refunded': 'Refunded', 'cancelled': 'Cancelled'}
 # orders placed before the Courier flow keep working: their old statuses read as the nearest new one
 _LEGACY_SHIP = {'pending': 'confirmed', 'awaiting_payment': 'confirmed', 'processing': 'in_progress',
