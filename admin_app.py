@@ -2108,7 +2108,11 @@ def admin_dashboard():
     order_ship_json = json.dumps({
         str(o.id): {'delivery': str(o.delivery_method or 'pickup'),
                     'address': str(o.ship_address or ''),
-                    'payment': str(o.payment_method or 'cash')}
+                    'payment': str(o.payment_method or 'cash'),
+                    'cancel_req': ({'reason': str(o.cancel_request_reason or ''),
+                                    'when': o.cancel_requested_at.strftime('%b %d, %Y %I:%M %p'),
+                                    'paid': bool(o.paid_at or (str(o.payment_method or '').lower() == 'gcash' and o.status != 'awaiting_payment'))}
+                                   if (o.cancel_requested_at and o.status not in ('cancelled', 'refunded', 'completed')) else None)}
         for o in all_orders + archived_orders
     })
     _booking_status_counts = dict(db.session.query(Booking.status, func.count(Booking.id)).filter(Booking.is_archived == False).group_by(Booking.status).all())
