@@ -3438,7 +3438,6 @@
           <span id="conf-total" style="color:var(--brand-red);font-family:'Barlow Condensed',sans-serif;font-size:1.3rem;"></span>
         </div>
       </div>
-      <div id="conf-bulk-note" style="display:none;margin:0 0 0.9rem;padding:0.65rem 0.8rem;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;font-size:0.8rem;color:#92400e;line-height:1.5;"></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel-modal" onclick="goToStep('step-payment')">‹ Back</button>
         <button type="button" id="confirm-pay-btn" class="btn-submit" style="width:auto;background:#15803d;" onclick="submitCartOrder()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> <span id="confirm-pay-label">Confirm and Pay</span></button>
@@ -3823,7 +3822,7 @@
       const lim = document.getElementById('cart-limit-' + item.id);
       if (lim) lim.textContent = (item.qty >= 1 && item.qty >= cartLimit(item) && !cartQtyIssue(item))
         ? (item.stock < MAX_ONLINE_QTY ? `Only ${item.stock} left in stock` : `Up to ${MAX_ONLINE_QTY} per item online`)
-        : ((item.qty > BULK_NOTICE_QTY && !cartQtyIssue(item)) ? 'Large order: the shop will arrange it with you' : '');
+        : '';
       const plus = document.getElementById('cart-plus-' + item.id), minus = document.getElementById('cart-minus-' + item.id);
       if (plus) plus.disabled = !(item.qty < cartLimit(item));
       if (minus) minus.disabled = !(item.qty > 1);
@@ -4256,13 +4255,6 @@ function goToConfirm() {
   const ship = deliveryMethod === 'ship';
   document.getElementById('conf-total').textContent = ship ? `₱${Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} + delivery fee later` : '₱' + Number(total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   document.getElementById('conf-payment-hold').style.display = ship ? 'block' : 'none';
-  const bulkNote = document.getElementById('conf-bulk-note');
-  if (cart.some(i => i.qty > BULK_NOTICE_QTY)) {
-    bulkNote.textContent = ship
-      ? 'This is a large order. After we pack it, the shop will contact you about the delivery fee and the right vehicle for it.'
-      : 'This is a large order. The shop will prepare it and notify you when it is ready. Please come with a vehicle that can carry it.';
-    bulkNote.style.display = 'block';
-  } else { bulkNote.style.display = 'none'; }
   document.getElementById('confirm-pay-label').textContent = 'Confirm and Pay';
   const paymentLabels = { cash: 'Cash', gcash: 'GCash' };
   document.getElementById('conf-payment-display').innerHTML = paymentLabels[selectedPayment] || 'Cash';
@@ -7363,7 +7355,6 @@ const DELIVERY_ZONE_GROUPS = {{ delivery_zone_groups|tojson }};
 const BARANGAY_ZIPS = {{ barangay_zips|tojson }};
 const BARANGAY_LABELS = {{ barangay_labels|tojson }};
 const MAX_ONLINE_QTY = 9999;   // no cap except the stock itself
-const BULK_NOTICE_QTY = 10;    // above this many of one item the order is 'large': only a notice, nothing is blocked
 const DEFAULT_DELIVERY_ADDRESS = {
   name: {{ (current_user.default_delivery_name or '')|tojson }},
   mobile: {{ (current_user.default_delivery_mobile or '')|tojson }},
@@ -9577,15 +9568,13 @@ function paintInfoQtyState() {
   plus.style.opacity = atMax ? '0.4' : '';
   plus.style.cursor = atMax ? 'not-allowed' : 'pointer';
   plus.setAttribute('aria-disabled', atMax ? 'true' : 'false');
-  const typed = parseInt(input.value, 10) || 1;
-  if (hint) hint.textContent = (currentProductInfo.stock > 0 && atMax) ? (currentProductInfo.stock <= MAX_ONLINE_QTY ? 'Max ' + max + ' (all in stock)' : 'Max ' + max + ' online')
-    : (typed > BULK_NOTICE_QTY ? 'Large order: the shop will arrange it with you' : '');
+  if (hint) hint.textContent = (currentProductInfo.stock > 0 && atMax) ? (currentProductInfo.stock <= MAX_ONLINE_QTY ? 'Max ' + max + ' (all in stock)' : 'Max ' + max + ' online') : '';
 }
-function showInfoQtyLimit() {
+function showInfoQtyLimit(customText) {
   const box = document.getElementById('pi-qty-msg'), txt = document.getElementById('pi-qty-msg-text'), input = document.getElementById('pi-qty');
   if (!box || !txt || !currentProductInfo) return;
   const stock = currentProductInfo.stock;
-  txt.textContent = stock < MAX_ONLINE_QTY
+  txt.textContent = customText ? customText : stock < MAX_ONLINE_QTY
     ? (stock === 1 ? 'Only 1 in stock. That’s all we have.' : 'Only ' + stock + ' in stock. That’s all we have.')
     : 'Up to ' + MAX_ONLINE_QTY + ' of this item per online order.';
   box.style.opacity = '1'; box.style.transform = 'translateY(0)';
@@ -9625,7 +9614,7 @@ function clampInfoQty() {
   const raw   = String(input.value);
   if (raw === '') { hideInfoQtyLimit(); return; }
   const val = parseInt(raw, 10);
-  if (!(val >= 1)) { input.value = ''; hideInfoQtyLimit(); return; }
+  if (!(val >= 1)) { input.value = ''; showInfoQtyLimit('You need to order at least 1.'); return; }   // 0 cannot be typed: say why
   const over = val > max;
   input.value = Math.min(max, val);
   paintInfoQtyState();

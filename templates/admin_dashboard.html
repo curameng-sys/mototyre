@@ -1975,7 +1975,6 @@
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
                     {{ o_display_ref }}
                   </a>
-                  {% if o.items|selectattr('quantity','gt',10)|list %}<div style="margin-top:0.2rem;"><span title="One item has more than 10 pieces: arrange the delivery or the pickup with the customer" style="display:inline-block;background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-size:0.55rem;font-weight:800;letter-spacing:0.04em;padding:0.05rem 0.4rem;border-radius:4px;">BULK</span></div>{% endif %}
                   {% if o.cancel_requested_at and o.status not in ['cancelled','refunded','completed'] %}<div title="{{ o.cancel_request_reason or '' }}" style="margin-top:0.2rem;"><span style="display:inline-block;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-size:0.58rem;font-weight:800;letter-spacing:0.04em;padding:0.08rem 0.4rem;border-radius:4px;white-space:normal;">CANCEL REQUESTED</span><div style="font-size:0.62rem;color:#991b1b;white-space:normal;max-width:130px;line-height:1.3;margin-top:0.15rem;">{{ (o.cancel_request_reason or '')[:90] }}</div></div>{% endif %}
                   {% if sh and o.status == 'confirmed' %}<div><span style="display:inline-block;background:#dc2626;color:#fff;font-size:0.55rem;font-weight:700;letter-spacing:0.04em;padding:0.05rem 0.4rem;border-radius:4px;">NEW</span></div>{% endif %}
                 </td>
