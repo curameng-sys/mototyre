@@ -224,7 +224,11 @@
       body.tbl-lock #sec-archive > .card:last-child { margin-bottom: 0; }
       body.tbl-lock #sec-archive > div:not(.page-header):not(.card) { margin-bottom: 0.9rem !important; }
       /* Transaction History: the card fills the screen, only the rows scroll inside it, and the page numbers stay under them */
-      body.tbl-lock #sec-activity.active, body.tbl-lock #sec-transactions.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      body.tbl-lock #sec-activity.active, body.tbl-lock #sec-transactions.active, body.tbl-lock #sec-expenses.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      body.tbl-lock #sec-expenses > .card { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
+      body.tbl-lock #exp-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
+      body.tbl-lock #exp-wrap > div { overflow: visible !important; }
+      body.tbl-lock #exp-pagination { flex-shrink: 0; }
       body.tbl-lock #sec-activity > .card { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
       body.tbl-lock #act-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
       body.tbl-lock #act-wrap > div { overflow: visible !important; }
@@ -1110,6 +1114,7 @@
     <a href="#" onclick="showSection('joborders', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span> Job Orders</a>
     <a href="#" onclick="showSection('billing', this); return false;"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing <span id="billing-nav-badge" title="Waiting at the counter" style="display:{{ 'inline-block' if pending_billing_count else 'none' }};margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;border-radius:10px;padding:0.05rem 0.45rem;">{{ pending_billing_count or 0 }}</span></a>
     <a href="#" onclick="showSection('transactions', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Transactions</a>
+    <a href="#" onclick="showSection('expenses', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Expenses</a>
     </div>
     <div class="sidebar-label sidebar-toggle" data-group="management" onclick="toggleSidebarGroup('management')">Management <svg class="sb-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
     <div class="sidebar-group" id="sbg-management">
@@ -2645,6 +2650,48 @@
           </div>
         </div>
       </div>
+      <div class="rpt-row" style="grid-template-columns:minmax(0,1fr);margin-top:1rem;">
+        <div class="card" id="rpt-payout-card">
+          <div class="card-head">
+            <h5>Mechanic Payout</h5>
+            <span style="font-size:0.7rem;color:var(--muted);">{{ (mechanic_share_pct) }}% of the labor + &#8369;{{ '{:,.0f}'.format(mechanic_daily_pay) }} for each day present</span>
+          </div>
+          <div id="rpt-payout-wrap" style="overflow-x:auto;">
+            {% if rpt.mechanic_payout %}
+            <table class="table">
+              <thead><tr><th>Mechanic</th><th style="text-align:right;">Days present</th><th style="text-align:right;">Daily pay</th><th style="text-align:right;">Services done</th><th style="text-align:right;">Labor</th><th style="text-align:right;">{{ mechanic_share_pct }}% share</th><th style="text-align:right;">Total pay</th></tr></thead>
+              <tbody>
+                {% for m in rpt.mechanic_payout %}
+                <tr>
+                  <td style="font-weight:600;color:var(--text);">{{ m.name }}</td>
+                  <td style="text-align:right;">{{ m.days_present }}</td>
+                  <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(m.daily_pay) }}</td>
+                  <td style="text-align:right;">{{ m.completed }}{% if m.backjobs %}<span style="color:var(--muted);font-size:0.7rem;"> ({{ m.backjobs }} back job{{ '' if m.backjobs == 1 else 's' }})</span>{% endif %}</td>
+                  <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(m.labor) }}</td>
+                  <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(m.share) }}</td>
+                  <td style="text-align:right;font-weight:800;color:var(--text);">&#8369;{{ '{:,.2f}'.format(m.total) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr style="font-weight:700;background:var(--light,#f9fafb);">
+                  <td>Total</td>
+                  <td style="text-align:right;">{{ rpt.mechanic_payout|sum(attribute='days_present') }}</td>
+                  <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='daily_pay')) }}</td>
+                  <td style="text-align:right;">{{ rpt.mechanic_payout|sum(attribute='completed') }}</td>
+                  <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='labor')) }}</td>
+                  <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='share')) }}</td>
+                  <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='total')) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+            {% else %}
+            <div class="empty-state"><p>No mechanic was present or finished a service in this period.</p></div>
+            {% endif %}
+          </div>
+          <div id="rpt-payout-note" style="font-size:0.68rem;color:var(--muted);padding:0.6rem 1rem 0.85rem;line-height:1.5;">The shop keeps {{ 100 - mechanic_share_pct }}% of the labor: &#8369;<span id="rpt-payout-shop">{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='shop_share')) }}</span>. Labor is the services and inspections only; parts are the shop's sales. A day counts when the mechanic timed in and was not marked absent. Back jobs earn no labor. Refunded services are not taken off yet.</div>
+        </div>
+      </div>
       </div>
       <div class="rpt-panel" id="rpt-panel-inventory" style="display:none;">
       <div class="card" id="rpt-inventory" style="margin-bottom:1rem;">
@@ -3020,6 +3067,36 @@
     </section>
 
     <!-- ARCHIVE -->
+    <!-- EXPENSES: money the shop spends, written down when it is taken -->
+    <section id="sec-expenses" class="page-section">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Shop <span class="accent">Expenses</span></div>
+          <div class="page-sub">Write down every peso taken out for the shop, so the cash in the drawer and the profit are always right.</div>
+        </div>
+        <div class="page-actions"><button type="button" class="btn-primary-custom" onclick="openExpenseModal()">+ Record expense</button></div>
+      </div>
+      <div class="stats-grid" id="exp-cards" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:0.9rem;margin-bottom:0.9rem;">
+        <div class="stat-card" style="padding:0.8rem 1rem;"><div class="stat-label">Spent today</div><div class="stat-value" id="exp-today" style="font-size:1.45rem;">&#8369;0.00</div><div class="stat-sub">Business expenses</div></div>
+        <div class="stat-card" style="padding:0.8rem 1rem;"><div class="stat-label">Spent this month</div><div class="stat-value" id="exp-month" style="font-size:1.45rem;">&#8369;0.00</div><div class="stat-sub">Business expenses</div></div>
+        <div class="stat-card" style="padding:0.8rem 1rem;"><div class="stat-label">Cash taken out today</div><div class="stat-value" id="exp-cashout" style="font-size:1.45rem;">&#8369;0.00</div><div class="stat-sub">From the drawer</div></div>
+        <div class="stat-card" style="padding:0.8rem 1rem;"><div class="stat-label">Should be in the drawer</div><div class="stat-value" id="exp-left" style="font-size:1.45rem;">&#8369;0.00</div>
+          <div class="stat-sub">Cash sales &minus; cash taken out</div>
+          <div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.4rem;font-size:0.72rem;color:var(--muted);">Counted <input type="text" inputmode="decimal" id="exp-count" placeholder="&#8369;" oninput="expCountCheck()" style="width:84px;padding:0.2rem 0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.76rem;"><span id="exp-diff" style="font-weight:700;"></span></div>
+        </div>
+      </div>
+      <div class="filter-bar" style="align-items:center;">
+        <select id="exp-range" onchange="expReload()"><option value="today">Today</option><option value="week">This week</option><option value="month" selected>This month</option><option value="all">All time</option></select>
+        <select id="exp-cat" onchange="expReload()"><option value="">All kinds</option></select>
+        <input type="text" id="exp-search" placeholder="Search what it was for, who took it, receipt…" oninput="expSearchChanged()">
+        <span id="exp-count-text" style="font-size:0.74rem;color:var(--muted);white-space:nowrap;"></span>
+      </div>
+      <div class="card">
+        <div id="exp-wrap"><div class="empty-state"><p>Loading…</p></div></div>
+        <div id="exp-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0.55rem 0;flex-wrap:wrap;"></div>
+      </div>
+    </section>
+
 <!-- ACTIVITY LOG (admin only) -->
     <section id="sec-activity" class="page-section">
       <div class="page-header">
@@ -3638,6 +3715,44 @@
 </div>
 
 <!-- CANCEL A SHOP PICKUP ORDER (part out of stock / not available) -->
+<div class="modal-overlay" id="modal-expense">
+  <div class="modal-box" style="width:520px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Record an expense</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;line-height:1.5;">Write it down when the money is taken, so the drawer and the profit stay right.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div class="form-group"><label>Amount (&#8369;)</label><input type="text" inputmode="decimal" id="ex-amount" placeholder="0.00" oninput="this.value=this.value.replace(/[^0-9.]/g,'');this.classList.remove('so-err-field')"></div>
+      <div class="form-group"><label>Date</label><input type="date" id="ex-date" oninput="this.classList.remove('so-err-field')"></div>
+    </div>
+    <div class="form-group"><label>Kind of expense</label><select id="ex-cat" onchange="this.classList.remove('so-err-field')"><option value="">Choose one</option></select></div>
+    <div class="form-group"><label>What was it for?</label><input type="text" id="ex-note" maxlength="300" placeholder="e.g. 2 liters of engine oil for the shop, electric bill for October" oninput="this.classList.remove('so-err-field')"></div>
+    <div class="form-group"><label>Where did the money come from?</label>
+      <select id="ex-from" onchange="expFromChanged()"><option value="cash">Cash drawer</option><option value="gcash">GCash</option><option value="other">Other (own pocket, bank)</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div class="form-group" id="ex-taken-wrap"><label>Who took the money?</label><input type="text" id="ex-taken" maxlength="100" oninput="this.classList.remove('so-err-field')"></div>
+      <div class="form-group"><label>Receipt number <span class="lbl-sub">(optional)</span></label><input type="text" id="ex-receipt" maxlength="60"></div>
+    </div>
+    <div id="ex-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.7rem;"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-expense')">Cancel</button>
+      <button type="button" class="btn-primary-custom" id="ex-go" onclick="submitExpense()">Save expense</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-expense-void">
+  <div class="modal-box" style="width:440px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Void this expense?</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;line-height:1.5;" id="exv-sub"></div>
+    <input type="hidden" id="exv-id">
+    <div class="form-group"><label>Why is it being voided?</label><input type="text" id="exv-reason" maxlength="300" placeholder="e.g. typed the wrong amount" oninput="this.classList.remove('so-err-field')"></div>
+    <div id="exv-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.7rem;"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-expense-void')">Keep it</button>
+      <button type="button" class="btn-primary-custom" id="exv-go" onclick="submitExpenseVoid()">Void expense</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-cancel-day">
   <div class="modal-box" style="width:480px;">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Cancel a whole day</div>
@@ -4296,7 +4411,7 @@
     document.body.classList.toggle('dash-lock', name === 'dashboard');
     document.body.classList.toggle('rpt-lock', name === 'reports');
     if (name === 'dashboard') setTimeout(() => { if (typeof fitDashRows === 'function') fitDashRows(); }, 30);
-    document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products', 'bookings', 'returns', 'archive', 'transactions', 'activity'].includes(name));
+    document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products', 'bookings', 'returns', 'archive', 'transactions', 'activity', 'expenses'].includes(name));
     openSidebarGroupOfActive();
     document.body.classList.toggle('embed-lock', !!EMBEDS[name]);
     if (EMBEDS[name]) {
@@ -4307,6 +4422,7 @@
     if (name === 'parts') loadPartsProducts();
     if (name === 'transactions') loadTxns();
     if (name === 'activity') actReload();
+    if (name === 'expenses') expReload();
     if (name === 'day-schedule') { initDaySchedule(); if (dsView === 'list') loadBookingList(); }
     if (name === 'outbox') { loadOutbox(); }
     if (name === 'inspection') { loadInspection(); }
@@ -9231,6 +9347,105 @@ async function shipPost(oid, step, body) {
 function shipReload(msg) { showToast(msg, 'success'); setTimeout(() => { window.location.hash = 'orders'; window.location.reload(); }, 700); }
 
 // ── Cancel a Shop Pickup order when the part is out of stock or not available ──
+// ── Expenses ──
+let _expOffset = 0, _expTimer = null, _expCats = [], _expCash = 0, _expItems = {};
+const _expMoney = n => (Number(n) < 0 ? '-' : '') + '₱' + Math.abs(Number(n || 0)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+function expSearchChanged() { clearTimeout(_expTimer); _expTimer = setTimeout(() => { _expOffset = 0; expLoad(); }, 300); }
+function expReload() { _expOffset = 0; expLoad(); }
+function expPage(delta) { _expOffset = Math.max(0, _expOffset + delta * 15); expLoad(); }
+function expCountCheck() {
+  const raw = document.getElementById('exp-count').value.replace(/[^0-9.]/g, ''), out = document.getElementById('exp-diff');
+  if (raw === '') { out.textContent = ''; return; }
+  const diff = Math.round((parseFloat(raw) - _expCash) * 100) / 100;
+  out.textContent = diff === 0 ? 'Exact' : (diff > 0 ? 'Over ' + _expMoney(diff) : 'Short ' + _expMoney(-diff));
+  out.style.color = diff === 0 ? '#15803d' : (diff > 0 ? '#b45309' : '#b91c1c');
+}
+async function expLoad() {
+  const wrap = document.getElementById('exp-wrap');
+  const url = '/api/expenses?offset=' + _expOffset + '&range=' + document.getElementById('exp-range').value + '&category=' + encodeURIComponent(document.getElementById('exp-cat').value)
+    + '&q=' + encodeURIComponent(document.getElementById('exp-search').value.trim());
+  try {
+    const res = await fetch(url); const d = await res.json();
+    if (!res.ok) { wrap.innerHTML = '<div class="empty-state"><p>Could not load the expenses.</p></div>'; return; }
+    _expCash = d.summary.cash_left_today;
+    document.getElementById('exp-today').textContent = _expMoney(d.summary.today); document.getElementById('exp-month').textContent = _expMoney(d.summary.month);
+    document.getElementById('exp-cashout').textContent = _expMoney(d.summary.cash_out_today); document.getElementById('exp-left').textContent = _expMoney(d.summary.cash_left_today);
+    expCountCheck();
+    const catSel = document.getElementById('exp-cat');
+    if (catSel.options.length <= 1) {
+      _expCats = d.categories;
+      catSel.innerHTML = '<option value="">All kinds</option>' + d.categories.map(c => `<option value="${c.key}">${_soEsc(c.label)}</option>`).join('');
+    }
+    document.getElementById('exp-count-text').textContent = d.total + ' record' + (d.total === 1 ? '' : 's') + ' · ' + _expMoney(d.shown_total) + ' spent';
+    _expItems = {}; d.items.forEach(e => { _expItems[e.id] = e; });
+    if (!d.items.length) { wrap.innerHTML = '<div class="empty-state"><p>No expenses recorded for this view.</p></div>'; }
+    else {
+      wrap.innerHTML = '<div style="overflow-x:auto;"><table class="table"><thead><tr><th>Date</th><th>Kind</th><th>What it was for</th><th>Paid from</th><th>Taken by</th><th style="text-align:right;">Amount</th><th></th></tr></thead><tbody>' +
+        d.items.map(e => {
+          const st = e.voided ? 'text-decoration:line-through;color:var(--muted);' : '';
+          return '<tr style="' + (e.voided ? 'opacity:0.7;' : '') + '"><td style="white-space:nowrap;font-size:0.78rem;"><div style="' + st + '">' + _soEsc(e.date) + '</div><div style="font-size:0.66rem;color:var(--muted);">' + _soEsc(e.ref) + '</div></td>' +
+            '<td style="font-weight:600;' + st + '">' + _soEsc(e.category_label) + (e.counts ? '' : ' <span style="font-size:0.6rem;font-weight:700;padding:0.05rem 0.35rem;border-radius:4px;background:#f3f4f6;color:#4b5563;">not an expense</span>') + '</td>' +
+            '<td style="max-width:260px;font-size:0.8rem;' + st + '">' + _soEsc(e.note) + (e.receipt_no ? '<div style="font-size:0.68rem;color:var(--muted);">Receipt ' + _soEsc(e.receipt_no) + '</div>' : '') +
+              (e.voided ? '<div style="font-size:0.7rem;color:#b91c1c;font-weight:600;text-decoration:none;">Voided: ' + _soEsc(e.void_reason) + '</div>' : '') + '</td>' +
+            '<td style="white-space:nowrap;font-size:0.78rem;">' + _soEsc(e.paid_from_label) + '</td>' +
+            '<td style="font-size:0.78rem;">' + _soEsc(e.taken_by || '—') + '<div style="font-size:0.66rem;color:var(--muted);">Recorded by ' + _soEsc(e.recorded_by) + '</div></td>' +
+            '<td style="text-align:right;font-weight:800;white-space:nowrap;' + st + '">' + _expMoney(e.amount) + '</td>' +
+            '<td style="text-align:right;">' + (e.voided ? '' : '<a class="ship-link" onclick="openExpenseVoid(' + e.id + ')" style="cursor:pointer;color:#b91c1c;font-size:0.72rem;">Void</a>') + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }
+    const pages = Math.max(1, Math.ceil(d.total / 15)), cur = Math.floor(_expOffset / 15) + 1;
+    document.getElementById('exp-pagination').innerHTML = d.total > 15 ?
+      '<button class="parts-page-btn" onclick="expPage(-1)" ' + (cur === 1 ? 'disabled' : '') + '>←</button><span style="font-size:0.78rem;color:var(--muted);padding:0 0.5rem;">Page ' + cur + ' of ' + pages + '</span><button class="parts-page-btn" onclick="expPage(1)" ' + (cur === pages ? 'disabled' : '') + '>→</button>' : '';
+  } catch (e) { wrap.innerHTML = '<div class="empty-state"><p>Could not load the expenses.</p></div>'; }
+}
+function expFromChanged() { document.getElementById('ex-taken-wrap').style.display = document.getElementById('ex-from').value === 'cash' ? '' : 'none'; }
+function openExpenseModal() {
+  const sel = document.getElementById('ex-cat');
+  if (sel.options.length <= 1 && _expCats.length) {
+    sel.innerHTML = '<option value="">Choose one</option>' + _expCats.map(c => `<option value="${c.key}">${_soEsc(c.label)}</option>`).join('');
+  }
+  ['ex-amount', 'ex-note', 'ex-receipt'].forEach(id => { const e = document.getElementById(id); e.value = ''; e.classList.remove('so-err-field'); });
+  sel.value = ''; sel.classList.remove('so-err-field');
+  document.getElementById('ex-from').value = 'cash';
+  document.getElementById('ex-taken').value = {{ current_user.fullname|tojson }};
+  document.getElementById('ex-date').value = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  document.getElementById('ex-date').max = document.getElementById('ex-date').value;
+  expFromChanged(); shipErr('ex-err', '');
+  openModal('modal-expense');
+}
+async function submitExpense() {
+  const g = id => document.getElementById(id).value.trim();
+  const body = { amount: g('ex-amount'), category: g('ex-cat'), note: g('ex-note'), paid_from: g('ex-from'), taken_by: g('ex-taken'), receipt_no: g('ex-receipt'), spent_on: g('ex-date') };
+  const btn = document.getElementById('ex-go'); btn.disabled = true; shipErr('ex-err', '');
+  try {
+    const res = await fetch('/expenses/add', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+    const d = await res.json().catch(() => ({}));
+    btn.disabled = false;
+    if (res.ok && d.success) { closeModal('modal-expense'); if (typeof showToast === 'function') showToast('Expense recorded.', 'success'); expReload(); return; }
+    const map = { amount: 'ex-amount', category: 'ex-cat', note: 'ex-note', taken_by: 'ex-taken', spent_on: 'ex-date' };
+    Object.keys(d.errors || {}).forEach(k => { const el = document.getElementById(map[k]); if (el) el.classList.add('so-err-field'); });
+    shipErr('ex-err', d.error || 'Could not save the expense.');
+  } catch (e) { btn.disabled = false; shipErr('ex-err', 'No connection. Please try again.'); }
+}
+function openExpenseVoid(id) {
+  const e = _expItems[id]; if (!e) return;
+  document.getElementById('exv-id').value = id; document.getElementById('exv-reason').value = '';
+  document.getElementById('exv-sub').textContent = e.ref + ' · ' + e.category_label + ' · ' + _expMoney(e.amount) + '. The record stays, marked as voided, and the amount is no longer counted.';
+  shipErr('exv-err', ''); openModal('modal-expense-void');
+}
+async function submitExpenseVoid() {
+  const reason = document.getElementById('exv-reason').value.trim();
+  if (reason.length < 3) { document.getElementById('exv-reason').classList.add('so-err-field'); shipErr('exv-err', 'Write why this expense is being voided.'); return; }
+  const btn = document.getElementById('exv-go'); btn.disabled = true;
+  try {
+    const res = await fetch('/expenses/' + document.getElementById('exv-id').value + '/void', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ reason }) });
+    const d = await res.json().catch(() => ({}));
+    btn.disabled = false;
+    if (res.ok && d.success) { closeModal('modal-expense-void'); expLoad(); return; }
+    shipErr('exv-err', d.error || 'Could not void it.');
+  } catch (e) { btn.disabled = false; shipErr('exv-err', 'No connection. Please try again.'); }
+}
+
 // ── Activity Log (admin only): the Activity tab and the Stock history tab, 15 rows a page ──
 let _actTab = 'audit', _actOffset = 0, _actTimer = null;
 function actTab(name, btn) {
@@ -10684,6 +10899,23 @@ const _rEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '
 const _rPeso = n => '₱' + Number(n || 0).toLocaleString('en-PH', {minimumFractionDigits: 2});
 
 // Mechanic Performance: the top few by services completed, with the total of everyone
+// Mechanic Payout: the share of the labor plus the daily pay, for the same period as the other cards
+function _renderRptPayout(list, rules) {
+  const wrap = document.getElementById('rpt-payout-wrap'); if (!wrap) return;
+  const pct = rules.share_pct != null ? rules.share_pct : 30;
+  const shop = document.getElementById('rpt-payout-shop');
+  if (!list.length) { wrap.innerHTML = '<div class="empty-state"><p>No mechanic was present or finished a service in this period.</p></div>'; if (shop) shop.textContent = '0.00'; return; }
+  const sum = k => list.reduce((a, m) => a + (m[k] || 0), 0);
+  const money = n => '₱' + Number(n || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const R = 'text-align:right;';
+  const rows = list.map(m => `<tr><td style="font-weight:600;color:var(--text);">${_rEsc(m.name)}</td><td style="${R}">${m.days_present}</td><td style="${R}">${money(m.daily_pay)}</td>
+    <td style="${R}">${m.completed}${m.backjobs ? `<span style="color:var(--muted);font-size:0.7rem;"> (${m.backjobs} back job${m.backjobs === 1 ? '' : 's'})</span>` : ''}</td>
+    <td style="${R}">${money(m.labor)}</td><td style="${R}">${money(m.share)}</td><td style="${R}font-weight:800;color:var(--text);">${money(m.total)}</td></tr>`).join('');
+  wrap.innerHTML = `<table class="table"><thead><tr><th>Mechanic</th><th style="${R}">Days present</th><th style="${R}">Daily pay</th><th style="${R}">Services done</th><th style="${R}">Labor</th><th style="${R}">${pct}% share</th><th style="${R}">Total pay</th></tr></thead><tbody>${rows}</tbody>
+    <tfoot><tr style="font-weight:700;background:var(--light,#f9fafb);"><td>Total</td><td style="${R}">${sum('days_present')}</td><td style="${R}">${money(sum('daily_pay'))}</td><td style="${R}">${sum('completed')}</td><td style="${R}">${money(sum('labor'))}</td><td style="${R}">${money(sum('share'))}</td><td style="${R}">${money(sum('total'))}</td></tr></tfoot></table>`;
+  if (shop) shop.textContent = Number(sum('shop_share')).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
 function _renderRptMechanics(list) {
   const wrap = document.getElementById('rpt-mechanic-wrap');
   if (!wrap) return;
@@ -10788,6 +11020,7 @@ function _applyReportsData(d) {
   }
   _renderRptTrend(d.trend);
   _renderRptMechanics(d.mechanic_performance || []);
+  _renderRptPayout(d.mechanic_payout || [], d.payout_rules || {});
   _renderRptProducts(d.top_products || []);
 
   const topWrap = document.getElementById('rpt-top-services-chart');
@@ -10836,7 +11069,15 @@ function _applyReportsData(d) {
       <span style="font-weight:800;font-size:1rem;color:var(--text);">Net revenue</span>
       <span style="font-weight:800;font-size:1.15rem;color:var(--red);">₱${d.net_revenue.toLocaleString('en-PH', {minimumFractionDigits:2})}</span>
     </div>
-    <div style="font-size:0.68rem;color:var(--muted);line-height:1.5;margin-top:0.5rem;">Refunds are subtracted on the date they're approved. Replacements don't change revenue, since no money is returned.</div>`;
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;font-size:0.85rem;">
+      <span style="color:var(--muted);">Expenses (${d.expenses_count || 0})</span>
+      <span style="font-weight:600;color:var(--red);">−₱${(d.expenses_total || 0).toLocaleString('en-PH', {minimumFractionDigits:2})}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.7rem 0;margin-top:0.3rem;border-top:2px solid var(--border);">
+      <span style="font-weight:800;font-size:1rem;color:var(--text);">Profit</span>
+      <span style="font-weight:800;font-size:1.15rem;color:${(d.profit || 0) >= 0 ? '#15803d' : 'var(--red)'};">${(d.profit || 0) < 0 ? '−' : ''}₱${Math.abs(d.profit || 0).toLocaleString('en-PH', {minimumFractionDigits:2})}</span>
+    </div>
+    <div style="font-size:0.68rem;color:var(--muted);line-height:1.5;margin-top:0.5rem;">Profit is net revenue minus the expenses recorded in Expenses (a staff cash advance and the owner's withdrawal are not counted). Refunds are subtracted on the date they're approved. Replacements don't change revenue, since no money is returned.</div>`;
 }
 
 function _applyRptTxnPagination() {

@@ -639,6 +639,27 @@ class WalkInQueue(db.Model):
     job_order_id     = db.Column(db.Integer, nullable=True)
 
 
+class Expense(db.Model):
+    """Money the shop spends, written down when it happens (usually taken straight from the cash drawer). Never deleted: a wrong one is voided
+    with a reason, so the record stays."""
+    __tablename__ = 'expense'
+    id            = db.Column(db.Integer, primary_key=True)
+    created_at    = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
+    spent_on      = db.Column(db.Date, nullable=False, index=True)          # the day the money was spent
+    amount        = db.Column(db.Float, nullable=False)
+    category      = db.Column(db.String(30), nullable=False)
+    note          = db.Column(db.String(300), nullable=False)               # what it was for
+    paid_from     = db.Column(db.String(10), default='cash')               # cash (the drawer), gcash or other
+    receipt_no    = db.Column(db.String(60), nullable=True)
+    taken_by      = db.Column(db.String(100), nullable=True)                # who took the money
+    recorded_by_id   = db.Column(db.Integer, nullable=True)
+    recorded_by_name = db.Column(db.String(120), nullable=True)
+    voided        = db.Column(db.Boolean, default=False)
+    void_reason   = db.Column(db.String(300), nullable=True)
+    voided_at     = db.Column(db.DateTime, nullable=True)
+    voided_by_name = db.Column(db.String(120), nullable=True)
+
+
 class AuditLog(db.Model):
     """Who did what, and when: every refund, cancellation, price or stock edit and payment a staff member makes, plus what the system
     does by itself (automatic cancels and refunds). Read-only for the admin."""
@@ -1657,6 +1678,54 @@ def _net_revenue_between(date_from, date_to):
     return round(sum(float(t['amount'] or 0) for t in _revenue_transactions(date_from, date_to)), 2)
 
 
+MECHANIC_SHARE = 0.30          # the mechanic gets 30% of the labor they did; the shop keeps 70%
+MECHANIC_DAILY_PAY = 50.0      # and P50 for each day they are present
+
+
+# Every kind of money a motorcycle shop spends. counts=False means the money leaves the drawer but is not a business expense (so it is
+# not taken off the profit): a staff cash advance, the owner's withdrawal. A customer's cash refund is NOT here: refunds are already recorded.
+EXPENSE_CATEGORIES = [
+    ('parts',       'Parts and stock purchase', True),
+    ('supplies',    'Shop supplies (oil, grease, rags, cleaners)', True),
+    ('tools',       'Tools and equipment', True),
+    ('repairs',     'Repairs and upkeep of the shop and equipment', True),
+    ('rent',        'Rent', True),
+    ('electricity', 'Electricity', True),
+    ('water',       'Water', True),
+    ('internet',    'Internet and phone load', True),
+    ('payroll',     'Mechanic pay and wages', True),
+    ('meals',       'Meals and snacks', True),
+    ('transport',   'Transport, fuel and delivery', True),
+    ('disposal',    'Waste disposal (used oil, old tires)', True),
+    ('permits',     'Permits, licenses and taxes', True),
+    ('insurance',   'Insurance', True),
+    ('marketing',   'Advertising and marketing', True),
+    ('fees',        'Bank and GCash fees', True),
+    ('other',       'Other expense', True),
+    ('advance',     'Cash advance to staff (not an expense yet)', False),
+    ('withdrawal',  "Owner's withdrawal (not an expense)", False),
+]
+EXPENSE_LABEL = {k: lbl for k, lbl, _c in EXPENSE_CATEGORIES}
+EXPENSE_COUNTS = {k: c for k, _l, c in EXPENSE_CATEGORIES}
+EXPENSE_SOURCES = {'cash': 'Cash drawer', 'gcash': 'GCash', 'other': 'Other'}
+
+
+def _expense_totals(date_from=None, date_to=None):
+    """(total that counts as a business expense, how many, {category: total}) for the days given. Voided ones are left out."""
+    q = Expense.query.filter(Expense.voided == False)
+    if date_from:
+        q = q.filter(Expense.spent_on >= date_from)
+    if date_to:
+        q = q.filter(Expense.spent_on <= date_to)
+    total, count, by_cat = 0.0, 0, {}
+    for e in q.all():
+        if EXPENSE_COUNTS.get(e.category, True):
+            total += e.amount or 0
+            count += 1
+            by_cat[e.category] = by_cat.get(e.category, 0.0) + (e.amount or 0)
+    return round(total, 2), count, {k: round(v, 2) for k, v in by_cat.items()}
+
+
 def _reports_summary(date_from=None, date_to=None):
     """Everything the Dashboard's revenue card, the Reports & Sales page,
     and Transaction History all read from — one computation, so they can
@@ -1777,6 +1846,35 @@ def _reports_summary(date_from=None, date_to=None):
         [{'name': name, 'completed': c, 'backjobs': bj, 'income': inc} for name, (c, bj, inc) in mechanic_tally.items()],
         key=lambda r: r['completed'], reverse=True)
 
+    # What each mechanic is paid: 30% of the labor they did (the shop keeps 70%) plus P50 for every day they were present.
+    # A day counts as present when the mechanic timed in and was not marked absent. Parts never count (they are the shop's sales).
+    _aq = db.session.query(MechanicAttendance.mechanic_id, func.count(MechanicAttendance.id)).filter(
+        MechanicAttendance.time_in.isnot(None), db.or_(MechanicAttendance.is_absent == False, MechanicAttendance.is_absent.is_(None)))
+    if date_from:
+        _aq = _aq.filter(MechanicAttendance.date >= date_from)
+    if date_to:
+        _aq = _aq.filter(MechanicAttendance.date <= date_to)
+    _days_present = dict(_aq.group_by(MechanicAttendance.mechanic_id).all())
+    _perf = {m['name']: m for m in mechanic_performance}
+    mechanic_payout, _seen_names = [], set()
+
+    def _payout_row(name, days):
+        p = _perf.get(name, {})
+        labor = round(float(p.get('income', 0.0)), 2)
+        share, daily = round(labor * MECHANIC_SHARE, 2), round(days * MECHANIC_DAILY_PAY, 2)
+        return {'name': name, 'days_present': days, 'daily_pay': daily, 'completed': int(p.get('completed', 0)), 'backjobs': int(p.get('backjobs', 0)),
+                'labor': labor, 'share': share, 'shop_share': round(labor - share, 2), 'total': round(share + daily, 2)}
+    for _m in Mechanic.query.order_by(Mechanic.name).all():
+        _seen_names.add(_m.name)
+        _days = int(_days_present.get(_m.id, 0))
+        if _days or _perf.get(_m.name):
+            mechanic_payout.append(_payout_row(_m.name, _days))
+    for _name in _perf:                                           # a mechanic who was removed but still did work in this period
+        if _name not in _seen_names:
+            mechanic_payout.append(_payout_row(_name, 0))
+    mechanic_payout.sort(key=lambda r: (-r['total'], r['name']))
+    _exp_total, _exp_count, _exp_by = _expense_totals(date_from, date_to)
+
     # Top Products Sold — online orders + in-store sales (both are Order rows),
     # plus parts billed through job orders (quotation parts already folded in
     # above). Fully-refunded orders are excluded entirely; for a partial refund
@@ -1826,6 +1924,9 @@ def _reports_summary(date_from=None, date_to=None):
         'order_status_counts': order_status_counts,
         'top_services': top_services_list,
         'mechanic_performance': mechanic_performance,
+        'mechanic_payout': mechanic_payout,
+        'expenses_total': _exp_total, 'expenses_count': _exp_count, 'profit': round(net_revenue - _exp_total, 2),
+        'expenses_by_category': [{'label': EXPENSE_LABEL.get(k, k), 'amount': v} for k, v in sorted(_exp_by.items(), key=lambda kv: -kv[1])],
         'top_products': top_products_list,
     }
 
@@ -1969,11 +2070,12 @@ AUDIT_RULES = {
     '/quotation/<int:qid>/approve': 'Approved a quotation', '/quotation/<int:qid>/reject': 'Rejected a quotation',
     '/quotation/<int:qid>/convert': 'Turned a quotation into a job order', '/quotation/<int:qid>/withdraw': 'Withdrew a quotation',
     '/job-order/<int:jid>/status': 'Changed a job order status',
+    '/expenses/add': 'Recorded an expense', '/expenses/<int:eid>/void': 'Voided an expense',
 }
 _AUDIT_REFS = (('oid', 'ORD-%03d'), ('bid', 'BKG-%03d'), ('rid', 'RMA-%03d'), ('joid', 'JO-%03d'), ('jid', 'JO-%03d'), ('qid', 'QTN-%03d'),
-               ('pid', 'Product #%d'), ('sid', 'Service #%d'), ('mid', 'Mechanic #%d'), ('uid', 'User #%d'))
+               ('pid', 'Product #%d'), ('sid', 'Service #%d'), ('mid', 'Mechanic #%d'), ('uid', 'User #%d'), ('eid', 'EXP-%03d'))
 _AUDIT_KEYS = ('status', 'new_status', 'reason', 'name', 'price', 'stock', 'role', 'action', 'category', 'amount', 'cash_amount', 'gcash_amount',
-               'payment_method', 'date', 'time', 'mechanic_name', 'resolution', 'decision', 'fee', 'vehicle')
+               'payment_method', 'date', 'time', 'mechanic_name', 'resolution', 'decision', 'fee', 'vehicle', 'paid_from', 'taken_by', 'note')
 
 
 @admin_app.after_request
@@ -2108,6 +2210,107 @@ def api_nav_counts():
     })
 
 
+def _expense_dict(e):
+    return {'id': e.id, 'ref': f'EXP-{e.id:03d}', 'date': e.spent_on.strftime('%b %d, %Y'), 'category': e.category,
+            'category_label': EXPENSE_LABEL.get(e.category, e.category), 'counts': EXPENSE_COUNTS.get(e.category, True),
+            'amount': round(e.amount or 0, 2), 'note': e.note or '', 'paid_from': e.paid_from or 'cash',
+            'paid_from_label': EXPENSE_SOURCES.get(e.paid_from or 'cash', 'Cash drawer'), 'receipt_no': e.receipt_no or '',
+            'taken_by': e.taken_by or '', 'recorded_by': e.recorded_by_name or '', 'voided': bool(e.voided),
+            'void_reason': e.void_reason or '', 'voided_by': e.voided_by_name or '',
+            'recorded_at': e.created_at.strftime('%b %d, %I:%M %p') if e.created_at else ''}
+
+
+@admin_app.route('/api/expenses')
+@login_required
+@require_admin_or_staff
+def api_expenses():
+    """The expense list (15 a page, newest first) with the numbers the page shows on top, including the cash that should be in the drawer."""
+    today = ph_now().date()
+    rng = (request.args.get('range') or 'month').strip()
+    start = {'today': today, 'week': today - timedelta(days=today.weekday()), 'month': today.replace(day=1)}.get(rng)
+    q = Expense.query
+    if start:
+        q = q.filter(Expense.spent_on >= start)
+    cat = (request.args.get('category') or '').strip()
+    if cat in EXPENSE_LABEL:
+        q = q.filter(Expense.category == cat)
+    term = (request.args.get('q') or '').strip()
+    if term:
+        like = f'%{term}%'
+        q = q.filter(or_(Expense.note.like(like), Expense.taken_by.like(like), Expense.receipt_no.like(like)))
+    try:
+        offset = max(0, int(request.args.get('offset', 0)))
+    except ValueError:
+        offset = 0
+    total_rows = q.count()
+    rows = q.order_by(Expense.spent_on.desc(), Expense.id.desc()).offset(offset).limit(15).all()
+    shown_total = round(sum((e.amount or 0) for e in q.filter(Expense.voided == False).all() if EXPENSE_COUNTS.get(e.category, True)), 2)
+    # the cash drawer today: what was collected in cash, minus the cash taken out (every cash expense, a staff advance and a withdrawal too)
+    collected = round(sum(t.get('cash', 0.0) for t in _revenue_transactions(today, today) if t['type'] != 'refund'), 2)
+    cash_out = round(sum((e.amount or 0) for e in Expense.query.filter(Expense.spent_on == today, Expense.voided == False, Expense.paid_from == 'cash').all()), 2)
+    month_total, month_count, _by = _expense_totals(today.replace(day=1), today)
+    today_total, _n, _b = _expense_totals(today, today)
+    return jsonify({'total': total_rows, 'offset': offset, 'items': [_expense_dict(e) for e in rows], 'shown_total': shown_total,
+                    'summary': {'today': today_total, 'month': month_total, 'cash_collected_today': collected, 'cash_out_today': cash_out,
+                                'cash_left_today': round(collected - cash_out, 2)},
+                    'categories': [{'key': k, 'label': lbl, 'counts': c} for k, lbl, c in EXPENSE_CATEGORIES]})
+
+
+@admin_app.route('/expenses/add', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def expense_add():
+    d = request.get_json(silent=True) or {}
+    errors = {}
+    try:
+        amount = round(float(str(d.get('amount', '')).replace(',', '').replace('\u20b1', '').strip()), 2)
+    except ValueError:
+        amount = 0
+    if not (0 < amount <= 1000000):
+        errors['amount'] = 'Type how much was spent (more than 0).'
+    category = clean_str(d.get('category', ''), max_len=30)
+    if category not in EXPENSE_LABEL:
+        errors['category'] = 'Choose what kind of expense it is.'
+    note = clean_str(d.get('note', ''), max_len=300)
+    if len(note) < 3:
+        errors['note'] = 'Write what the money was for.'
+    paid_from = clean_str(d.get('paid_from', 'cash'), max_len=10)
+    if paid_from not in EXPENSE_SOURCES:
+        paid_from = 'cash'
+    taken_by = clean_str(d.get('taken_by', ''), max_len=100)
+    if paid_from == 'cash' and not taken_by:
+        errors['taken_by'] = 'Write who took the money from the drawer.'
+    try:
+        spent_on = datetime.strptime(str(d.get('spent_on') or ph_now().date()), '%Y-%m-%d').date()
+    except ValueError:
+        spent_on = ph_now().date()
+    if spent_on > ph_now().date():
+        errors['spent_on'] = 'The date cannot be in the future.'
+    if errors:
+        return jsonify({'success': False, 'error': next(iter(errors.values())), 'errors': errors}), 400
+    e = Expense(spent_on=spent_on, amount=amount, category=category, note=note, paid_from=paid_from,
+                receipt_no=clean_str(d.get('receipt_no', ''), max_len=60) or None, taken_by=taken_by or None,
+                recorded_by_id=current_user.id, recorded_by_name=(current_user.fullname or '')[:120])
+    db.session.add(e)
+    db.session.commit()
+    return jsonify({'success': True, 'expense': _expense_dict(e)})
+
+
+@admin_app.route('/expenses/<int:eid>/void', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def expense_void(eid):
+    e = Expense.query.get_or_404(eid)
+    if e.voided:
+        return jsonify({'success': False, 'error': 'This expense was already voided.'}), 400
+    reason = clean_str((request.get_json(silent=True) or {}).get('reason', ''), max_len=300)
+    if len(reason) < 3:
+        return jsonify({'success': False, 'error': 'Write why this expense is being voided.'}), 400
+    e.voided, e.void_reason, e.voided_at, e.voided_by_name = True, reason, ph_now(), (current_user.fullname or '')[:120]
+    db.session.commit()
+    return jsonify({'success': True, 'expense': _expense_dict(e)})
+
+
 @admin_app.route('/api/dashboard-restock')
 @login_required
 @require_admin_or_staff
@@ -2228,6 +2431,7 @@ def admin_dashboard():
         order_status_counts=_rpt['order_status_counts'],
         top_services=_rpt['top_services'],
         rpt=_rpt,
+        mechanic_share_pct=int(round(MECHANIC_SHARE * 100)), mechanic_daily_pay=MECHANIC_DAILY_PAY,
         inv=_inventory_insights(),
         new_users_today=User.query.filter(func.date(User.id) == date.today()).count(),
         recent_bookings=_all_bookings_list[:5],
@@ -10291,6 +10495,10 @@ def api_reports_data():
         'order_status_counts': rpt['order_status_counts'],
         'top_services': rpt['top_services'],
         'mechanic_performance': rpt['mechanic_performance'],
+        'mechanic_payout': rpt['mechanic_payout'],
+        'expenses_total': rpt['expenses_total'], 'expenses_count': rpt['expenses_count'], 'profit': rpt['profit'],
+        'expenses_by_category': rpt['expenses_by_category'],
+        'payout_rules': {'share_pct': int(round(MECHANIC_SHARE * 100)), 'daily_pay': MECHANIC_DAILY_PAY},
         'top_products': [{**t, 'name': readable_item(t['name'])} for t in rpt['top_products']],
         'transactions': txns_json,
         'transaction_count': len(rpt['transactions']),

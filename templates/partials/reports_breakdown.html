@@ -22,4 +22,12 @@
   <span style="font-weight:800;font-size:1rem;color:var(--text);">Net revenue</span>
   <span style="font-weight:800;font-size:1.15rem;color:var(--red);">₱{{ (rpt.net_revenue)|money }}</span>
 </div>
-<div style="font-size:0.68rem;color:var(--muted);line-height:1.5;margin-top:0.5rem;">Refunds are subtracted on the date they're approved. Replacements don't change revenue, since no money is returned.</div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;font-size:0.85rem;">
+  <span style="color:var(--muted);">Expenses ({{ rpt.expenses_count }})</span>
+  <span style="font-weight:600;color:var(--red);">−₱{{ (rpt.expenses_total)|money }}</span>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:0.7rem 0;margin-top:0.3rem;border-top:2px solid var(--border);">
+  <span style="font-weight:800;font-size:1rem;color:var(--text);">Profit</span>
+  <span style="font-weight:800;font-size:1.15rem;color:{{ '#15803d' if rpt.profit >= 0 else 'var(--red)' }};">{{ '−' if rpt.profit < 0 else '' }}₱{{ (rpt.profit|abs)|money }}</span>
+</div>
+<div style="font-size:0.68rem;color:var(--muted);line-height:1.5;margin-top:0.5rem;">Profit is net revenue minus the expenses recorded in Expenses (a staff cash advance and the owner's withdrawal are not counted). Refunds are subtracted on the date they're approved. Replacements don't change revenue, since no money is returned.</div>
