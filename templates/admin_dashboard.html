@@ -224,7 +224,11 @@
       body.tbl-lock #sec-archive > .card:last-child { margin-bottom: 0; }
       body.tbl-lock #sec-archive > div:not(.page-header):not(.card) { margin-bottom: 0.9rem !important; }
       /* Transaction History: the card fills the screen, only the rows scroll inside it, and the page numbers stay under them */
-      body.tbl-lock #sec-transactions.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      body.tbl-lock #sec-activity.active, body.tbl-lock #sec-transactions.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      body.tbl-lock #sec-activity > .card { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
+      body.tbl-lock #act-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
+      body.tbl-lock #act-wrap > div { overflow: visible !important; }
+      body.tbl-lock #act-pagination { flex-shrink: 0; }
       body.tbl-lock #sec-transactions > .card { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
       body.tbl-lock #sec-transactions > .card > .card-head { flex-shrink: 0; }
       body.tbl-lock #txn-table-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
@@ -1125,6 +1129,7 @@
     <div class="sidebar-label sidebar-toggle" data-group="analytics" onclick="toggleSidebarGroup('analytics')">Analytics <svg class="sb-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
     <div class="sidebar-group" id="sbg-analytics">
     <a href="#" onclick="showSection('reports', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Reports & Sales</a>
+    {% if current_user.role == 'admin' %}<a href="#" onclick="showSection('activity', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Activity Log</a>{% endif %}
     <a href="#" onclick="showSection('archive', this)"><span class="nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span> Archive</a>
 
     </div>
@@ -3012,6 +3017,29 @@
     </section>
 
     <!-- ARCHIVE -->
+<!-- ACTIVITY LOG (admin only) -->
+    <section id="sec-activity" class="page-section">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title">Activity <span class="accent">Log</span></div>
+          <div class="page-sub">Who did what, and when. Refunds, cancellations, payments, price and stock changes, and what the system did by itself.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.8rem;align-items:center;">
+        <button type="button" class="bk-tab active" data-act-tab="audit" onclick="actTab('audit', this)">Activity</button>
+        <button type="button" class="bk-tab" data-act-tab="stock" onclick="actTab('stock', this)">Stock history</button>
+      </div>
+      <div class="filter-bar" style="align-items:center;">
+        <input type="text" id="act-search" placeholder="Search…" oninput="actSearchChanged()">
+        <select id="act-who" onchange="actReload()"><option value="">Everyone</option><option value="admin">Admin</option><option value="system">System (automatic)</option></select>
+        <span id="act-count" style="font-size:0.74rem;color:var(--muted);white-space:nowrap;"></span>
+      </div>
+      <div class="card">
+        <div id="act-wrap"><div class="empty-state"><p>Loading…</p></div></div>
+        <div id="act-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0.55rem 0;flex-wrap:wrap;"></div>
+      </div>
+    </section>
+
 <section id="sec-archive" class="page-section">
   <div class="page-header">
     <div class="page-header-left">
@@ -4258,7 +4286,7 @@
     document.body.classList.toggle('dash-lock', name === 'dashboard');
     document.body.classList.toggle('rpt-lock', name === 'reports');
     if (name === 'dashboard') setTimeout(() => { if (typeof fitDashRows === 'function') fitDashRows(); }, 30);
-    document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products', 'bookings', 'returns', 'archive', 'transactions'].includes(name));
+    document.body.classList.toggle('tbl-lock', ['services', 'mechanics', 'users', 'products', 'bookings', 'returns', 'archive', 'transactions', 'activity'].includes(name));
     openSidebarGroupOfActive();
     document.body.classList.toggle('embed-lock', !!EMBEDS[name]);
     if (EMBEDS[name]) {
@@ -4268,6 +4296,7 @@
     }
     if (name === 'parts') loadPartsProducts();
     if (name === 'transactions') loadTxns();
+    if (name === 'activity') actReload();
     if (name === 'day-schedule') { initDaySchedule(); if (dsView === 'list') loadBookingList(); }
     if (name === 'outbox') { loadOutbox(); }
     if (name === 'inspection') { loadInspection(); }
@@ -9162,6 +9191,43 @@ async function shipPost(oid, step, body) {
 function shipReload(msg) { showToast(msg, 'success'); setTimeout(() => { window.location.hash = 'orders'; window.location.reload(); }, 700); }
 
 // ── Cancel a Shop Pickup order when the part is out of stock or not available ──
+// ── Activity Log (admin only): the Activity tab and the Stock history tab, 15 rows a page ──
+let _actTab = 'audit', _actOffset = 0, _actTimer = null;
+function actTab(name, btn) {
+  _actTab = name; _actOffset = 0;
+  document.querySelectorAll('#sec-activity [data-act-tab]').forEach(b => b.classList.toggle('active', b.dataset.actTab === name));
+  document.getElementById('act-who').style.display = name === 'audit' ? '' : 'none';
+  document.getElementById('act-search').placeholder = name === 'audit' ? 'Search person, action, order or booking…' : 'Search product or reason…';
+  actReload();
+}
+function actSearchChanged() { clearTimeout(_actTimer); _actTimer = setTimeout(() => { _actOffset = 0; actLoad(); }, 300); }
+function actReload() { _actOffset = 0; actLoad(); }
+function actPage(delta) { _actOffset = Math.max(0, _actOffset + delta * 15); actLoad(); }
+async function actLoad() {
+  const wrap = document.getElementById('act-wrap');
+  const q = document.getElementById('act-search').value.trim(), who = document.getElementById('act-who').value;
+  const url = (_actTab === 'audit' ? '/api/audit-log' : '/api/stock-history') + '?offset=' + _actOffset + '&q=' + encodeURIComponent(q) + (_actTab === 'audit' && who ? '&who=' + who : '');
+  try {
+    const res = await fetch(url); const d = await res.json();
+    if (!res.ok) { wrap.innerHTML = '<div class="empty-state"><p>' + _soEsc(d.error || 'Could not load.') + '</p></div>'; return; }
+    document.getElementById('act-count').textContent = d.total + ' record' + (d.total === 1 ? '' : 's');
+    if (!d.items.length) { wrap.innerHTML = '<div class="empty-state"><p>Nothing here yet.</p></div>'; }
+    else if (_actTab === 'audit') {
+      wrap.innerHTML = '<div style="overflow-x:auto;"><table class="table"><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Details</th></tr></thead><tbody>' +
+        d.items.map(r => '<tr><td style="white-space:nowrap;font-size:0.76rem;color:var(--muted);">' + _soEsc(r.when) + '</td><td style="white-space:nowrap;font-weight:600;">' + _soEsc(r.who) +
+          (r.role ? ' <span style="font-size:0.6rem;font-weight:700;padding:0.08rem 0.4rem;border-radius:4px;background:' + (r.role === 'system' ? '#eff6ff;color:#1d4ed8' : (r.role === 'staff' ? '#f3f4f6;color:#4b5563' : '#fef2f2;color:#b91c1c')) + ';">' + _soEsc(r.role) + '</span>' : '') + '</td><td>' + _soEsc(r.action) +
+          '</td><td style="white-space:nowrap;font-weight:600;">' + _soEsc(r.target) + '</td><td style="font-size:0.76rem;color:var(--muted);">' + _soEsc(r.summary) + '</td></tr>').join('') + '</tbody></table></div>';
+    } else {
+      wrap.innerHTML = '<div style="overflow-x:auto;"><table class="table"><thead><tr><th>When</th><th>Product</th><th style="text-align:right;">Change</th><th style="text-align:right;">Stock after</th><th>Reason</th><th>By</th></tr></thead><tbody>' +
+        d.items.map(r => '<tr><td style="white-space:nowrap;font-size:0.76rem;color:var(--muted);">' + _soEsc(r.when) + '</td><td style="font-weight:600;">' + _soEsc(r.product) +
+          '</td><td style="text-align:right;font-weight:800;color:' + (r.change < 0 ? '#b91c1c' : '#15803d') + ';">' + (r.change > 0 ? '+' : '') + r.change + '</td><td style="text-align:right;">' + (r.after === null ? '' : r.after) +
+          '</td><td>' + _soEsc(r.source) + '</td><td style="font-size:0.76rem;color:var(--muted);">' + _soEsc(r.who) + '</td></tr>').join('') + '</tbody></table></div>';
+    }
+    const pages = Math.max(1, Math.ceil(d.total / 15)), cur = Math.floor(_actOffset / 15) + 1;
+    document.getElementById('act-pagination').innerHTML = d.total > 15 ?
+      '<button class="parts-page-btn" onclick="actPage(-1)" ' + (cur === 1 ? 'disabled' : '') + '>←</button><span style="font-size:0.78rem;color:var(--muted);padding:0 0.5rem;">Page ' + cur + ' of ' + pages + '</span><button class="parts-page-btn" onclick="actPage(1)" ' + (cur === pages ? 'disabled' : '') + '>→</button>' : '';
+  } catch (e) { wrap.innerHTML = '<div class="empty-state"><p>Could not load.</p></div>'; }
+}
 function openCancelDay() {
   const d = document.getElementById('cd-date'); d.value = ''; d.min = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
   document.getElementById('cd-reason').value = '';

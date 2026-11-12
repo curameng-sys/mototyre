@@ -1012,14 +1012,15 @@
 
           <!-- Terms -->
           <div class="terms-wrap" id="terms-wrap">
-            <input type="checkbox" id="agree-terms">
+            <input type="checkbox" id="agree-terms" name="agree_terms" value="1" disabled>
             <label for="agree-terms">
               I have read and agree to the
-              <a href="{{ url_for('terms') }}" target="_blank">Terms &amp; Conditions</a>
-              and <a href="{{ url_for('privacy') }}" target="_blank">Data Privacy Policy</a>
+              <a href="{{ url_for('terms') }}" target="_blank" data-terms-link="terms">Terms &amp; Conditions</a>
+              and <a href="{{ url_for('privacy') }}" target="_blank" data-terms-link="privacy">Data Privacy Policy</a>
               of MotoTyres.
             </label>
           </div>
+          <div id="terms-hint" style="font-size:0.72rem;color:var(--fg-3);margin:0.3rem 0 0 0.2rem;"></div>
 
           </div><!-- /step 4 -->
 
@@ -1187,6 +1188,22 @@
     switchPanel('otp');
   });
   {% endif %}
+
+// The Terms box stays locked until both documents have been opened. (The server checks this too: see _terms_accepted.)
+(function () {
+  const box = document.getElementById('agree-terms'), hint = document.getElementById('terms-hint');
+  const links = Array.from(document.querySelectorAll('[data-terms-link]')); if (!box || !links.length) return;
+  const opened = {{ '{terms: true, privacy: true}' if (session.get('terms_opened') and session.get('privacy_opened')) else '{}' }};
+  function update() {
+    const left = links.filter(a => !opened[a.dataset.termsLink]).map(a => a.textContent.trim());
+    box.disabled = left.length > 0;
+    if (left.length) box.checked = false;
+    if (hint) hint.textContent = left.length ? 'Open ' + left.join(' and ') + ' to unlock this box.' : '';
+  }
+  links.forEach(a => ['click', 'auxclick'].forEach(ev => a.addEventListener(ev, () => { opened[a.dataset.termsLink] = true; update(); })));
+  update();
+})();
+
 
   document.getElementById('reg-form').addEventListener('submit', function (e) {
     if (!document.getElementById('agree-terms').checked) {

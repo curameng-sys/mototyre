@@ -62,8 +62,21 @@ gzip_responses.register(admin_app)          # pages and JSON are sent compressed
 # never something that has to be remembered as a separate setting.
 _db_host = urlparse(DATABASE_URL.replace('mysql+pymysql://', 'mysql://', 1)).hostname or ''
 _engine_options = {} if _db_host in ('localhost', '127.0.0.1', '') else {'connect_args': {'ssl': {'ssl': {}}}}
+def _stable_secret(env_name, label):
+    """The session signing key comes from the environment. If it is not set, one is derived from another secret that is already in the
+    environment (never from the source code), so it stays the same between restarts. Only on a bare local machine is a dev key used."""
+    import hashlib
+    v = os.getenv(env_name)
+    if v:
+        return v
+    base = os.getenv('DB_PASS') or os.getenv('PAYMONGO_SECRET_KEY') or ''
+    if base:
+        return hashlib.sha256(f'mototyres:{label}:{base}'.encode()).hexdigest()
+    return f'local-development-only-{label}'
+
+
 admin_app.config.update(
-    SECRET_KEY=os.getenv('ADMIN_SECRET_KEY', 'mototyre-admin-secret-key-aP5nQ9vX2kR8mT6yW1'),
+    SECRET_KEY=_stable_secret('ADMIN_SECRET_KEY', 'admin'),
     SESSION_COOKIE_NAME='mototyre_admin_session',
     SESSION_COOKIE_SECURE=os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true',
     SQLALCHEMY_DATABASE_URI=DATABASE_URL,
@@ -118,7 +131,7 @@ _write_gmail_secret_from_env(GMAIL_CREDS_FILE, "GMAIL_CREDENTIALS_JSON")
 
 # PayMongo config
 
-PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
+PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "")     # set in the environment (.env), never in the source
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
 # /payment/success and /payment/failed only exist on the customer app, never
 # this one — so this always has to point there, not at admin_app's own host.
@@ -624,6 +637,105 @@ class WalkInQueue(db.Model):
     created_at       = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     done_at          = db.Column(db.DateTime, nullable=True)
     job_order_id     = db.Column(db.Integer, nullable=True)
+
+
+class AuditLog(db.Model):
+    """Who did what, and when: every refund, cancellation, price or stock edit and payment a staff member makes, plus what the system
+    does by itself (automatic cancels and refunds). Read-only for the admin."""
+    __tablename__ = 'audit_log'
+    id         = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8), index=True)
+    actor_id   = db.Column(db.Integer, nullable=True)
+    actor_name = db.Column(db.String(120), nullable=True)
+    actor_role = db.Column(db.String(20), nullable=True)          # admin / staff / system
+    action     = db.Column(db.String(80), nullable=False)
+    target     = db.Column(db.String(60), nullable=True)           # ORD-021, BKG-007, ...
+    summary    = db.Column(db.String(400), nullable=True)
+
+
+class StockMovement(db.Model):
+    """Every change to a product's stock, with the reason, so a count that does not match can be traced."""
+    __tablename__ = 'stock_movement'
+    id           = db.Column(db.Integer, primary_key=True)
+    created_at   = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8), index=True)
+    product_id   = db.Column(db.Integer, index=True)
+    product_name = db.Column(db.String(150), nullable=True)
+    change       = db.Column(db.Integer, nullable=False)           # +5 / -2
+    stock_after  = db.Column(db.Integer, nullable=True)
+    source       = db.Column(db.String(120), nullable=True)
+    actor_name   = db.Column(db.String(120), nullable=True)
+
+
+_STOCK_SOURCES = (('cart/checkout', 'Online order'), ('pos/checkout', 'In-store sale'), ('walk-in/checkout', 'In-store sale'),
+                  ('cancel-unpaid', 'Unpaid order cancelled'), ('ship/cancel', 'Order cancelled'), ('/cancel', 'Order cancelled'),
+                  ('void', 'Order voided'), ('add-items', 'Parts on a job order'), ('add-work', 'Parts on a job order'),
+                  ('job-order', 'Job order'), ('quotation', 'Quotation parts'), ('product/add', 'Product added'), ('/edit', 'Edited in Products'),
+                  ('import-products', 'Product import'), ('return', 'Return'), ('webhook', 'Late payment'), ('payment', 'Payment'),
+                  ('billing', 'Billing'))
+
+
+def _stock_source():
+    """What is changing the stock right now: the page the staff or customer used, or Automatic for a background job."""
+    try:
+        if has_request_context() and request.url_rule is not None:
+            rule = request.url_rule.rule
+            args = request.view_args or {}
+            label = next((lbl for key, lbl in _STOCK_SOURCES if key in rule), rule)
+            ref = ''
+            if 'oid' in args: ref = f" ORD-{int(args['oid']):03d}"
+            elif 'bid' in args: ref = f" BKG-{int(args['bid']):03d}"
+            elif 'jid' in args or 'joid' in args: ref = f" JO-{int(args.get('jid') or args.get('joid')):03d}"
+            return label + ref
+    except Exception:
+        pass
+    return 'Automatic (background)'
+
+
+def _stock_actor():
+    try:
+        if has_request_context() and current_user.is_authenticated:
+            return f"{current_user.fullname} ({current_user.role})"
+    except Exception:
+        pass
+    return 'System'
+
+
+from sqlalchemy import event as _sa_event
+
+
+@_sa_event.listens_for(Product.stock, 'set', active_history=True)
+def _log_stock_set(target, value, oldvalue, initiator):
+    """Any assignment to product.stock leaves a StockMovement row (the number before and after, and why)."""
+    try:
+        if not isinstance(oldvalue, (int, float)) or value is None or target.id is None:
+            return
+        diff = int(value) - int(oldvalue)
+        if diff:
+            db.session.add(StockMovement(product_id=target.id, product_name=(target.name or '')[:150], change=diff,
+                                         stock_after=int(value), source=_stock_source()[:120], actor_name=_stock_actor()[:120]))
+    except Exception:
+        pass
+
+
+def log_stock_bulk(product_id, change, source=None):
+    """For the places that change stock with one SQL UPDATE (which the listener above cannot see)."""
+    try:
+        row = db.session.query(Product.stock, Product.name).filter(Product.id == product_id).first()
+        db.session.add(StockMovement(product_id=product_id, product_name=((row[1] if row else '') or '')[:150], change=int(change),
+                                     stock_after=int((row[0] if row else 0) or 0), source=(source or _stock_source())[:120],
+                                     actor_name=_stock_actor()[:120]))
+    except Exception:
+        pass
+
+
+def audit_system(action, target='', summary=''):
+    """Something the system did by itself (not a person): written to the activity log."""
+    try:
+        db.session.add(AuditLog(actor_id=None, actor_name='System', actor_role='system', action=action[:80],
+                                target=(target or '')[:60], summary=(summary or '')[:400]))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 class Notification(db.Model):
@@ -1177,6 +1289,8 @@ def cleanup_abandoned_gcash_orders():
         order.status = 'cancelled'
         order.cancelled_by = 'auto'
         order.cancel_reason = 'Not paid within 30 minutes'
+        db.session.add(AuditLog(actor_name='System', actor_role='system', action='Order cancelled automatically (not paid)',
+                                target=f'ORD-{order.id:03d}', summary='No GCash payment within 30 minutes. Items put back in stock.'))
         _notify_order_customer(order, 'Order cancelled: not paid',
             f'Your order ORD-{order.id:03d} was cancelled because the GCash payment was not completed within 30 minutes. '
             f'You were not charged. You can order again anytime.', status='cancelled')
@@ -1819,6 +1933,123 @@ def _inventory_insights():
         'slow_count': len(slow), 'slow_value': round(sum(r['value'] for r in slow), 2),
         'window_days': INV_WINDOW_DAYS, 'slow_days': INV_SLOW_DAYS, 'cover_days': INV_COVER_DAYS,
     }
+
+
+# What a staff member does that changes money, stock, a customer's booking or an account. Anything not listed here is only looking.
+AUDIT_RULES = {
+    '/order/<int:oid>/ship/cancel': 'Cancelled a Ship to Address order (refunded if paid)',
+    '/order/<int:oid>/cancel': 'Cancelled a Shop Pickup order (refunded if paid)',
+    '/order/<int:oid>/status': 'Changed an order status',
+    '/order/<int:oid>/ship/status': 'Moved a Ship order to the next step',
+    '/order/<int:oid>/ship/options': 'Sent the delivery fee or courier choice',
+    '/order/<int:oid>/ship/start': 'Handed a Ship order to the courier',
+    '/order/<int:oid>/ship/complete': 'Completed a Ship order',
+    '/order/<int:oid>/archive': 'Archived an order', '/order/<int:oid>/unarchive': 'Restored an archived order',
+    '/billing/order/<int:oid>/complete': 'Recorded a pickup order as paid and handed over',
+    '/billing/order/<int:oid>/void': 'Voided an order',
+    '/pos/checkout': 'In-store sale', '/walk-in/checkout': 'Walk-in checkout',
+    '/payments/process/<int:joid>': 'Recorded a job order payment', '/payments/booking/<int:bid>': 'Recorded a booking payment',
+    '/booking/<int:bid>/invoice/record-cash': 'Recorded a cash payment for a booking', '/booking/<int:bid>/complete-invoice': 'Sent a booking invoice',
+    '/booking/<int:bid>/status': 'Changed a booking status', '/booking/<int:bid>/cancel': 'Cancelled a booking',
+    '/bookings/cancel-day': 'Cancelled every booking of a day', '/booking/<int:bid>/no-show': 'Marked a booking as no-show',
+    '/booking/<int:bid>/reschedule': 'Rescheduled a booking', '/booking/<int:bid>/assign-mechanic': 'Assigned a mechanic to a booking',
+    '/booking/<int:bid>/undo-status': 'Undid a booking status', '/booking/<int:bid>/restore': 'Restored a booking',
+    '/booking/<int:bid>/archive': 'Archived a booking', '/booking/<int:bid>/unarchive': 'Restored an archived booking',
+    '/returns/<int:rid>/decide': 'Decided a return request', '/returns/<int:rid>/resolve': 'Resolved a return request',
+    '/returns/<int:rid>/release-gcash': 'Released a GCash refund', '/returns/<int:rid>/cash-given': 'Gave a cash refund',
+    '/returns/<int:rid>/replacement-given': 'Gave a replacement', '/returns/<int:rid>/complete': 'Completed a return',
+    '/product/add': 'Added a product', '/product/<int:pid>/edit': 'Edited a product', '/product/<int:pid>/delete': 'Deleted a product',
+    '/import-products': 'Imported products',
+    '/service/add': 'Added a service', '/service/<int:sid>/edit': 'Edited a service', '/service/<int:sid>/delete': 'Deleted a service',
+    '/service/<int:sid>/toggle': 'Switched a service on or off',
+    '/mechanic/add': 'Added a mechanic', '/mechanic/<int:mid>/edit': 'Edited a mechanic', '/mechanic/<int:mid>/delete': 'Deleted a mechanic',
+    '/user/<int:uid>/delete': 'Deleted a user', '/user/<int:uid>/manage': 'Changed a user account',
+    '/quotation/<int:qid>/approve': 'Approved a quotation', '/quotation/<int:qid>/reject': 'Rejected a quotation',
+    '/quotation/<int:qid>/convert': 'Turned a quotation into a job order', '/quotation/<int:qid>/withdraw': 'Withdrew a quotation',
+    '/job-order/<int:jid>/status': 'Changed a job order status',
+}
+_AUDIT_REFS = (('oid', 'ORD-%03d'), ('bid', 'BKG-%03d'), ('rid', 'RMA-%03d'), ('joid', 'JO-%03d'), ('jid', 'JO-%03d'), ('qid', 'QTN-%03d'),
+               ('pid', 'Product #%d'), ('sid', 'Service #%d'), ('mid', 'Mechanic #%d'), ('uid', 'User #%d'))
+_AUDIT_KEYS = ('status', 'new_status', 'reason', 'name', 'price', 'stock', 'role', 'action', 'category', 'amount', 'cash_amount', 'gcash_amount',
+               'payment_method', 'date', 'time', 'mechanic_name', 'resolution', 'decision', 'fee', 'vehicle')
+
+
+@admin_app.after_request
+def _write_audit(response):
+    """One line in the activity log for every successful action a signed-in admin or staff member takes (see AUDIT_RULES)."""
+    try:
+        if request.method not in ('POST', 'PUT', 'DELETE', 'PATCH') or response.status_code >= 400:
+            return response
+        rule = request.url_rule.rule if request.url_rule else None
+        label = AUDIT_RULES.get(rule)
+        if not label or not current_user.is_authenticated or current_user.role not in ('admin', 'staff'):
+            return response
+        if response.is_json:
+            body = response.get_json(silent=True)
+            if isinstance(body, dict) and body.get('success') is False:
+                return response                                  # it was refused: nothing happened
+        args = request.view_args or {}
+        target = next((fmt % int(args[k]) for k, fmt in _AUDIT_REFS if k in args), '')
+        data = request.get_json(silent=True) if request.is_json else request.form
+        bits = []
+        for k in _AUDIT_KEYS:
+            v = (data.get(k) if hasattr(data, 'get') else None)
+            if v not in (None, ''):
+                bits.append(f'{k.replace("_", " ")}: {str(v)[:120]}')
+        db.session.add(AuditLog(actor_id=current_user.id, actor_name=(current_user.fullname or '')[:120], actor_role=current_user.role,
+                                action=label[:80], target=target[:60], summary='; '.join(bits)[:400]))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print('[audit] could not write:', e)
+    return response
+
+
+@admin_app.route('/api/audit-log')
+@login_required
+def api_audit_log():
+    """Activity Log, newest first, 15 a page. Admin only."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Only the admin can see the activity log.'}), 403
+    try:
+        offset = max(0, int(request.args.get('offset', 0)))
+    except ValueError:
+        offset = 0
+    q = AuditLog.query
+    who = (request.args.get('who') or '').strip()
+    if who in ('admin', 'staff', 'system'):
+        q = q.filter(AuditLog.actor_role == who)
+    term = (request.args.get('q') or '').strip()
+    if term:
+        like = f'%{term}%'
+        q = q.filter(or_(AuditLog.actor_name.like(like), AuditLog.action.like(like), AuditLog.target.like(like), AuditLog.summary.like(like)))
+    total = q.count()
+    rows = q.order_by(AuditLog.id.desc()).offset(offset).limit(15).all()
+    return jsonify({'total': total, 'offset': offset, 'items': [{
+        'when': r.created_at.strftime('%b %d, %Y %I:%M %p') if r.created_at else '', 'who': r.actor_name or 'System', 'role': r.actor_role or '',
+        'action': r.action, 'target': r.target or '', 'summary': r.summary or ''} for r in rows]})
+
+
+@admin_app.route('/api/stock-history')
+@login_required
+def api_stock_history():
+    """Every change to a product's stock, newest first, 15 a page. Admin only."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Only the admin can see the stock history.'}), 403
+    try:
+        offset = max(0, int(request.args.get('offset', 0)))
+    except ValueError:
+        offset = 0
+    q = StockMovement.query
+    term = (request.args.get('q') or '').strip()
+    if term:
+        like = f'%{term}%'
+        q = q.filter(or_(StockMovement.product_name.like(like), StockMovement.source.like(like), StockMovement.actor_name.like(like)))
+    total = q.count()
+    rows = q.order_by(StockMovement.id.desc()).offset(offset).limit(15).all()
+    return jsonify({'total': total, 'offset': offset, 'items': [{
+        'when': r.created_at.strftime('%b %d, %Y %I:%M %p') if r.created_at else '', 'product': r.product_name or f'Product #{r.product_id}',
+        'change': r.change, 'after': r.stock_after, 'source': r.source or '', 'who': r.actor_name or ''} for r in rows]})
 
 
 @admin_app.route('/api/dashboard-restock')
@@ -9096,6 +9327,7 @@ def pos_checkout():
             if taken != 1:
                 db.session.rollback()
                 return jsonify({'success': False, 'error': f'{product.name} was just bought by someone else. Its stock has been updated.'}), 409
+            log_stock_bulk(product.id, -item['quantity'], 'In-store sale')
         if customer_id:
             send_notification(int(customer_id), 'Order Completed (In-Store)',
                 f'Your in-store order ORD-{order.id:03d} worth ₱{new_total:,.2f} has been completed.',
@@ -9406,6 +9638,7 @@ def _take_stock(product_id, qty):
         return 'Please check the quantity.'
     taken = Product.query.filter(Product.id == product_id, Product.stock >= qty).update({Product.stock: Product.stock - qty}, synchronize_session=False)
     if taken:
+        log_stock_bulk(product_id, -qty)
         return None
     prod = Product.query.get(product_id)
     return f"Only {int(prod.stock or 0) if prod else 0} left of {prod.name if prod else 'that product'}."
@@ -9416,6 +9649,7 @@ def _return_job_order_stock(jo):
     for it in JobOrderItem.query.filter_by(job_order_id=jo.id).all():
         if it.item_type == 'product' and it.product_id:
             Product.query.filter(Product.id == it.product_id).update({Product.stock: Product.stock + int(it.quantity or 0)}, synchronize_session=False)
+            log_stock_bulk(it.product_id, int(it.quantity or 0), 'Job order cancelled: parts returned')
 
 
 @admin_app.route('/job-order/<int:jid>/add-items', methods=['POST'])

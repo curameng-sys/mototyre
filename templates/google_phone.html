@@ -20,6 +20,10 @@
     label { display:block; font-family:'Inter',sans-serif; font-weight:700; font-size:0.66rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-2); margin-bottom:0.35rem; }
     input { width:100%; padding:0.8rem 0.9rem; border:1.5px solid var(--line-2); border-radius:10px; font-family:inherit; font-size:0.9rem; outline:none; margin-bottom:0.9rem; }
     input:focus { border-color:var(--brand-red); box-shadow:0 0 0 3px rgba(208,0,25,0.1); }
+    .terms { display:flex; align-items:flex-start; gap:0.6rem; padding:0.65rem 0.8rem; border:1px solid var(--line-2); border-radius:10px; background:#faf8f5; margin:0 0 0.9rem; }
+    .terms input { width:15px; height:15px; margin:2px 0 0; padding:0; flex-shrink:0; accent-color:var(--brand-red); cursor:pointer; }
+    .terms label { margin:0; text-transform:none; letter-spacing:0; font-weight:400; font-size:0.78rem; line-height:1.55; color:var(--fg-2); cursor:pointer; }
+    .terms label a { color:var(--brand-red); font-weight:600; text-decoration:none; } .terms label a:hover { text-decoration:underline; }
     .hint { font-size:0.72rem; color:var(--fg-3); margin:-0.6rem 0 0.9rem; }
     button { width:100%; padding:0.85rem; border:none; border-radius:10px; background:#1a1613; color:#fff; font-family:'Inter',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer; }
     button:hover { background:#000; }
@@ -50,10 +54,31 @@
           {% for y in range(current_year + 1, 1979, -1) %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
         </select>
       </div>
+      <div class="terms">
+        <input type="checkbox" id="agree-terms" name="agree_terms" value="1" required disabled>
+        <label for="agree-terms">I have read and agree to the <a href="{{ url_for('terms') }}" target="_blank" data-terms-link="terms">Terms &amp; Conditions</a> and <a href="{{ url_for('privacy') }}" target="_blank" data-terms-link="privacy">Data Privacy Policy</a> of MotoTyres.</label>
+      </div>
+      <div id="terms-hint" class="hint" style="margin:-0.5rem 0 0.9rem;"></div>
       <button type="submit">Create my account</button>
     </form>
     <a class="cancel" href="{{ url_for('google_cancel') }}">Cancel</a>
   </div>
+<script>
+// The Terms box stays locked until both documents have been opened. (The server checks this too: see _terms_accepted.)
+(function () {
+  const box = document.getElementById('agree-terms'), hint = document.getElementById('terms-hint');
+  const links = Array.from(document.querySelectorAll('[data-terms-link]')); if (!box || !links.length) return;
+  const opened = {{ '{terms: true, privacy: true}' if (session.get('terms_opened') and session.get('privacy_opened')) else '{}' }};
+  function update() {
+    const left = links.filter(a => !opened[a.dataset.termsLink]).map(a => a.textContent.trim());
+    box.disabled = left.length > 0;
+    if (left.length) box.checked = false;
+    if (hint) hint.textContent = left.length ? 'Open ' + left.join(' and ') + ' to unlock this box.' : '';
+  }
+  links.forEach(a => ['click', 'auxclick'].forEach(ev => a.addEventListener(ev, () => { opened[a.dataset.termsLink] = true; update(); })));
+  update();
+})();
+</script>
 <script data-fresh-form>
 // Privacy: never keep what was typed in these forms when the page is shown again (Back button / bfcache).
 window.addEventListener('pageshow', function (e) {

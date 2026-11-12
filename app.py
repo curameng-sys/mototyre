@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response, abort
+from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify, make_response, abort, has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -90,8 +90,21 @@ _db_host = urlparse(DATABASE_URL.replace('mysql+pymysql://', 'mysql://', 1)).hos
 # connections before the server's idle timeout.
 _engine_options = {} if _db_host in ('localhost', '127.0.0.1', '') else {
     'connect_args': {'ssl': {'ssl': {}}}, 'pool_pre_ping': True, 'pool_recycle': 280}
+def _stable_secret(env_name, label):
+    """The session signing key comes from the environment. If it is not set, one is derived from another secret that is already in the
+    environment (never from the source code), so it stays the same between restarts. Only on a bare local machine is a dev key used."""
+    import hashlib
+    v = os.getenv(env_name)
+    if v:
+        return v
+    base = os.getenv('DB_PASS') or os.getenv('PAYMONGO_SECRET_KEY') or ''
+    if base:
+        return hashlib.sha256(f'mototyres:{label}:{base}'.encode()).hexdigest()
+    return f'local-development-only-{label}'
+
+
 app.config.update(
-    SECRET_KEY=os.getenv('SECRET_KEY', 'mototyre-fixed-secret-key-xK9mP2qL7rZ3wN8vB4'),
+    SECRET_KEY=_stable_secret('SECRET_KEY', 'customer'),
     SESSION_COOKIE_NAME='mototyre_customer_session',
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_COOKIE_SECURE=_secure_cookies,
@@ -134,7 +147,7 @@ login_manager.login_view = 'login'
 OTP_EXPIRY_MINS = 2
 
 # ── PayMongo config ──────────────────────────────────────────────────────────
-PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "sk_test_qzA2hw8wmbB6AR46TSWYjKPV")
+PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "")     # set in the environment (.env), never in the source
 PAYMONGO_API_URL = "https://api.paymongo.com/v1"
 # Only set BASE_URL in .env if PayMongo needs a fixed public host (e.g. a persistent
 # tunnel). Otherwise leave it unset — create_gcash_payment() falls back to whatever
@@ -945,6 +958,105 @@ class Feedback(db.Model):
     created_at = db.Column(db.DateTime, default=ph_now)
 
 
+class AuditLog(db.Model):
+    """Who did what, and when: every refund, cancellation, price or stock edit and payment a staff member makes, plus what the system
+    does by itself (automatic cancels and refunds). Read-only for the admin."""
+    __tablename__ = 'audit_log'
+    id         = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8), index=True)
+    actor_id   = db.Column(db.Integer, nullable=True)
+    actor_name = db.Column(db.String(120), nullable=True)
+    actor_role = db.Column(db.String(20), nullable=True)          # admin / staff / system
+    action     = db.Column(db.String(80), nullable=False)
+    target     = db.Column(db.String(60), nullable=True)           # ORD-021, BKG-007, ...
+    summary    = db.Column(db.String(400), nullable=True)
+
+
+class StockMovement(db.Model):
+    """Every change to a product's stock, with the reason, so a count that does not match can be traced."""
+    __tablename__ = 'stock_movement'
+    id           = db.Column(db.Integer, primary_key=True)
+    created_at   = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8), index=True)
+    product_id   = db.Column(db.Integer, index=True)
+    product_name = db.Column(db.String(150), nullable=True)
+    change       = db.Column(db.Integer, nullable=False)           # +5 / -2
+    stock_after  = db.Column(db.Integer, nullable=True)
+    source       = db.Column(db.String(120), nullable=True)
+    actor_name   = db.Column(db.String(120), nullable=True)
+
+
+_STOCK_SOURCES = (('cart/checkout', 'Online order'), ('pos/checkout', 'In-store sale'), ('walk-in/checkout', 'In-store sale'),
+                  ('cancel-unpaid', 'Unpaid order cancelled'), ('ship/cancel', 'Order cancelled'), ('/cancel', 'Order cancelled'),
+                  ('void', 'Order voided'), ('add-items', 'Parts on a job order'), ('add-work', 'Parts on a job order'),
+                  ('job-order', 'Job order'), ('quotation', 'Quotation parts'), ('product/add', 'Product added'), ('/edit', 'Edited in Products'),
+                  ('import-products', 'Product import'), ('return', 'Return'), ('webhook', 'Late payment'), ('payment', 'Payment'),
+                  ('billing', 'Billing'))
+
+
+def _stock_source():
+    """What is changing the stock right now: the page the staff or customer used, or Automatic for a background job."""
+    try:
+        if has_request_context() and request.url_rule is not None:
+            rule = request.url_rule.rule
+            args = request.view_args or {}
+            label = next((lbl for key, lbl in _STOCK_SOURCES if key in rule), rule)
+            ref = ''
+            if 'oid' in args: ref = f" ORD-{int(args['oid']):03d}"
+            elif 'bid' in args: ref = f" BKG-{int(args['bid']):03d}"
+            elif 'jid' in args or 'joid' in args: ref = f" JO-{int(args.get('jid') or args.get('joid')):03d}"
+            return label + ref
+    except Exception:
+        pass
+    return 'Automatic (background)'
+
+
+def _stock_actor():
+    try:
+        if has_request_context() and current_user.is_authenticated:
+            return f"{current_user.fullname} ({current_user.role})"
+    except Exception:
+        pass
+    return 'System'
+
+
+from sqlalchemy import event as _sa_event
+
+
+@_sa_event.listens_for(Product.stock, 'set', active_history=True)
+def _log_stock_set(target, value, oldvalue, initiator):
+    """Any assignment to product.stock leaves a StockMovement row (the number before and after, and why)."""
+    try:
+        if not isinstance(oldvalue, (int, float)) or value is None or target.id is None:
+            return
+        diff = int(value) - int(oldvalue)
+        if diff:
+            db.session.add(StockMovement(product_id=target.id, product_name=(target.name or '')[:150], change=diff,
+                                         stock_after=int(value), source=_stock_source()[:120], actor_name=_stock_actor()[:120]))
+    except Exception:
+        pass
+
+
+def log_stock_bulk(product_id, change, source=None):
+    """For the places that change stock with one SQL UPDATE (which the listener above cannot see)."""
+    try:
+        row = db.session.query(Product.stock, Product.name).filter(Product.id == product_id).first()
+        db.session.add(StockMovement(product_id=product_id, product_name=((row[1] if row else '') or '')[:150], change=int(change),
+                                     stock_after=int((row[0] if row else 0) or 0), source=(source or _stock_source())[:120],
+                                     actor_name=_stock_actor()[:120]))
+    except Exception:
+        pass
+
+
+def audit_system(action, target='', summary=''):
+    """Something the system did by itself (not a person): written to the activity log."""
+    try:
+        db.session.add(AuditLog(actor_id=None, actor_name='System', actor_role='system', action=action[:80],
+                                target=(target or '')[:60], summary=(summary or '')[:400]))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
 class Notification(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -1447,6 +1559,7 @@ def _late_payment_on_cancelled_order(order, cid, pid):
         order.cancelled_by = None
         order.cancel_reason = None
         _confirm_gcash_order(order, cid)
+        audit_system('Late payment: order restored', ref, 'The customer paid after the order was cancelled. The items were still in stock.')
         for admin in User.query.filter_by(role='admin').all():
             send_notification(admin.id, f'{ref} paid late \u00b7 order restored',
                 f'{ref} was cancelled for no payment, but the customer paid afterwards. The items were still in stock, so the order is Confirmed again.',
@@ -1458,6 +1571,7 @@ def _late_payment_on_cancelled_order(order, cid, pid):
         order.refund_amount = float(order.total_amount or 0)
         order.refund_reason = 'Paid after the order was cancelled; the items were no longer available'
         db.session.commit()
+        audit_system('Late payment: refunded', ref, f'\u20b1{order.total_amount:,.2f} refunded automatically. The items were no longer available.')
         _notify_order_customer(order, 'Payment refunded',
             f'Your GCash payment for {ref} arrived after the order was cancelled for no payment, and the items are no longer available. '
             f'We refunded \u20b1{order.total_amount:,.2f} to the same GCash account. It can take a few banking days to show.', status='cancelled')
@@ -1497,6 +1611,8 @@ def cleanup_abandoned_gcash_orders():
             _confirm_gcash_order(order, cid)
             continue
         _cancel_unpaid_order(order, 'auto', UNPAID_CANCEL_REASON)
+        db.session.add(AuditLog(actor_name='System', actor_role='system', action='Order cancelled automatically (not paid)',
+                                target=f'ORD-{order.id:03d}', summary=f'No GCash payment within {GCASH_HOLD_MINUTES} minutes. Items put back in stock.'))
         _notify_order_customer(order, 'Order cancelled: not paid',
             f'Your order ORD-{order.id:03d} was cancelled because the GCash payment was not completed within {GCASH_HOLD_MINUTES} minutes. '
             f'You were not charged. You can order again anytime.', status='cancelled')
@@ -1713,6 +1829,9 @@ def google_complete():
         return redirect(url_for('login'))
     if request.method == 'POST':
         phone = clean_str(request.form.get('phone', ''), max_len=11)
+        if not _terms_accepted():                           # a new account made with Google accepts the terms like any other
+            flash('Please open and read the Terms & Conditions and the Data Privacy Policy, then tick the box to create your account.', 'danger')
+            return render_template('google_phone.html', name=pending['name'], email=pending['email'])
         if not is_valid_phone(phone):
             flash('Enter a valid mobile number: 11 digits starting with 09.', 'danger')
             return render_template('google_phone.html', name=pending['name'], email=pending['email'])
@@ -1787,6 +1906,9 @@ def register():
         email = clean_str(request.form.get('email', ''), max_len=254).lower()
         phone = clean_str(request.form.get('phone', ''), max_len=11)
 
+        if not _terms_accepted():
+            flash('Please open and read the Terms & Conditions and the Data Privacy Policy, then tick the box to register.', 'danger')
+            return redirect(url_for('register'))
         if not is_valid_email(email):
             flash('Invalid email address.', 'danger')
             return redirect(url_for('register'))
@@ -5191,11 +5313,18 @@ def paymongo_webhook():
 
 @app.route('/terms')
 def terms():
+    session['terms_opened'] = True              # the sign-up boxes stay locked until this page has been opened
     return render_template('terms.html')
 
 @app.route('/privacy')
 def privacy():
+    session['privacy_opened'] = True
     return render_template('privacy.html')
+
+
+def _terms_accepted():
+    """A new account needs the box ticked, and the Terms and the Privacy Policy must have been opened by this visitor first."""
+    return bool(request.form.get('agree_terms') and session.get('terms_opened') and session.get('privacy_opened'))
 
 @app.route('/api/services')
 def api_services():
@@ -5534,6 +5663,7 @@ def process_ship_deadlines():
                 o.cancelled_by = 'auto'
                 o.cancel_reason = 'No payment within 24 hours'
                 db.session.commit()
+                audit_system('Ship order cancelled automatically (no payment)', ref, 'No payment within 24 hours. Items put back in stock.')
                 _t, _m, _s = ship_notice('cancelled', ref, by='auto', deadline=deadline)
                 _notify_order_customer(o, _t, _m, status=_s)
                 for admin in User.query.filter_by(role='admin').all():
@@ -5672,6 +5802,7 @@ def process_fee_deadlines():
                 o.cancelled_by = 'auto'
                 o.cancel_reason = reason
                 db.session.commit()
+                audit_system('Order refunded automatically (delivery fee not paid)', ref, f'\u20b1{o.refund_amount:,.2f} for the items refunded. Items put back in stock.')
                 _t, _m, _s = ship_notice('fee_expired', ref, deadline=deadline, amount=o.refund_amount)
                 _notify_order_customer(o, _t, _m, status=_s)
                 for admin in User.query.filter_by(role='admin').all():
@@ -5763,6 +5894,7 @@ def process_pickup_holds():
                 else:
                     body = (f'Your order {ref} was not picked up within {PICKUP_HOLD_DAYS} days, so we cancelled it. '
                             f'You were not charged. You can order again anytime.')
+                audit_system('Pickup order cancelled automatically', ref, reason + (f'. \u20b1{refunded:,.2f} refunded.' if gcash else '. Nothing was paid.'))
                 _notify_order_customer(o, 'Order cancelled: not picked up', body, status='cancelled')
                 for admin in User.query.filter_by(role='admin').all():
                     send_notification(admin.id, f'{ref} cancelled automatically',
