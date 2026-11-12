@@ -3480,7 +3480,7 @@
       <span style="font-size:0.78rem;color:var(--fg-3);font-family:'Inter',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Qty</span>
       <div style="display:flex;align-items:center;gap:0.5rem;position:relative;">
         <button type="button" class="pi-qty-btn" onclick="changeInfoQty(-1)" style="width:30px;height:30px;border-radius:6px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);font-size:1.1rem;cursor:pointer;">−</button>
-        <input type="number" id="pi-qty" min="1" value="1" style="width:52px;text-align:center;background:var(--bg-page);border:1px solid var(--line-2);border-radius:6px;padding:0.35rem;color:var(--fg-1);font-size:0.9rem;" oninput="clampInfoQty()">
+        <input type="number" id="pi-qty" min="1" value="1" style="width:52px;text-align:center;background:var(--bg-page);border:1px solid var(--line-2);border-radius:6px;padding:0.35rem;color:var(--fg-1);font-size:0.9rem;" oninput="clampInfoQty()" onblur="finishInfoQty()" onkeydown="if (['-', '+', 'e', 'E', '.', ','].includes(event.key)) event.preventDefault()">
         <button type="button" class="pi-qty-btn" id="pi-qty-plus" onclick="changeInfoQty(1)" style="width:30px;height:30px;border-radius:6px;background:var(--bg-subtle);border:1px solid var(--line-2);color:var(--fg-1);font-size:1.1rem;cursor:pointer;transition:opacity .15s;">+</button>
         <span id="pi-qty-hint" style="font-size:0.74rem;color:var(--fg-3);font-family:'Inter',sans-serif;margin-left:0.15rem;"></span>
         <div id="pi-qty-msg" role="status" style="position:absolute;right:0;bottom:calc(100% + 10px);max-width:230px;padding:0.5rem 0.7rem;border-radius:8px;font-size:0.78rem;line-height:1.4;font-family:'Inter',sans-serif;background:#1c1814;color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.22);opacity:0;transform:translateY(4px);transition:opacity .18s,transform .18s;pointer-events:none;z-index:5;">
@@ -9605,13 +9605,23 @@ function changeInfoQty(delta) {
   if (over) { paintInfoQtyState(); showInfoQtyLimit(); } else hideInfoQtyLimit();
 }
 
+// Typing a quantity: the box can be cleared and a number typed freely. It never jumps to the stock while typing; only a number
+// above the limit is pulled back to the limit (with the message). 0 cannot be typed. An empty box becomes 1 when they leave it.
 function clampInfoQty() {
   const input = document.getElementById('pi-qty');
   const max   = infoQtyMax();
-  let val     = parseInt(input.value) || 1;
-  const over  = val > max;
-  input.value = Math.max(1, Math.min(max, val));
+  const raw   = String(input.value);
+  if (raw === '') { hideInfoQtyLimit(); return; }
+  const val = parseInt(raw, 10);
+  if (!(val >= 1)) { input.value = ''; hideInfoQtyLimit(); return; }
+  const over = val > max;
+  input.value = Math.min(max, val);
   if (over) { paintInfoQtyState(); showInfoQtyLimit(); } else hideInfoQtyLimit();
+}
+function finishInfoQty() {
+  const input = document.getElementById('pi-qty');
+  if (!(parseInt(input.value, 10) >= 1)) input.value = 1;
+  hideInfoQtyLimit(); paintInfoQtyState();
 }
 
 async function addToCartFromInfo() {
