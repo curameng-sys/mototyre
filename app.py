@@ -3509,7 +3509,8 @@ def _book_multiple_impl():
     })
 
 
-MAX_ONLINE_QTY = 10      # one courier delivery: up to 10 of each item online
+MAX_ONLINE_QTY = 9999    # no cap except the stock itself (the shop arranges a large order with the customer: see BULK_NOTICE_QTY)
+BULK_NOTICE_QTY = 10     # above this many of one item an order is 'large': the customer is told the shop will arrange it with them
 
 
 def _check_online_qty(product, qty):
