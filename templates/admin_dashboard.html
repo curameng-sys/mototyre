@@ -1198,6 +1198,10 @@
               <div><span>Returns to Review</span><div class="pending-sub">Claims waiting for the shop</div></div>
               <span class="pending-num" id="pending-num-returns" style="color:#b91c1c;">{{ dash.returns_waiting }}</span>
             </div>
+            <div class="pending-box{% if dash.cancel_requests > 0 %} amber-highlight{% endif %}" id="pending-box-cancelreq" onclick="goToCancelRequests()">
+              <div><span>Cancel Requests</span><div class="pending-sub">Customers asking to cancel an order</div></div>
+              <span class="pending-num" id="pending-num-cancelreq" style="color:#b91c1c;">{{ dash.cancel_requests }}</span>
+            </div>
             <div class="pending-box" id="pending-box-orders" onclick="goToSection('orders')">
               <div><span>New Orders</span><div class="pending-sub">Confirmed, not yet started</div></div>
               <span class="pending-num" id="pending-num-orders" style="color:var(--blue);">{{ order_status_counts.get('confirmed', 0) }}</span>
@@ -1969,7 +1973,7 @@
               {% set sh_grand = (o.total_amount or 0) + (o.shipping_fee or 0) %}
               {% set sh_sent = sh and o.shipping_options_sent_at %}
               {% set sh_paid = (o.fee_paid_at if o.ship_two_step else o.paid_at) %}
-              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}" data-delivery="{{ 'ship' if o.delivery_method == 'ship' else 'pickup' }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if (o.fee_paid_at if o.ship_two_step else o.paid_at) else 0 }}" data-twostep="{{ 1 if o.ship_two_step else 0 }}" data-cc="{{ 1 if o.customer_courier else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ (o.fee_paid_at if o.ship_two_step else o.paid_at)|when if (o.fee_paid_at if o.ship_two_step else o.paid_at) else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-lines="{{ o.items|ship_lines|tojson|forceescape }}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
+              <tr data-type="{{ 'instore' if o.is_instore else 'online' }}" data-delivery="{{ 'ship' if o.delivery_method == 'ship' else 'pickup' }}" data-cancelreq="{{ 1 if (o.cancel_requested_at and o.status not in ['cancelled','refunded','completed']) else 0 }}"{% if sh %} data-ship="1" data-oid="{{ o.id }}" data-status="{{ o.status }}" data-paid="{{ 1 if (o.fee_paid_at if o.ship_two_step else o.paid_at) else 0 }}" data-twostep="{{ 1 if o.ship_two_step else 0 }}" data-cc="{{ 1 if o.customer_courier else 0 }}" data-received="{{ 1 if o.received_at else 0 }}" data-vehicle="{{ o.shipping_vehicle or '' }}" data-reason="{{ o.shipping_reason or '' }}" data-prices="{{ sp|tojson|forceescape }}" data-items="{{ '%.2f'|format(o.total_amount or 0) }}" data-grand="{{ '%.2f'|format(sh_grand) }}" data-sent="{{ 1 if sh_sent else 0 }}" data-option="{{ (o.shipping_option or '')|title }}" data-fee="{{ '%.2f'|format(o.shipping_fee or 0) }}" data-paidat="{{ (o.fee_paid_at if o.ship_two_step else o.paid_at)|when if (o.fee_paid_at if o.ship_two_step else o.paid_at) else '' }}" data-link="{{ o.lalamove_link or '' }}" data-ref="{{ o_display_ref }}" data-customer="{{ o_display_name }}" data-item="{% for item in o.items %}{{ item.product.name }}{% if not loop.last %}, {% endif %}{% endfor %}" data-lines="{{ o.items|ship_lines|tojson|forceescape }}" data-qty="{% for item in o.items %}{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}" data-shipname="{{ (o.ship_address or '').split('\n')[0] }}" data-shipmobile="{{ ((o.ship_address or '').split('\n'))[1] if (o.ship_address or '').split('\n')|length > 1 else '' }}" data-shipaddr="{{ ((o.ship_address or '').split('\n'))[2:]|join(', ') }}"{% endif %}>
                 <td style="white-space:nowrap;">
                   <a href="#" onclick="viewOrder({{ o.id }}, {{ (o_display_name)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.email)|tojson|forceescape }}, {{ ('' if o.is_instore else o.customer.phone)|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_model or ''))|tojson|forceescape }}, {{ ('' if o.is_instore else (o.customer.motorcycle_plate or ''))|tojson|forceescape }}, {{ o.total_amount }}, {{ (o.status)|tojson|forceescape }}, {{ (o.payment_method)|tojson|forceescape }}, {{ (o.created_at.strftime('%b %d, %Y — %I:%M %p'))|tojson|forceescape }}, {{ o.items|length }}); return false;"
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
@@ -8463,12 +8467,16 @@
       const t = _orderStatusText(row);
       if (t) counts[t] = (counts[t] || 0) + 1;
     });
-    const sig = type + '|' + list.map(k => counts[k] || 0).join(',');
+    let crCount = 0;
+    document.querySelectorAll('#orders-table tbody tr').forEach(row => { if ((!type || row.dataset.delivery === type) && row.dataset.cancelreq === '1') crCount++; });
+    const keep = sel.value;
+    const sig = type + '|' + crCount + '|' + list.map(k => counts[k] || 0).join(',');
     if (sel.dataset.sig === sig) return;
     sel.dataset.sig = sig;
-    const keep = sel.value;
-    sel.innerHTML = '<option value="">All statuses</option>' + list.map(k => `<option value="${k}">${k.replace(/\b\w/g, c => c.toUpperCase())} (${counts[k] || 0})</option>`).join('');
-    if (list.includes(keep)) sel.value = keep;
+    sel.innerHTML = '<option value="">All statuses</option>'
+      + ((crCount || keep === 'cancel requested') ? `<option value="cancel requested">Cancel requested (${crCount})</option>` : '')
+      + list.map(k => `<option value="${k}">${k.replace(/\b\w/g, c => c.toUpperCase())} (${counts[k] || 0})</option>`).join('');
+    if (list.includes(keep) || keep === 'cancel requested') sel.value = keep;
   }
   document.addEventListener('DOMContentLoaded', buildOrderStatusOptions);
   function applyOrderFilters() {
@@ -8482,12 +8490,21 @@
       const statusText = _orderStatusText(row).replace(/\s+/g, '');
       const ok = (!q || row.textContent.toLowerCase().includes(q))
               && (!type || row.dataset.delivery === type)
-              && (!status || statusText === status);
+              && (!status || (status === 'cancelrequested' ? row.dataset.cancelreq === '1' : statusText === status));
       row.style.display = ok ? '' : 'none';
       if (ok) shown++;
     });
     document.getElementById('orders-count').textContent = `Showing ${shown} of ${rows.length}`;
     document.getElementById('orders-clear').style.display = (q || type || status) ? '' : 'none';
+  }
+  // From the Dashboard card: open Manage Orders already showing only the orders the customer asked to cancel.
+  function goToCancelRequests() {
+    goToSection('orders');
+    setTimeout(() => {
+      const sel = document.getElementById('orders-status-filter'); if (!sel) return;
+      document.getElementById('orders-type-filter').value = ''; document.getElementById('orders-search').value = '';
+      buildOrderStatusOptions(); sel.value = 'cancel requested'; applyOrderFilters();
+    }, 60);
   }
   function clearOrderFilters() {
     document.getElementById('orders-search').value = '';
@@ -10363,6 +10380,7 @@ async function refreshDashboardOverview() {
     attn('pending-box-billing', 'pending-num-billing', d.pending_billing_count || 0);
     attn('pending-box-quotation', 'pending-num-quotation', d.awaiting_quotation_count || 0);
     attn('pending-box-returns', 'pending-num-returns', dd.returns_waiting || 0);
+    attn('pending-box-cancelreq', 'pending-num-cancelreq', dd.cancel_requests || 0);
     const ordNum = document.getElementById('pending-num-orders');
     if (ordNum) ordNum.textContent = (d.order_status_counts || {}).confirmed || 0;
 

@@ -1870,6 +1870,8 @@ def _dash_today_facts():
         'bookings_today': len(todays), 'bookings_today_done': sum(1 for b in todays if b.status == 'completed'),
         'in_progress_now': in_progress, 'queue_waiting': queue_waiting,
         'returns_waiting': ReturnRequest.query.filter(ReturnRequest.status.in_(['submitted', 'under_review'])).count(),
+        'cancel_requests': Order.query.filter(Order.cancel_requested_at.isnot(None), Order.is_archived == False,
+                                              Order.status.notin_(['cancelled', 'refunded', 'completed'])).count(),
         'stock_out': sum(1 for p in low if (p.stock or 0) <= 0), 'stock_low': sum(1 for p in low if (p.stock or 0) > 0),
         'restock': [{'id': p.id, 'name': p.name, 'category': p.category, 'stock': int(p.stock or 0), 'price': float(p.price or 0)} for p in low[:6]],
         'schedule': schedule, 'schedule_total': len(todays),
