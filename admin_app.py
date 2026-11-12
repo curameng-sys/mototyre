@@ -421,6 +421,8 @@ class Order(db.Model):
     fee_paid_at             = db.Column(db.DateTime, nullable=True)
     fee_payment_id          = db.Column(db.String(80), nullable=True)
     customer_courier        = db.Column(db.Boolean, default=False)      # two-step ship: the customer books their own courier (no delivery fee)
+    cancel_requested_at     = db.Column(db.DateTime, nullable=True)      # the customer asked to cancel a paid order
+    cancel_request_reason   = db.Column(db.String(300), nullable=True)
     shipping_vehicle        = db.Column(db.String(40), nullable=True)
     shipping_reason         = db.Column(db.String(200), nullable=True)
     shipping_prices         = db.Column(db.Text, nullable=True)
@@ -1122,6 +1124,34 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'jfif', 'jpe', 'webp', 'bmp'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+FEE_PAY_DAYS = 5      # days a customer has to pay the delivery fee (Ship to Address, two payments)
+
+
+def _gcash_items_paid(order):
+    """(checkout id, payment id) of an items payment PayMongo says is paid for this order (any checkout ever started), else (None, None)."""
+    ids = [order.payment_ref] if order.payment_ref else []
+    try:
+        d = json.loads(order.pay_sessions or '{}') or {}
+    except ValueError:
+        d = {}
+    ids += [c for c, inf in d.items() if (inf or {}).get('kind') == 'items' and c not in ids]
+    headers = {"Authorization": f"Basic {base64.b64encode(f'{PAYMONGO_SECRET_KEY}:'.encode()).decode()}"}
+    for cid in ids:
+        try:
+            res = requests.get(f"{PAYMONGO_API_URL}/checkout_sessions/{cid}", headers=headers, timeout=15)
+            if res.status_code != 200:
+                continue
+            attrs = res.json()['data']['attributes']
+            for pay in (attrs.get('payments') or []):
+                if (pay.get('attributes') or {}).get('status') in ('paid', 'succeeded'):
+                    return cid, pay.get('id')
+            if attrs.get('status') in ('paid', 'completed'):
+                return cid, None
+        except Exception as e:
+            print(f'[paymongo] could not check checkout {cid}: {e}')
+    return None, None
+
+
 def cleanup_abandoned_gcash_orders():
     cutoff = ph_now() - timedelta(minutes=30)
     abandoned = Order.query.filter(
@@ -1130,6 +1160,18 @@ def cleanup_abandoned_gcash_orders():
         Order.created_at < cutoff
     ).all()
     for order in abandoned:
+        cid, pid = _gcash_items_paid(order)
+        if cid:                                   # it was paid after all (the customer never came back): confirm it, do not cancel it
+            order.status = 'confirmed'
+            order.payment_ref = cid
+            if pid:
+                order.paymongo_payment_id = pid
+            if order.delivery_method == 'ship' and order.ship_two_step:
+                order.paid_at = ph_now()
+            db.session.commit()
+            _notify_order_customer(order, 'Order Confirmed! ✅',
+                f'Your payment for Order ORD-{order.id:03d} worth ₱{order.total_amount:,.2f} has been confirmed.', status='confirmed')
+            continue
         # Cancelled, not deleted: the items go back to stock, nothing was charged, and the customer is told.
         _restock_order(order)
         order.status = 'cancelled'
@@ -1919,6 +1961,7 @@ def admin_dashboard():
         recent_bookings=_all_bookings_list[:5],
         awaiting_quotation_count=_awaiting_quotation_count,
         all_bookings=_all_bookings_list,
+        no_show_counts=_no_show_counts(),
         booking_days=_booking_days,
         row_mech=_row_mech,
         bk_unseen=_bk_unseen,
@@ -4087,6 +4130,55 @@ def cancel_booking_day_panel(bid):
                      'message': f'Cancelled{" — customer notified." if emailed else (" — customer not notified." if not notify else " — no email on file.")}'})
 
 
+@admin_app.route('/bookings/cancel-day', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def cancel_bookings_for_day():
+    """The shop cannot open (storm, emergency, power cut): every Confirmed booking on that day is cancelled with the same reason and
+    every customer is told (bell + email). Bookings the shop already started are left alone."""
+    data = request.get_json(silent=True) or {}
+    try:
+        day = datetime.strptime(str(data.get('date', '')), '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Choose the date.'}), 400
+    if day < ph_now().date():
+        return jsonify({'success': False, 'error': 'That date has already passed.'}), 400
+    reason = clean_str(data.get('reason', ''), max_len=300)
+    if not reason:
+        return jsonify({'success': False, 'error': 'Say why the shop is closed. Every customer sees this reason.'}), 400
+    rows = Booking.query.filter(Booking.date == day, Booking.status == 'confirmed', Booking.is_archived == False).all()
+    if data.get('preview'):
+        return jsonify({'success': True, 'count': len(rows)})
+    try:
+        _q_before = _queue_day_numbers(day)
+    except Exception:
+        _q_before = None
+    for b in rows:
+        b.status = 'cancelled'
+        b.cancelled_at = ph_now()
+        b.cancelled_by = 'shop'
+        b.cancel_reason = reason
+    db.session.commit()
+    if _q_before is not None:
+        try:
+            _notify_queue_moved(day, _q_before)
+        except Exception:
+            pass
+    told = 0
+    for b in rows:
+        ref = f'BKG-{b.id:03d}'
+        title = f'Cancelled \u2014 {day.strftime("%b %d")} at {b.time.strftime("%I:%M %p")}'
+        body = (f"Your {b.service} appointment ({ref}) on {day.strftime('%b %d, %Y')} at {b.time.strftime('%I:%M %p')} was cancelled because "
+                f"the shop cannot open that day. Reason: {reason}. We are sorry. You can book again anytime.")
+        try:
+            if _notify_customer(b, title, body, priority=True, status='cancelled', cta_label='Book Again'):
+                told += 1
+        except Exception as e:
+            print('[cancel-day] could not notify', b.id, e)
+    return jsonify({'success': True, 'count': len(rows), 'emailed': told,
+                    'message': f'{len(rows)} booking{"" if len(rows) == 1 else "s"} cancelled. Every customer was told.'})
+
+
 def _cancel_note(b):
     """'Cancelled by the customer' / 'Cancelled by the shop: reason' / 'No-show', or '' when the booking is not cancelled."""
     if b.status != 'cancelled':
@@ -4112,6 +4204,15 @@ def _minutes_late(b):
         return 0
     late = (ph_now() - datetime.combine(b.date, b.time)).total_seconds() / 60
     return int(late) if late >= NO_SHOW_GRACE_MIN else 0
+
+
+REPEAT_NO_SHOW_AT = 3          # the shop is warned when a customer has missed this many bookings
+
+
+def _no_show_counts():
+    """{user id: how many bookings that customer missed}, for the Manage Bookings list."""
+    return {uid: n for uid, n in db.session.query(Booking.user_id, db.func.count(Booking.id))
+            .filter(Booking.no_show == True, Booking.user_id.isnot(None)).group_by(Booking.user_id).all()}
 
 
 def _no_show_count(user_id):
@@ -4149,6 +4250,12 @@ def _apply_no_show(booking, to_queue=False, queue_at=None):
             + "You can also book again anytime. If something came up, just let the shop know."
             + (f" This is your no-show number {n}; repeated no-shows can make it harder to get slots." if n >= 2 else ''))
     emailed = _notify_customer(booking, f'No-show — {booking.date.strftime("%b %d")}', body, priority=True, status='cancelled', cta_label='Book Again')
+    if n >= REPEAT_NO_SHOW_AT and not booking.walkin_customer_id:
+        _who = User.query.get(booking.user_id)
+        for admin in User.query.filter_by(role='admin').all():
+            send_notification(admin.id, f'Repeat no-show \u00b7 {n} times',
+                f'{_who.fullname if _who else "A customer"} has now missed {n} bookings ({ref} is the latest). '
+                f'You may want to confirm with them before giving them another slot.', type='booking', status='cancelled')
     return n, emailed
 
 
@@ -6275,7 +6382,8 @@ def ship_send_options(oid):
     order.shipping_reason = reason or None
     order.shipping_prices = json.dumps(prices)
     order.shipping_options_sent_at = ph_now()
-    order.shipping_deadline_at = None if order.ship_two_step else ph_now() + timedelta(hours=24)
+    # one payment: 24 hours. Two payments: the items are already paid, so the customer gets a few days for the delivery fee
+    order.shipping_deadline_at = ph_now() + (timedelta(days=FEE_PAY_DAYS) if order.ship_two_step else timedelta(hours=24))
     order.shipping_reminder_at = None
     db.session.commit()
     ref = f'ORD-{order.id:03d}'
@@ -11040,6 +11148,8 @@ with admin_app.app_context():
         "ALTER TABLE `order` ADD COLUMN fee_paid_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN fee_payment_id VARCHAR(80) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN customer_courier TINYINT(1) DEFAULT 0",
+        "ALTER TABLE `order` ADD COLUMN cancel_requested_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN cancel_request_reason VARCHAR(300) DEFAULT NULL",
         "UPDATE `order` SET status = 'confirmed' WHERE status = 'pending'",           # there is no Pending status for online orders any more
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",

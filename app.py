@@ -464,7 +464,7 @@ def send_booking_confirmation_email(booking):
               Please arrive 10 minutes early so we can start on time.
               <ul style="margin:10px 0 0 18px;padding:0;color:#6b7280;font-size:12px;line-height:1.7;">
                 <li>Your booking is valid only for the date and time above. It is held for {NO_SHOW_GRACE_MIN} minutes after your time; after that it is cancelled as a no-show, and if you still come you join the walk-in line.</li>
-                <li>You can cancel while it is Confirmed. Once the shop starts the work, it can no longer be cancelled online.</li>
+                <li>You can cancel while it is Confirmed, until {CANCEL_CUTOFF_HOURS} hours before your appointment. Once the shop starts the work, it can no longer be cancelled online.</li>
                 <li>You can change the date or time up to {MAX_CUSTOMER_RESCHEDULES} times, and not within {RESCHEDULE_CUTOFF_HOURS} hours of your appointment.</li>
                 <li>You pay at the shop after the service. If the mechanic finds more work, the shop sends you a quotation first and you decide.</li>
               </ul>
@@ -878,6 +878,8 @@ class Order(db.Model):
     fee_paid_at             = db.Column(db.DateTime, nullable=True)
     fee_payment_id          = db.Column(db.String(80), nullable=True)
     customer_courier        = db.Column(db.Boolean, default=False)      # two-step ship: the customer books their own courier (no delivery fee)
+    cancel_requested_at     = db.Column(db.DateTime, nullable=True)      # the customer asked to cancel a paid order
+    cancel_request_reason   = db.Column(db.String(300), nullable=True)
     shipping_vehicle        = db.Column(db.String(40), nullable=True)
     shipping_reason         = db.Column(db.String(200), nullable=True)
     shipping_prices         = db.Column(db.Text, nullable=True)
@@ -1400,6 +1402,76 @@ GCASH_HOLD_MINUTES = 30          # an unpaid GCash order keeps its items on hold
 
 
 UNPAID_CANCEL_REASON = 'Not paid within 30 minutes'
+UNPAID_REASONS = (UNPAID_CANCEL_REASON, 'Cancelled by the customer before paying')
+
+
+def _record_items_session(order, cid):
+    """Every checkout started for an order's ITEMS is remembered, so a payment made on an older PayMongo page is still found."""
+    if order.delivery_method == 'ship' and not order.ship_two_step:
+        return                                           # the one-payment ship flow keeps its own record (_ship_sessions)
+    try:
+        d = _json_ship.loads(order.pay_sessions or '{}') or {}
+    except ValueError:
+        d = {}
+    d[cid] = {'kind': 'items'}
+    order.pay_sessions = _json_ship.dumps(d)
+
+
+def _paid_items_checkout(order):
+    """(checkout id, payment id) of an items payment that PayMongo itself says is paid for this order, else (None, None).
+    Looks at every checkout ever started for the items, not only the last one."""
+    ids = [order.payment_ref] if order.payment_ref else []
+    try:
+        d = _json_ship.loads(order.pay_sessions or '{}') or {}
+    except ValueError:
+        d = {}
+    ids += [c for c, inf in d.items() if (inf or {}).get('kind') == 'items' and c not in ids]
+    for cid in ids:
+        ok, pid = _paymongo_session_paid(cid)
+        if ok:
+            return cid, pid
+    return None, None
+
+
+def _late_payment_on_cancelled_order(order, cid, pid):
+    """The customer paid on a PayMongo page they left open, after the order was cancelled for no payment. Their money is never
+    left hanging: if the items are still in stock the order comes back as Confirmed, if not the payment is refunded."""
+    ref = f'ORD-{order.id:03d}'
+    if pid:
+        order.paymongo_payment_id = pid
+    lines = [(it, Product.query.get(it.product_id)) for it in order.items]
+    if all(p and (p.stock or 0) >= it.quantity for it, p in lines):
+        for it, p in lines:
+            p.stock -= it.quantity
+        order.stock_restocked = False
+        order.cancelled_by = None
+        order.cancel_reason = None
+        _confirm_gcash_order(order, cid)
+        for admin in User.query.filter_by(role='admin').all():
+            send_notification(admin.id, f'{ref} paid late \u00b7 order restored',
+                f'{ref} was cancelled for no payment, but the customer paid afterwards. The items were still in stock, so the order is Confirmed again.',
+                type='order', status='confirmed', order_id=order.id)
+        return 'restored'
+    ok, why = _paymongo_refund_pickup(order, 'Paid after the order was cancelled and the items were no longer available')
+    if ok:
+        order.refunded_at = ph_now()
+        order.refund_amount = float(order.total_amount or 0)
+        order.refund_reason = 'Paid after the order was cancelled; the items were no longer available'
+        db.session.commit()
+        _notify_order_customer(order, 'Payment refunded',
+            f'Your GCash payment for {ref} arrived after the order was cancelled for no payment, and the items are no longer available. '
+            f'We refunded \u20b1{order.total_amount:,.2f} to the same GCash account. It can take a few banking days to show.', status='cancelled')
+        for admin in User.query.filter_by(role='admin').all():
+            send_notification(admin.id, f'{ref} paid late \u00b7 refunded',
+                f'{ref} was paid after it was cancelled and the items are gone, so \u20b1{order.total_amount:,.2f} was refunded automatically.',
+                type='order', status='cancelled', order_id=order.id)
+        return 'refunded'
+    db.session.commit()
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(admin.id, f'{ref} paid late \u00b7 refund needed',
+            f'{ref} was paid after it was cancelled and the items are gone, but the automatic refund failed: {why} Please refund \u20b1{order.total_amount:,.2f} by hand in PayMongo.',
+            type='order', status='cancelled', order_id=order.id)
+    return 'refund_failed'
 
 
 def _cancel_unpaid_order(order, by, reason):
@@ -1418,6 +1490,12 @@ def cleanup_abandoned_gcash_orders():
         Order.created_at < cutoff
     ).all()
     for order in abandoned:
+        cid, pid = _paid_items_checkout(order)
+        if cid:                                          # it was paid after all (the customer never came back): confirm it, do not cancel it
+            if pid:
+                order.paymongo_payment_id = pid
+            _confirm_gcash_order(order, cid)
+            continue
         _cancel_unpaid_order(order, 'auto', UNPAID_CANCEL_REASON)
         _notify_order_customer(order, 'Order cancelled: not paid',
             f'Your order ORD-{order.id:03d} was cancelled because the GCash payment was not completed within {GCASH_HOLD_MINUTES} minutes. '
@@ -1993,7 +2071,7 @@ def customer_dashboard():
         db.session.rollback()
         my_motorcycles = []
     return render_template('customer_dashboard.html', bookings=bookings, orders=orders, saved_motorcycles=saved_motorcycles,
-                           policy={'grace': NO_SHOW_GRACE_MIN, 'resched_max': MAX_CUSTOMER_RESCHEDULES, 'resched_hours': RESCHEDULE_CUTOFF_HOURS,
+                           policy={'grace': NO_SHOW_GRACE_MIN, 'resched_max': MAX_CUSTOMER_RESCHEDULES, 'resched_hours': RESCHEDULE_CUTOFF_HOURS, 'cancel_hours': CANCEL_CUTOFF_HOURS,
                                    'pickup_days': PICKUP_HOLD_DAYS, 'gcash_minutes': 30, 'service_warranty': RETURN_WINDOW_DAYS['service'],
                                    'part_return': RETURN_WINDOW_DAYS['product']},
                            queue_info=queue_info, my_motorcycles=my_motorcycles, today_iso=ph_now().date().isoformat(),
@@ -2599,6 +2677,10 @@ def customer_cancel_booking(bid):
             'The shop has already started this booking, so it can no longer be cancelled online. Please contact the shop.'
             if started else ('This booking is already cancelled.' if status == 'cancelled' else 'This booking can no longer be cancelled.'))}), 400
 
+    if b.status == 'confirmed':
+        _too_late = _cancel_block_reason(b)
+        if _too_late:                                   # the slot is already (almost) here: the shop decides
+            return jsonify({'success': False, 'cutoff': True, 'error': _too_late}), 400
     # The page may be stale (another device, or the shop just pressed Start), so don't trust
     # what it showed — the UPDATE below only matches a booking that is still Confirmed right now.
     try:
@@ -2635,6 +2717,15 @@ def customer_cancel_booking(bid):
 NO_SHOW_GRACE_MIN = 30              # the grace period: a Confirmed booking not started this many minutes after its time is a no-show and the customer joins the walk-in line (same number as the admin app)
 MAX_CUSTOMER_RESCHEDULES = 2        # how many times a customer can move one booking on their own
 RESCHEDULE_CUTOFF_HOURS = 2         # and not any closer to the start than this (after that, call the shop)
+CANCEL_CUTOFF_HOURS = 2             # a customer can cancel online until this long before the appointment (after that, call the shop)
+
+
+def _cancel_block_reason(b):
+    """Why this customer can no longer cancel this booking online because it is too close to the appointment, or None."""
+    if datetime.combine(b.date, b.time) - ph_now() < timedelta(hours=CANCEL_CUTOFF_HOURS):
+        return (f'It is less than {CANCEL_CUTOFF_HOURS} hours before your appointment, so it can no longer be cancelled online. '
+                f'Please contact the shop.')
+    return None
 
 
 def _reschedule_block_reason(b):
@@ -3434,6 +3525,7 @@ def _cart_checkout_impl(data):
         result = create_gcash_payment(amount=total, description=desc[:100], order_id=order.id, origin=request.host_url)
         if result['success']:
             order.payment_ref = result['checkout_id']          # remembered, so the return from PayMongo can be checked against it
+            _record_items_session(order, result['checkout_id'])
             db.session.commit()
             return jsonify({'success': True, 'gcash': True, 'checkout_url': result['checkout_url'], 'order_id': order.id})
         return jsonify({'success': False, 'error': 'Could not create GCash payment'}), 500
@@ -4854,10 +4946,22 @@ def payment_success():
                     flash(_NOT_CONFIRMED_YET, 'warning')
             elif order and order.status in ('awaiting_payment', 'pending'):
                 paid_cid = _verified_checkout(order.user_id, order.payment_ref, checkout_id)
+                if not paid_cid and order.user_id == getattr(current_user, 'id', None):
+                    paid_cid = _paid_items_checkout(order)[0]          # paid on an older checkout page
                 if paid_cid:
                     _confirm_gcash_order(order, paid_cid)
                     flash('GCash payment successful — order confirmed!', 'success')
                     send_order_receipt_email(order, override_email=paying_email(paid_cid))
+                else:
+                    flash(_NOT_CONFIRMED_YET, 'warning')
+            elif (order and order.status == 'cancelled' and order.cancel_reason in UNPAID_REASONS and not order.refunded_at
+                  and order.user_id == getattr(current_user, 'id', None)):
+                paid_cid, paid_pid = _paid_items_checkout(order)       # paid after the order was cancelled for no payment
+                if paid_cid:
+                    outcome = _late_payment_on_cancelled_order(order, paid_cid, paid_pid)
+                    flash({'restored': 'Your payment arrived late, and your order is confirmed again.',
+                           'refunded': 'Your payment arrived after the order was cancelled and the items are gone, so it was refunded to your GCash.',
+                           'refund_failed': 'Your payment arrived after the order was cancelled. The shop was told and will refund you.'}[outcome], 'warning')
                 else:
                     flash(_NOT_CONFIRMED_YET, 'warning')
         except Exception as e:
@@ -4892,9 +4996,45 @@ def _unpaid_gcash_order_or_error(oid):
     if not order or order.user_id != current_user.id:
         return None, (jsonify({'success': False, 'reload': True,
                               'error': 'This order was not paid in time, so it was removed and nothing was charged. Please place the order again.'}), 404)
+    if order.status == 'cancelled' and order.cancel_reason in UNPAID_REASONS:
+        return None, (jsonify({'success': False, 'reload': True,
+                              'error': 'This order was cancelled because it was not paid in time. Nothing was charged. Please place the order again.'}), 400)
     if order.status != 'awaiting_payment' or (order.payment_method or '').lower() != 'gcash':
         return None, (jsonify({'success': False, 'error': 'This order is not waiting for payment.', 'reload': True}), 400)
     return order, None
+
+
+CANCEL_REQUEST_STATUSES = ('confirmed', 'processing', 'in_progress', 'done_packaging', 'shipped')   # not unpaid, not on the way, not finished
+
+
+@app.route('/customer/order/<int:oid>/request-cancel', methods=['POST'])
+@login_required
+def request_order_cancel(oid):
+    """A customer who has paid cannot cancel by themselves (the shop refunds). This sends the shop the request with the reason."""
+    order = db.session.get(Order, oid)
+    if not order or order.user_id != current_user.id:
+        return jsonify({'success': False, 'error': 'Order not found.'}), 404
+    if order.status not in CANCEL_REQUEST_STATUSES:
+        return jsonify({'success': False, 'reload': True,
+                        'error': 'This order can no longer be cancelled here. Please contact the shop.'}), 400
+    if order.cancel_requested_at:
+        return jsonify({'success': False, 'error': 'You already asked to cancel this order. The shop will get back to you.'}), 400
+    reason = clean_str((request.get_json(silent=True) or {}).get('reason', ''), max_len=300)
+    if not reason:
+        return jsonify({'success': False, 'error': 'Please tell the shop why you want to cancel.'}), 400
+    order.cancel_requested_at = ph_now()
+    order.cancel_request_reason = reason
+    db.session.commit()
+    ref = f'ORD-{order.id:03d}'
+    for admin in User.query.filter_by(role='admin').all():
+        send_notification(admin.id, f'{ref}: cancellation requested',
+            f'{current_user.fullname} wants to cancel {ref}. Reason: {reason}. Cancel it from Manage Orders to refund them, or contact the customer.',
+            type='order', status=order.status, order_id=order.id)
+    _notify_order_customer(order, 'Cancellation requested',
+        f'We sent your request to cancel {ref} to the shop. They will contact you.'
+        + (' If it is cancelled, your payment is refunded to your GCash.' if (order.payment_method or '').lower() == 'gcash' else ''),
+        status=order.status)
+    return jsonify({'success': True})
 
 
 @app.route('/customer/order/<int:oid>/continue-payment', methods=['POST'])
@@ -4904,8 +5044,10 @@ def continue_order_payment(oid):
     order, err = _unpaid_gcash_order_or_error(oid)
     if err: return err
     if order.payment_ref:
-        paid_cid = _verified_checkout(order.user_id, order.payment_ref, '', tries=1)
+        paid_cid, paid_pid = _paid_items_checkout(order)
         if paid_cid:                                   # it was paid after all
+            if paid_pid:
+                order.paymongo_payment_id = paid_pid
             _confirm_gcash_order(order, paid_cid)
             send_order_receipt_email(order)
             return jsonify({'success': True, 'paid': True})
@@ -4924,6 +5066,7 @@ def continue_order_payment(oid):
     if not result['success']:
         return jsonify({'success': False, 'error': 'Could not open the GCash payment. Please try again.'}), 502
     order.payment_ref = result['checkout_id']
+    _record_items_session(order, result['checkout_id'])
     db.session.commit()
     return jsonify({'success': True, 'checkout_url': result['checkout_url']})
 
@@ -4935,13 +5078,15 @@ def cancel_unpaid_order(oid):
     order, err = _unpaid_gcash_order_or_error(oid)
     if err: return err
     if order.payment_ref:
-        paid_cid = _verified_checkout(order.user_id, order.payment_ref, '', tries=1)
+        paid_cid, paid_pid = _paid_items_checkout(order)
         if paid_cid:                                   # already paid: it is not cancelled here
+            if paid_pid:
+                order.paymongo_payment_id = paid_pid
             _confirm_gcash_order(order, paid_cid)
             send_order_receipt_email(order)
             return jsonify({'success': False, 'reload': True,
                             'error': 'This order was already paid, so it was not cancelled. Contact the shop if you want to cancel it.'}), 409
-    _cancel_unpaid_order(order, 'customer', 'Cancelled by the customer before paying')
+    _cancel_unpaid_order(order, 'customer', UNPAID_REASONS[1])
     db.session.commit()
     return jsonify({'success': True})
 
@@ -5018,7 +5163,8 @@ def paymongo_webhook():
     for cid in list(ids)[:5]:
         try:
             booking = Booking.query.filter(Booking.invoice_gcash_ref == cid).first()
-            order = Order.query.filter(Order.payment_ref == cid).first()
+            order = (Order.query.filter(Order.payment_ref == cid).first()
+                     or Order.query.filter(Order.pay_sessions.like('%"' + cid + '"%')).first())
             if not booking and not order:
                 continue
             paid, _pid = _paymongo_session_paid(cid)
@@ -5034,6 +5180,9 @@ def paymongo_webhook():
                 send_order_receipt_email(order)
             elif order and order.delivery_method == 'ship' and order.ship_two_step and order.status == 'done_packaging' and not order.fee_paid_at:
                 _mark_fee_paid(order, cid)
+            elif (order and order.status == 'cancelled' and order.cancel_reason in UNPAID_REASONS and not order.refunded_at
+                  and not order.paid_at):
+                _late_payment_on_cancelled_order(order, cid, _pid)
         except Exception as e:
             db.session.rollback()
             print(f'[webhook/paymongo] {cid}: {e}')
@@ -5435,6 +5584,105 @@ def _pickup_last_day(order):
     return f"{d.strftime('%b')} {d.day}, {d.strftime('%I:%M %p').lstrip('0')}"
 
 
+INVOICE_REMIND_HOURS = 24   # a finished service whose invoice is still unpaid this long after it was sent gets one reminder
+
+
+def process_invoice_reminders():
+    """The service is done and the invoice was sent, but the customer has not paid. One friendly reminder (bell + email), once."""
+    with app.app_context():
+        now = ph_now()
+        sent_at = {}
+        for bid, created in db.session.query(Notification.booking_id, db.func.min(Notification.created_at)).filter(
+                Notification.type == 'invoice', Notification.booking_id.isnot(None)).group_by(Notification.booking_id).all():
+            sent_at[bid] = created
+        if not sent_at:
+            return
+        due = [b for b in Booking.query.filter(Booking.id.in_(list(sent_at)), Booking.status == 'completed',
+                                               Booking.invoice_paid == False, Booking.is_archived == False).all()
+               if b.walkin_customer_id is None and now - sent_at[b.id] >= timedelta(hours=INVOICE_REMIND_HOURS)]
+        for b in due:
+            try:
+                title = 'Payment reminder'
+                if Notification.query.filter_by(booking_id=b.id, type='booking', title=title).first():
+                    continue
+                ref = f'BKG-{b.id:03d}'
+                amount = f"\u20b1{(b.total_amount or 0):,.2f}" if b.total_amount else 'the amount on your invoice'
+                body = (f'Your {b.service} service ({ref}) is done, and the invoice of {amount} is still unpaid. '
+                        f'You can pay in cash at the shop, or with GCash from My Bookings. If you already paid, please ignore this.')
+                send_notification(b.user_id, title, body, type='booking', status='completed', booking_id=b.id)
+                u = User.query.get(b.user_id)
+                if u and u.email:
+                    html = (f'<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;"><p>Hi {u.fullname},</p><p>{body}</p>'
+                            f'<p>\u2014 MotoTyres North Caloocan</p></div>')
+                    _send_gmail(u.email, f'{title} \u2014 MotoTyres North Caloocan', html)
+            except Exception as e:
+                db.session.rollback()
+                print('[invoice-remind] could not process', b.id, e)
+
+
+FEE_REMIND_HOURS = 24      # a reminder this long before the delivery-fee deadline
+PAID_PICKUP_REMIND_DAYS = 7  # a paid pickup that has waited this long gets one reminder (it is never cancelled)
+
+
+def process_fee_deadlines():
+    """Ship to Address paid in two steps: the items are paid, the delivery fee was sent, and the customer has a few days to pay it.
+    One reminder a day before. At the deadline with no fee paid the order is cancelled, the items go back to stock and the
+    payment for the items is refunded. A refund that fails tells the shop and is tried again later."""
+    with app.app_context():
+        now = ph_now()
+        waiting = Order.query.filter(Order.delivery_method == 'ship', Order.ship_two_step == True, Order.status == 'done_packaging',
+                                     Order.fee_paid_at.is_(None), Order.customer_courier == False,
+                                     Order.shipping_deadline_at.isnot(None)).all()
+        for o in waiting:
+            try:
+                ref = f'ORD-{o.id:03d}'
+                if _mark_fee_paid(o):
+                    continue                                          # the fee was paid (maybe the customer never came back to the site)
+                deadline = _fmt_when(o.shipping_deadline_at)
+                if now < o.shipping_deadline_at:
+                    if not o.shipping_reminder_at and now >= o.shipping_deadline_at - timedelta(hours=FEE_REMIND_HOURS):
+                        o.shipping_reminder_at = now
+                        db.session.commit()
+                        _t, _m, _s = ship_notice('fee_reminder', ref, deadline=deadline)
+                        _notify_order_customer(o, _t, _m, status=_s)
+                    continue
+                if o.pay_started_at and now - o.pay_started_at < timedelta(minutes=PAY_GRACE_MINUTES):
+                    continue                                          # still paying: let that payment finish first
+                if o.pickup_refund_failed_at and now - o.pickup_refund_failed_at < timedelta(hours=6):
+                    continue
+                reason = 'Delivery fee not paid in time'
+                ok, why = _paymongo_refund_pickup(o, reason)
+                if not ok:
+                    first = not o.pickup_refund_failed_at
+                    o.pickup_refund_failed_at = now
+                    db.session.commit()
+                    if first:
+                        for admin in User.query.filter_by(role='admin').all():
+                            send_notification(admin.id, f'{ref}: automatic refund failed',
+                                f'The delivery fee of {ref} was not paid by {deadline}, but the refund of \u20b1{(o.total_amount or 0):,.2f} did not go through. {why} '
+                                f'The order is still Packed. Refund it by hand, then cancel it. The system will also try again.',
+                                type='order', status='done_packaging', order_id=o.id)
+                    continue
+                items = ', '.join(f"{i.product.name if i.product else 'Item'} x{i.quantity}" for i in o.items)
+                _restock_order(o)
+                o.status = 'refunded'
+                o.refunded_at = now
+                o.refund_amount = float(o.total_amount or 0)
+                o.refund_reason = reason
+                o.cancelled_by = 'auto'
+                o.cancel_reason = reason
+                db.session.commit()
+                _t, _m, _s = ship_notice('fee_expired', ref, deadline=deadline, amount=o.refund_amount)
+                _notify_order_customer(o, _t, _m, status=_s)
+                for admin in User.query.filter_by(role='admin').all():
+                    send_notification(admin.id, f'{ref} cancelled automatically',
+                        f'{ref}: the delivery fee was not paid by {deadline}. \u20b1{o.refund_amount:,.2f} refunded to GCash via PayMongo. {items} went back to stock.',
+                        type='order', status='refunded', order_id=o.id)
+            except Exception as e:
+                db.session.rollback()
+                print('[fee-deadline] could not process', o.id, e)
+
+
 def process_pickup_holds():
     """Runs on its own (no one needs the website open). A Shop Pickup order that has been Ready to Pick Up for
     PICKUP_HOLD_DAYS is cancelled: the items go back to stock, a cash order (nothing was paid yet) is simply cancelled,
@@ -5444,8 +5692,20 @@ def process_pickup_holds():
     with app.app_context():
         now = ph_now()
         # A GCash order is already paid, so the shop keeps it for as long as it takes: only unpaid (cash) orders are auto-cancelled.
-        ready = [o for o in Order.query.filter(Order.delivery_method != 'ship', Order.status == 'shipped').all()
-                 if (o.payment_method or '').lower() != 'gcash']
+        _shipped = Order.query.filter(Order.delivery_method != 'ship', Order.status == 'shipped').all()
+        for o in _shipped:                              # a PAID pickup is never cancelled, but it gets one friendly reminder
+            try:
+                if ((o.payment_method or '').lower() == 'gcash' and o.ready_at and not o.pickup_reminder_at
+                        and now >= o.ready_at + timedelta(days=PAID_PICKUP_REMIND_DAYS)):
+                    o.pickup_reminder_at = now
+                    db.session.commit()
+                    _notify_order_customer(o, 'Your order is waiting for you',
+                        f'Your paid order ORD-{o.id:03d} is still ready at {SHOP_NAME}. Please pick it up when you can. We are keeping it for you.',
+                        status='shipped')
+            except Exception as e:
+                db.session.rollback()
+                print('[pickup-remind] could not process', o.id, e)
+        ready = [o for o in _shipped if (o.payment_method or '').lower() != 'gcash']
         for o in ready:
             try:
                 ref = f'ORD-{o.id:03d}'
@@ -5528,6 +5788,23 @@ scheduler.add_job(func=process_ship_deadlines, trigger='interval', minutes=1,
                   id='ship_deadline_job', replace_existing=True)
 scheduler.add_job(func=process_pickup_holds, trigger='interval', minutes=10,
                   id='pickup_hold_job', replace_existing=True)
+scheduler.add_job(func=process_fee_deadlines, trigger='interval', minutes=10,
+                  id='fee_deadline_job', replace_existing=True)
+scheduler.add_job(func=process_invoice_reminders, trigger='interval', minutes=60,
+                  id='invoice_reminder_job', replace_existing=True)
+
+
+def _job_cleanup_unpaid_orders():
+    with app.app_context():
+        try:
+            cleanup_abandoned_gcash_orders()
+        except Exception as e:
+            db.session.rollback()
+            print('[cleanup-unpaid] failed:', e)
+
+
+scheduler.add_job(func=_job_cleanup_unpaid_orders, trigger='interval', minutes=5,
+                  id='unpaid_order_cleanup_job', replace_existing=True)
 scheduler.start()
 print('[SCHEDULER] Booking reminder service started — checking every 1 minute (15-min) / 30 minutes (day-before)')
 atexit.register(lambda: scheduler.shutdown())
@@ -5571,6 +5848,8 @@ with app.app_context():
         "ALTER TABLE `order` ADD COLUMN fee_paid_at DATETIME DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN fee_payment_id VARCHAR(80) DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN customer_courier TINYINT(1) DEFAULT 0",
+        "ALTER TABLE `order` ADD COLUMN cancel_requested_at DATETIME DEFAULT NULL",
+        "ALTER TABLE `order` ADD COLUMN cancel_request_reason VARCHAR(300) DEFAULT NULL",
         "UPDATE `order` SET status = 'confirmed' WHERE status = 'pending'",           # there is no Pending status for online orders any more
         "ALTER TABLE `order` ADD COLUMN shipping_vehicle VARCHAR(40)",
         "ALTER TABLE `order` ADD COLUMN shipping_reason VARCHAR(200)",

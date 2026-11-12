@@ -201,9 +201,19 @@ def ship_notice(kind, ref, **c):
                 f"{ref} is packed. We're checking courier prices now and will send your shipping options shortly.", 'done_packaging')
     if kind in ('options', 'options_updated') and c.get('two_step'):
         title = 'Pay Your Delivery Fee 🚚' if kind == 'options' else 'Delivery Fee Updated 🚚'
+        by = (f' Please pay by {c.get("deadline")}. If it is not paid by then, the order is cancelled and your payment for the items is refunded.'
+              if c.get('deadline') else '')
         return (title,
                 f'{ref} is packed and goes by Courier {c.get("vehicle", "")}. {_prices_line(c.get("prices"))}. '
-                f'Your items are already paid. Pay only the delivery fee so we can book the courier.', 'done_packaging')
+                f'Your items are already paid. Pay only the delivery fee so we can book the courier.{by}', 'done_packaging')
+    if kind == 'fee_reminder':
+        return ('Delivery Fee Reminder ⏰',
+                f'Please pay the delivery fee for {ref} by {c.get("deadline", "")}. If it is not paid by then, the order is cancelled '
+                f'and your payment for the items is refunded.', 'done_packaging')
+    if kind == 'fee_expired':
+        return ('Order Cancelled and Refunded 💸',
+                f'The delivery fee for {ref} was not paid by {c.get("deadline", "")}, so the order was cancelled. '
+                f'We refunded {_peso(c.get("amount", 0))} for your items to the same GCash account. It can take a few banking days to show.', 'refunded')
     if kind in ('options', 'options_updated'):
         title = 'Choose Your Shipping 🚚' if kind == 'options' else 'Shipping Options Updated 🚚'
         return (title,
@@ -300,7 +310,8 @@ def ship_email_extra(kind, **c):
         for n, v, d in rows)
     return (why +
             f'<table style="width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 10px;">{tr}</table>'
-            + (f'<p style="margin:0 0 6px;">Your items ({_peso(c.get("items_total", 0))}) are already paid. You only pay the delivery fee.</p>'
+            + (f'<p style="margin:0 0 6px;">Your items ({_peso(c.get("items_total", 0))}) are already paid. You only pay the delivery fee.'
+               + (f' Please pay by <strong>{c.get("deadline")}</strong>, or the order is cancelled and your items are refunded.' if c.get('deadline') else '') + '</p>'
                if c.get('two_step') else
                f'<p style="margin:0 0 6px;">Items total: <strong>{_peso(c.get("items_total", 0))}</strong> (the shipping fee you choose is added when you pay).</p>'
                f'<p style="margin:0 0 6px;">Pay by: <strong>{c.get("deadline", "")}</strong> (24 hours). '

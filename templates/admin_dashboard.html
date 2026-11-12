@@ -1274,6 +1274,7 @@
           <div class="page-sub">View, confirm, complete, or cancel service appointments.</div>
         </div>
         <div class="page-actions">
+          <button type="button" class="btn-export-pdf" style="background:#fff;color:#b91c1c;border-color:#fecaca;" onclick="openCancelDay()">Shop closed? Cancel a day</button>
           <button type="button" class="btn-export-pdf" onclick="openExportPdf()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
             Export PDF
@@ -1378,6 +1379,8 @@
                         <span style="font-size:0.63rem;font-weight:600;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;padding:0.1rem 0.4rem;border-radius:4px;margin-left:0.3rem;vertical-align:middle;">Walk-In</span>
                       {% else %}
                         {{ b.customer.fullname }}
+                        {% set _ns = no_show_counts.get(b.user_id, 0) %}
+                        {% if _ns %}<span title="This customer missed {{ _ns }} booking{{ '' if _ns == 1 else 's' }} before" style="font-size:0.6rem;font-weight:700;margin-left:0.3rem;vertical-align:middle;padding:0.08rem 0.4rem;border-radius:4px;{% if _ns >= 3 %}background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;{% else %}background:#fffbeb;color:#92400e;border:1px solid #fde68a;{% endif %}">{{ _ns }} no-show{{ '' if _ns == 1 else 's' }}</span>{% endif %}
                       {% endif %}
                     </div>
                     {% if b.motorcycle_model or b.motorcycle_plate %}
@@ -1967,6 +1970,7 @@
                     style="color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer;">
                     {{ o_display_ref }}
                   </a>
+                  {% if o.cancel_requested_at and o.status not in ['cancelled','refunded','completed'] %}<div title="{{ o.cancel_request_reason or '' }}" style="margin-top:0.2rem;"><span style="display:inline-block;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-size:0.58rem;font-weight:800;letter-spacing:0.04em;padding:0.08rem 0.4rem;border-radius:4px;white-space:normal;">CANCEL REQUESTED</span><div style="font-size:0.62rem;color:#991b1b;white-space:normal;max-width:130px;line-height:1.3;margin-top:0.15rem;">{{ (o.cancel_request_reason or '')[:90] }}</div></div>{% endif %}
                   {% if sh and o.status == 'confirmed' %}<div><span style="display:inline-block;background:#dc2626;color:#fff;font-size:0.55rem;font-weight:700;letter-spacing:0.04em;padding:0.05rem 0.4rem;border-radius:4px;">NEW</span></div>{% endif %}
                 </td>
                 <td style="overflow:hidden;text-overflow:ellipsis;max-width:130px;"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ o_display_name }}</div>{% if not o.is_instore and o.customer and o.customer.phone %}<div style="font-size:0.66rem;color:var(--muted);">({{ o.customer.phone }})</div>{% endif %}</td>
@@ -2140,7 +2144,7 @@
                   {% elif o.status == 'done_packaging' and o.customer_courier %}
                     <span class="ship-line">When their rider collects it, choose Shipping. Changed your mind? Press Edit options.</span>
                   {% elif o.status == 'done_packaging' and not sh_paid %}
-                    <span class="ship-line">{% if o.ship_two_step %}Shipping unlocks once the customer pays the delivery fee. The items are already paid.{% else %}Shipping unlocks once the customer pays. No payment in 24 hours and it cancels by itself.{% endif %}</span>
+                    <span class="ship-line">{% if o.ship_two_step %}Shipping unlocks once the customer pays the delivery fee. The items are already paid.{% if o.shipping_deadline_at %} If it is not paid by {{ o.shipping_deadline_at|when }}, the order cancels itself and the items are refunded.{% endif %}{% else %}Shipping unlocks once the customer pays. No payment in 24 hours and it cancels by itself.{% endif %}</span>
                   {% elif o.status == 'done_packaging' %}
                     <span class="ship-line">Book a Courier {{ o.shipping_vehicle }}, then choose Shipping. Need to cancel? Choose Cancelled (refund).</span>
                   {% elif o.status == 'shipping' and not o.received_at %}
@@ -3603,6 +3607,21 @@
 </div>
 
 <!-- CANCEL A SHOP PICKUP ORDER (part out of stock / not available) -->
+<div class="modal-overlay" id="modal-cancel-day">
+  <div class="modal-box" style="width:480px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Cancel a whole day</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 1rem;line-height:1.5;">Use this when the shop cannot open (storm, power cut, emergency). Every <b>Confirmed</b> booking on that day is cancelled and every customer is told by notification and email. Bookings the shop already started are not touched.</div>
+    <div class="form-group"><label>Date</label><input type="date" id="cd-date" onchange="cancelDayPreview()"></div>
+    <div class="form-group"><label>Reason (every customer will see this)</label><input type="text" id="cd-reason" maxlength="200" placeholder="e.g. The shop is closed because of the typhoon" oninput="this.classList.remove('so-err-field')"></div>
+    <div id="cd-count" style="background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.85rem;font-size:0.8rem;color:#374151;margin-bottom:0.8rem;">Choose a date to see how many bookings it affects.</div>
+    <div id="cd-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.7rem;"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-cancel-day')">Go back</button>
+      <button type="button" class="btn-primary-custom" id="cd-go" onclick="submitCancelDay()">Cancel the bookings</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-order-cancel">
   <div class="modal-box" style="width:500px;">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Cancel order</div>
@@ -9143,6 +9162,33 @@ async function shipPost(oid, step, body) {
 function shipReload(msg) { showToast(msg, 'success'); setTimeout(() => { window.location.hash = 'orders'; window.location.reload(); }, 700); }
 
 // ── Cancel a Shop Pickup order when the part is out of stock or not available ──
+function openCancelDay() {
+  const d = document.getElementById('cd-date'); d.value = ''; d.min = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  document.getElementById('cd-reason').value = '';
+  document.getElementById('cd-count').textContent = 'Choose a date to see how many bookings it affects.';
+  shipErr('cd-err', '');
+  openModal('modal-cancel-day');
+}
+async function _cancelDayPost(body) {
+  const res = await fetch('/bookings/cancel-day', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  return { ok: res.ok, data: await res.json().catch(() => ({})) };
+}
+async function cancelDayPreview() {
+  const date = document.getElementById('cd-date').value, box = document.getElementById('cd-count');
+  if (!date) return;
+  const r = await _cancelDayPost({date, reason: 'preview', preview: true});
+  box.innerHTML = r.ok ? ('<b>' + r.data.count + '</b> Confirmed booking' + (r.data.count === 1 ? '' : 's') + ' on this day will be cancelled.') : (r.data.error || '');
+}
+async function submitCancelDay() {
+  const date = document.getElementById('cd-date').value, reasonEl = document.getElementById('cd-reason'), reason = reasonEl.value.trim();
+  if (!date) { shipErr('cd-err', 'Choose the date.'); return; }
+  if (!reason) { reasonEl.classList.add('so-err-field'); shipErr('cd-err', 'Say why the shop is closed. Every customer sees this.'); return; }
+  const btn = document.getElementById('cd-go'); btn.disabled = true; shipErr('cd-err', '');
+  const r = await _cancelDayPost({date, reason});
+  btn.disabled = false;
+  if (r.ok && r.data.success) { closeModal('modal-cancel-day'); if (typeof showToast === 'function') showToast(r.data.message, 'success'); setTimeout(() => window.location.reload(), 900); return; }
+  shipErr('cd-err', r.data.error || 'Could not cancel the day.');
+}
 function openOrderCancel(btn) {
   const d = btn.dataset, money = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits: 2});
   document.getElementById('oc-oid').value = d.oid;
