@@ -2054,6 +2054,60 @@ def api_stock_history():
         'change': r.change, 'after': r.stock_after, 'source': r.source or '', 'who': r.actor_name or ''} for r in rows]})
 
 
+def _pending_billing_count_now():
+    """What the Billing page lists under Pending: job orders in progress that are not paid, finished bookings whose invoice is not paid yet,
+    and pickup orders ready to hand over. It is the same number as the tabs on that page (a booking still being worked on is not listed
+    there, so it is not counted here), and it is the only number the sidebar and the Dashboard card show for Billing. Sales that are
+    already paid (in-store sales nobody has looked at in History yet) are NOT here: nothing is waiting for the cashier."""
+    paid_jo_ids = [r[0] for r in db.session.query(Payment.job_order_id).filter(Payment.job_order_id != None).all()]
+    quoted = {r[0] for r in db.session.query(Quotation.booking_id).filter(Quotation.booking_id.isnot(None)).all()}
+    jobs = JobOrder.query.filter(JobOrder.status == 'in_progress',
+                                 ~JobOrder.id.in_(paid_jo_ids) if paid_jo_ids else True).count()
+    invoices = (Booking.query.filter(Booking.status == 'completed', Booking.invoice_paid == False, Booking.walkin_customer_id == None,
+                                     Booking.is_archived == False, Booking.id.in_(quoted)).count() if quoted else 0)
+    pickups = (Order.query.filter(Order.delivery_method == 'pickup', Order.status == 'shipped',
+                                  Order.walkin_customer_id == None, Order.is_archived == False)
+                          .filter(Order.items.any()).count())
+    return jobs + invoices + pickups
+
+
+def _outbox_needs_action_count():
+    """Messages in the Outbox that need the shop to do something: a customer decided on a quotation in person and the work is not finished
+    yet. (The number of messages the CUSTOMER has not read is not a job for the shop, so it is not what the badge shows.)"""
+    rows = Notification.query.order_by(Notification.created_at.desc()).limit(300).all()
+    ids = {n.booking_id for n in rows if n.type == 'quotation_decision' and n.booking_id}
+    if not ids:
+        return 0
+    bookings = {b.id: b for b in Booking.query.filter(Booking.id.in_(ids)).all()}
+    quoted = {r[0] for r in db.session.query(Quotation.booking_id).filter(Quotation.booking_id.in_(ids)).all()}
+    return sum(1 for n in rows if n.type == 'quotation_decision' and n.booking_id in quoted
+               and bookings.get(n.booking_id) and bookings[n.booking_id].status != 'completed')
+
+
+def _orders_needing_shop_count():
+    """Online orders the shop has to look at: new ones nobody has started (Confirmed) and ones whose customer asked to cancel."""
+    return (Order.query.filter(Order.is_instore == False, Order.walkin_customer_id == None, Order.is_archived == False)
+                       .filter(Order.items.any())
+                       .filter(db.or_(Order.status == 'confirmed',
+                                      db.and_(Order.cancel_requested_at.isnot(None), Order.status.notin_(['cancelled', 'refunded', 'completed']))))
+                       .count())
+
+
+@admin_app.route('/api/nav-counts')
+@login_required
+@require_admin_or_staff
+def api_nav_counts():
+    """The red numbers in the sidebar, all in one light request, so they are right on every page and refresh by themselves."""
+    return jsonify({
+        'bookings': (_sync_booking_tab_badges().get('confirmed', 0) or 0),
+        'orders': _orders_needing_shop_count(),
+        'billing': _pending_billing_count_now(),
+        'outbox': _outbox_needs_action_count(),
+        'returns': ReturnRequest.query.filter(ReturnRequest.status.in_(list(OPEN_RETURN_STATUSES) + ['replacement_shipped', 'replacement_arrived'])).count(),
+        'feedback': Feedback.query.filter(db.or_(Feedback.is_read == False, Feedback.is_read.is_(None))).count(),
+    })
+
+
 @admin_app.route('/api/dashboard-restock')
 @login_required
 @require_admin_or_staff
@@ -2130,26 +2184,7 @@ def admin_dashboard():
     # for its Pending tab — kept in lockstep so the sidebar count and the
     # page it links to never disagree.
     _paid_jo_ids = [r[0] for r in db.session.query(Payment.job_order_id).filter(Payment.job_order_id != None).all()]
-    _pending_billing_count = (
-        JobOrder.query.filter(JobOrder.status == 'in_progress',
-                               ~JobOrder.id.in_(_paid_jo_ids) if _paid_jo_ids else True).count()
-        + Booking.query.filter(Booking.status.in_(['in_progress', 'inprogress']),
-                                Booking.payment_method.in_(['cash', None]),
-                                Booking.walkin_customer_id == None,
-                                Booking.is_archived == False).count()
-        + Order.query.filter(Order.delivery_method == 'pickup', Order.status == 'shipped',
-                              Order.walkin_customer_id == None, Order.is_archived == False)
-                     .filter(Order.items.any()).count()
-        # Invoices waiting at the counter — the customer told us they're
-        # paying cash, so this is actual work for the cashier, same as the
-        # queries above. Invoices still waiting on the customer to even pick
-        # a method aren't counted here; there's nothing for the shop to do yet.
-        + Booking.query.filter(Booking.status == 'completed', Booking.invoice_paid == False,
-                                Booking.invoice_payment_method == 'cash',
-                                Booking.is_archived == False).count()
-        # In-store sales nobody's opened History to see yet.
-        + Order.query.filter(Order.is_instore == True, Order.instore_seen == False).count()
-    )
+    _pending_billing_count = _pending_billing_count_now()
 
     _all_bookings_list = Booking.query.filter_by(is_archived=False).order_by(Booking.created_at.desc()).all()
     # Manage Bookings is grouped by day (archived bookings are not listed). Days from today on come first, soonest first; older days after.
@@ -2390,21 +2425,7 @@ def api_dashboard_stats():
     )
 
     _paid_jo_ids = [r[0] for r in db.session.query(Payment.job_order_id).filter(Payment.job_order_id != None).all()]
-    _pending_billing_count = (
-        JobOrder.query.filter(JobOrder.status == 'in_progress',
-                               ~JobOrder.id.in_(_paid_jo_ids) if _paid_jo_ids else True).count()
-        + Booking.query.filter(Booking.status.in_(['in_progress', 'inprogress']),
-                                Booking.payment_method.in_(['cash', None]),
-                                Booking.walkin_customer_id == None,
-                                Booking.is_archived == False).count()
-        + Order.query.filter(Order.delivery_method == 'pickup', Order.status == 'shipped',
-                              Order.walkin_customer_id == None, Order.is_archived == False)
-                     .filter(Order.items.any()).count()
-        + Booking.query.filter(Booking.status == 'completed', Booking.invoice_paid == False,
-                                Booking.invoice_payment_method == 'cash',
-                                Booking.is_archived == False).count()
-        + Order.query.filter(Order.is_instore == True, Order.instore_seen == False).count()
-    )
+    _pending_billing_count = _pending_billing_count_now()
 
     recent_bookings = []
     for b in _all_bookings_list[:5]:
