@@ -305,6 +305,42 @@
         .otp-row { gap: 0.35rem; }
         .otp-box { height: 46px; font-size: 1.3rem; }
       }
+    
+      /* ── Light theme: the same look as Sign In and Register (photo on the left, white form on the right) ── */
+      body { background: #f5f4f2; color: #1c1814; }
+      .auth-left { background: #1c1814 url("{{ url_for('static', filename='images/shop-hero.jpg') }}") center / cover no-repeat; color: #fff; }
+      .auth-left-bg { background: linear-gradient(to bottom, rgba(28,24,20,0.65) 0%, rgba(28,24,20,0.55) 45%, rgba(28,24,20,0.80) 100%); }
+      .auth-left-bg::before { display: none; }
+      .auth-left p { color: rgba(255,255,255,0.75); }
+      .auth-perk { color: rgba(255,255,255,0.85); }
+      .auth-right { background: #fff; color: #1c1814; border-left: 1px solid #ebe9e4; }
+      .auth-right h3 { color: #1c1814; }
+      .auth-right .sub { color: #5a544d; }
+      .flash-danger  { background: rgba(220,38,38,0.06);  border: 1px solid rgba(220,38,38,0.2);  color: #b91c1c; }
+      .flash-success { background: rgba(22,163,74,0.06);  border: 1px solid rgba(22,163,74,0.2);  color: #15803d; }
+      .flash-info    { background: rgba(37,99,235,0.06);  border: 1px solid rgba(37,99,235,0.2);  color: #1d4ed8; }
+      .flash-warning { background: rgba(217,119,6,0.06);  border: 1px solid rgba(217,119,6,0.2);  color: #b45309; }
+      .field-group label { color: #5a544d; }
+      .field-group input { background: #fff; border: 1.5px solid #d6d3cd; color: #1c1814; }
+      .field-group input::placeholder { color: #908980; }
+      .field-group input:hover:not(:focus) { border-color: #908980; }
+      .field-group input:focus { border-color: #d00019; background: #fff; box-shadow: 0 0 0 3px rgba(208,0,25,0.10); }
+      .auth-switch { color: #5a544d; }
+      .icon-circle { background: rgba(208,0,25,0.08); border-color: rgba(208,0,25,0.25); }
+      .email-badge { background: rgba(208,0,25,0.07); border-color: rgba(208,0,25,0.25); color: #a8001a; }
+      .otp-box { background: #fff; border: 1.5px solid #d6d3cd; color: #1c1814; }
+      .otp-box::placeholder { color: #d6d3cd; }
+      .otp-box:focus { background: #fff; border-color: #d00019; box-shadow: 0 0 0 3px rgba(208,0,25,0.10); }
+      .otp-box.filled { border-color: rgba(208,0,25,0.5); background: rgba(208,0,25,0.05); }
+      .timer-wrap { color: #5a544d; }
+      .timer-count.expired { color: #908980; }
+      .back-link { color: #5a544d; }
+      .back-link:hover { color: #d00019; }
+      .pass-toggle { color: #5a544d; }
+      .pass-toggle:hover { color: #1c1814; }
+      .pass-hint { color: #b91c1c; }
+      .match-ok { color: #15803d; }
+      .match-fail { color: #b91c1c; }
     </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-logo.css') }}">
 </head>
