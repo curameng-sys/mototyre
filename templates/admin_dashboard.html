@@ -2659,7 +2659,7 @@
           <div id="rpt-payout-wrap" style="overflow-x:auto;">
             {% if rpt.mechanic_payout %}
             <table class="table">
-              <thead><tr><th>Mechanic</th><th style="text-align:right;">Days present</th><th style="text-align:right;">Daily pay</th><th style="text-align:right;">Services done</th><th style="text-align:right;">Labor</th><th style="text-align:right;">{{ mechanic_share_pct }}% share</th><th style="text-align:right;">Total pay</th></tr></thead>
+              <thead><tr><th>Mechanic</th><th style="text-align:right;">Days present</th><th style="text-align:right;">Daily pay</th><th style="text-align:right;">Services done</th><th style="text-align:right;">Labor</th><th style="text-align:right;">{{ mechanic_share_pct }}% share</th><th style="text-align:right;">Total pay</th><th style="text-align:right;">Payment</th></tr></thead>
               <tbody>
                 {% for m in rpt.mechanic_payout %}
                 <tr>
@@ -2670,6 +2670,7 @@
                   <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(m.labor) }}</td>
                   <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(m.share) }}</td>
                   <td style="text-align:right;font-weight:800;color:var(--text);">&#8369;{{ '{:,.2f}'.format(m.total) }}</td>
+                  <td style="text-align:right;color:var(--muted);font-size:0.72rem;">Pick dates</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -2682,6 +2683,7 @@
                   <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='labor')) }}</td>
                   <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='share')) }}</td>
                   <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='total')) }}</td>
+                  <td></td>
                 </tr>
               </tfoot>
             </table>
@@ -2689,7 +2691,7 @@
             <div class="empty-state"><p>No mechanic was present or finished a service in this period.</p></div>
             {% endif %}
           </div>
-          <div id="rpt-payout-note" style="font-size:0.68rem;color:var(--muted);padding:0.6rem 1rem 0.85rem;line-height:1.5;">The shop keeps {{ 100 - mechanic_share_pct }}% of the labor: &#8369;<span id="rpt-payout-shop">{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='shop_share')) }}</span>. Labor is the services and inspections only; parts are the shop's sales. A day counts when the mechanic timed in and was not marked absent. Back jobs earn no labor. Refunded services are not taken off yet.</div>
+          <div id="rpt-payout-note" style="font-size:0.68rem;color:var(--muted);padding:0.6rem 1rem 0.85rem;line-height:1.5;">The shop keeps {{ 100 - mechanic_share_pct }}% of the labor: &#8369;<span id="rpt-payout-shop">{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='shop_share')) }}</span>. Labor is the services and inspections only; parts are the shop's sales. A day counts when the mechanic timed in and was not marked absent. Back jobs earn no labor. Refunded services are not taken off yet. To pay a mechanic, choose the From and To dates, then press Pay: it is written in Expenses as Payroll.</div>
         </div>
       </div>
       </div>
@@ -3735,6 +3737,22 @@
     <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
       <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-expense')">Cancel</button>
       <button type="button" class="btn-primary-custom" id="ex-go" onclick="submitExpense()">Save expense</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-payout">
+  <div class="modal-box" style="width:460px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--red);letter-spacing:0.04em;line-height:1;">Pay mechanic</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 0.9rem;line-height:1.5;" id="po-sub"></div>
+    <div id="po-box" style="border:1px solid var(--border);border-radius:10px;padding:0.7rem 0.9rem;font-size:0.82rem;line-height:1.7;margin-bottom:0.9rem;"></div>
+    <div class="form-group"><label>Where does the money come from?</label>
+      <select id="po-from" onchange="document.getElementById('po-taken-wrap').style.display = this.value === 'cash' ? '' : 'none'"><option value="cash">Cash drawer</option><option value="gcash">GCash</option><option value="other">Other (own pocket, bank)</option></select></div>
+    <div class="form-group" id="po-taken-wrap"><label>Who took the money?</label><input type="text" id="po-taken" maxlength="100" oninput="this.classList.remove('so-err-field')"></div>
+    <div id="po-err" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;margin-bottom:0.7rem;"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:flex-end;">
+      <button type="button" class="btn-secondary-custom" onclick="closeModal('modal-payout')">Cancel</button>
+      <button type="button" class="btn-primary-custom" id="po-go" onclick="submitPayout()">Confirm payment</button>
     </div>
   </div>
 </div>
@@ -9347,6 +9365,34 @@ async function shipPost(oid, step, body) {
 function shipReload(msg) { showToast(msg, 'success'); setTimeout(() => { window.location.hash = 'orders'; window.location.reload(); }, 700); }
 
 // ── Cancel a Shop Pickup order when the part is out of stock or not available ──
+// ── Pay a mechanic (Reports > Mechanic Payout) ──
+let _payoutIdx = -1;
+function openPayout(i) {
+  const m = (window._payoutList || [])[i]; if (!m) return; _payoutIdx = i;
+  const f = document.getElementById('rpt-date-from').value, to = document.getElementById('rpt-date-to').value;
+  const mon = n => '₱' + Number(n || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('po-sub').textContent = m.name + ' · ' + f + (f === to ? '' : ' to ' + to);
+  document.getElementById('po-box').innerHTML = '<div style="display:flex;justify-content:space-between;"><span>' + m.days_present + ' day(s) present</span><b>' + mon(m.daily_pay) + '</b></div>' +
+    '<div style="display:flex;justify-content:space-between;"><span>Share of the labor (' + m.completed + ' service' + (m.completed === 1 ? '' : 's') + ')</span><b>' + mon(m.share) + '</b></div>' +
+    '<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:0.3rem;padding-top:0.3rem;font-size:0.95rem;"><span>Total to pay</span><b>' + mon(m.total) + '</b></div>';
+  document.getElementById('po-from').value = 'cash'; document.getElementById('po-taken-wrap').style.display = '';
+  document.getElementById('po-taken').value = {{ current_user.fullname|tojson }}; shipErr('po-err', '');
+  openModal('modal-payout');
+}
+async function submitPayout() {
+  const m = (window._payoutList || [])[_payoutIdx]; if (!m) return;
+  const body = { name: m.name, date_from: document.getElementById('rpt-date-from').value, date_to: document.getElementById('rpt-date-to').value,
+                 paid_from: document.getElementById('po-from').value, taken_by: document.getElementById('po-taken').value.trim() };
+  const btn = document.getElementById('po-go'); btn.disabled = true; shipErr('po-err', '');
+  try {
+    const res = await fetch('/payouts/pay', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+    const d = await res.json().catch(() => ({})); btn.disabled = false;
+    if (res.ok && d.success) { closeModal('modal-payout'); if (typeof showToast === 'function') showToast('Paid ' + m.name + ' (' + d.ref + ').', 'success'); refreshReports(); return; }
+    if (!body.taken_by && body.paid_from === 'cash') document.getElementById('po-taken').classList.add('so-err-field');
+    shipErr('po-err', d.error || 'Could not record the payment.');
+  } catch (e) { btn.disabled = false; shipErr('po-err', 'No connection. Please try again.'); }
+}
+
 // ── Expenses ──
 let _expOffset = 0, _expTimer = null, _expCats = [], _expCash = 0, _expItems = {};
 const _expMoney = n => (Number(n) < 0 ? '-' : '') + '₱' + Math.abs(Number(n || 0)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -10908,11 +10954,17 @@ function _renderRptPayout(list, rules) {
   const sum = k => list.reduce((a, m) => a + (m[k] || 0), 0);
   const money = n => '₱' + Number(n || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const R = 'text-align:right;';
+  const hasPeriod = !!(document.getElementById('rpt-date-from').value && document.getElementById('rpt-date-to').value);
+  window._payoutList = list;
+  const payCell = m => m.paid_ref ? `<span style="font-size:0.7rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:99px;background:#dcfce7;color:#166534;">Paid · ${_rEsc(m.paid_ref)}</span>`
+    : m.overlap ? '<span style="font-size:0.7rem;color:var(--muted);">Overlaps a paid period</span>'
+    : m.can_pay ? `<button type="button" class="btn-primary-custom" style="padding:0.25rem 0.8rem;font-size:0.74rem;" onclick="openPayout(${list.indexOf(m)})">Pay</button>`
+    : `<span style="font-size:0.72rem;color:var(--muted);">${hasPeriod ? '—' : 'Pick dates'}</span>`;
   const rows = list.map(m => `<tr><td style="font-weight:600;color:var(--text);">${_rEsc(m.name)}</td><td style="${R}">${m.days_present}</td><td style="${R}">${money(m.daily_pay)}</td>
     <td style="${R}">${m.completed}${m.backjobs ? `<span style="color:var(--muted);font-size:0.7rem;"> (${m.backjobs} back job${m.backjobs === 1 ? '' : 's'})</span>` : ''}</td>
-    <td style="${R}">${money(m.labor)}</td><td style="${R}">${money(m.share)}</td><td style="${R}font-weight:800;color:var(--text);">${money(m.total)}</td></tr>`).join('');
-  wrap.innerHTML = `<table class="table"><thead><tr><th>Mechanic</th><th style="${R}">Days present</th><th style="${R}">Daily pay</th><th style="${R}">Services done</th><th style="${R}">Labor</th><th style="${R}">${pct}% share</th><th style="${R}">Total pay</th></tr></thead><tbody>${rows}</tbody>
-    <tfoot><tr style="font-weight:700;background:var(--light,#f9fafb);"><td>Total</td><td style="${R}">${sum('days_present')}</td><td style="${R}">${money(sum('daily_pay'))}</td><td style="${R}">${sum('completed')}</td><td style="${R}">${money(sum('labor'))}</td><td style="${R}">${money(sum('share'))}</td><td style="${R}">${money(sum('total'))}</td></tr></tfoot></table>`;
+    <td style="${R}">${money(m.labor)}</td><td style="${R}">${money(m.share)}</td><td style="${R}font-weight:800;color:var(--text);">${money(m.total)}</td><td style="${R}white-space:nowrap;">${payCell(m)}</td></tr>`).join('');
+  wrap.innerHTML = `<table class="table"><thead><tr><th>Mechanic</th><th style="${R}">Days present</th><th style="${R}">Daily pay</th><th style="${R}">Services done</th><th style="${R}">Labor</th><th style="${R}">${pct}% share</th><th style="${R}">Total pay</th><th style="${R}">Payment</th></tr></thead><tbody>${rows}</tbody>
+    <tfoot><tr style="font-weight:700;background:var(--light,#f9fafb);"><td>Total</td><td style="${R}">${sum('days_present')}</td><td style="${R}">${money(sum('daily_pay'))}</td><td style="${R}">${sum('completed')}</td><td style="${R}">${money(sum('labor'))}</td><td style="${R}">${money(sum('share'))}</td><td style="${R}">${money(sum('total'))}</td><td></td></tr></tfoot></table>`;
   if (shop) shop.textContent = Number(sum('shop_share')).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 

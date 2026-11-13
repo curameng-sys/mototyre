@@ -658,6 +658,9 @@ class Expense(db.Model):
     void_reason   = db.Column(db.String(300), nullable=True)
     voided_at     = db.Column(db.DateTime, nullable=True)
     voided_by_name = db.Column(db.String(120), nullable=True)
+    payout_name   = db.Column(db.String(100), nullable=True)                # set when this paid a mechanic from Reports > Mechanic Payout
+    payout_from   = db.Column(db.Date, nullable=True)
+    payout_to     = db.Column(db.Date, nullable=True)
 
 
 class AuditLog(db.Model):
@@ -1873,6 +1876,17 @@ def _reports_summary(date_from=None, date_to=None):
         if _name not in _seen_names:
             mechanic_payout.append(_payout_row(_name, 0))
     mechanic_payout.sort(key=lambda r: (-r['total'], r['name']))
+    _paid_rows = []
+    if date_from and date_to:
+        _paid_rows = Expense.query.filter(Expense.voided == False, Expense.payout_name.isnot(None),
+                                          Expense.payout_from <= date_to, Expense.payout_to >= date_from).all()
+    for _r in mechanic_payout:
+        _same = next((e for e in _paid_rows if e.payout_name == _r['name'] and e.payout_from == date_from and e.payout_to == date_to), None)
+        _over = next((e for e in _paid_rows if e.payout_name == _r['name'] and e is not _same), None)
+        _r['paid_ref'] = f'EXP-{_same.id:03d}' if _same else ''
+        _r['paid_on'] = _same.spent_on.strftime('%b %d, %Y') if _same else ''
+        _r['overlap'] = bool(_over) and not _same
+        _r['can_pay'] = bool(date_from and date_to and _r['total'] > 0 and not _same and not _over and date_to <= ph_now().date())
     _exp_total, _exp_count, _exp_by = _expense_totals(date_from, date_to)
 
     # Top Products Sold — online orders + in-store sales (both are Order rows),
@@ -2070,7 +2084,7 @@ AUDIT_RULES = {
     '/quotation/<int:qid>/approve': 'Approved a quotation', '/quotation/<int:qid>/reject': 'Rejected a quotation',
     '/quotation/<int:qid>/convert': 'Turned a quotation into a job order', '/quotation/<int:qid>/withdraw': 'Withdrew a quotation',
     '/job-order/<int:jid>/status': 'Changed a job order status',
-    '/expenses/add': 'Recorded an expense', '/expenses/<int:eid>/void': 'Voided an expense',
+    '/expenses/add': 'Recorded an expense', '/payouts/pay': 'Paid a mechanic', '/expenses/<int:eid>/void': 'Voided an expense',
 }
 _AUDIT_REFS = (('oid', 'ORD-%03d'), ('bid', 'BKG-%03d'), ('rid', 'RMA-%03d'), ('joid', 'JO-%03d'), ('jid', 'JO-%03d'), ('qid', 'QTN-%03d'),
                ('pid', 'Product #%d'), ('sid', 'Service #%d'), ('mid', 'Mechanic #%d'), ('uid', 'User #%d'), ('eid', 'EXP-%03d'))
@@ -2218,6 +2232,47 @@ def _expense_dict(e):
             'taken_by': e.taken_by or '', 'recorded_by': e.recorded_by_name or '', 'voided': bool(e.voided),
             'void_reason': e.void_reason or '', 'voided_by': e.voided_by_name or '',
             'recorded_at': e.created_at.strftime('%b %d, %I:%M %p') if e.created_at else ''}
+
+
+@admin_app.route('/payouts/pay', methods=['POST'])
+@login_required
+@require_admin_or_staff
+def payout_pay():
+    """Pay one mechanic for a period: the amount is worked out again here (never taken from the browser) and written as a Payroll expense."""
+    d = request.get_json(silent=True) or {}
+    try:
+        date_from = datetime.strptime(str(d.get('date_from') or ''), '%Y-%m-%d').date()
+        date_to = datetime.strptime(str(d.get('date_to') or ''), '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Choose the From and To dates first.'}), 400
+    if date_from > date_to:
+        return jsonify({'success': False, 'error': '"From" must be on or before "To".'}), 400
+    if date_to > ph_now().date():
+        return jsonify({'success': False, 'error': 'The period cannot end in the future.'}), 400
+    name = clean_str(d.get('name', ''), max_len=100)
+    row = next((r for r in _reports_summary(date_from, date_to)['mechanic_payout'] if r['name'] == name), None)
+    if not row:
+        return jsonify({'success': False, 'error': 'That mechanic has no pay in this period.'}), 404
+    if row['paid_ref']:
+        return jsonify({'success': False, 'error': f"Already paid for this period ({row['paid_ref']})."}), 400
+    if row['overlap']:
+        return jsonify({'success': False, 'error': 'Part of this period was already paid. Choose a period that does not overlap.'}), 400
+    if row['total'] <= 0:
+        return jsonify({'success': False, 'error': 'There is nothing to pay for this period.'}), 400
+    paid_from = clean_str(d.get('paid_from', 'cash'), max_len=10)
+    if paid_from not in EXPENSE_SOURCES:
+        paid_from = 'cash'
+    taken_by = clean_str(d.get('taken_by', ''), max_len=100)
+    if paid_from == 'cash' and not taken_by:
+        return jsonify({'success': False, 'error': 'Write who took the money from the drawer.'}), 400
+    span = date_from.strftime('%b %d, %Y') if date_from == date_to else f"{date_from.strftime('%b %d')} - {date_to.strftime('%b %d, %Y')}"
+    note = f"Pay of {name} ({span}): {row['days_present']} day(s) present PHP {row['daily_pay']:,.2f} + {int(round(MECHANIC_SHARE * 100))}% of labor PHP {row['share']:,.2f}"
+    e = Expense(spent_on=ph_now().date(), amount=row['total'], category='payroll', note=note[:300], paid_from=paid_from,
+                taken_by=taken_by or None, recorded_by_id=current_user.id, recorded_by_name=(current_user.fullname or '')[:120],
+                payout_name=name, payout_from=date_from, payout_to=date_to)
+    db.session.add(e)
+    db.session.commit()
+    return jsonify({'success': True, 'ref': f'EXP-{e.id:03d}', 'amount': row['total']})
 
 
 @admin_app.route('/api/expenses')
