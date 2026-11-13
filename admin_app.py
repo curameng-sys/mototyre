@@ -11539,6 +11539,9 @@ with admin_app.app_context():
         "ALTER TABLE booking ADD COLUMN walkin_customer_id INT DEFAULT NULL",
         "ALTER TABLE `order` ADD COLUMN walkin_customer_id INT DEFAULT NULL",
         "ALTER TABLE booking ADD COLUMN booking_batch VARCHAR(36) DEFAULT NULL",
+        "ALTER TABLE expense ADD COLUMN payout_name VARCHAR(100) DEFAULT NULL",
+        "ALTER TABLE expense ADD COLUMN payout_from DATE DEFAULT NULL",
+        "ALTER TABLE expense ADD COLUMN payout_to DATE DEFAULT NULL",
     ]:
         try:
             from sqlalchemy import text as _tmig
