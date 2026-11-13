@@ -1681,7 +1681,7 @@ def _net_revenue_between(date_from, date_to):
     return round(sum(float(t['amount'] or 0) for t in _revenue_transactions(date_from, date_to)), 2)
 
 
-MECHANIC_SHARE = 0.30          # the mechanic gets 30% of the labor they did; the shop keeps 70%
+MECHANIC_SHARE = 0.70          # the mechanic gets 70% of the labor they did; the shop keeps 30%
 MECHANIC_DAILY_PAY = 50.0      # and P50 for each day they are present
 
 
@@ -1849,7 +1849,7 @@ def _reports_summary(date_from=None, date_to=None):
         [{'name': name, 'completed': c, 'backjobs': bj, 'income': inc} for name, (c, bj, inc) in mechanic_tally.items()],
         key=lambda r: r['completed'], reverse=True)
 
-    # What each mechanic is paid: 30% of the labor they did (the shop keeps 70%) plus P50 for every day they were present.
+    # What each mechanic is paid: 70% of the labor they did (the shop keeps 30%) plus P50 for every day they were present.
     # A day counts as present when the mechanic timed in and was not marked absent. Parts never count (they are the shop's sales).
     _aq = db.session.query(MechanicAttendance.mechanic_id, func.count(MechanicAttendance.id)).filter(
         MechanicAttendance.time_in.isnot(None), db.or_(MechanicAttendance.is_absent == False, MechanicAttendance.is_absent.is_(None)))
