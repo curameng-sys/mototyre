@@ -2234,6 +2234,22 @@ def _expense_dict(e):
             'recorded_at': e.created_at.strftime('%b %d, %I:%M %p') if e.created_at else ''}
 
 
+@admin_app.route('/api/payroll')
+@login_required
+@require_admin_or_staff
+def api_payroll():
+    """Who is owed what for the period chosen on Expenses > Mechanic Payroll (same figures as Reports, plus whether each one was paid)."""
+    try:
+        date_from = datetime.strptime(request.args.get('date_from', ''), '%Y-%m-%d').date()
+        date_to = datetime.strptime(request.args.get('date_to', ''), '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Choose the From and To dates.'}), 400
+    if date_from > date_to:
+        return jsonify({'success': False, 'error': '"From" must be on or before "To".'}), 400
+    return jsonify({'success': True, 'rows': _reports_summary(date_from, date_to)['mechanic_payout'],
+                    'rules': {'share_pct': int(round(MECHANIC_SHARE * 100)), 'daily_pay': MECHANIC_DAILY_PAY}})
+
+
 @admin_app.route('/payouts/pay', methods=['POST'])
 @login_required
 @require_admin_or_staff

@@ -226,7 +226,7 @@
       /* Transaction History: the card fills the screen, only the rows scroll inside it, and the page numbers stay under them */
       body.tbl-lock #sec-activity.active, body.tbl-lock #sec-transactions.active, body.tbl-lock #sec-expenses.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
       body.tbl-lock #sec-expenses > .card { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
-      body.tbl-lock #exp-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
+      body.tbl-lock #exp-wrap, body.tbl-lock #pr-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
       body.tbl-lock #exp-wrap > div { overflow: visible !important; }
       body.tbl-lock #exp-pagination { flex-shrink: 0; }
       body.tbl-lock #sec-activity > .card { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0; }
@@ -2670,7 +2670,7 @@
                   <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(m.labor) }}</td>
                   <td style="text-align:right;">&#8369;{{ '{:,.2f}'.format(m.share) }}</td>
                   <td style="text-align:right;font-weight:800;color:var(--text);">&#8369;{{ '{:,.2f}'.format(m.total) }}</td>
-                  <td style="text-align:right;color:var(--muted);font-size:0.72rem;">Pick dates</td>
+                  <td style="text-align:right;color:var(--muted);font-size:0.72rem;">&mdash;</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -2691,7 +2691,7 @@
             <div class="empty-state"><p>No mechanic was present or finished a service in this period.</p></div>
             {% endif %}
           </div>
-          <div id="rpt-payout-note" style="font-size:0.68rem;color:var(--muted);padding:0.6rem 1rem 0.85rem;line-height:1.5;">The shop keeps {{ 100 - mechanic_share_pct }}% of the labor: &#8369;<span id="rpt-payout-shop">{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='shop_share')) }}</span>. Labor is the services and inspections only; parts are the shop's sales. A day counts when the mechanic timed in and was not marked absent. Back jobs earn no labor. Refunded services are not taken off yet. To pay a mechanic, choose the From and To dates, then press Pay: it is written in Expenses as Payroll.</div>
+          <div id="rpt-payout-note" style="font-size:0.68rem;color:var(--muted);padding:0.6rem 1rem 0.85rem;line-height:1.5;">The shop keeps {{ 100 - mechanic_share_pct }}% of the labor: &#8369;<span id="rpt-payout-shop">{{ '{:,.2f}'.format(rpt.mechanic_payout|sum(attribute='shop_share')) }}</span>. Labor is the services and inspections only; parts are the shop's sales. A day counts when the mechanic timed in and was not marked absent. Back jobs earn no labor. Refunded services are not taken off yet. To pay a mechanic, go to Expenses &rsaquo; Mechanic Payroll.</div>
         </div>
       </div>
       </div>
@@ -3087,15 +3087,30 @@
           <div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.4rem;font-size:0.72rem;color:var(--muted);">Counted <input type="text" inputmode="decimal" id="exp-count" placeholder="&#8369;" oninput="expCountCheck()" style="width:84px;padding:0.2rem 0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.76rem;"><span id="exp-diff" style="font-weight:700;"></span></div>
         </div>
       </div>
-      <div class="filter-bar" style="align-items:center;">
+      <div class="exp-tabs" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:0 0 0.8rem;">
+        <button type="button" class="bk-tab active" data-exp-tab="list" onclick="expTab('list')">Expenses</button>
+        <button type="button" class="bk-tab" data-exp-tab="payroll" onclick="expTab('payroll')">Mechanic Payroll</button>
+      </div>
+      <div class="filter-bar" id="exp-filterbar" style="align-items:center;">
         <select id="exp-range" onchange="expReload()"><option value="today">Today</option><option value="week">This week</option><option value="month" selected>This month</option><option value="all">All time</option></select>
         <select id="exp-cat" onchange="expReload()"><option value="">All kinds</option></select>
         <input type="text" id="exp-search" placeholder="Search what it was for, who took it, receipt…" oninput="expSearchChanged()">
         <span id="exp-count-text" style="font-size:0.74rem;color:var(--muted);white-space:nowrap;"></span>
       </div>
-      <div class="card">
+      <div class="card" id="exp-listcard">
         <div id="exp-wrap"><div class="empty-state"><p>Loading…</p></div></div>
         <div id="exp-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0.55rem 0;flex-wrap:wrap;"></div>
+      </div>
+      <div class="card" id="exp-payrollcard" style="display:none;">
+        <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;padding:0.7rem 1rem;border-bottom:1px solid var(--border);">
+          <span style="font-weight:700;font-size:0.82rem;">Pay period</span>
+          <label style="font-size:0.74rem;color:var(--muted);">From <input type="date" id="pr-from" onchange="prLoad()" style="padding:0.35rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-size:0.8rem;"></label>
+          <label style="font-size:0.74rem;color:var(--muted);">To <input type="date" id="pr-to" onchange="prLoad()" style="padding:0.35rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-size:0.8rem;"></label>
+          <span style="font-size:0.72rem;color:var(--muted);margin-left:auto;" id="pr-rule"></span>
+        </div>
+        <div id="pr-error" style="display:none;color:#b91c1c;font-size:0.76rem;font-weight:600;padding:0.5rem 1rem 0;"></div>
+        <div id="pr-wrap" style="overflow:auto;"><div class="empty-state"><p>Loading…</p></div></div>
+        <div style="font-size:0.68rem;color:var(--muted);padding:0.6rem 1rem 0.85rem;line-height:1.5;">Pay = days present &times; the daily pay + the mechanic's share of the labor they did in the period. Pressing Pay writes it as a Payroll expense, so the profit and the drawer are updated. A period that was already paid, or overlaps one, cannot be paid again.</div>
       </div>
     </section>
 
@@ -9365,11 +9380,47 @@ async function shipPost(oid, step, body) {
 function shipReload(msg) { showToast(msg, 'success'); setTimeout(() => { window.location.hash = 'orders'; window.location.reload(); }, 700); }
 
 // ── Cancel a Shop Pickup order when the part is out of stock or not available ──
-// ── Pay a mechanic (Reports > Mechanic Payout) ──
-let _payoutIdx = -1;
+// ── Expenses > Mechanic Payroll: who is owed what for a period, and the Pay button ──
+let _payoutIdx = -1, _prList = [];
+function expTab(name) {
+  document.querySelectorAll('#sec-expenses .exp-tabs .bk-tab').forEach(b => b.classList.toggle('active', b.dataset.expTab === name));
+  const pay = name === 'payroll';
+  document.getElementById('exp-filterbar').style.display = pay ? 'none' : '';
+  document.getElementById('exp-listcard').style.display = pay ? 'none' : '';
+  document.getElementById('exp-payrollcard').style.display = pay ? '' : 'none';
+  if (pay) {
+    const f = document.getElementById('pr-from'), to = document.getElementById('pr-to');
+    if (!f.value || !to.value) {
+      const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+      f.value = today.slice(0, 8) + '01'; to.value = today; to.max = today;
+    }
+    prLoad();
+  }
+}
+async function prLoad() {
+  const f = document.getElementById('pr-from').value, to = document.getElementById('pr-to').value, wrap = document.getElementById('pr-wrap'), err = document.getElementById('pr-error');
+  err.style.display = 'none';
+  if (!f || !to) { wrap.innerHTML = '<div class="empty-state"><p>Choose the From and To dates.</p></div>'; return; }
+  if (f > to) { err.textContent = '"From" must be on or before "To".'; err.style.display = 'block'; return; }
+  try {
+    const res = await fetch('/api/payroll?date_from=' + f + '&date_to=' + to); const d = await res.json();
+    if (!d.success) { err.textContent = d.error || 'Could not load the payroll.'; err.style.display = 'block'; return; }
+    _prList = d.rows;
+    document.getElementById('pr-rule').textContent = d.rules.share_pct + '% of the labor + ' + _expMoney(d.rules.daily_pay) + ' for each day present';
+    if (!d.rows.length) { wrap.innerHTML = '<div class="empty-state"><p>No mechanic was present or finished a service in this period.</p></div>'; return; }
+    const R = 'text-align:right;', sum = k => d.rows.reduce((a, m) => a + (m[k] || 0), 0);
+    const cell = (m, i) => m.paid_ref ? `<span style="font-size:0.7rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:99px;background:#dcfce7;color:#166534;">Paid · ${_soEsc(m.paid_ref)}</span>`
+      : m.overlap ? '<span style="font-size:0.7rem;color:var(--muted);">Overlaps a paid period</span>'
+      : m.can_pay ? `<button type="button" class="btn-primary-custom" style="padding:0.25rem 0.8rem;font-size:0.74rem;" onclick="openPayout(${i})">Pay</button>`
+      : '<span style="font-size:0.72rem;color:var(--muted);">—</span>';
+    wrap.innerHTML = `<table class="table"><thead><tr><th>Mechanic</th><th style="${R}">Days present</th><th style="${R}">Daily pay</th><th style="${R}">Services done</th><th style="${R}">Labor</th><th style="${R}">${d.rules.share_pct}% share</th><th style="${R}">Total pay</th><th style="${R}">Payment</th></tr></thead><tbody>` +
+      d.rows.map((m, i) => `<tr><td style="font-weight:600;color:var(--text);">${_soEsc(m.name)}</td><td style="${R}">${m.days_present}</td><td style="${R}">${_expMoney(m.daily_pay)}</td><td style="${R}">${m.completed}</td><td style="${R}">${_expMoney(m.labor)}</td><td style="${R}">${_expMoney(m.share)}</td><td style="${R}font-weight:800;color:var(--text);">${_expMoney(m.total)}</td><td style="${R}white-space:nowrap;">${cell(m, i)}</td></tr>`).join('') +
+      `</tbody><tfoot><tr style="font-weight:700;background:var(--light,#f9fafb);"><td>Total</td><td style="${R}">${sum('days_present')}</td><td style="${R}">${_expMoney(sum('daily_pay'))}</td><td style="${R}">${sum('completed')}</td><td style="${R}">${_expMoney(sum('labor'))}</td><td style="${R}">${_expMoney(sum('share'))}</td><td style="${R}">${_expMoney(sum('total'))}</td><td></td></tr></tfoot></table>`;
+  } catch (e) { wrap.innerHTML = '<div class="empty-state"><p>Could not load the payroll.</p></div>'; }
+}
 function openPayout(i) {
-  const m = (window._payoutList || [])[i]; if (!m) return; _payoutIdx = i;
-  const f = document.getElementById('rpt-date-from').value, to = document.getElementById('rpt-date-to').value;
+  const m = _prList[i]; if (!m) return; _payoutIdx = i;
+  const f = document.getElementById('pr-from').value, to = document.getElementById('pr-to').value;
   const mon = n => '₱' + Number(n || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   document.getElementById('po-sub').textContent = m.name + ' · ' + f + (f === to ? '' : ' to ' + to);
   document.getElementById('po-box').innerHTML = '<div style="display:flex;justify-content:space-between;"><span>' + m.days_present + ' day(s) present</span><b>' + mon(m.daily_pay) + '</b></div>' +
@@ -9380,14 +9431,14 @@ function openPayout(i) {
   openModal('modal-payout');
 }
 async function submitPayout() {
-  const m = (window._payoutList || [])[_payoutIdx]; if (!m) return;
-  const body = { name: m.name, date_from: document.getElementById('rpt-date-from').value, date_to: document.getElementById('rpt-date-to').value,
+  const m = _prList[_payoutIdx]; if (!m) return;
+  const body = { name: m.name, date_from: document.getElementById('pr-from').value, date_to: document.getElementById('pr-to').value,
                  paid_from: document.getElementById('po-from').value, taken_by: document.getElementById('po-taken').value.trim() };
   const btn = document.getElementById('po-go'); btn.disabled = true; shipErr('po-err', '');
   try {
     const res = await fetch('/payouts/pay', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
     const d = await res.json().catch(() => ({})); btn.disabled = false;
-    if (res.ok && d.success) { closeModal('modal-payout'); if (typeof showToast === 'function') showToast('Paid ' + m.name + ' (' + d.ref + ').', 'success'); refreshReports(); return; }
+    if (res.ok && d.success) { closeModal('modal-payout'); if (typeof showToast === 'function') showToast('Paid ' + m.name + ' (' + d.ref + ').', 'success'); prLoad(); expLoad(); return; }
     if (!body.taken_by && body.paid_from === 'cash') document.getElementById('po-taken').classList.add('so-err-field');
     shipErr('po-err', d.error || 'Could not record the payment.');
   } catch (e) { btn.disabled = false; shipErr('po-err', 'No connection. Please try again.'); }
@@ -10954,12 +11005,7 @@ function _renderRptPayout(list, rules) {
   const sum = k => list.reduce((a, m) => a + (m[k] || 0), 0);
   const money = n => '₱' + Number(n || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const R = 'text-align:right;';
-  const hasPeriod = !!(document.getElementById('rpt-date-from').value && document.getElementById('rpt-date-to').value);
-  window._payoutList = list;
-  const payCell = m => m.paid_ref ? `<span style="font-size:0.7rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:99px;background:#dcfce7;color:#166534;">Paid · ${_rEsc(m.paid_ref)}</span>`
-    : m.overlap ? '<span style="font-size:0.7rem;color:var(--muted);">Overlaps a paid period</span>'
-    : m.can_pay ? `<button type="button" class="btn-primary-custom" style="padding:0.25rem 0.8rem;font-size:0.74rem;" onclick="openPayout(${list.indexOf(m)})">Pay</button>`
-    : `<span style="font-size:0.72rem;color:var(--muted);">${hasPeriod ? '—' : 'Pick dates'}</span>`;
+  const payCell = m => m.paid_ref ? `<span style="font-size:0.7rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:99px;background:#dcfce7;color:#166534;">Paid · ${_rEsc(m.paid_ref)}</span>` : '<span style="font-size:0.72rem;color:var(--muted);">—</span>';
   const rows = list.map(m => `<tr><td style="font-weight:600;color:var(--text);">${_rEsc(m.name)}</td><td style="${R}">${m.days_present}</td><td style="${R}">${money(m.daily_pay)}</td>
     <td style="${R}">${m.completed}${m.backjobs ? `<span style="color:var(--muted);font-size:0.7rem;"> (${m.backjobs} back job${m.backjobs === 1 ? '' : 's'})</span>` : ''}</td>
     <td style="${R}">${money(m.labor)}</td><td style="${R}">${money(m.share)}</td><td style="${R}font-weight:800;color:var(--text);">${money(m.total)}</td><td style="${R}white-space:nowrap;">${payCell(m)}</td></tr>`).join('');
